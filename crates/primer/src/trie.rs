@@ -4,7 +4,7 @@ use crate::trie_node_type::TrieNodeType;
 pub struct Trie<T: Clone + Sized> {
 
     // The root of the trie.
-    root: Option<TrieNodeType<T>>,
+    pub(crate) root: Option<TrieNodeType<T>>,
 }
 
 impl<T: Clone + Sized> Trie<T> {
