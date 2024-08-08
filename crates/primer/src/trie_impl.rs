@@ -54,7 +54,7 @@ impl Trie {
     // Put a new key-value pair into the trie. If the key already exists, overwrite the value.
     // Returns the new trie.
     pub fn put(&self, key: &str, value: TrieNodeValueTypes) -> Self {
-        let new_root = Self::put_recursive(self.root.clone(), key, value);
+        let new_root = Self::put_recursive(self.root.as_ref(), key, value);
 
         let new_trie = Trie::new(new_root);
 
@@ -62,11 +62,12 @@ impl Trie {
     }
 
 
-    fn put_recursive(possible_node: Option<TrieNodeType>, key: &str, value: TrieNodeValueTypes) -> TrieNodeType {
+    fn put_recursive(possible_node: Option<&TrieNodeType>, key: &str, value: TrieNodeValueTypes) -> TrieNodeType {
         let is_last_char = key.len() == 0;
 
         if is_last_char {
             let children: Option<HashMap<char, TrieNodeType>> = possible_node
+                // Clone children so the reference won't be saved
                 .and_then(|c| c.get_children().clone());
 
 
@@ -84,16 +85,13 @@ impl Trie {
                 )
             }
             Some(n) => {
-                // TODO - if possible node exist transform
                 new_node = n.clone();
                 new_node.init_children_if_missing()
             }
         }
 
-        let next_char = key.chars().nth(0).expect("Must have another char");
-        // TODO - remove clone
-        let possible_child: Option<TrieNodeType> = new_node.get_child_at_char(next_char).cloned();
-
+        let next_char = key.chars().nth(0).expect("Must have first char");
+        let possible_child: Option<&TrieNodeType> = new_node.get_child_at_char(next_char);
 
         let child = Self::put_recursive(
             possible_child,
