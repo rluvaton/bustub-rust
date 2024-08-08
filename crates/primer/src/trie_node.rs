@@ -10,6 +10,8 @@ pub struct TrieNode {
     // A map of children, where the key is the next character in the key, and the value is the next TrieNode.
     // You MUST store the children information in this structure. You are NOT allowed to remove the `const` from
     // the structure.
+
+    // TODO - made the value be Cow
     pub(crate) children: Option<HashMap<char, TrieNodeType>>,
 
     // Indicates if the node is the terminal node.

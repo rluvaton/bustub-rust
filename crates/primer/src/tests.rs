@@ -26,7 +26,7 @@ mod tests {
 
         // Ensure the trie is the same representation of the writeup
         // (Some students were using '\0' as the terminator in previous semesters)
-        let root = trie.root.expect("Must have root");
+        let root = trie.into_owned().root.expect("Must have root");
 
         let children = root.get_children().as_ref().expect("Must have children on root");
 
@@ -151,5 +151,71 @@ mod tests {
         let trie = trie.remove("te");
 
         assert_eq!(trie.root, None);
+    }
+
+    // No mismatch type test as the original project as this cannot happen in the current impl
+
+    #[test]
+    fn copy_on_write_1() {
+        let empty_trie = Trie::create_empty();
+
+        // Put something
+        let trie1 = empty_trie.put("test", 2333.into());
+        let trie2 = trie1.put("te", 23.into());
+        let trie3 = trie2.put("tes", 233.into());
+
+        // Delete something
+        let trie4 = trie3.remove("te");
+        let trie5 = trie3.remove("tes");
+        let trie6 = trie3.remove("test");
+
+        // Check each snapshot
+        assert_eq!(trie3.get("te"), Some(&23.into()));
+        assert_eq!(trie3.get("tes"), Some(&233.into()));
+        assert_eq!(trie3.get("test"), Some(&2333.into()));
+
+        assert_eq!(trie4.get("te"), None);
+        assert_eq!(trie4.get("tes"), Some(&233.into()));
+        assert_eq!(trie4.get("test"), Some(&2333.into()));
+
+        assert_eq!(trie5.get("te"), Some(&23.into()));
+        assert_eq!(trie5.get("tes"), None);
+        assert_eq!(trie5.get("test"), Some(&2333.into()));
+
+        assert_eq!(trie6.get("te"), Some(&23.into()));
+        assert_eq!(trie6.get("tes"), Some(&233.into()));
+        assert_eq!(trie6.get("test"), None);
+    }
+
+    #[test]
+    fn copy_on_write_2() {
+        let empty_trie = Trie::create_empty();
+
+        // Put something
+        let trie1 = empty_trie.put("test", 2333.into());
+        let trie2 = trie1.put("te", 23.into());
+        let trie3 = trie2.put("tes", 233.into());
+
+        // Delete something
+        let trie4 = trie3.put("te", "23".to_string().into());
+        let trie5 = trie3.put("tes", "233".to_string().into());
+        let trie6 = trie3.put("test", "2333".to_string().into());
+
+        // Check each snapshot
+        assert_eq!(trie3.get("te"), Some(&23.into()));
+        assert_eq!(trie3.get("tes"), Some(&233.into()));
+        assert_eq!(trie3.get("test"), Some(&2333.into()));
+
+        assert_eq!(trie4.get("te"), Some(&"23".to_string().into()));
+        assert_eq!(trie4.get("tes"), Some(&233.into()));
+        assert_eq!(trie4.get("test"), Some(&2333.into()));
+
+        assert_eq!(trie5.get("te"), Some(&23.into()));
+        assert_eq!(trie5.get("tes"), Some(&"233".to_string().into()));
+        assert_eq!(trie5.get("test"), Some(&2333.into()));
+
+        assert_eq!(trie6.get("te"), Some(&23.into()));
+        assert_eq!(trie6.get("tes"), Some(&233.into()));
+        assert_eq!(trie6.get("test"), Some(&"2333".to_string().into()));
     }
 }

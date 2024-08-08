@@ -1,5 +1,6 @@
 // This file is what the students will be implementing
 
+use std::borrow::Cow;
 use std::collections::HashMap;
 
 use crate::trie::Trie;
@@ -15,7 +16,7 @@ enum RemoveResult {
     ReplaceNode(TrieNodeType),
 
     // Remove node completely, if the found node has no children
-    Remove
+    Remove,
 }
 
 impl Trie {
@@ -23,7 +24,7 @@ impl Trie {
     // 1. If the key is not in the trie, return nullptr.
     // 2. If the key is in the trie but the type is mismatched, return nullptr.
     // 3. Otherwise, return the value.
-    pub fn get(&self, key: &str) -> Option<&TrieNodeValueTypes> {
+    pub fn get(self: &Trie, key: &str) -> Option<&TrieNodeValueTypes> {
         return if let Some(root) = &self.root {
             Self::get_recursive(root, key)
         } else {
@@ -63,7 +64,7 @@ impl Trie {
 
     // Put a new key-value pair into the trie. If the key already exists, overwrite the value.
     // Returns the new trie.
-    pub fn put(&self, key: &str, value: TrieNodeValueTypes) -> Self {
+    pub fn put(&self, key: &str, value: TrieNodeValueTypes) -> Cow<'_, Self> {
         let new_root = Self::put_recursive(self.root.as_ref(), key, value);
 
         let new_trie = Trie::new(new_root);
@@ -118,30 +119,30 @@ impl Trie {
 
     // Remove the key from the trie. If the key does not exist, return the original trie.
     // Otherwise, returns the new trie.
-    pub fn remove(self, key: &str) -> Self {
+    pub fn remove(&self, key: &str) -> Cow<'_, Self> {
         if self.root.is_none() {
             // If not found return the same trie
-            return self
+            return Cow::Borrowed(self);
         }
 
         let remove_result = Self::remove_recursive(self.root.as_ref().unwrap(), key);
 
-        match remove_result {
+        return match remove_result {
             RemoveResult::NotFound => {
                 // If not found return the same trie
-                return self
+                Cow::Borrowed(self)
             }
             RemoveResult::ReplaceNode(new_root) => {
                 // Replace root, mean that node found but has children so need to keep
                 let new_trie = Trie::new(new_root);
 
-                return new_trie;
+                new_trie
             }
             RemoveResult::Remove => {
                 // Remove the node completely
                 let new_trie = Trie::create_empty();
 
-                return new_trie;
+                new_trie
             }
         }
     }
@@ -221,7 +222,6 @@ impl Trie {
 
                 RemoveResult::ReplaceNode(new_node)
             }
-        }
+        };
     }
-
 }
