@@ -10,9 +10,7 @@ mod tests {
 
         let trie = trie.put("test-int", 233u32.into());
         let trie = trie.put("test-int2", 23333333u32.into());
-        // let trie = trie.put::<String>("test-string", 123);
         let trie = trie.put("test-string", "test".to_string().into());
-        // let trie = trie.put::<String>("", 0);
         let trie = trie.put("", "empty-key".to_string().into());
     }
 
@@ -37,7 +35,6 @@ mod tests {
         let child = children.get(&'t').unwrap();
         assert_eq!(child.get_children(), &None);
 
-        // TODO - add rest of checks
 
         // The original tests has the following which does not make sense as we only inserted t
         // ASSERT_EQ(root->children_.size(), 1);
