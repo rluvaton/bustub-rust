@@ -1,24 +1,24 @@
 use std::collections::HashMap;
-use crate::trie_node::TrieNode;
 use crate::trie_node_type::TrieNodeType;
+use crate::trie_node_value_types::TrieNodeValueTypes;
 
-#[derive(Clone, Debug)]
-pub struct TrieNodeWithValue<T: Clone> {
+#[derive(Clone, Debug, PartialEq)]
+pub struct TrieNodeWithValue {
 
-    pub(crate) value: T,
+    pub(crate) value: TrieNodeValueTypes,
 
     // A map of children, where the key is the next character in the key, and the value is the next TrieNode.
     // You MUST store the children information in this structure. You are NOT allowed to remove the `const` from
     // the structure.
-    pub(crate) children: Option<HashMap<char, TrieNodeType<T>>>,
+    pub(crate) children: Option<HashMap<char, TrieNodeType>>,
 
     // Indicates if the node is the terminal node.
     // is_value_node: bool
 }
 
-impl<T: Clone> TrieNodeWithValue<T> {
+impl TrieNodeWithValue {
 
-    pub fn new(children: Option<HashMap<char, TrieNodeType<T>>>, value: T) -> Self {
+    pub fn new(children: Option<HashMap<char, TrieNodeType>>, value: TrieNodeValueTypes) -> Self {
         TrieNodeWithValue {
             value,
             children,
@@ -26,7 +26,7 @@ impl<T: Clone> TrieNodeWithValue<T> {
     }
 
     // Create a TrieNode with no children.
-    pub fn with_value(value: T) -> Self {
+    pub fn with_value(value: TrieNodeValueTypes) -> Self {
         TrieNodeWithValue {
             value,
             children: None,

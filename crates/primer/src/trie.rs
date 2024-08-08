@@ -1,13 +1,13 @@
 use crate::trie_node_type::TrieNodeType;
 
 #[derive(Clone, Debug)]
-pub struct Trie<T: Clone + Sized> {
+pub struct Trie {
 
     // The root of the trie.
-    pub(crate) root: Option<TrieNodeType<T>>,
+    pub(crate) root: Option<TrieNodeType>,
 }
 
-impl<T: Clone + Sized> Trie<T> {
+impl Trie {
 
     // Create an empty trie.
     pub fn create_empty() -> Self {
@@ -17,7 +17,7 @@ impl<T: Clone + Sized> Trie<T> {
     }
 
     // Create a new trie with the given root.
-    pub fn new(root: TrieNodeType<T>) -> Self {
+    pub fn new(root: TrieNodeType) -> Self {
         Trie {
             root: Some(root),
         }
