@@ -10,6 +10,16 @@ pub enum TrieNodeType {
 }
 
 impl TrieNodeType {
+    pub(crate) fn has_children(&self) -> bool {
+        match &self {
+            TrieNodeType::WithValue(c) => {
+                c.children.is_some()
+            }
+            TrieNodeType::WithoutValue(c) => {
+                c.children.is_some()
+            }
+        }
+    }
     pub(crate) fn get_children(&self) -> &Option<HashMap<char, TrieNodeType>> {
         match &self {
             TrieNodeType::WithValue(c) => {
@@ -32,6 +42,14 @@ impl TrieNodeType {
         }
     }
 
+    /// Will return new instance of trie node type without children
+    pub(crate) fn clone_to_be_without_children(&self) -> Self {
+        return match self {
+            TrieNodeType::WithValue(node) => TrieNodeType::WithValue(TrieNodeWithValue::with_value(node.value.clone())),
+            TrieNodeType::WithoutValue(_) => TrieNodeType::WithoutValue(TrieNode::empty()),
+        }
+    }
+
     pub(crate) fn is_value_node(&self) -> bool {
         match self {
             TrieNodeType::WithValue(_) => true,
@@ -50,7 +68,7 @@ impl TrieNodeType {
         let children = self.get_children();
 
         if let Some(children) = children {
-            if (children.contains_key(&c)) {
+            if children.contains_key(&c) {
                 return children.get(&c);
             }
         }
@@ -69,6 +87,20 @@ impl TrieNodeType {
                 if c.children.is_none() {
                     c.children = Some(HashMap::new());
                 }
+            }
+        }
+    }
+
+    /// this should be used when knowing for sure that current node is value node
+    pub(crate) fn change_to_without_value(&self) -> Self {
+        match self {
+            TrieNodeType::WithValue(node) => {
+                TrieNodeType::WithoutValue(
+                    node.into()
+                )
+            }
+            _ => {
+                unreachable!("Must be node with value")
             }
         }
     }

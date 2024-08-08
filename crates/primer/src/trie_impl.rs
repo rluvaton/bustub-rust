@@ -8,6 +8,16 @@ use crate::trie_node_type::TrieNodeType;
 use crate::trie_node_value_types::TrieNodeValueTypes;
 use crate::trie_node_with_value::TrieNodeWithValue;
 
+enum RemoveResult {
+    NotFound,
+
+    // If node has children
+    ReplaceNode(TrieNodeType),
+
+    // Remove node completely, if the found node has no children
+    Remove
+}
+
 impl Trie {
     // Get the value associated with the given key.
     // 1. If the key is not in the trie, return nullptr.
@@ -99,7 +109,7 @@ impl Trie {
             value,
         );
 
-        let mut children = new_node.get_children_mut().as_mut().unwrap();
+        let children = new_node.get_children_mut().as_mut().unwrap();
 
         children.insert(next_char, child);
 
@@ -108,7 +118,110 @@ impl Trie {
 
     // Remove the key from the trie. If the key does not exist, return the original trie.
     // Otherwise, returns the new trie.
-    pub fn remove(&self, key: &str) -> Self {
-        unimplemented!()
+    pub fn remove(self, key: &str) -> Self {
+        if self.root.is_none() {
+            // If not found return the same trie
+            return self
+        }
+
+        let remove_result = Self::remove_recursive(self.root.as_ref().unwrap(), key);
+
+        match remove_result {
+            RemoveResult::NotFound => {
+                // If not found return the same trie
+                return self
+            }
+            RemoveResult::ReplaceNode(new_root) => {
+                // Replace root, mean that node found but has children so need to keep
+                let new_trie = Trie::new(new_root);
+
+                return new_trie;
+            }
+            RemoveResult::Remove => {
+                // Remove the node completely
+                let new_trie = Trie::create_empty();
+
+                return new_trie;
+            }
+        }
     }
+
+    fn remove_recursive(node: &TrieNodeType, key: &str) -> RemoveResult {
+        let is_last_char = key.len() == 0;
+
+        if is_last_char {
+            // If not value node than it's not found
+            if !node.is_value_node() {
+                return RemoveResult::NotFound;
+            }
+
+            // If node is value node and has children then just replace the node to be node without value
+            // and return new node
+            if node.has_children() {
+                return RemoveResult::ReplaceNode(node.change_to_without_value());
+            }
+
+            // If value node and no children than need to remove this node
+            return RemoveResult::Remove;
+        }
+
+        let children: &Option<HashMap<char, TrieNodeType>> = node.get_children();
+
+        // key not found
+        if children.is_none() {
+            return RemoveResult::NotFound;
+        }
+
+        let children = children.as_ref().expect("Must have children as we checked before");
+
+        let c = key.chars().next().expect("Must have first char");
+
+        if !children.contains_key(&c) {
+            return RemoveResult::NotFound;
+        }
+
+
+        let child: &TrieNodeType = children.get(&c).expect("Must have child");
+
+        let remove_result = Self::remove_recursive(
+            child,
+            &key[1..],
+        );
+
+        return match remove_result {
+            RemoveResult::NotFound => {
+                RemoveResult::NotFound
+            }
+            RemoveResult::ReplaceNode(new_child) => {
+                // Replacing the node
+                let mut new_node = node.clone();
+                new_node.get_children_mut().as_mut().unwrap().insert(c, new_child);
+
+                RemoveResult::ReplaceNode(new_node)
+            }
+            RemoveResult::Remove => {
+                // If the next char is the only char in children, should remove this node as well
+                if children.len() == 1 {
+
+                    // If not value node, then just remove this node as well
+                    if !node.is_value_node() {
+                        return RemoveResult::Remove;
+                    }
+
+                    // if value node, then need to remove the children
+                    return RemoveResult::ReplaceNode(node.clone_to_be_without_children());
+                }
+
+                // Need to remove the node from the children
+                // should only clone the value if has + children map without the actual children themselves
+                let mut new_node = node.clone();
+
+                // unwrap as we know for sure the children exist
+                new_node.get_children_mut().as_mut().unwrap().remove(&c);
+
+                RemoveResult::ReplaceNode(new_node)
+            }
+        }
+    }
+
 }

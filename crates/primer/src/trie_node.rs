@@ -2,6 +2,7 @@
 
 use std::collections::HashMap;
 use crate::trie_node_type::TrieNodeType;
+use crate::trie_node_with_value::TrieNodeWithValue;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct TrieNode {
@@ -27,6 +28,23 @@ impl TrieNode {
     pub fn new(children: HashMap<char, TrieNodeType>) -> Self {
         TrieNode {
             children: Some(children),
+        }
+    }
+}
+
+impl From<TrieNodeWithValue> for TrieNode {
+    fn from(value: TrieNodeWithValue) -> Self {
+        TrieNode {
+            children: value.children
+        }
+    }
+}
+
+
+impl From<&TrieNodeWithValue> for TrieNode {
+    fn from(value: &TrieNodeWithValue) -> Self {
+        TrieNode {
+            children: value.clone().children
         }
     }
 }
