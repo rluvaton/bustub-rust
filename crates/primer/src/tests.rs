@@ -1,4 +1,3 @@
-
 #[cfg(test)]
 mod tests {
     use crate::trie::Trie;
@@ -217,5 +216,124 @@ mod tests {
         assert_eq!(trie6.get("te"), Some(&23.into()));
         assert_eq!(trie6.get("tes"), Some(&233.into()));
         assert_eq!(trie6.get("test"), Some(&"2333".to_string().into()));
+    }
+
+    #[test]
+    fn copy_on_write_3() {
+        let empty_trie = Trie::create_empty();
+
+        // Put something
+        let trie1 = empty_trie.put("test", 2333.into());
+        let trie2 = trie1.put("te", 23.into());
+        let trie3 = trie2.put("", 233.into());
+
+        // Delete something
+        let trie4 = trie3.put("te", "23".to_string().into());
+        let trie5 = trie3.put("", "233".to_string().into());
+        let trie6 = trie3.put("test", "2333".to_string().into());
+
+        // Check each snapshot
+        assert_eq!(trie3.get("te"), Some(&23.into()));
+        assert_eq!(trie3.get(""), Some(&233.into()));
+        assert_eq!(trie3.get("test"), Some(&2333.into()));
+
+        assert_eq!(trie4.get("te"), Some(&"23".to_string().into()));
+        assert_eq!(trie4.get(""), Some(&233.into()));
+        assert_eq!(trie4.get("test"), Some(&2333.into()));
+
+        assert_eq!(trie5.get("te"), Some(&23.into()));
+        assert_eq!(trie5.get(""), Some(&"233".to_string().into()));
+        assert_eq!(trie5.get("test"), Some(&2333.into()));
+
+        assert_eq!(trie6.get("te"), Some(&23.into()));
+        assert_eq!(trie6.get(""), Some(&233.into()));
+        assert_eq!(trie6.get("test"), Some(&"2333".to_string().into()));
+    }
+
+    #[test]
+    fn mixed() {
+        let mut trie = Trie::create_empty();
+
+        for i in 0..23333 {
+            let key = format!("{:#05}", i);
+            let value = format!("value-{:#08}", i);
+
+            trie = trie.put(key.as_str(), value.into());
+        }
+
+        // TODO - remove clone
+        let trie_full: Trie = trie.clone().into_owned();
+
+        for i in (0..23333).step_by(2) {
+            let key = format!("{:#05}", i);
+            let value = format!("new-value-{:#08}", i);
+
+            trie = trie.put(key.as_str(), value.into());
+        }
+
+        // TODO - remove clone
+        let trie_override: Trie = trie.clone().into_owned();
+
+        for i in (0..23333).step_by(3) {
+            let key = format!("{:#05}", i);
+
+            trie = trie.remove(key.as_str());
+        }
+
+        let trie_final: Trie = trie.into_owned();
+
+        // verify trie_full
+        for i in 0..23333 {
+            let key = format!("{:#05}", i);
+            let value = format!("value-{:#08}", i);
+
+            assert_eq!(trie_full.get(key.as_str()), Some(&value.into()));
+        }
+
+        // verify trie_override
+        for i in 0..23333 {
+            let key = format!("{:#05}", i);
+            if i % 2 == 0 {
+                let value = format!("new-value-{:#08}", i);
+                assert_eq!(trie_override.get(key.as_str()), Some(&value.into()));
+            } else {
+                let value = format!("value-{:#08}", i);
+                assert_eq!(trie_override.get(key.as_str()), Some(&value.into()));
+            }
+        }
+
+        // verify final trie
+        for i in 0..23333 {
+            let key = format!("{:#05}", i);
+            if i % 3 == 0 {
+                assert_eq!(trie_final.get(key.as_str()), None);
+            } else if i % 2 == 0 {
+                let value = format!("new-value-{:#08}", i);
+                assert_eq!(trie_final.get(key.as_str()), Some(&value.into()));
+            } else {
+                let value = format!("value-{:#08}", i);
+                assert_eq!(trie_final.get(key.as_str()), Some(&value.into()));
+            }
+        }
+    }
+
+    #[test]
+    fn pointer_stability() {
+        let trie = Trie::create_empty();
+
+        let trie = trie.put("test", 2333.into());
+
+        // TODO - get ptr
+        // auto *ptr_before = trie.Get<std::string>("test");
+        let ptr_before = trie.get("test");
+
+        let trie = trie.put("tes", 233.into());
+        let trie = trie.put("te", 23.into());
+
+        // TODO - get ptr
+        let ptr_after = trie.get("test");
+
+        // TODO - assert same pointer
+        //     ASSERT_EQ(reinterpret_cast<uint64_t>(ptr_before), reinterpret_cast<uint64_t>(ptr_after));
     }
 }
