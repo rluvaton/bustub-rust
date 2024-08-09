@@ -2,11 +2,11 @@
 
 use std::collections::HashMap;
 use std::rc::Rc;
-use crate::trie::Trie;
-use crate::trie_node::TrieNode;
-use crate::trie_node_type::TrieNodeType;
-use crate::trie_node_value_types::TrieNodeValueTypes;
-use crate::trie_node_with_value::TrieNodeWithValue;
+use crate::trie::trie::Trie;
+use crate::trie::trie_node::TrieNode;
+use crate::trie::trie_node_type::TrieNodeType;
+use crate::trie::trie_node_value_types::TrieNodeValueTypes;
+use crate::trie::trie_node_with_value::TrieNodeWithValue;
 
 enum RemoveResult {
     NotFound,

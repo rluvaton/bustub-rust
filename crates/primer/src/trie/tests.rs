@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
     use std::rc::Rc;
-    use crate::trie::Trie;
+    use crate::trie::trie::Trie;
 
     #[test]
     fn basic_put() {

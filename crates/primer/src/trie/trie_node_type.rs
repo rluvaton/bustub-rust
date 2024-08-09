@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 use std::rc::Rc;
-use crate::trie_node::TrieNode;
-use crate::trie_node_value_types::TrieNodeValueTypes;
-use crate::trie_node_with_value::TrieNodeWithValue;
+use crate::trie::trie_node::TrieNode;
+use crate::trie::trie_node_value_types::TrieNodeValueTypes;
+use crate::trie::trie_node_with_value::TrieNodeWithValue;
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum TrieNodeType {

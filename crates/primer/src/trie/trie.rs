@@ -1,5 +1,5 @@
 use std::rc::Rc;
-use crate::trie_node_type::TrieNodeType;
+use crate::trie::trie_node_type::TrieNodeType;
 
 #[derive(Clone, Debug)]
 pub struct Trie {
