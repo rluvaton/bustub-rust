@@ -1,4 +1,4 @@
 pub mod trie;
-// TODO - implement MoveBlocked?
+pub mod trie_store;
 
 pub use trie::{Trie, TrieNode, TrieNodeValueTypes};
