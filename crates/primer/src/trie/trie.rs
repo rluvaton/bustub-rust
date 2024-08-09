@@ -8,7 +8,7 @@ pub struct Trie {
     pub(crate) root: Option<Rc<TrieNode>>,
 }
 
-impl<'a> Trie {
+impl Trie {
 
     // Create an empty trie.
     pub fn create_empty() -> Rc<Self> {
