@@ -7,18 +7,18 @@ pub struct LRUKNode {
 
     // in cpp it was std::list<size_t>
     #[allow(dead_code)]
-    history: Vec<isize>,
+    pub(crate) history: Vec<isize>,
 
     #[allow(dead_code)]
-    k: isize,
+    pub(crate) k: isize,
 
     #[allow(dead_code)]
-    fid: FrameId,
+    pub(crate) fid: FrameId,
 
     #[allow(dead_code)]
-    current_timestamp: isize,
+    pub(crate) current_timestamp: isize,
 
     // TODO - set default to false
     #[allow(dead_code)]
-    is_evictable: bool,
+    pub(crate) is_evictable: bool,
 }

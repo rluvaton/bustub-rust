@@ -20,25 +20,29 @@ pub struct LRUKReplacer {
 
     // in cpp it was unordered_map
     #[allow(dead_code)]
-    node_store: HashMap<FrameId, LRUKNode>,
+    pub(crate) node_store: HashMap<FrameId, LRUKNode>,
 
     // TODO - set default to 0
     #[allow(dead_code)]
-    current_timestamp: isize,
+    pub(crate) current_timestamp: isize,
 
     // TODO - set default to 0
     #[allow(dead_code)]
-    curr_size: isize,
+    pub(crate) curr_size: isize,
 
     #[allow(dead_code)]
-    replacer_size: isize,
+    pub(crate) replacer_size: isize,
 
     #[allow(dead_code)]
-    k: isize,
+    pub(crate) k: isize,
 
-    // TODO - if using, replace the mutex value with something that is needed
+    // TODO - if using remove the option?
     #[allow(dead_code)]
-    latch: Mutex<u8>,
+    pub(crate) latch: Option<Mutex<()>>,
+
+
+    // Tracks the number of evictable frames
+    pub(crate) evictable_frames: usize,
 }
 
 

@@ -75,4 +75,6 @@ mod tests {
         assert_eq!(lru_replacer.evict(), None);
         assert_eq!(lru_replacer.size(), 0);
     }
+
+    // TODO - add tests for thread safety
 }
