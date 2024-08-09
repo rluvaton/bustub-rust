@@ -31,3 +31,9 @@ impl TrieStore {
         }
     }
 }
+
+impl Default for TrieStore {
+    fn default() -> Self {
+        TrieStore::new()
+    }
+}

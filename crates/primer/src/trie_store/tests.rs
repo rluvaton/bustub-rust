@@ -2,7 +2,7 @@
 mod tests {
     use crate::trie_store::TrieStore;
     use std::sync::atomic::AtomicBool;
-    use std::sync::atomic::Ordering::{Acquire, Release, SeqCst};
+    use std::sync::atomic::Ordering::SeqCst;
     use std::sync::Arc;
     use std::thread;
     use std::thread::JoinHandle;
@@ -165,10 +165,27 @@ mod tests {
             assert_eq!(store.get(key.as_str()), Some(value.into()));
         }
     }
-    //
-    // #[test]
-    // fn non_copyable() {
-    //     // Implement
-    //     unimplemented!()
-    // }
+
+    #[test]
+    fn non_copyable() {
+        let mut store = TrieStore::new();
+
+        store.put("tes", 233.into());
+        store.put("te", 23.into());
+        store.put("test", 2333.into());
+
+        assert_eq!(store.get("te"), Some(23.into()));
+        assert_eq!(store.get("tes"), Some(233.into()));
+        assert_eq!(store.get("test"), Some(2333.into()));
+
+        store.remove("te");
+        store.remove("tes");
+        store.remove("test");
+
+        assert_eq!(store.get("te"), None);
+        assert_eq!(store.get("tes"), None);
+        assert_eq!(store.get("test"), None);
+    }
+
+    // Did not implement the ReadWriteTest as I don't understand it
 }
