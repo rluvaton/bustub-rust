@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::rc::Rc;
 use crate::trie_node::TrieNode;
 use crate::trie_node_value_types::TrieNodeValueTypes;
 use crate::trie_node_with_value::TrieNodeWithValue;
@@ -20,7 +21,7 @@ impl TrieNodeType {
             }
         }
     }
-    pub(crate) fn get_children(&self) -> &Option<HashMap<char, TrieNodeType>> {
+    pub(crate) fn get_children(&self) -> &Option<HashMap<char, Rc<TrieNodeType>>> {
         match &self {
             TrieNodeType::WithValue(c) => {
                 &c.children
@@ -31,7 +32,7 @@ impl TrieNodeType {
         }
     }
 
-    pub(crate) fn get_children_mut(&mut self) -> &mut Option<HashMap<char, TrieNodeType>> {
+    pub(crate) fn get_children_mut(&mut self) -> &mut Option<HashMap<char, Rc<TrieNodeType>>> {
         match self {
             TrieNodeType::WithValue(c) => {
                 &mut c.children
@@ -64,12 +65,12 @@ impl TrieNodeType {
         }
     }
 
-    pub(crate) fn get_child_at_char(&self, c: char) -> Option<&TrieNodeType> {
+    pub(crate) fn get_child_at_char(&self, c: char) -> Option<Rc<TrieNodeType>> {
         let children = self.get_children();
 
         if let Some(children) = children {
             if children.contains_key(&c) {
-                return children.get(&c);
+                return children.get(&c).cloned();
             }
         }
 
@@ -104,4 +105,6 @@ impl TrieNodeType {
             }
         }
     }
+
+    // pub(crate) fn clone_while_keeping_children_ref
 }

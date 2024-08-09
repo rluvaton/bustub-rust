@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
+    use std::rc::Rc;
     use crate::trie::Trie;
-    use super::*;
 
     #[test]
     fn basic_put() {
@@ -25,7 +25,7 @@ mod tests {
 
         // Ensure the trie is the same representation of the writeup
         // (Some students were using '\0' as the terminator in previous semesters)
-        let root = trie.into_owned().root.expect("Must have root");
+        let root = trie.root.clone().expect("Must have root");
 
         let children = root.get_children().as_ref().expect("Must have children on root");
 
@@ -252,17 +252,18 @@ mod tests {
 
     #[test]
     fn mixed() {
+        // TODO - this is very slow, probably because all of the cloning
         let mut trie = Trie::create_empty();
 
         for i in 0..23333 {
             let key = format!("{:#05}", i);
             let value = format!("value-{:#08}", i);
 
+            // I need each put to transfer ownership of the entire trie
             trie = trie.put(key.as_str(), value.into());
         }
 
-        // TODO - remove clone
-        let trie_full: Trie = trie.clone().into_owned();
+        let trie_full: Rc<Trie> = Rc::clone(&trie);
 
         for i in (0..23333).step_by(2) {
             let key = format!("{:#05}", i);
@@ -271,8 +272,7 @@ mod tests {
             trie = trie.put(key.as_str(), value.into());
         }
 
-        // TODO - remove clone
-        let trie_override: Trie = trie.clone().into_owned();
+        let trie_override: Rc<Trie> = Rc::clone(&trie);
 
         for i in (0..23333).step_by(3) {
             let key = format!("{:#05}", i);
@@ -280,7 +280,7 @@ mod tests {
             trie = trie.remove(key.as_str());
         }
 
-        let trie_final: Trie = trie.into_owned();
+        let trie_final: Rc<Trie> = Rc::clone(&trie);
 
         // verify trie_full
         for i in 0..23333 {
@@ -323,17 +323,13 @@ mod tests {
 
         let trie = trie.put("test", 2333.into());
 
-        // TODO - get ptr
-        // auto *ptr_before = trie.Get<std::string>("test");
-        let ptr_before = trie.get("test");
+        let ptr_before = trie.get("test").unwrap();
 
         let trie = trie.put("tes", 233.into());
         let trie = trie.put("te", 23.into());
 
-        // TODO - get ptr
-        let ptr_after = trie.get("test");
+        let ptr_after = trie.get("test").unwrap();
 
-        // TODO - assert same pointer
-        //     ASSERT_EQ(reinterpret_cast<uint64_t>(ptr_before), reinterpret_cast<uint64_t>(ptr_after));
+        assert_eq!(std::ptr::eq(ptr_before, ptr_after), true, "Should point to the same location - not cloned");
     }
 }

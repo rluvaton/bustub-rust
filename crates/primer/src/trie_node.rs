@@ -1,6 +1,7 @@
 // TODO - implement MoveBlocked?
 
 use std::collections::HashMap;
+use std::rc::Rc;
 use crate::trie_node_type::TrieNodeType;
 use crate::trie_node_with_value::TrieNodeWithValue;
 
@@ -12,7 +13,7 @@ pub struct TrieNode {
     // the structure.
 
     // TODO - made the value be Cow
-    pub(crate) children: Option<HashMap<char, TrieNodeType>>,
+    pub(crate) children: Option<HashMap<char, Rc<TrieNodeType>>>,
 
     // Indicates if the node is the terminal node.
     // is_value_node: bool
@@ -27,7 +28,7 @@ impl TrieNode {
         }
     }
 
-    pub fn new(children: HashMap<char, TrieNodeType>) -> Self {
+    pub fn new(children: HashMap<char, Rc<TrieNodeType>>) -> Self {
         TrieNode {
             children: Some(children),
         }
@@ -46,7 +47,7 @@ impl From<TrieNodeWithValue> for TrieNode {
 impl From<&TrieNodeWithValue> for TrieNode {
     fn from(value: &TrieNodeWithValue) -> Self {
         TrieNode {
-            children: value.clone().children
+            children: value.children.clone()
         }
     }
 }

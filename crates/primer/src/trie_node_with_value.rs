@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::rc::Rc;
 use crate::trie_node_type::TrieNodeType;
 use crate::trie_node_value_types::TrieNodeValueTypes;
 
@@ -12,7 +13,8 @@ pub struct TrieNodeWithValue {
     // the structure.
 
     // TODO - made the value be Cow
-    pub(crate) children: Option<HashMap<char, TrieNodeType>>,
+    // RC is for a single threaded
+    pub(crate) children: Option<HashMap<char, Rc<TrieNodeType>>>,
 
     // Indicates if the node is the terminal node.
     // is_value_node: bool
@@ -20,7 +22,7 @@ pub struct TrieNodeWithValue {
 
 impl TrieNodeWithValue {
 
-    pub fn new(children: Option<HashMap<char, TrieNodeType>>, value: TrieNodeValueTypes) -> Self {
+    pub fn new(children: Option<HashMap<char, Rc<TrieNodeType>>>, value: TrieNodeValueTypes) -> Self {
         TrieNodeWithValue {
             value,
             children,
