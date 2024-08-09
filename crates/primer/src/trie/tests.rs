@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
-    use std::rc::Rc;
     use crate::trie::trie::Trie;
+    use std::sync::Arc;
 
     #[test]
     fn basic_put() {
@@ -263,7 +263,7 @@ mod tests {
             trie = trie.put(key.as_str(), value.into());
         }
 
-        let trie_full: Rc<Trie> = Rc::clone(&trie);
+        let trie_full: Arc<Trie> = Arc::clone(&trie);
 
         for i in (0..23333).step_by(2) {
             let key = format!("{:#05}", i);
@@ -272,7 +272,7 @@ mod tests {
             trie = trie.put(key.as_str(), value.into());
         }
 
-        let trie_override: Rc<Trie> = Rc::clone(&trie);
+        let trie_override: Arc<Trie> = Arc::clone(&trie);
 
         for i in (0..23333).step_by(3) {
             let key = format!("{:#05}", i);
@@ -280,7 +280,7 @@ mod tests {
             trie = trie.remove(key.as_str());
         }
 
-        let trie_final: Rc<Trie> = Rc::clone(&trie);
+        let trie_final: Arc<Trie> = Arc::clone(&trie);
 
         // verify trie_full
         for i in 0..23333 {

@@ -1,17 +1,16 @@
 // This file is what the students will be implementing
 
-use std::collections::HashMap;
-use std::ops::Deref;
-use std::rc::Rc;
 use crate::trie::trie::Trie;
 use crate::trie::trie_node::TrieNode;
 use crate::trie::trie_node_value_types::TrieNodeValueTypes;
+use std::collections::HashMap;
+use std::sync::Arc;
 
 enum RemoveResult {
     NotFound,
 
     // If node has children
-    ReplaceNode(Rc<TrieNode>),
+    ReplaceNode(Arc<TrieNode>),
 
     // Remove node completely, if the found node has no children
     Remove,
@@ -38,7 +37,7 @@ impl Trie {
         }
 
 
-        let children: &Option<HashMap<char, Rc<TrieNode>>> = &node.children;
+        let children: &Option<HashMap<char, Arc<TrieNode>>> = &node.children;
 
         if children.is_none() {
             return None;
@@ -62,7 +61,7 @@ impl Trie {
 
     // Put a new key-value pair into the trie. If the key already exists, overwrite the value.
     // Returns the new trie.
-    pub fn put(&self, key: &str, value: TrieNodeValueTypes) -> Rc<Self> {
+    pub fn put(&self, key: &str, value: TrieNodeValueTypes) -> Arc<Self> {
         let new_root = Self::put_recursive(self.root.clone(), key, value);
 
         let new_trie = Trie::new(new_root);
@@ -70,17 +69,16 @@ impl Trie {
         new_trie
     }
 
-
-    fn put_recursive(possible_node: Option<Rc<TrieNode>>, key: &str, value: TrieNodeValueTypes) -> Rc<TrieNode> {
+    fn put_recursive(possible_node: Option<Arc<TrieNode>>, key: &str, value: TrieNodeValueTypes) -> Arc<TrieNode> {
         let is_last_char = key.len() == 0;
 
         if is_last_char {
-            let children: Option<HashMap<char, Rc<TrieNode>>> = possible_node
+            let children: Option<HashMap<char, Arc<TrieNode>>> = possible_node
                 // Clone children so the reference won't be saved
                 .and_then(|c| c.children.clone());
 
 
-            return Rc::new(TrieNode::new(Some(value), children));
+            return Arc::new(TrieNode::new(Some(value), children));
         }
 
         let mut new_node: TrieNode;
@@ -102,7 +100,7 @@ impl Trie {
         }
 
         let next_char = key.chars().nth(0).expect("Must have first char");
-        let possible_child: Option<Rc<TrieNode>> = new_node.children.as_ref().and_then(|m| m.get(&next_char).cloned());
+        let possible_child: Option<Arc<TrieNode>> = new_node.children.as_ref().and_then(|m| m.get(&next_char).cloned());
 
         let child = Self::put_recursive(
             possible_child,
@@ -114,15 +112,15 @@ impl Trie {
 
         children.insert(next_char, child);
 
-        Rc::new(new_node)
+        Arc::new(new_node)
     }
 
     // Remove the key from the trie. If the key does not exist, return the original trie.
     // Otherwise, returns the new trie.
-    pub fn remove(&self, key: &str) -> Rc<Self> {
+    pub fn remove(&self, key: &str) -> Arc<Self> {
         if self.root.is_none() {
             // If not found return the same trie
-            return Rc::new(self.clone());
+            return Arc::new(self.clone());
         }
 
         let this = self.clone();
@@ -132,24 +130,20 @@ impl Trie {
         match remove_result {
             RemoveResult::NotFound => {
                 // If not found return the same trie
-                Rc::new(self.clone())
+                Arc::new(self.clone())
             }
             RemoveResult::ReplaceNode(new_root) => {
                 // Replace root, mean that node found but has children so need to keep
-                let new_trie = Trie::new(new_root);
-
-                new_trie
+                Trie::new(new_root)
             }
             RemoveResult::Remove => {
                 // Remove the node completely
-                let new_trie = Trie::create_empty();
-
-                new_trie
+                Trie::create_empty()
             }
         }
     }
 
-    fn remove_recursive(node: Rc<TrieNode>, key: &str) -> RemoveResult {
+    fn remove_recursive(node: Arc<TrieNode>, key: &str) -> RemoveResult {
         let is_last_char = key.len() == 0;
 
         if is_last_char {
@@ -162,14 +156,14 @@ impl Trie {
             // and return new node
             if node.children.is_some() {
                 let new_node = TrieNode::new(None, node.children.clone());
-                return RemoveResult::ReplaceNode(Rc::new(new_node));
+                return RemoveResult::ReplaceNode(Arc::new(new_node));
             }
 
             // If value node and no children than need to remove this node
             return RemoveResult::Remove;
         }
 
-        let children: &Option<HashMap<char, Rc<TrieNode>>> = &node.children;
+        let children: &Option<HashMap<char, Arc<TrieNode>>> = &node.children;
 
         // key not found
         if children.is_none() {
@@ -184,8 +178,7 @@ impl Trie {
             return RemoveResult::NotFound;
         }
 
-
-        let child: Rc<TrieNode> = Rc::clone(children.get(&c).expect("Must have child"));
+        let child: Arc<TrieNode> = Arc::clone(children.get(&c).expect("Must have child"));
 
         let remove_result = Self::remove_recursive(
             child,
@@ -199,10 +192,10 @@ impl Trie {
             RemoveResult::ReplaceNode(new_child) => {
                 // Replacing the node
                 let mut tmp = node.clone();
-                let mut new_node = Rc::make_mut(&mut tmp);
+                let new_node = Arc::make_mut(&mut tmp);
                 new_node.children.as_mut().unwrap().insert(c, new_child);
 
-                RemoveResult::ReplaceNode(Rc::new(new_node.clone()))
+                RemoveResult::ReplaceNode(Arc::new(new_node.clone()))
             }
             RemoveResult::Remove => {
                 // If the next char is the only char in children, should remove this node as well
@@ -214,18 +207,18 @@ impl Trie {
 
                     // if value node, then need to remove the children
                     let new_node: TrieNode = TrieNode::new(node.value.clone(), None);
-                    return RemoveResult::ReplaceNode(Rc::new(new_node));
+                    return RemoveResult::ReplaceNode(Arc::new(new_node));
                 }
 
                 // Need to remove the node from the children
                 // should only clone the value if has + children map without the actual children themselves
                 let mut tmp = node.clone();
-                let mut new_node = Rc::make_mut(&mut tmp);
+                let new_node = Arc::make_mut(&mut tmp);
 
                 // unwrap as we know for sure the children exist
                 new_node.children.as_mut().unwrap().remove(&c);
 
-                RemoveResult::ReplaceNode(Rc::new(new_node.clone()))
+                RemoveResult::ReplaceNode(Arc::new(new_node.clone()))
             }
         }
     }
