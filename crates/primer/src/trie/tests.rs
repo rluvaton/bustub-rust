@@ -332,4 +332,25 @@ mod tests {
 
         assert_eq!(std::ptr::eq(ptr_before, ptr_after), true, "Should point to the same location - not cloned");
     }
+
+    #[test]
+    fn non_copyable() {
+        let trie = Trie::create_empty();
+
+        let trie = trie.put("tes", 233.into());
+        let trie = trie.put("te", 23.into());
+        let trie = trie.put("test", 2333.into());
+
+        assert_eq!(trie.get("te"), Some(&23.into()));
+        assert_eq!(trie.get("tes"), Some(&233.into()));
+        assert_eq!(trie.get("test"), Some(&2333.into()));
+
+        let trie = trie.remove("te");
+        let trie = trie.remove("tes");
+        let trie = trie.remove("test");
+
+        assert_eq!(trie.get("te"), None);
+        assert_eq!(trie.get("tes"), None);
+        assert_eq!(trie.get("test"), None);
+    }
 }
