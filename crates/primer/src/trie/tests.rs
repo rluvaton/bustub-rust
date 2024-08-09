@@ -27,12 +27,12 @@ mod tests {
         // (Some students were using '\0' as the terminator in previous semesters)
         let root = trie.root.clone().expect("Must have root");
 
-        let children = root.get_children().as_ref().expect("Must have children on root");
+        let children = root.children.as_ref().expect("Must have children on root");
 
         assert_eq!(children.len(), 1);
 
         let child = children.get(&'t').unwrap();
-        assert_eq!(child.get_children(), &None);
+        assert_eq!(child.children, None);
 
 
         // The original tests has the following which does not make sense as we only inserted t
@@ -145,7 +145,7 @@ mod tests {
         let trie_node_at_t = trie_root.get_child_at_char('t').expect("must have child t");
         let trie_node_at_e = trie_node_at_t.get_child_at_char('e').expect("must have child e");
 
-        assert_eq!(trie_node_at_e.has_children(), false);
+        assert_eq!(trie_node_at_e.children, None);
 
         let trie = trie.remove("te");
 
