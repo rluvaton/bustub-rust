@@ -14,7 +14,7 @@
  pub const HEADER_PAGE_ID: i32 = 0;                                             // the header page id
  pub const BUSTUB_PAGE_SIZE: i32 = 4096;                                        // size of a data page in byte
  pub const BUFFER_POOL_SIZE: i32 = 10;                                          // size of buffer pool
- pub const LOG_BUFFER_SIZE: i32 = ((BUFFER_POOL_SIZE + 1) * BUSTUB_PAGE_SIZE);  // size of a log buffer in byte
+ pub const LOG_BUFFER_SIZE: i32 = (BUFFER_POOL_SIZE + 1) * BUSTUB_PAGE_SIZE;  // size of a log buffer in byte
  pub const BUCKET_SIZE: i32 = 50;                                               // size of extendible hash bucket
  pub const LRUK_REPLACER_K: i32 = 10;  // lookback window for lru-k replacer
 

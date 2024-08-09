@@ -1,3 +1,5 @@
+mod lru_k_replacer;
+
 pub fn add(left: usize, right: usize) -> usize {
     left + right
 }
