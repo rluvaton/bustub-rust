@@ -1,6 +1,8 @@
 use std::collections::HashMap;
 use common::config::FrameId;
 use crate::lru_k_replacer::access_type::AccessType;
+use crate::lru_k_replacer::counter::AtomicU64Counter;
+use crate::lru_k_replacer::lru_k_node::LRUKNode;
 use crate::lru_k_replacer::lru_k_replacer::LRUKReplacer;
 
 impl LRUKReplacer {
@@ -15,21 +17,16 @@ impl LRUKReplacer {
     ///
     pub fn new(num_frames: isize, k: isize) -> Self {
         LRUKReplacer {
+
             node_store: HashMap::with_capacity(num_frames as usize),
             k,
 
-            // Default
-            current_timestamp: 0,
-
-            // let not really needed?
-            curr_size: 0,
-
-            // Not really needed
-            replacer_size: num_frames,
+            replacer_size: num_frames as usize,
             latch: None,
 
-
             evictable_frames: 0,
+
+            history_access_counter: AtomicU64Counter::default(),
         }
     }
 
@@ -47,20 +44,30 @@ impl LRUKReplacer {
     ///          got evicted
     ///
     pub fn evict(&mut self) -> Option<FrameId> {
-        unimplemented!()
+        // No frame is evictable
+        if self.size() == 0 {
+            return None;
+        }
+
+        // This is not really performant, and we should better track the most likely to be evicted in a sorted way
+        let evictable_frame = self
+            .get_next_to_evict()
+            .clone();
+
+        // TODO - this should not be possible as we check that we have at least 1 evictable item
+        if evictable_frame.is_some() {
+            // We know for sure that the frame is evictable
+            // TODO - what if changed in the middle? we need to hold a lock
+            unsafe { self.remove_unchecked(evictable_frame?) }
+        }
+
+        evictable_frame
     }
 
     /// Record the event that the given frame id is accessed at current timestamp.
     /// Create a new entry for access history if frame id has not been seen before.
     ///
-    /// If frame id is invalid (i.e. larger than replacer_size_), throw an exception. You can
-    /// also use BUSTUB_ASSERT to abort the process if frame id is invalid.
-    ///
-    /// If a frame was previously evictable and is to be set to non-evictable, then size should
-    /// decrement. If a frame was previously non-evictable and is to be set to evictable,
-    /// then size should increment.
-    ///
-    /// If frame is missing or invalid, this function should terminate without modifying anything.
+    /// If frame id is invalid nothing is done
     ///
     /// # Arguments
     ///
@@ -69,8 +76,42 @@ impl LRUKReplacer {
     ///                  This parameter is only needed for leaderboard tests.
     ///
     pub fn record_access(&mut self, frame_id: FrameId, access_type: AccessType) {
-        // TODO = default access type is unknown
-        unimplemented!()
+        if !self.is_valid_frame_id(frame_id) {
+            return;
+        }
+
+        unsafe {
+            self.record_access_unchecked(frame_id, access_type);
+        }
+    }
+
+    /// Record the event that the given frame id is accessed at current timestamp.
+    /// Create a new entry for access history if frame id has not been seen before.
+    ///
+    /// If frame id is invalid (i.e. larger than replacer_size_), throw an exception
+    ///
+    /// # Arguments
+    ///
+    /// * `frame_id`: id of frame that received a new access.
+    /// * `access_type`: type of access that was received.
+    ///                  This parameter is only needed for leaderboard tests.
+    ///
+    /// # Unsafe
+    /// unsafe as we are certain that the frame id is valid
+    pub unsafe fn record_access_unchecked(&mut self, frame_id: FrameId, _access_type: AccessType) {
+        self.assert_valid_frame_id(frame_id);
+
+        let node = self.node_store.get_mut(&frame_id);
+
+        // TODO - should return or what? from the description it look like it should be marked anyway
+        if node.is_none() {
+            self.node_store.insert(frame_id, LRUKNode::new(self.k, frame_id, &self.history_access_counter));
+            return;
+        }
+
+        let node = node.unwrap();
+
+        node.marked_accessed(&self.history_access_counter)
     }
 
     /// Toggle whether a frame is evictable or non-evictable. This function also
@@ -81,7 +122,6 @@ impl LRUKReplacer {
     /// then size should increment.
     ///
     /// If frame is missing or invalid, this function should terminate without modifying anything.
-    ///
     ///
     /// # Arguments
     ///
@@ -129,7 +169,7 @@ impl LRUKReplacer {
 
         // Nothing to change
         if node.is_evictable == set_evictable {
-            return
+            return;
         }
 
         // If evictable, mark as no longer evictable or vice versa
@@ -154,7 +194,7 @@ impl LRUKReplacer {
     pub fn remove(&mut self, frame_id: FrameId) {
         let frame = self.node_store.get(&frame_id);
         if frame.is_none() || !frame.unwrap().is_evictable {
-            return
+            return;
         }
 
         unsafe {
@@ -182,7 +222,7 @@ impl LRUKReplacer {
     pub unsafe fn remove_unchecked(&mut self, frame_id: FrameId) {
         let frame = self.node_store.get(&frame_id);
         if frame.is_none() {
-            return
+            return;
         }
 
         let frame = frame.unwrap();
@@ -205,10 +245,45 @@ impl LRUKReplacer {
     }
 
     fn is_valid_frame_id(&self, frame_id: FrameId) -> bool {
-        self.node_store.capacity() < frame_id as usize
+        self.replacer_size > frame_id as usize
     }
 
     fn assert_valid_frame_id(&self, frame_id: FrameId) {
         assert!(self.is_valid_frame_id(frame_id));
+    }
+
+    /// Helper for debugging in tests
+    pub(super) fn get_order_of_eviction(&self) -> Vec<FrameId> {
+        let now = LRUKNode::get_current_time();
+
+        let mut evictable_frames: Vec<(&LRUKNode, i64)> = self.node_store
+            .values()
+            .filter(|item| item.is_evictable)
+            // (node, interval)
+            .map(|item| (item, item.calculate_intervals(now)))
+            .collect::<Vec<(&LRUKNode, i64)>>();
+
+        evictable_frames
+            .sort_unstable_by(LRUKNode::next_to_evict_compare);
+
+        evictable_frames
+            .into_iter()
+            .map(|item| item.0.frame_id)
+            .collect::<Vec<FrameId>>()
+    }
+
+    pub(super) fn get_next_to_evict(&self) -> Option<FrameId> {
+        let now = LRUKNode::get_current_time();
+
+        // Not the most performant as we keep filtering here, and it's not already sorted
+        self.node_store
+            .values()
+            .filter(|item| item.is_evictable)
+            // (node, interval) - done this for caching, so we won't keep recalculating
+            .map(|item| (item, item.calculate_intervals(now)))
+
+            // Min here as the next evict to compare will be at the beginning
+            .min_by(LRUKNode::next_to_evict_compare)
+            .map(|item| item.0.frame_id)
     }
 }

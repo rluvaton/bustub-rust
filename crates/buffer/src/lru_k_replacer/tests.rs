@@ -22,9 +22,12 @@ mod tests {
         lru_replacer.set_evictable(6, false);
         assert_eq!(lru_replacer.size(), 5);
 
+        assert_eq!(lru_replacer.get_order_of_eviction(), vec![1, 2, 3, 4, 5]);
+
         // Scenario: Insert access history for frame 1. Now frame 1 has two access histories.
         // All other frames have max backward k-dist. The order of eviction is [2,3,4,5,1].
         lru_replacer.record_access(1, AccessType::default());
+        assert_eq!(lru_replacer.get_order_of_eviction(), vec![2, 3, 4, 5, 1]);
 
         // Scenario: Evict three pages from the replacer. Elements with max k-distance should be popped
         // first based on LRU.
@@ -34,6 +37,8 @@ mod tests {
         assert_eq!(lru_replacer.size(), 2);
 
         // Scenario: Now replacer has frames [5,1].
+        assert_eq!(lru_replacer.get_order_of_eviction(), vec![5, 1]);
+
         // Insert new frames 3, 4, and update access history for 5. We should end with [3,1,5,4]
         lru_replacer.record_access(3, AccessType::default());
         lru_replacer.record_access(4, AccessType::default());
@@ -42,6 +47,7 @@ mod tests {
         lru_replacer.set_evictable(3, true);
         lru_replacer.set_evictable(4, true);
         assert_eq!(lru_replacer.size(), 4);
+        assert_eq!(lru_replacer.get_order_of_eviction(), vec![3, 1, 5, 4]);
 
 
         // Scenario: continue looking for victims. We expect 3 to be evicted next.
@@ -55,6 +61,8 @@ mod tests {
         assert_eq!(lru_replacer.size(), 3);
 
         // Now we have [1,5,4]. Continue looking for victims.
+        assert_eq!(lru_replacer.get_order_of_eviction(), vec![1, 5, 4]);
+
         lru_replacer.set_evictable(1, false);
         assert_eq!(lru_replacer.size(), 2);
         assert_eq!(lru_replacer.evict(), Some(5));
@@ -64,6 +72,7 @@ mod tests {
         lru_replacer.record_access(1, AccessType::default());
         lru_replacer.record_access(1, AccessType::default());
         lru_replacer.set_evictable(1, true);
+        assert_eq!(lru_replacer.get_order_of_eviction(), vec![4, 1]);
         assert_eq!(lru_replacer.size(), 2);
         assert_eq!(lru_replacer.evict(), Some(4));
 
