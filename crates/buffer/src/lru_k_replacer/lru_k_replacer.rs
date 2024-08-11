@@ -1,53 +1,46 @@
-use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
+use crate::lru_k_replacer::access_type::AccessType;
 use common::config::FrameId;
-use crate::lru_k_replacer::counter::AtomicU64Counter;
-use crate::lru_k_replacer::lru_k_node::LRUKNode;
+use std::sync::{Arc, Mutex};
+use crate::lru_k_replacer::LRUKReplacerImpl;
 
-/**
- * LRUKReplacer implements the LRU-k replacement policy.
- *
- * The LRU-k algorithm evicts a frame whose backward k-distance is maximum
- * of all frames. Backward k-distance is computed as the difference in time between
- * current timestamp and the timestamp of kth previous access.
- *
- * A frame with less than k historical references is given
- * +inf as its backward k-distance. When multiple frames have +inf backward k-distance,
- * classical LRU algorithm is used to choose victim.
- */
-#[derive(Clone, Debug)]
+// Cloning does not actually clone the underlying data but just increment the ref count
+#[derive(Debug, Clone)]
 pub struct LRUKReplacer {
-    // TODO(student): implement me! You can replace these member variables as you like.
-    // Remove #[allow(dead_code)] if you start using them.
-
-    /// in cpp it was unordered_map
-    /// # Performance improvement idea
-    /// the following idea will improve eviction time but decrease record access time
-    ///
-    /// split to 2 parts, evictable and non-evictable
-    /// evictable is sorted by first to evict and each time updating access it will update the location of the frame id
-    #[allow(dead_code)]
-    pub(crate) node_store: HashMap<FrameId, LRUKNode>,
-
-    // TODO - set default to 0
-    // #[allow(dead_code)]
-    // pub(crate) current_timestamp: isize,
-
-    // TODO - set default to 0
-    // #[allow(dead_code)]
-    // pub(crate) curr_size: isize,
-
-    #[allow(dead_code)]
-    pub(crate) replacer_size: usize,
-
-    #[allow(dead_code)]
-    pub(crate) k: isize,
-
-    #[allow(dead_code)]
-    pub(crate) latch: Arc<Mutex<()>>,
-
-    // Tracks the number of evictable frames
-    pub(crate) evictable_frames: isize,
-
-    pub(crate) history_access_counter: Arc<AtomicU64Counter>,
+    // This lock every call instead of smarter lock, or when can lock smaller parts of the code
+    pub(super) replacer: Arc<Mutex<LRUKReplacerImpl>>,
 }
+
+
+// Proxy to LRU-K Replacer Impl
+impl LRUKReplacer {
+    pub fn new(num_frames: isize, k: isize) -> Self {
+        LRUKReplacer {
+            replacer: Arc::new(Mutex::new(LRUKReplacerImpl::new(num_frames, k)))
+        }
+    }
+
+    pub fn evict(&mut self) -> Option<FrameId> {
+        self.replacer.lock().unwrap().evict()
+    }
+
+    pub fn record_access(&mut self, frame_id: FrameId, access_type: AccessType) {
+        self.replacer.lock().unwrap().record_access(frame_id, access_type)
+    }
+
+    pub fn set_evictable(&mut self, frame_id: FrameId, set_evictable: bool) {
+        self.replacer.lock().unwrap().set_evictable(frame_id, set_evictable)
+    }
+
+    pub fn remove(&mut self, frame_id: FrameId) {
+        self.replacer.lock().unwrap().remove(frame_id)
+    }
+
+    pub fn size(&self) -> isize {
+        self.replacer.lock().unwrap().size()
+    }
+
+    pub(super) fn get_order_of_eviction(&self) -> Vec<FrameId> {
+        self.replacer.lock().unwrap().get_order_of_eviction()
+    }
+}
+

@@ -1,12 +1,12 @@
-use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
-use common::config::FrameId;
 use crate::lru_k_replacer::access_type::AccessType;
 use crate::lru_k_replacer::counter::AtomicU64Counter;
 use crate::lru_k_replacer::lru_k_node::LRUKNode;
-use crate::lru_k_replacer::lru_k_replacer::LRUKReplacer;
+use common::config::FrameId;
+use std::collections::HashMap;
+use std::sync::Arc;
+use crate::lru_k_replacer::LRUKReplacerImpl;
 
-impl LRUKReplacer {
+impl LRUKReplacerImpl {
     /// a new `LRUKReplacer`
     ///
     /// # Arguments
@@ -16,14 +16,12 @@ impl LRUKReplacer {
     ///
     /// returns: LRUKReplacer
     ///
-    pub fn new(num_frames: isize, k: isize) -> Self {
-        LRUKReplacer {
-
+    pub(crate) fn new(num_frames: isize, k: isize) -> Self {
+        LRUKReplacerImpl {
             node_store: HashMap::with_capacity(num_frames as usize),
             k,
 
             replacer_size: num_frames as usize,
-            latch: Arc::new(Mutex::new(())),
 
             evictable_frames: 0,
 
@@ -45,22 +43,16 @@ impl LRUKReplacer {
     ///          got evicted
     ///
     pub fn evict(&mut self) -> Option<FrameId> {
-
-        let evictable_frame;
-        {
-            let _guard = &self.latch.lock();
-
-            // No frame is evictable
-            if self.size() == 0 {
-                return None;
-            }
-
-            // This is not really performant, and we should better track the most likely to be evicted in a sorted way
-            evictable_frame = self
-                .get_next_to_evict()
-                .expect("Cant have missing evictable frame");
-
+        // No frame is evictable
+        if self.size() == 0 {
+            return None;
         }
+
+        // This is not really performant, and we should better track the most likely to be evicted in a sorted way
+        let evictable_frame = self
+            .get_next_to_evict()
+            .expect("Cant have missing evictable frame");
+
         // We know for sure that the frame is evictable
         unsafe { self.remove_unchecked(evictable_frame) }
 
@@ -103,9 +95,6 @@ impl LRUKReplacer {
     /// unsafe as we are certain that the frame id is valid
     pub unsafe fn record_access_unchecked(&mut self, frame_id: FrameId, _access_type: AccessType) {
         self.assert_valid_frame_id(frame_id);
-
-        // This is too much latching, maybe have better performant way
-        let _guard = self.latch.lock();
 
         let node = self.node_store.get_mut(&frame_id);
 
@@ -164,9 +153,6 @@ impl LRUKReplacer {
         // We are certain that the frame id is valid
         self.assert_valid_frame_id(frame_id);
 
-        // This is too much latching, maybe have better performant way
-        let _guard = self.latch.lock();
-
         let node = self.node_store.get_mut(&frame_id);
 
         // Nothing to do
@@ -201,14 +187,9 @@ impl LRUKReplacer {
     /// * `frame_id`: Frame ID to remove, the frame must be evictable
     ///
     pub fn remove(&mut self, frame_id: FrameId) {
-        // This is too much latching, maybe have better performant way
-        {
-            let _guard = self.latch.lock();
-
-            let frame = self.node_store.get(&frame_id);
-            if frame.is_none() || !frame.unwrap().is_evictable {
-                return;
-            }
+        let frame = self.node_store.get(&frame_id);
+        if frame.is_none() || !frame.unwrap().is_evictable {
+            return;
         }
 
         unsafe {
@@ -238,8 +219,6 @@ impl LRUKReplacer {
     /// as the functions that called it should be responsible for that
     ///
     unsafe fn remove_unchecked(&mut self, frame_id: FrameId) {
-        let _guard = self.latch.lock();
-
         let frame = self.node_store.get(&frame_id);
         if frame.is_none() {
             return;
@@ -273,10 +252,7 @@ impl LRUKReplacer {
     }
 
     /// Helper for debugging in tests
-    pub(super) fn get_order_of_eviction(&self) -> Vec<FrameId> {
-        // This is too much latching, maybe have better performant way
-        let _guard = self.latch.lock();
-
+    pub(crate) fn get_order_of_eviction(&self) -> Vec<FrameId> {
         let now = LRUKNode::get_current_time();
 
         let mut evictable_frames: Vec<(&LRUKNode, i64)> = self.node_store
@@ -295,7 +271,7 @@ impl LRUKReplacer {
             .collect::<Vec<FrameId>>()
     }
 
-    pub(super) fn get_next_to_evict(&self) -> Option<FrameId> {
+    fn get_next_to_evict(&self) -> Option<FrameId> {
         let now = LRUKNode::get_current_time();
 
         // Not the most performant as we keep filtering here, and it's not already sorted
