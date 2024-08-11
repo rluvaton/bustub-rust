@@ -3,7 +3,7 @@
 use crate::trie::trie_node_value_types::TrieNodeValueTypes;
 use crate::trie_store::trie_store::TrieStore;
 use crate::Trie;
-use std::sync::Arc;
+use std::sync::{Arc, MutexGuard};
 
 impl TrieStore {
     // This function returns a ValueGuard object that holds a reference to the value in the trie. If
@@ -37,15 +37,6 @@ impl TrieStore {
         // You will need to ensure there is only one writer at a time. Think of how you can achieve this.
         // The logic should be somehow similar to `TrieStore::Get`.
 
-        // Locking to get the root
-        // let mut root: Arc<Trie>;
-        // {
-        //     let guard = self.root_lock.lock().unwrap();
-        //     root = Arc::clone(&guard);
-        //
-        //     // Release the lock
-        // }
-
         // After got the root, lock in the write lock to avoid multiple writers
         let mut write_guard = self.write_lock.lock().unwrap();
 
@@ -53,14 +44,7 @@ impl TrieStore {
         let new_root = write_guard.put(key, value);
 
         // Lock again the root so we can modify it
-        {
-            let mut guard = self.root_lock.lock().unwrap();
-            *guard = Arc::clone(&new_root);
-            *write_guard = Arc::clone(&new_root);
-            self.root = Arc::clone(&new_root)
-
-            // Release the root lock
-        }
+        self.update_root(new_root, write_guard);
 
         // Release the write lock
     }
@@ -70,14 +54,6 @@ impl TrieStore {
         // You will need to ensure there is only one writer at a time. Think of how you can achieve this.
         // The logic should be somehow similar to `TrieStore::Get`.
 
-        // Locking to get the root
-        // let mut root: Arc<Trie>;
-        // {
-        //     let _guard = self.root_lock.lock().unwrap();
-        //     root = Arc::clone(&self.root);
-        //
-        //     // Release the lock
-        // }
 
         // After got the root, lock in the write lock to avoid multiple writers
         let mut write_guard = self.write_lock.lock().unwrap();
@@ -86,16 +62,17 @@ impl TrieStore {
         let new_root = write_guard.remove(key);
 
         // Lock again the root so we can modify it
-
-        {
-            let mut guard = self.root_lock.lock().unwrap();
-            *guard = Arc::clone(&new_root);
-            *write_guard = Arc::clone(&new_root);
-            self.root = Arc::clone(&new_root)
-
-            // Release the root lock
-        }
+        self.update_root(new_root, write_guard);
 
         // Release the write lock
+    }
+
+    fn update_root(&mut self, new_root: Arc<Trie>, write_guard: MutexGuard<Arc<Trie>>) {
+        // Lock again the root so we can modify it
+        let mut guard = self.root_lock.lock().unwrap();
+
+        *guard = Arc::clone(&new_root);
+        *write_guard = Arc::clone(&new_root);
+        self.root = Arc::clone(&new_root)
     }
 }
