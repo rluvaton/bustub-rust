@@ -20,6 +20,7 @@ type LRUKNodeCompareItem<'a> = (
     i64
 );
 
+#[derive(Clone, Debug)]
 pub struct LRUKNode {
 
     // Remove #[allow(dead_code)] if you start using them. Feel free to change the member variables as you want.

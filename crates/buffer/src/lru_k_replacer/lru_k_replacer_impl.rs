@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
 use common::config::FrameId;
 use crate::lru_k_replacer::access_type::AccessType;
 use crate::lru_k_replacer::counter::AtomicU64Counter;
@@ -22,11 +23,11 @@ impl LRUKReplacer {
             k,
 
             replacer_size: num_frames as usize,
-            latch: None,
+            latch: Arc::new(Mutex::new(())),
 
             evictable_frames: 0,
 
-            history_access_counter: AtomicU64Counter::default(),
+            history_access_counter: Arc::new(AtomicU64Counter::default()),
         }
     }
 
@@ -44,24 +45,26 @@ impl LRUKReplacer {
     ///          got evicted
     ///
     pub fn evict(&mut self) -> Option<FrameId> {
-        // No frame is evictable
-        if self.size() == 0 {
-            return None;
+
+        let evictable_frame;
+        {
+            let _guard = &self.latch.lock();
+
+            // No frame is evictable
+            if self.size() == 0 {
+                return None;
+            }
+
+            // This is not really performant, and we should better track the most likely to be evicted in a sorted way
+            evictable_frame = self
+                .get_next_to_evict()
+                .expect("Cant have missing evictable frame");
+
         }
+        // We know for sure that the frame is evictable
+        unsafe { self.remove_unchecked(evictable_frame) }
 
-        // This is not really performant, and we should better track the most likely to be evicted in a sorted way
-        let evictable_frame = self
-            .get_next_to_evict()
-            .clone();
-
-        // TODO - this should not be possible as we check that we have at least 1 evictable item
-        if evictable_frame.is_some() {
-            // We know for sure that the frame is evictable
-            // TODO - what if changed in the middle? we need to hold a lock
-            unsafe { self.remove_unchecked(evictable_frame?) }
-        }
-
-        evictable_frame
+        Some(evictable_frame)
     }
 
     /// Record the event that the given frame id is accessed at current timestamp.
@@ -101,10 +104,13 @@ impl LRUKReplacer {
     pub unsafe fn record_access_unchecked(&mut self, frame_id: FrameId, _access_type: AccessType) {
         self.assert_valid_frame_id(frame_id);
 
+        // This is too much latching, maybe have better performant way
+        let _guard = self.latch.lock();
+
         let node = self.node_store.get_mut(&frame_id);
 
-        // TODO - should return or what? from the description it look like it should be marked anyway
         if node.is_none() {
+            // TODO - should we evict another frame?
             self.node_store.insert(frame_id, LRUKNode::new(self.k, frame_id, &self.history_access_counter));
             return;
         }
@@ -158,6 +164,9 @@ impl LRUKReplacer {
         // We are certain that the frame id is valid
         self.assert_valid_frame_id(frame_id);
 
+        // This is too much latching, maybe have better performant way
+        let _guard = self.latch.lock();
+
         let node = self.node_store.get_mut(&frame_id);
 
         // Nothing to do
@@ -192,9 +201,14 @@ impl LRUKReplacer {
     /// * `frame_id`: Frame ID to remove, the frame must be evictable
     ///
     pub fn remove(&mut self, frame_id: FrameId) {
-        let frame = self.node_store.get(&frame_id);
-        if frame.is_none() || !frame.unwrap().is_evictable {
-            return;
+        // This is too much latching, maybe have better performant way
+        {
+            let _guard = self.latch.lock();
+
+            let frame = self.node_store.get(&frame_id);
+            if frame.is_none() || !frame.unwrap().is_evictable {
+                return;
+            }
         }
 
         unsafe {
@@ -219,7 +233,13 @@ impl LRUKReplacer {
     /// # Unsafe:
     /// This is unsafe because we are certain that the frame is evictable
     ///
-    pub unsafe fn remove_unchecked(&mut self, frame_id: FrameId) {
+    /// # Visibility
+    /// function is not public as it is not locking by itself
+    /// as the functions that called it should be responsible for that
+    ///
+    unsafe fn remove_unchecked(&mut self, frame_id: FrameId) {
+        let _guard = self.latch.lock();
+
         let frame = self.node_store.get(&frame_id);
         if frame.is_none() {
             return;
@@ -241,7 +261,7 @@ impl LRUKReplacer {
     /// returns: isize the number of evictable frames
     ///
     pub fn size(&self) -> isize {
-        self.evictable_frames as isize
+        self.evictable_frames
     }
 
     fn is_valid_frame_id(&self, frame_id: FrameId) -> bool {
@@ -254,6 +274,9 @@ impl LRUKReplacer {
 
     /// Helper for debugging in tests
     pub(super) fn get_order_of_eviction(&self) -> Vec<FrameId> {
+        // This is too much latching, maybe have better performant way
+        let _guard = self.latch.lock();
+
         let now = LRUKNode::get_current_time();
 
         let mut evictable_frames: Vec<(&LRUKNode, i64)> = self.node_store

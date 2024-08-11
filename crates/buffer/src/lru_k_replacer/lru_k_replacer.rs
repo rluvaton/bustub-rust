@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 use common::config::FrameId;
 use crate::lru_k_replacer::counter::AtomicU64Counter;
 use crate::lru_k_replacer::lru_k_node::LRUKNode;
@@ -15,6 +15,7 @@ use crate::lru_k_replacer::lru_k_node::LRUKNode;
  * +inf as its backward k-distance. When multiple frames have +inf backward k-distance,
  * classical LRU algorithm is used to choose victim.
  */
+#[derive(Clone, Debug)]
 pub struct LRUKReplacer {
     // TODO(student): implement me! You can replace these member variables as you like.
     // Remove #[allow(dead_code)] if you start using them.
@@ -42,14 +43,11 @@ pub struct LRUKReplacer {
     #[allow(dead_code)]
     pub(crate) k: isize,
 
-    // TODO - if using remove the option?
     #[allow(dead_code)]
-    pub(crate) latch: Option<Mutex<()>>,
+    pub(crate) latch: Arc<Mutex<()>>,
 
     // Tracks the number of evictable frames
     pub(crate) evictable_frames: isize,
 
-    pub(crate) history_access_counter: AtomicU64Counter,
+    pub(crate) history_access_counter: Arc<AtomicU64Counter>,
 }
-
-

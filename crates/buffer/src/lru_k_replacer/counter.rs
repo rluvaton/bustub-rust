@@ -1,6 +1,6 @@
 use std::sync::atomic::{AtomicU64, Ordering};
 
-
+#[derive(Debug)]
 pub(crate) struct AtomicU64Counter(AtomicU64);
 
 impl AtomicU64Counter {
