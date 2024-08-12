@@ -1,0 +1,11 @@
+[package]
+name = "storage"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+common = {path = "../common"}
+anyhow = "1.0.86"
+
+[dev-dependencies]
+tempdir = "0.3.7"

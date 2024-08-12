@@ -1,3 +1,7 @@
 [workspace]
-members = ["crates/buffer", "crates/common", "crates/primer"
+members = [
+    "crates/buffer",
+    "crates/common",
+    "crates/primer",
+    "crates/storage"
 ]
