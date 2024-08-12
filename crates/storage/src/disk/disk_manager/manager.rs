@@ -355,7 +355,6 @@ impl DiskManager for DefaultDiskManager {
      */
     fn set_flush_log_future(&mut self, f: Option<Box<dyn Future<Output=()>>>) {
         self.flush_log_f = f;
-        unimplemented!()
     }
 
     /** Checks if the non-blocking flush future was set. */
