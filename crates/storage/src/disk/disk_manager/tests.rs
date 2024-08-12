@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use crate::disk::disk_manager::DiskManager;
+    use crate::disk::disk_manager::{DefaultDiskManager, DiskManager};
     use common::config::BUSTUB_PAGE_SIZE;
     use std::fs;
     use std::path::{Path, PathBuf};
@@ -21,7 +21,7 @@ mod tests {
         let tmp_dir = setup();
 
         let db_file = tmp_dir.path().join("test.db");
-        let mut dm = DiskManager::new(db_file).expect("Should create disk manager");
+        let mut dm = DefaultDiskManager::new(db_file).expect("Should create disk manager");
         let val = "A test string.";
         data[0..val.len()].copy_from_slice(val.as_bytes());
 
@@ -54,7 +54,7 @@ mod tests {
         let tmp_dir = setup();
 
         let db_file = tmp_dir.path().join("test.db");
-        let mut dm = DiskManager::new(db_file).expect("Should create disk manager");
+        let mut dm = DefaultDiskManager::new(db_file).expect("Should create disk manager");
 
         let val = "A test string.";
         data[0..val.len()].copy_from_slice(val.as_bytes());
@@ -76,7 +76,7 @@ mod tests {
     #[test]
     fn bad_file() {
         let p = PathBuf::from("dev/null\\/foo/bar/baz/test.db");
-        let creation = DiskManager::new(p);
+        let creation = DefaultDiskManager::new(p);
 
         assert_eq!(creation.is_err(), true);
     }
