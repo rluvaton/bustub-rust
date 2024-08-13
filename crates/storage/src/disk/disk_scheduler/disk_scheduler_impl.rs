@@ -5,7 +5,7 @@ use common::Promise;
 
 type DiskSchedulerPromise = Promise<bool>;
 
-impl DiskScheduler {
+impl<'a> DiskScheduler<'a> {
     pub fn new(disk_manager: &impl DiskManager) -> Self {
         unimplemented!();
     }

@@ -1,5 +1,7 @@
-use std::thread::Thread;
 use crate::disk::disk_manager::DiskManager;
+use crate::disk::disk_scheduler::disk_request::DiskRequest;
+use common::Channel;
+use std::thread::Thread;
 
 /**
  * @brief The DiskScheduler schedules disk read and write operations.
@@ -8,7 +10,7 @@ use crate::disk::disk_manager::DiskManager;
  * maintains a background worker thread that processes the scheduled requests using the disk manager. The background
  * thread is created in the DiskScheduler constructor and joined in its destructor.
  */
-pub struct DiskScheduler {
+pub struct DiskScheduler<'a> {
 
     /** Pointer to the disk manager. */
     // DiskManager *disk_manager_ __attribute__((__unused__));
@@ -18,7 +20,7 @@ pub struct DiskScheduler {
         * `std::nullopt` is put into the queue to signal to the background thread to stop execution. */
     // Channel<std::optional<DiskRequest>> request_queue_;
     // TODO ----------- FIX TYPE -------
-    request_queue: Option<()>,
+    request_queue: Option<Channel<DiskRequest<'a>>>,
 
     /** The background thread responsible for issuing scheduled requests to the disk manager. */
     // std::optional<std::thread> background_thread_;
