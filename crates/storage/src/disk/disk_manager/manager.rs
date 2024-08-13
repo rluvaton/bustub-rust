@@ -2,11 +2,12 @@
 use anyhow::{anyhow, Result};
 
 use std::fs::{File, OpenOptions};
-use std::future::Future;
 use std::io::{Read, Seek, SeekFrom, Write};
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
+use std::time::Duration;
 use common::config::{PageId, BUSTUB_PAGE_SIZE};
+use common::Future;
 use crate::disk::disk_manager::disk_manager_trait::DiskManager;
 use crate::disk::disk_manager::utils::get_file_size;
 
@@ -38,7 +39,7 @@ pub struct DefaultDiskManager {
     flush_log: bool,
 
     // std::future<void> *flush_log_f_{nullptr};
-    flush_log_f: Option<Box<dyn Future<Output=()>>>,
+    flush_log_f: Option<Future<()>>,
 }
 
 impl DefaultDiskManager {
@@ -252,15 +253,13 @@ impl DiskManager for DefaultDiskManager {
 
         self.flush_log = true;
 
-        if (self.flush_log_f.is_some()) {
+        if let Some(flush_log_f) = &self.flush_log_f {
             // used for checking non-blocking flushing
-            // assert(flush_log_f_->wait_for(std::chrono::seconds(10)) == std::future_status::ready);
-
-            // TODO - #######################
-            unimplemented!("flush log f is some is not implemented")
+            assert_eq!(flush_log_f.wait_for(Duration::from_secs(10)), true);
         }
 
         self.num_flushes += 1;
+
         // sequence write
         let res = self.log_io.write(&log_data[0..size as usize]);
 
@@ -353,7 +352,7 @@ impl DiskManager for DefaultDiskManager {
      * Sets the future which is used to check for non-blocking flushes.
      * @param f the non-blocking flush check
      */
-    fn set_flush_log_future(&mut self, f: Option<Box<dyn Future<Output=()>>>) {
+    fn set_flush_log_future(&mut self, f: Option<Future<()>>) {
         self.flush_log_f = f;
     }
 

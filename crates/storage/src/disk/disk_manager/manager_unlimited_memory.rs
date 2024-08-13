@@ -1,17 +1,10 @@
-use anyhow::{anyhow, Result};
-
 use crate::disk::disk_manager::disk_manager_trait::DiskManager;
-use crate::disk::disk_manager::utils::get_file_size;
 use common::config::{PageId, BUSTUB_PAGE_SIZE};
-use std::fs::{File, OpenOptions};
-use std::future::Future;
-use std::io::{Read, Seek, SeekFrom, Write};
-use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::thread::{sleep, ThreadId};
 use std::time::Duration;
-use crate::disk::disk_manager::DefaultDiskManager;
+use common::Future;
 
 // TODO - Why shared?
 static BUFFER_USED: Mutex<Option<Vec<u8>>> = Mutex::new(None);
@@ -29,8 +22,6 @@ fn create_new_protected_page() -> ProtectedPage {
  * writing of pages to and from disk, providing a logical file layer within the context of a database management system.
  */
 pub struct DiskManagerUnlimitedMemory {
-    underlying_disk_manager: DefaultDiskManager,
-
     // TODO - default false
     latency_simulator_enabled: bool,
 
@@ -54,23 +45,18 @@ impl DiskManagerUnlimitedMemory {
      * Creates a new disk manager that writes to the specified database file.
      * @param db_file the file name of the database file to write to
      */
-    pub fn new(db_file: PathBuf) -> Result<DiskManagerUnlimitedMemory> {
-        Ok(
-            DiskManagerUnlimitedMemory {
-                underlying_disk_manager: DefaultDiskManager::new(db_file)?,
+    pub fn new() -> DiskManagerUnlimitedMemory {
+        DiskManagerUnlimitedMemory {
+            latency_simulator_enabled: false,
 
-                latency_simulator_enabled: false,
+            recent_access: [0; 4],
+            latency_processor_mutex: Mutex::new(()),
+            access_ptr: 0,
 
-                recent_access: [0; 4],
-                latency_processor_mutex: Mutex::new(()),
-                access_ptr: 0,
-
-                mutex: Mutex::new(()),
-                thread_id: None,
-                data: vec![],
-
-            }
-        )
+            mutex: Mutex::new(()),
+            thread_id: None,
+            data: vec![],
+        }
     }
 
     fn process_latency(&mut self, page_id: PageId) {
@@ -123,9 +109,7 @@ impl DiskManagerUnlimitedMemory {
 }
 
 impl DiskManager for DiskManagerUnlimitedMemory {
-    fn shut_down(&mut self) {
-        self.underlying_disk_manager.shut_down()
-    }
+    fn shut_down(&mut self) {}
 
     /**
      * Write a page to the database file.
@@ -206,30 +190,30 @@ impl DiskManager for DiskManagerUnlimitedMemory {
     }
 
     fn write_log(&mut self, log_data: &[u8], size: i32) {
-        self.underlying_disk_manager.write_log(log_data, size)
+        unimplemented!();
     }
 
     fn read_log(&mut self, log_data: &mut [u8], size: i32, offset: i32) -> bool {
-        self.underlying_disk_manager.read_log(log_data, size, offset)
+        unimplemented!();
     }
 
     fn get_num_flushes(&self) -> i32 {
-        self.underlying_disk_manager.get_num_flushes()
+        unimplemented!();
     }
 
     fn get_flush_state(&self) -> bool {
-        self.underlying_disk_manager.get_flush_state()
+        unimplemented!();
     }
 
     fn get_num_writes(&self) -> i32 {
-        self.underlying_disk_manager.get_num_writes()
+        unimplemented!();
     }
 
-    fn set_flush_log_future(&mut self, f: Option<Box<dyn Future<Output=()>>>) {
-        self.underlying_disk_manager.set_flush_log_future(f)
+    fn set_flush_log_future(&mut self, f: Option<Future<()>>) {
+        unimplemented!();
     }
 
     fn has_flush_log_future(&self) -> bool {
-        self.underlying_disk_manager.has_flush_log_future()
+        unimplemented!();
     }
 }

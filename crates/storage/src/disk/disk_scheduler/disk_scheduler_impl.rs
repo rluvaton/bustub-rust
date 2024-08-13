@@ -1,16 +1,14 @@
 use crate::disk::disk_manager::DiskManager;
 use crate::disk::disk_scheduler::disk_request::DiskRequest;
 use crate::disk::disk_scheduler::disk_scheduler::DiskScheduler;
+use common::Promise;
 
-// TODO --------- FIX TYPE
-// type DiskSchedulerPromise = std::promise<bool>;
-type DiskSchedulerPromise = bool;
+type DiskSchedulerPromise = Promise<bool>;
 
 impl DiskScheduler {
-    pub fn new(disk_manager: &DiskManager) {
-
+    pub fn new(disk_manager: &impl DiskManager) -> Self {
+        unimplemented!();
     }
-
 
     /**
      * TODO(P1): Add implementation
@@ -44,7 +42,7 @@ impl DiskScheduler {
      *
      * @return std::promise<bool>
      */
-    pub fn create_promise() -> DiskSchedulerPromise {
-        unimplemented!()
+    pub fn create_promise(&self) -> DiskSchedulerPromise {
+        Promise::new()
     }
 }

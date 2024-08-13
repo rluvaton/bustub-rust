@@ -70,9 +70,6 @@ mod tests {
         dm.shut_down();
     }
 
-
-
-
     #[test]
     fn bad_file() {
         let p = PathBuf::from("dev/null\\/foo/bar/baz/test.db");

@@ -1,5 +1,6 @@
 use std::thread::JoinHandle;
 use common::config::PageId;
+use common::Promise;
 
 /**
  * @brief Represents a Write or Read request for the DiskManager to execute.
@@ -16,12 +17,12 @@ pub(crate) struct DiskRequest<'a> {
      */
     // char *data_;
     //
-    data: &'a [u8],
+    pub(crate) data: &'a [u8],
 
     /** ID of the page being read from / written to disk. */
-    page_id: PageId,
+    pub(crate) page_id: PageId,
 
     /** Callback used to signal to the request issuer when the request has been completed. */
     // std::promise<bool> callback_;
-    callback: JoinHandle<bool>,
+    pub(crate) callback: Promise<bool>,
 }

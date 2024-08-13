@@ -12,7 +12,7 @@ pub struct DiskScheduler {
 
     /** Pointer to the disk manager. */
     // DiskManager *disk_manager_ __attribute__((__unused__));
-    disk_manager: DiskManager,
+    disk_manager: Box<dyn DiskManager>,
 
     /** A shared queue to concurrently schedule and process requests. When the DiskScheduler's destructor is called,
         * `std::nullopt` is put into the queue to signal to the background thread to stop execution. */
