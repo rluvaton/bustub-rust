@@ -13,6 +13,13 @@ pub struct Channel<T> {
 }
 
 impl<T> Channel<T> {
+    pub fn new() -> Self {
+        Channel {
+            mutex: Mutex::new(()),
+            queue: VecDeque::new(),
+            cv: Condvar::new()
+        }
+    }
     pub fn put(&mut self, el: T) {
         {
             let _guard = self.mutex.lock().unwrap();

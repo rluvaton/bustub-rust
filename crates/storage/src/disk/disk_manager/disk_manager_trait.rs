@@ -9,6 +9,8 @@ pub trait DiskManager {
 
     /**
      * Shut down the disk manager and close all the file resources.
+
+    // TODO - don't really need, can implement the drop?
      */
     fn shut_down(&mut self);
 

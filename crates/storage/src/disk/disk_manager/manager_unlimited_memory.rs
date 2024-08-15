@@ -133,19 +133,27 @@ impl DiskManager for DiskManagerUnlimitedMemory {
             }
 
             if self.data[page_id as usize].is_none() {
-                self.data[page_id as usize] = Arc::new(
+                ptr = Arc::new(
                     Some(
                         create_new_protected_page()
                     )
-                )
-            }
+                );
 
-            ptr = Arc::clone(&self.data[page_id as usize]);
+
+                // self.data[page_id as usize] = ptr.clone();
+            } else {
+                ptr = Arc::clone(&self.data[page_id as usize]);
+            }
         }
 
-        let mut page_lock = Arc::get_mut(&mut ptr).unwrap().as_ref().unwrap().lock().unwrap();
+        {
+            let a = Arc::get_mut(&mut ptr);
 
-        page_lock[0..BUSTUB_PAGE_SIZE as usize].copy_from_slice(page_data);
+            let mut page_lock = a.unwrap().as_ref().unwrap().lock().unwrap();
+
+            page_lock[0..BUSTUB_PAGE_SIZE as usize].copy_from_slice(page_data);
+        }
+        self.data[page_id as usize] = ptr;
 
         self.post_process_latency(page_id);
     }
@@ -158,7 +166,7 @@ impl DiskManager for DiskManagerUnlimitedMemory {
     fn read_page(&mut self, page_id: PageId, page_data: &mut [u8]) {
         self.process_latency(page_id);
 
-        let mut ptr: Arc<Option<ProtectedPage>>;
+        let mut ptr: &mut Arc<Option<ProtectedPage>>;
 
         {
             let _lock = self.mutex.lock().unwrap();
@@ -179,12 +187,14 @@ impl DiskManager for DiskManagerUnlimitedMemory {
                 panic!("page {} not exists", page_id);
             }
 
-            ptr = Arc::clone(&self.data[page_id as usize]);
+            ptr = &mut self.data[page_id as usize];
         }
 
-        let page_lock = Arc::get_mut(&mut ptr).unwrap().as_ref().unwrap().lock().unwrap();
+        {
+            let page_lock = Arc::get_mut(&mut ptr).unwrap().as_ref().unwrap().lock().unwrap();
 
-        page_data[0..BUSTUB_PAGE_SIZE as usize].copy_from_slice(page_lock.as_ref());
+            page_data[0..BUSTUB_PAGE_SIZE as usize].copy_from_slice(page_lock.as_ref());
+        }
 
         self.post_process_latency(page_id);
     }

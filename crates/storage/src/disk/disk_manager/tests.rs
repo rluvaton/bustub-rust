@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use crate::disk::disk_manager::{DefaultDiskManager, DiskManager};
+    use crate::disk::disk_manager::{DefaultDiskManager, DiskManager, DiskManagerUnlimitedMemory};
     use common::config::BUSTUB_PAGE_SIZE;
     use std::fs;
     use std::path::{Path, PathBuf};
@@ -76,5 +76,34 @@ mod tests {
         let creation = DefaultDiskManager::new(p);
 
         assert_eq!(creation.is_err(), true);
+    }
+
+
+    #[test]
+    fn read_write_page_unlimited_memory() {
+        let mut buf = [0u8; BUSTUB_PAGE_SIZE as usize];
+        let mut data = [0u8; BUSTUB_PAGE_SIZE as usize];
+        let tmp_dir = setup();
+
+        let mut dm = DiskManagerUnlimitedMemory::new();
+        let val = "A test string.";
+        data[0..val.len()].copy_from_slice(val.as_bytes());
+
+        dm.write_page(0, &data);
+        dm.read_page(0, &mut buf);
+
+        // EXPECT_EQ(std::memcmp(buf, data, sizeof(buf)), 0);
+        assert_eq!(buf, data);
+
+        // std::memset(buf, 0, sizeof(buf));
+        buf.fill(0);
+
+        dm.write_page(5, &data);
+        dm.read_page(5, &mut buf);
+
+        // EXPECT_EQ(std::memcmp(buf, data, sizeof(buf)), 0);
+        assert_eq!(buf, data);
+
+        dm.shut_down();
     }
 }
