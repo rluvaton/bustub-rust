@@ -4,77 +4,53 @@ use common::config::PageId;
 use common::Promise;
 
 /**
- * @brief Represents a Write or Read request for the DiskManager to execute.
+ * @brief Represents a Read request for the DiskManager to execute.
  */
-pub(crate) struct DiskRequest {
-
-    /** Flag indicating whether the request is a write or a read. */
-    pub(crate) is_write: bool,
-
-    /**
-     *  Pointer to the start of the memory location where a page is either:
-     *   1. being read into from disk (on a read).
-     *   2. being written out to disk (on a write).
-     */
-    // char *data_;
-    //
-    pub(crate) data: Vec<u8>,
-
-    /** ID of the page being read from / written to disk. */
-    pub(crate) page_id: PageId,
-
-    /** Callback used to signal to the request issuer when the request has been completed. */
-    // std::promise<bool> callback_;
-    pub(crate) callback: Promise<bool>,
-}
-
-
-/**
- * @brief Represents a Write or Read request for the DiskManager to execute.
- */
-pub(crate) struct ReadDiskRequest<const Size: usize> {
+pub struct ReadDiskRequest {
     /**
      *  Pointer to the start of the memory location where a page is being read into from disk (on a read).
+    Having box will reduce performance as it will need to create in the heap
      */
-    pub(crate) data: Arc<Mutex<[u8; Size]>>,
+    pub data: Arc<Mutex<Box<[u8]>>>,
 
     /** ID of the page being read from disk. */
-    pub(crate) page_id: PageId,
+    pub page_id: PageId,
 
     /** Callback used to signal to the request issuer when the request has been completed. */
-    pub(crate) callback: Promise<bool>,
+    pub callback: Promise<bool>,
 }
-
 
 /**
- * @brief Represents a Write or Read request for the DiskManager to execute.
+ * @brief Represents a Write request for the DiskManager to execute.
  */
-pub(crate) struct WriteDiskRequest<const Size: usize> {
+pub struct WriteDiskRequest {
     /**
      *  Pointer to the start of the memory location where a page being written out to disk
+
+    Having box will reduce performance as it will need to create in the heap
      */
-    pub(crate) data: Arc<[u8; Size]>,
+    pub data: Arc<Box<[u8]>>,
 
     /** ID of the page being written to disk. */
-    pub(crate) page_id: PageId,
+    pub page_id: PageId,
 
     /** Callback used to signal to the request issuer when the request has been completed. */
-    pub(crate) callback: Promise<bool>,
+    pub callback: Promise<bool>,
 }
 
-pub(crate) enum DiskRequestType<const Size: usize> {
-    Read(ReadDiskRequest<Size>),
-    Write(WriteDiskRequest<Size>)
+pub enum DiskRequestType {
+    Read(ReadDiskRequest),
+    Write(WriteDiskRequest)
 }
 
-impl<const Size: usize> From<ReadDiskRequest<Size>> for DiskRequestType<Size> {
-    fn from(value: ReadDiskRequest<Size>) -> Self {
+impl From<ReadDiskRequest> for DiskRequestType {
+    fn from(value: ReadDiskRequest) -> Self {
         DiskRequestType::Read(value)
     }
 }
 
-impl<const Size: usize> From<WriteDiskRequest<Size>> for DiskRequestType<Size> {
-    fn from(value: WriteDiskRequest<Size>) -> Self {
+impl From<WriteDiskRequest> for DiskRequestType {
+    fn from(value: WriteDiskRequest) -> Self {
         DiskRequestType::Write(value)
     }
 }

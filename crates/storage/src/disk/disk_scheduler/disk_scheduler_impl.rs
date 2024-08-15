@@ -9,7 +9,7 @@ use std::thread;
 
 type DiskSchedulerPromise = Promise<bool>;
 
-impl<const Size: usize> DiskScheduler<Size> {
+impl DiskScheduler {
     pub fn new(disk_manager: Arc<Mutex<(impl DiskManager + Send + 'static)>>) -> Self {
         // TODO(P1): remove this line after you have implemented the disk scheduler API
         // unimplemented!(
@@ -35,7 +35,7 @@ impl<const Size: usize> DiskScheduler<Size> {
      *
      * @param r The request to be scheduled.
      */
-    pub fn schedule(&mut self, r: DiskRequestType<Size>) {
+    pub fn schedule(&mut self, r: DiskRequestType) {
         // Schedules a request for the `DiskManager` to execute.
         // The `DiskRequest` struct specifies whether the request is for a read/write, where the data should be written into/from, and the page ID for the operation.
         // The `DiskRequest` also includes a `std::promise` whose value should be set to true once the request is processed.
@@ -55,7 +55,7 @@ impl<const Size: usize> DiskScheduler<Size> {
     }
 }
 
-impl<const Size: usize> Drop for DiskScheduler<Size> {
+impl Drop for DiskScheduler {
     fn drop(&mut self) {
         self.sender.send(DiskSchedulerWorkerMessage::Terminate).unwrap();
 
@@ -67,7 +67,7 @@ impl<const Size: usize> Drop for DiskScheduler<Size> {
 
 // Influenced from
 // https://web.mit.edu/rust-lang_v1.25/arch/amd64_ubuntu1404/share/doc/rust/html/book/second-edition/ch20-06-graceful-shutdown-and-cleanup.html
-impl<const Size: usize> DiskSchedulerWorker<Size> {
+impl DiskSchedulerWorker {
     /**
      * TODO(P1): Add implementation
      *
@@ -76,14 +76,14 @@ impl<const Size: usize> DiskSchedulerWorker<Size> {
      * The background thread needs to process requests while the DiskScheduler exists, i.e., this function should not
      * return until ~DiskScheduler() is called. At that point you need to make sure that the function does return.
      */
-    fn new(disk_manager: Arc<Mutex<(impl DiskManager + Send + 'static)>>, receiver: Arc<Mutex<Receiver<DiskSchedulerWorkerMessage<Size>>>>) -> DiskSchedulerWorker<Size> {
+    fn new(disk_manager: Arc<Mutex<(impl DiskManager + Send + 'static)>>, receiver: Arc<Mutex<Receiver<DiskSchedulerWorkerMessage>>>) -> DiskSchedulerWorker {
         let thread = thread::spawn(move || {
             loop {
                 let job = receiver.lock().recv().unwrap();
 
                 let mut manager = disk_manager.lock();
 
-                let req: DiskRequestType<Size>;
+                let req: DiskRequestType;
 
                 match job {
                     DiskSchedulerWorkerMessage::Terminate => {
@@ -96,7 +96,9 @@ impl<const Size: usize> DiskSchedulerWorker<Size> {
 
                 match req {
                     DiskRequestType::Read(mut req) => {
-                        manager.read_page(req.page_id, req.data.clone().lock().as_mut());
+                        let data = req.data.clone();
+                        let mut lock = data.lock();
+                        manager.read_page(req.page_id, (*lock).as_mut());
                         req.callback.set_value(true);
                     }
                     DiskRequestType::Write(req) => {

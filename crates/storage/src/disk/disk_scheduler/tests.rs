@@ -11,7 +11,7 @@ mod tests {
 
     #[test]
     fn schedule_write_read() {
-        let buf = [0u8; BUSTUB_PAGE_SIZE as usize];
+        let mut buf = [0u8; BUSTUB_PAGE_SIZE as usize];
         let mut data = [0u8; BUSTUB_PAGE_SIZE as usize];
 
         let dm = DiskManagerUnlimitedMemory::new();
@@ -26,8 +26,8 @@ mod tests {
         let promise2 = disk_scheduler.create_promise();
         let future2 = promise2.get_future();
 
-        let data = Arc::new(data);
-        let buf = Arc::new(Mutex::new(buf));
+        let data = Arc::new(Box::from(data));
+        let buf = Arc::new(Mutex::new(Box::from(buf)));
 
         disk_scheduler.schedule(
             WriteDiskRequest {
