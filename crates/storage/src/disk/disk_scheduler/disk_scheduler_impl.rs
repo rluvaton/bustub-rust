@@ -1,10 +1,10 @@
-use std::panic::{set_hook, take_hook};
 use crate::disk::disk_manager::DiskManager;
 use crate::disk::disk_scheduler::disk_request::DiskRequestType;
 use crate::disk::disk_scheduler::disk_scheduler::{DiskScheduler, DiskSchedulerWorker, DiskSchedulerWorkerMessage};
 use common::Promise;
-use std::sync::{mpsc, Arc, Mutex};
 use std::sync::mpsc::Receiver;
+use std::sync::{mpsc, Arc};
+use parking_lot::Mutex;
 use std::thread;
 
 type DiskSchedulerPromise = Promise<bool>;
@@ -145,9 +145,9 @@ impl<const Size: usize> DiskSchedulerWorker<Size> {
         let thread = thread::spawn(move || {
 
             loop {
-                let job = receiver.lock().unwrap().recv().unwrap();
+                let job = receiver.lock().recv().unwrap();
 
-                let mut manager = disk_manager.lock().unwrap();
+                let mut manager = disk_manager.lock();
 
                 let req: DiskRequestType<Size>;
 
@@ -162,7 +162,7 @@ impl<const Size: usize> DiskSchedulerWorker<Size> {
 
                 match req {
                     DiskRequestType::Read(mut req) => {
-                        manager.read_page(req.page_id, req.data.clone().lock().unwrap().as_mut());
+                        manager.read_page(req.page_id, req.data.clone().lock().as_mut());
 
                         // TODO - what value it should have?
                         req.callback.set_value(true);

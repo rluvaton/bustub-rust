@@ -1,8 +1,6 @@
-use std::sync::mpsc;
 use crate::disk::disk_scheduler::disk_request::DiskRequestType;
-use std::sync::mpsc::{Sender, SyncSender};
-use std::thread;
-use std::thread::{JoinHandle, ScopedJoinHandle};
+use std::sync::mpsc::Sender;
+use std::thread::JoinHandle;
 
 /**
  * @brief The DiskScheduler schedules disk read and write operations.

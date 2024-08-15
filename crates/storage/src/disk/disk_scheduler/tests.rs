@@ -6,7 +6,8 @@ mod tests {
     use crate::disk::disk_scheduler::disk_scheduler::DiskScheduler;
     use common::config::BUSTUB_PAGE_SIZE;
     use common::Promise;
-    use std::sync::{Arc, Mutex};
+    use std::sync::{Arc};
+    use parking_lot::Mutex;
 
     #[test]
     fn schedule_write_read() {
@@ -49,7 +50,7 @@ mod tests {
         // let buf = future2.wait();
 
         let buf_ref = buf.clone();
-        let buf_data = buf_ref.lock().unwrap();
+        let buf_data = buf_ref.lock();
 
         assert_eq!(buf_data.deref(), data.deref());
 

@@ -1,15 +1,14 @@
-
 use anyhow::{anyhow, Result};
 
-use std::fs::{File, OpenOptions};
-use std::io::{Read, Seek, SeekFrom, Write};
-use std::path::{Path, PathBuf};
-use std::sync::Mutex;
-use std::time::Duration;
-use common::config::{PageId, BUSTUB_PAGE_SIZE};
-use common::Future;
 use crate::disk::disk_manager::disk_manager_trait::DiskManager;
 use crate::disk::disk_manager::utils::get_file_size;
+use common::config::{PageId, BUSTUB_PAGE_SIZE};
+use common::Future;
+use parking_lot::Mutex;
+use std::fs::{File, OpenOptions};
+use std::io::{Read, Seek, SeekFrom, Write};
+use std::path::PathBuf;
+use std::time::Duration;
 
 // TODO - Why shared?
 static BUFFER_USED: Mutex<Option<Vec<u8>>> = Mutex::new(None);
@@ -153,7 +152,7 @@ impl DiskManager for DefaultDiskManager {
      */
     fn write_page(&mut self, page_id: PageId, page_data: &[u8]) {
         // std::scoped_lock scoped_db_io_latch(db_io_latch_);
-        let mut db_io = self.db_io_latch.lock().expect("Should acquire lock");
+        let mut db_io = self.db_io_latch.lock();
 
         let offset = page_id as u64 * BUSTUB_PAGE_SIZE as u64;
         // set write cursor to offset
@@ -187,7 +186,7 @@ impl DiskManager for DefaultDiskManager {
      */
     fn read_page(&mut self, page_id: PageId, page_data: &mut [u8]) {
         // std::scoped_lock scoped_db_io_latch(db_io_latch_);
-        let mut db_io = self.db_io_latch.lock().expect("Should acquire lock");
+        let mut db_io = self.db_io_latch.lock();
 
 
         let offset = page_id * BUSTUB_PAGE_SIZE;
@@ -238,7 +237,7 @@ impl DiskManager for DefaultDiskManager {
     * Only return when sync is done, and only perform sequence write
      */
     fn write_log(&mut self, log_data: &[u8], size: i32) {
-        let mut buffer_used = BUFFER_USED.lock().unwrap();
+        let mut buffer_used = BUFFER_USED.lock();
         // enforce swap log buffer
         // TODO - fix this as this is not true
         // if buffer_used.is_some() {

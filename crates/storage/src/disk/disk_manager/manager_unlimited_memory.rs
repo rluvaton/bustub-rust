@@ -1,19 +1,41 @@
 use crate::disk::disk_manager::disk_manager_trait::DiskManager;
 use common::config::{PageId, BUSTUB_PAGE_SIZE};
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc};
+use parking_lot::{Mutex, MutexGuard};
 use std::thread;
 use std::thread::{sleep, ThreadId};
 use std::time::Duration;
 use common::Future;
 
-// TODO - Why shared?
-static BUFFER_USED: Mutex<Option<Vec<u8>>> = Mutex::new(None);
-
 type Page = [u8; BUSTUB_PAGE_SIZE as usize];
-type ProtectedPage = Mutex<Page>;
+type ProtectedPage = Arc<Mutex<Option<Page>>>;
+
+fn create_page() -> Page {
+    [0u8; BUSTUB_PAGE_SIZE as usize]
+}
 
 fn create_new_protected_page() -> ProtectedPage {
-    Mutex::new([0u8; BUSTUB_PAGE_SIZE as usize])
+    Arc::new(
+        Mutex::new(
+            Some(
+                create_page()
+            )
+        )
+    )
+}
+
+pub(crate) struct LatencyProcessor {
+    recent_access: [PageId; 4],
+    access_ptr: u64,
+}
+
+pub(crate) struct DiskManagerUnlimitedMemoryData {
+    // Thread id change with the data itself
+    thread_id: Option<ThreadId>,
+
+    // Vector of protected pages
+    // each protected page has a lock to the underlying value
+    pages: Vec<ProtectedPage>,
 }
 
 
@@ -22,22 +44,13 @@ fn create_new_protected_page() -> ProtectedPage {
  * writing of pages to and from disk, providing a logical file layer within the context of a database management system.
  */
 pub struct DiskManagerUnlimitedMemory {
-    // TODO - default false
     latency_simulator_enabled: bool,
 
-    latency_processor_mutex: Mutex<()>,
-    recent_access: [PageId; 4],
+    // Access together so grouped together
+    latency_processor_mutex: Mutex<LatencyProcessor>,
 
-    // TODO - default 0
-    access_ptr: u64,
-
-    mutex: Mutex<()>,
-    // std::optional<std::thread::id> thread_id_;
-    thread_id: Option<ThreadId>,
-    // std::vector<std::shared_ptr<ProtectedPage>> data_;
-
-    // TODO - should option be inside mutex or outside?
-    data: Vec<Arc<Option<ProtectedPage>>>,
+    // Access the data using the lock for thread safety
+    data: Mutex<DiskManagerUnlimitedMemoryData>,
 }
 
 impl DiskManagerUnlimitedMemory {
@@ -49,17 +62,21 @@ impl DiskManagerUnlimitedMemory {
         DiskManagerUnlimitedMemory {
             latency_simulator_enabled: false,
 
-            recent_access: [0; 4],
-            latency_processor_mutex: Mutex::new(()),
-            access_ptr: 0,
+            latency_processor_mutex: Mutex::new(LatencyProcessor {
+                recent_access: [0; 4],
+                access_ptr: 0,
+            }),
 
-            mutex: Mutex::new(()),
-            thread_id: None,
-            data: vec![],
+            data: Mutex::new(
+                DiskManagerUnlimitedMemoryData {
+                    pages: vec![],
+                    thread_id: None,
+                }
+            ),
         }
     }
 
-    fn process_latency(&mut self, page_id: PageId) {
+    fn process_latency(&self, page_id: PageId) {
         if !self.latency_simulator_enabled {
             return;
         }
@@ -67,8 +84,8 @@ impl DiskManagerUnlimitedMemory {
         let mut sleep_micro_sec = 1000u64;  // for random access, 1ms latency
         {
             // std::unique_lock<std::mutex> lck(latency_processor_mutex_);
-            let _lock = self.latency_processor_mutex.lock().unwrap();
-            for recent_page_id in self.recent_access {
+            let latency_processor = self.latency_processor_mutex.lock();
+            for recent_page_id in latency_processor.recent_access {
                 if (recent_page_id & (!0x3) == page_id & (!0x3)) {
                     sleep_micro_sec = 100;  // for access in the same "block", 0.1ms latency
                     break;
@@ -83,15 +100,16 @@ impl DiskManagerUnlimitedMemory {
         sleep(Duration::from_micros(sleep_micro_sec));
     }
 
-    fn post_process_latency(&mut self, page_id: PageId) {
+    fn post_process_latency(&self, page_id: PageId) {
         if !self.latency_simulator_enabled {
             return;
         }
 
         // std::scoped_lock<std::mutex> lck(latency_processor_mutex_);
-        let lock = self.latency_processor_mutex.lock().unwrap();
-        self.recent_access[self.access_ptr as usize] = page_id;
-        self.access_ptr = (self.access_ptr + 1) % self.recent_access.len() as u64;
+        let mut latency_processor = self.latency_processor_mutex.lock();
+        let access_ptr = latency_processor.access_ptr;
+        latency_processor.recent_access[access_ptr as usize] = page_id;
+        latency_processor.access_ptr = (access_ptr + 1) % latency_processor.recent_access.len() as u64;
     }
 
     fn enable_latency_simulator(&mut self, enabled: bool) {
@@ -99,10 +117,10 @@ impl DiskManagerUnlimitedMemory {
     }
 
     fn get_last_read_thread_and_clear(&mut self) -> Option<ThreadId> {
-        let lock = self.mutex.lock().unwrap();
-        let t = self.thread_id;
+        let mut lock = self.data.lock();
+        let t = lock.thread_id;
 
-        self.thread_id = None;
+        lock.thread_id = None;
 
         t
     }
@@ -119,43 +137,44 @@ impl DiskManager for DiskManagerUnlimitedMemory {
     fn write_page(&mut self, page_id: PageId, page_data: &[u8]) {
         self.process_latency(page_id);
 
-        let mut ptr: Arc<Option<ProtectedPage>>;
+        let mut page_ref: Arc<Mutex<Option<Page>>>;
+        let mut page_lock: MutexGuard<Option<Page>>;
 
         {
-            let _lock = self.mutex.lock().unwrap();
+            let mut data = self.data.lock();
 
-            if self.thread_id.is_none() {
-                self.thread_id = Some(thread::current().id());
+            if data.thread_id.is_none() {
+                data.thread_id = Some(thread::current().id());
             }
 
-            if page_id >= self.data.len() as i32 {
-                self.data.resize((page_id + 1) as usize, Arc::new(None))
+            if page_id >= data.pages.len() as i32 {
+                data.pages.resize((page_id + 1) as usize, Arc::new(Mutex::new(None)))
             }
 
-            if self.data[page_id as usize].is_none() {
-                ptr = Arc::new(
-                    Some(
-                        create_new_protected_page()
-                    )
-                );
+            page_ref = Arc::clone(&data.pages[page_id as usize]);
 
+            page_lock = page_ref.lock()
 
-                // self.data[page_id as usize] = ptr.clone();
-            } else {
-                ptr = Arc::clone(&self.data[page_id as usize]);
-            }
+            // Unlock the page table lock
         }
 
-        {
-            let a = Arc::get_mut(&mut ptr);
-
-            let mut page_lock = a.unwrap().as_ref().unwrap().lock().unwrap();
-
-            page_lock[0..BUSTUB_PAGE_SIZE as usize].copy_from_slice(page_data);
+        if page_lock.is_none() {
+            *page_lock = Some(create_page());
         }
-        self.data[page_id as usize] = ptr;
+
+
+        // Get the value from the page
+        let mut value = page_lock.take().unwrap();
+
+        // Modify it
+        value[0..BUSTUB_PAGE_SIZE as usize].copy_from_slice(page_data);
+
+        // Set it back
+        page_lock.replace(value);
 
         self.post_process_latency(page_id);
+
+        // Unlock the single page lock
     }
 
     /**
@@ -166,44 +185,46 @@ impl DiskManager for DiskManagerUnlimitedMemory {
     fn read_page(&mut self, page_id: PageId, page_data: &mut [u8]) {
         self.process_latency(page_id);
 
-        let mut ptr: &mut Arc<Option<ProtectedPage>>;
+        let mut page_ref: Arc<Mutex<Option<Page>>>;
+        let mut page_lock: MutexGuard<Option<Page>>;
 
         {
-            let _lock = self.mutex.lock().unwrap();
+            let mut data = self.data.lock();
 
-            if self.thread_id.is_none() {
-                self.thread_id = Some(thread::current().id());
+            if data.thread_id.is_none() {
+                data.thread_id = Some(thread::current().id());
             }
 
-            if page_id >= self.data.len() as i32 {
+            if page_id >= data.pages.len() as i32 {
                 // TODO - output to stderr
                 println!("page {} not in range", page_id);
                 panic!("page {} not in range", page_id);
             }
 
-            if self.data[page_id as usize].is_none() {
-                // TODO - output to stderr
-                println!("page {} not exists", page_id);
-                panic!("page {} not exists", page_id);
-            }
+            page_ref = Arc::clone(&data.pages[page_id as usize]);
+            page_lock = page_ref.lock()
 
-            ptr = &mut self.data[page_id as usize];
+            // Page table lock dropped
         }
 
-        {
-            let page_lock = Arc::get_mut(&mut ptr).unwrap().as_ref().unwrap().lock().unwrap();
-
-            page_data[0..BUSTUB_PAGE_SIZE as usize].copy_from_slice(page_lock.as_ref());
+        if page_lock.is_none() {
+            // TODO - output to stderr
+            println!("page {} not exists", page_id);
+            panic!("page {} not exists", page_id);
         }
+
+        page_data[0..BUSTUB_PAGE_SIZE as usize].copy_from_slice(&page_lock.unwrap());
 
         self.post_process_latency(page_id);
+
+        // Single page lock dropped
     }
 
-    fn write_log(&mut self, log_data: &[u8], size: i32) {
+    fn write_log(&mut self, _log_data: &[u8], _size: i32) {
         unimplemented!();
     }
 
-    fn read_log(&mut self, log_data: &mut [u8], size: i32, offset: i32) -> bool {
+    fn read_log(&mut self, _log_data: &mut [u8], _size: i32, _offset: i32) -> bool {
         unimplemented!();
     }
 
@@ -219,7 +240,7 @@ impl DiskManager for DiskManagerUnlimitedMemory {
         unimplemented!();
     }
 
-    fn set_flush_log_future(&mut self, f: Option<Future<()>>) {
+    fn set_flush_log_future(&mut self, _f: Option<Future<()>>) {
         unimplemented!();
     }
 
