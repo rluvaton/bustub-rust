@@ -47,7 +47,6 @@ mod tests {
 
         assert!(future1.wait());
         assert!(future2.wait());
-        // let buf = future2.wait();
 
         let buf_ref = buf.clone();
         let buf_data = buf_ref.lock();
