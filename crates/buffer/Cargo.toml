@@ -5,7 +5,13 @@ edition = "2021"
 
 [dependencies]
 common = {path = "../common"}
+storage = {path = "../storage"}
+recovery = {path = "../recovery"}
 
 # TODO - remove unused features
 chrono = "0.4.38"
 rand = "0.8"
+parking_lot = "0.12.3"
+
+[dev-dependencies]
+tempdir = "0.3.7"

@@ -1,4 +1,5 @@
 mod lru_k_replacer;
+mod buffer_pool_manager;
 
 pub fn add(left: usize, right: usize) -> usize {
     left + right

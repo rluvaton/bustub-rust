@@ -11,3 +11,5 @@ pub use single_thread_impl::{LRUKReplacerImpl};
 
 // Wrapper around the impl for multi thread
 pub use lru_k_replacer::LRUKReplacer;
+
+pub use access_type::AccessType;

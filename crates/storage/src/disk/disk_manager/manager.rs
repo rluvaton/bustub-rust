@@ -189,7 +189,7 @@ impl DiskManager for DefaultDiskManager {
         let mut db_io = self.db_io_latch.lock();
 
 
-        let offset = page_id * BUSTUB_PAGE_SIZE;
+        let offset = page_id * BUSTUB_PAGE_SIZE as i32;
         // check if read beyond file length
         if offset > get_file_size(self.file_name.as_path()) {
             println!("I/O error reading past end of file");

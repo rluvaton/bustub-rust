@@ -35,7 +35,7 @@ pub struct LRUKNode {
     pub(crate) history: LinkedList<HistoryRecord>,
 
     #[allow(dead_code)]
-    pub(crate) k: isize,
+    pub(crate) k: usize,
 
     #[allow(dead_code)]
     pub(crate) frame_id: FrameId,
@@ -46,7 +46,7 @@ pub struct LRUKNode {
 }
 
 impl LRUKNode {
-    pub(crate) fn new(k: isize, frame_id: FrameId, counter: &AtomicU64Counter) -> Self {
+    pub(crate) fn new(k: usize, frame_id: FrameId, counter: &AtomicU64Counter) -> Self {
         assert!(k > 0, "K >= 0");
 
         let mut history = LinkedList::new();
@@ -132,7 +132,7 @@ impl LRUKNode {
     ///
     /// ```
     pub(crate) fn next_to_evict_compare(a: &LRUKNodeCompareItem, b: &LRUKNodeCompareItem) -> Ordering {
-        let k = a.0.k as usize;
+        let k = a.0.k;
 
         let does_a_not_having_enough_history = a.0.history.len() < k;
         let does_b_not_having_enough_history = b.0.history.len() < k;

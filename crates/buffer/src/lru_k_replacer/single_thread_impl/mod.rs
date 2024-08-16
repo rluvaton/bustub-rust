@@ -43,10 +43,10 @@ pub struct LRUKReplacerImpl {
     pub(crate) replacer_size: usize,
 
     #[allow(dead_code)]
-    pub(crate) k: isize,
+    pub(crate) k: usize,
 
     // Tracks the number of evictable frames
-    pub(crate) evictable_frames: isize,
+    pub(crate) evictable_frames: usize,
 
     pub(crate) history_access_counter: Arc<AtomicU64Counter>,
 }

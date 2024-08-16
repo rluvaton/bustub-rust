@@ -16,12 +16,12 @@ impl LRUKReplacerImpl {
     ///
     /// returns: LRUKReplacer
     ///
-    pub(crate) fn new(num_frames: isize, k: isize) -> Self {
+    pub(crate) fn new(num_frames: usize, k: usize) -> Self {
         LRUKReplacerImpl {
-            node_store: HashMap::with_capacity(num_frames as usize),
+            node_store: HashMap::with_capacity(num_frames),
             k,
 
-            replacer_size: num_frames as usize,
+            replacer_size: num_frames,
 
             evictable_frames: 0,
 
@@ -168,7 +168,11 @@ impl LRUKReplacerImpl {
         }
 
         // If evictable, mark as no longer evictable or vice versa
-        self.evictable_frames += if node.is_evictable { -1 } else { 1 };
+        if node.is_evictable {
+            self.evictable_frames -= 1;
+        } else {
+            self.evictable_frames += 1;
+        }
 
         node.is_evictable = set_evictable;
     }
@@ -239,7 +243,7 @@ impl LRUKReplacerImpl {
     ///
     /// returns: isize the number of evictable frames
     ///
-    pub fn size(&self) -> isize {
+    pub fn size(&self) -> usize {
         self.evictable_frames
     }
 

@@ -97,7 +97,7 @@ mod tests {
     fn two_thread_recording_access() {
         // This does not check any correctness, it just checks that we can use the LRU with threads
 
-        const FRAMES: isize = 50;
+        const FRAMES: usize = 50;
         let lru_replacer = LRUKReplacer::new(FRAMES, 10);
 
         let mut threads: Vec<JoinHandle<()>> = vec![];
@@ -129,7 +129,7 @@ mod tests {
     #[test]
     fn many_threads() {
         // This does not check any correctness, it just check that we can use the lru with threads
-        const FRAMES: isize = 1000;
+        const FRAMES: usize = 1000;
         let lru_replacer = LRUKReplacer::new(FRAMES, 10);
 
         let mut threads: Vec<JoinHandle<()>> = vec![];
@@ -198,7 +198,7 @@ mod tests {
     #[test]
     fn concurrent_set_evictable() {
         // This does not check any correctness, it just check that we can use the lru with threads
-        const FRAMES: isize = 10;
+        const FRAMES: usize = 10;
         let mut lru_replacer = LRUKReplacer::new(FRAMES, 10);
 
         for i in 0..FRAMES {

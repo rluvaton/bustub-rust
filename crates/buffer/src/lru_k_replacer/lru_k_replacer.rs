@@ -13,7 +13,7 @@ pub struct LRUKReplacer {
 
 // Proxy to LRU-K Replacer Impl
 impl LRUKReplacer {
-    pub fn new(num_frames: isize, k: isize) -> Self {
+    pub fn new(num_frames: usize, k: usize) -> Self {
         LRUKReplacer {
             replacer: Arc::new(Mutex::new(LRUKReplacerImpl::new(num_frames, k)))
         }
@@ -35,7 +35,7 @@ impl LRUKReplacer {
         self.replacer.lock().unwrap().remove(frame_id)
     }
 
-    pub fn size(&self) -> isize {
+    pub fn size(&self) -> usize {
         self.replacer.lock().unwrap().size()
     }
 
