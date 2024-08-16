@@ -11,8 +11,8 @@ impl LogManager {
         LogManager {
             next_lsn: AtomicLSN::new(0),
             persistent_lsn: AtomicLSN::new(INVALID_LSN),
-            log_buffer: [0u8; LOG_BUFFER_SIZE as usize],
-            flush_buffer: [0u8; LOG_BUFFER_SIZE as usize],
+            log_buffer: [0u8; LOG_BUFFER_SIZE],
+            flush_buffer: [0u8; LOG_BUFFER_SIZE],
             latch: Mutex::new(()),
             // flush_thread: (),
             cv: Default::default(),

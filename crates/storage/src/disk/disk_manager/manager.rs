@@ -165,7 +165,7 @@ impl DiskManager for DefaultDiskManager {
             println!("I/O error while writing (in seek)");
             return;
         }
-        let write_res = db_io.write(&page_data[0..BUSTUB_PAGE_SIZE as usize]);
+        let write_res = db_io.write(&page_data[0..BUSTUB_PAGE_SIZE]);
 
         // check for I/O error
         if write_res.is_err() {
@@ -204,7 +204,7 @@ impl DiskManager for DefaultDiskManager {
             println!("I/O error while reading (seek)");
             return;
         }
-        let read_res = db_io.read(&mut page_data[0..BUSTUB_PAGE_SIZE as usize]);
+        let read_res = db_io.read(&mut page_data[0..BUSTUB_PAGE_SIZE]);
 
         if read_res.is_err() {
             println!("I/O error while reading (read)");
@@ -214,7 +214,7 @@ impl DiskManager for DefaultDiskManager {
         // if file ends before reading BUSTUB_PAGE_SIZE
         // let read_count = db_io_.gcount();
         let read_count = read_res.unwrap();
-        if read_count < BUSTUB_PAGE_SIZE as usize {
+        if read_count < BUSTUB_PAGE_SIZE {
             println!("Read less than a page");
             // std::cerr << "Read less than a page" << std::endl;
 
@@ -223,8 +223,8 @@ impl DiskManager for DefaultDiskManager {
 
             // TODO - find safer way
             // memset(page_data + read_count, 0, BUSTUB_PAGE_SIZE - read_count);
-            page_data[read_count..(BUSTUB_PAGE_SIZE as usize) - read_count].fill(0);
-            // unsafe { write_bytes(&mut page_data[read_count..], 0, (BUSTUB_PAGE_SIZE as usize) - read_count); }
+            page_data[read_count..(BUSTUB_PAGE_SIZE) - read_count].fill(0);
+            // unsafe { write_bytes(&mut page_data[read_count..], 0, (BUSTUB_PAGE_SIZE) - read_count); }
         }
     }
 

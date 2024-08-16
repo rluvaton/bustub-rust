@@ -11,8 +11,8 @@ mod tests {
 
     #[test]
     fn schedule_write_read() {
-        let mut buf = [0u8; BUSTUB_PAGE_SIZE as usize];
-        let mut data = [0u8; BUSTUB_PAGE_SIZE as usize];
+        let mut buf = [0u8; BUSTUB_PAGE_SIZE];
+        let mut data = [0u8; BUSTUB_PAGE_SIZE];
 
         let dm = DiskManagerUnlimitedMemory::new();
 

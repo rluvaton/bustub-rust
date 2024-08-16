@@ -65,7 +65,7 @@ impl LRUKNode {
         let new_val = Self::get_new_access_record_now(counter);
 
         // If reached the size, remove the first item and add to the end
-        if self.history.len() >= self.k as usize {
+        if self.history.len() >= self.k {
             self.history.pop_front();
         }
 
@@ -73,7 +73,7 @@ impl LRUKNode {
     }
 
     pub(crate) fn calculate_intervals(&self, now: i64) -> i64 {
-        if self.history.len() < self.k as usize {
+        if self.history.len() < self.k {
             // If less than the number of records just make it the largest so it would be first to evict
             return i64::MAX;
         }

@@ -2,7 +2,7 @@ use std::mem::size_of;
 use common::config::{PageId, BUSTUB_PAGE_SIZE, INVALID_PAGE_ID, LSN};
 use common::ReaderWriterLatch;
 
-type PageData = [u8; BUSTUB_PAGE_SIZE as usize];
+type PageData = [u8; BUSTUB_PAGE_SIZE];
 
 // static_assert(sizeof(page_id_t) == 4);
 // static_assert(sizeof(lsn_t) == 4);
@@ -44,7 +44,7 @@ impl Page {
             is_dirty: false,
             pin_count: 0,
             rwlatch: ReaderWriterLatch::new(()),
-            data: [0u8; BUSTUB_PAGE_SIZE as usize],
+            data: [0u8; BUSTUB_PAGE_SIZE],
         }
     }
 

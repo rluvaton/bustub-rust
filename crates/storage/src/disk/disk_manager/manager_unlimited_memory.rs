@@ -7,11 +7,11 @@ use std::thread::{sleep, ThreadId};
 use std::time::Duration;
 use common::Future;
 
-type Page = [u8; BUSTUB_PAGE_SIZE as usize];
+type Page = [u8; BUSTUB_PAGE_SIZE];
 type ProtectedPage = Arc<Mutex<Option<Page>>>;
 
 fn create_page() -> Page {
-    [0u8; BUSTUB_PAGE_SIZE as usize]
+    [0u8; BUSTUB_PAGE_SIZE]
 }
 
 fn create_new_protected_page() -> ProtectedPage {
@@ -167,7 +167,7 @@ impl DiskManager for DiskManagerUnlimitedMemory {
         let mut value = page_lock.take().unwrap();
 
         // Modify it
-        value[0..BUSTUB_PAGE_SIZE as usize].copy_from_slice(page_data);
+        value[0..BUSTUB_PAGE_SIZE].copy_from_slice(page_data);
 
         // Set it back
         page_lock.replace(value);
@@ -213,7 +213,7 @@ impl DiskManager for DiskManagerUnlimitedMemory {
             panic!("page {} not exists", page_id);
         }
 
-        page_data[0..BUSTUB_PAGE_SIZE as usize].copy_from_slice(&page_lock.unwrap());
+        page_data[0..BUSTUB_PAGE_SIZE].copy_from_slice(&page_lock.unwrap());
 
         self.post_process_latency(page_id);
 
