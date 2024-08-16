@@ -79,7 +79,7 @@ impl LRUKNode {
         }
 
         let mut diff = 0;
-        let mut last = self.history.front().expect("K cant be 0");
+        let last = self.history.front().expect("K cant be 0");
         let mut last = last.1;
 
         for (_id, timestamp) in self.history.iter().skip(1) {

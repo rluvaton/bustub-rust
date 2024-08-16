@@ -19,7 +19,7 @@ impl DiskScheduler {
 
         let receiver = Arc::new(Mutex::new(receiver));
 
-        let mut scheduler = DiskScheduler {
+        let scheduler = DiskScheduler {
             // disk_manager: Arc::new(Mutex::new(disk_manager)),
             worker: DiskSchedulerWorker::new(disk_manager, Arc::clone(&receiver)),
             sender,
@@ -95,7 +95,7 @@ impl DiskSchedulerWorker {
                 }
 
                 match req {
-                    DiskRequestType::Read(mut req) => {
+                    DiskRequestType::Read(req) => {
                         let data = req.data.clone();
                         let mut lock = data.lock();
                         manager.read_page(req.page_id, (*lock).as_mut());

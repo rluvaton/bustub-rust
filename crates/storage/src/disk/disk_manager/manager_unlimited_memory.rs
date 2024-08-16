@@ -86,7 +86,7 @@ impl DiskManagerUnlimitedMemory {
             // std::unique_lock<std::mutex> lck(latency_processor_mutex_);
             let latency_processor = self.latency_processor_mutex.lock();
             for recent_page_id in latency_processor.recent_access {
-                if (recent_page_id & (!0x3) == page_id & (!0x3)) {
+                if recent_page_id & (!0x3) == page_id & (!0x3) {
                     sleep_micro_sec = 100;  // for access in the same "block", 0.1ms latency
                     break;
                 }
@@ -137,7 +137,7 @@ impl DiskManager for DiskManagerUnlimitedMemory {
     fn write_page(&mut self, page_id: PageId, page_data: &[u8]) {
         self.process_latency(page_id);
 
-        let mut page_ref: Arc<Mutex<Option<Page>>>;
+        let page_ref: Arc<Mutex<Option<Page>>>;
         let mut page_lock: MutexGuard<Option<Page>>;
 
         {
@@ -186,7 +186,7 @@ impl DiskManager for DiskManagerUnlimitedMemory {
         self.process_latency(page_id);
 
         let mut page_ref: Arc<Mutex<Option<Page>>>;
-        let mut page_lock: MutexGuard<Option<Page>>;
+        let page_lock: MutexGuard<Option<Page>>;
 
         {
             let mut data = self.data.lock();

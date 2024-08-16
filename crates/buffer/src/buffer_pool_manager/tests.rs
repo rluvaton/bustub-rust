@@ -6,7 +6,7 @@ mod tests {
     use parking_lot::Mutex;
     use rand::Rng;
     use std::sync::Arc;
-    use storage::{DefaultDiskManager, DiskManager};
+    use storage::DefaultDiskManager;
 
     use tempdir::TempDir;
 
@@ -30,15 +30,15 @@ mod tests {
         // No matter if `char` is signed or unsigned by default, this constraint must be met
         assert_eq!(upper_bound - lower_bound, 255);
 
-        let mut disk_manager = DefaultDiskManager::new(db_name).expect("should create disk manager");
-        let mut bpm = BufferPoolManager::new(buffer_pool_size, Arc::new(Mutex::new(disk_manager)), None, None);
+        let disk_manager = DefaultDiskManager::new(db_name).expect("should create disk manager");
+        let mut bpm = BufferPoolManager::new(buffer_pool_size, Arc::new(Mutex::new(disk_manager)), Some(k), None);
 
         let page0 = bpm.new_page();
 
         // Scenario: The buffer pool is empty. We should be able to create a new page.
         assert_ne!(page0, None);
 
-        let mut page0 = page0.unwrap();
+        let page0 = page0.unwrap();
 
         assert_eq!(page0.get_page_id(), 0);
 
@@ -57,12 +57,12 @@ mod tests {
         assert_eq!(page0.get_data().as_slice(), random_binary_data);
 
         // Scenario: We should be able to create new pages until we fill up the buffer pool.
-        for i in 1..buffer_pool_size {
+        for _ in 1..buffer_pool_size {
             assert_ne!(bpm.new_page(), None);
         }
 
         // Scenario: Once the buffer pool is full, we should not be able to create any new pages.
-        for i in buffer_pool_size..buffer_pool_size * 2 {
+        for _ in buffer_pool_size..buffer_pool_size * 2 {
             assert_eq!(bpm.new_page(), None);
         }
 
@@ -73,7 +73,7 @@ mod tests {
             bpm.flush_page(i);
         }
 
-        for i in 0..5 {
+        for _ in 0..5 {
             let page = bpm.new_page().expect("Must be able to create a new page");
             let page_id = page.get_page_id();
 
@@ -105,15 +105,15 @@ mod tests {
         let buffer_pool_size = 10;
         let k = 5;
 
-        let mut disk_manager = DefaultDiskManager::new(db_name).expect("should create disk manager");
-        let mut bpm = BufferPoolManager::new(buffer_pool_size, Arc::new(Mutex::new(disk_manager)), None, None);
+        let disk_manager = DefaultDiskManager::new(db_name).expect("should create disk manager");
+        let mut bpm = BufferPoolManager::new(buffer_pool_size, Arc::new(Mutex::new(disk_manager)), Some(k), None);
 
         let page0 = bpm.new_page();
 
         // Scenario: The buffer pool is empty. We should be able to create a new page.
         assert_ne!(page0, None);
 
-        let mut page0 = page0.unwrap();
+        let page0 = page0.unwrap();
 
         assert_eq!(page0.get_page_id(), 0);
 
@@ -122,12 +122,12 @@ mod tests {
         assert_eq!(page0.get_data(), "Hello".as_bytes());
 
         // Scenario: We should be able to create new pages until we fill up the buffer pool.
-        for i in 1..buffer_pool_size {
+        for _ in 1..buffer_pool_size {
             assert_ne!(bpm.new_page(), None);
         }
 
         // Scenario: Once the buffer pool is full, we should not be able to create any new pages.
-        for i in buffer_pool_size..buffer_pool_size * 2 {
+        for _ in buffer_pool_size..buffer_pool_size * 2 {
             assert_eq!(bpm.new_page(), None);
         }
 
@@ -136,7 +136,7 @@ mod tests {
         for i in 0..5 {
             assert!(bpm.unpin_page(i, true, AccessType::default()));
         }
-        for i in 0..4 {
+        for _ in 0..4 {
             assert_ne!(bpm.new_page(), None);
         }
 

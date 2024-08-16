@@ -1,12 +1,11 @@
 mod manager_impl;
 
-use std::thread::JoinHandle;
-use parking_lot::{Condvar, Mutex};
 use common::config::{AtomicLSN, LOG_BUFFER_SIZE};
+use parking_lot::{Condvar, Mutex};
 use storage::DiskManager;
 
-pub type LogBuffer = [u8; LOG_BUFFER_SIZE as usize];
-pub type FlushBuffer = [u8; LOG_BUFFER_SIZE as usize];
+pub type LogBuffer = [u8; LOG_BUFFER_SIZE];
+pub type FlushBuffer = [u8; LOG_BUFFER_SIZE];
 
 pub struct LogManager {
     // TODO(students): you may add your own member variables

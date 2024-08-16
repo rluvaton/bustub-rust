@@ -134,12 +134,12 @@ mod tests {
 
         let mut threads: Vec<JoinHandle<()>> = vec![];
 
-        for tid in 0..10 {
+        for _ in 0..10 {
             let mut lru_replacer = lru_replacer.clone();
 
             let t = thread::spawn(move || {
 
-                for i in 0..FRAMES * 10 {
+                for _ in 0..FRAMES * 10 {
                     let frame_id: FrameId = rand::thread_rng().gen_range(1..FRAMES) as FrameId;
 
                     lru_replacer.record_access(frame_id, AccessType::default());
@@ -149,11 +149,11 @@ mod tests {
             threads.push(t);
         }
 
-        for tid in 0..4 {
+        for _ in 0..4 {
             let mut lru_replacer = lru_replacer.clone();
 
             let t = thread::spawn(move || {
-                for i in 0..FRAMES * 10 {
+                for _ in 0..FRAMES * 10 {
                     let frame_id: FrameId = rand::thread_rng().gen_range(1..FRAMES) as FrameId;
                     let evictable = rand::thread_rng().gen_range(1..=2) == 1;
                     lru_replacer.set_evictable(frame_id, evictable);
@@ -166,7 +166,7 @@ mod tests {
         let mut eviction_threads: Vec<JoinHandle<()>> = vec![];
         let stop = Arc::new(AtomicBool::new(false));
 
-        for tid in 0..4 {
+        for _ in 0..4 {
             let stop = Arc::clone(&stop);
             let mut lru_replacer = lru_replacer.clone();
             let t = thread::spawn(move || {
@@ -207,7 +207,7 @@ mod tests {
 
         let mut threads: Vec<JoinHandle<()>> = vec![];
 
-        for i in 0..1000 {
+        for _ in 0..1000 {
             let mut lru_replacer = lru_replacer.clone();
 
             let t = thread::spawn(move || {

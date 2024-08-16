@@ -42,7 +42,7 @@ impl<T> Future<T> {
 
     pub fn wait_for(&self, duration: Duration) -> bool {
         let (lock, cvar) = &*self.result;
-        let mut ready = lock.lock().unwrap();
+        let ready = lock.lock().unwrap();
 
         let result = cvar.wait_timeout_while(ready, duration, |ready| !ready.0).unwrap();
 
