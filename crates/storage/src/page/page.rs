@@ -13,7 +13,7 @@ use std::sync::Arc;
  */
 #[derive(Debug)]
 pub struct Page {
-    inner: Arc<ReaderWriterLatch<(usize, Option<UnderlyingPage>)>>,
+    inner: Arc<ReaderWriterLatch<Option<UnderlyingPage>>>,
     is_pinned: bool,
 }
 
@@ -31,23 +31,28 @@ impl Page {
     }
 
     pub fn create_with_data(page_id: PageId, data: PageData) -> Self {
+        let mut inner = Arc::new(
+            ReaderWriterLatch::new(
+                Some(
+                    UnderlyingPage::new(
+                        page_id,
+                        data,
+                    )
+                )
+            )
+        );
+
+        let ptr = Arc::into_raw(inner);
+
+        unsafe {
+            Arc::increment_strong_count(ptr);
+            inner = Arc::from_raw(ptr);
+        }
+
         Page {
             // Starting as pinned
             is_pinned: true,
-            inner: Arc::new(
-                ReaderWriterLatch::new(
-                    (
-                        // Ref count
-                        1,
-                        Some(
-                            UnderlyingPage::new(
-                                page_id,
-                                data,
-                            )
-                        )
-                    )
-                )
-            ),
+            inner,
         }
     }
 
@@ -70,7 +75,7 @@ impl Page {
         /// 2. We use `ReaderWriterLatch` so no one can change in the middle
         let inner_guard = self.inner.read();
 
-        let (_, underlying) = inner_guard.deref();
+        let underlying = inner_guard.deref();
 
         if let Some(p) = underlying {
             return Some(p.get_page_id());
@@ -81,11 +86,9 @@ impl Page {
 
     /** @return the pin count of this page */
     pub fn get_pin_count(&self) -> usize {
-        let inner_guard = self.inner.read();
-
-        let r = inner_guard.deref();
-
-        r.0
+        // This can never be 0
+        // Ignore own + 1 we did in the new function
+        Arc::strong_count(&self.inner) - 1
     }
 
     /// Set page dirty state
@@ -104,9 +107,7 @@ impl Page {
     pub fn try_set_is_dirty(&self, is_dirty: bool) -> Option<()> {
         let mut inner_guard = self.inner.write();
 
-        let (_, underlying) = inner_guard.deref_mut();
-
-        if let Some(p) = underlying {
+        if let Some(p) = inner_guard.deref_mut() {
             p.set_is_dirty(is_dirty);
             return Some(());
         }
@@ -130,9 +131,7 @@ impl Page {
     pub fn try_is_dirty(&self) -> Option<bool> {
         let inner_guard = self.inner.read();
 
-        let (_, underlying) = inner_guard.deref();
-
-        if let Some(p) = underlying {
+        if let Some(p) = inner_guard.deref() {
             return Some(p.is_dirty());
         }
 
@@ -145,16 +144,23 @@ impl Page {
             return Some(());
         }
 
-        let mut inner_guard = self.inner.write();
-
-        let r = inner_guard.deref_mut();
-
-        if r.0 == 0 {
+        if self.get_pin_count() == 0 {
             // Already dropped
             return None;
         }
 
-        inner_guard.0 += 1;
+        {
+            let cloned_arc = Arc::clone(&self.inner);
+
+            let ptr = Arc::into_raw(cloned_arc);
+            unsafe {
+                self.inner = Arc::from_raw(ptr);
+
+                // Increment by 1 as we pinned
+                Arc::increment_strong_count(ptr)
+            }
+        }
+
         self.is_pinned = true;
 
         Some(())
@@ -166,16 +172,25 @@ impl Page {
             return;
         }
 
+        {
+            let cloned_arc = Arc::clone(&self.inner);
+
+            let ptr = Arc::into_raw(cloned_arc);
+            unsafe {
+                self.inner = Arc::from_raw(ptr);
+
+                // Decrement by 1 as we unpinned
+                Arc::decrement_strong_count(ptr)
+            }
+        }
+
         self.is_pinned = false;
-        let mut inner_guard = self.inner.write();
 
-        let r = inner_guard.deref_mut();
+        // TODO - should remove the underlying page on unpin everything?
+        if self.get_pin_count() == 0 {
+            let mut inner_guard = self.inner.write();
 
-        r.0 -= 1;
-
-        if r.0 == 0 {
-            // TODO - should remove the underlying page on unpin everything?
-            r.1 = None
+            *inner_guard.deref_mut() = None
         }
     }
 
@@ -190,28 +205,29 @@ impl Page {
     pub fn exists(&self) -> bool {
         let inner_guard = self.inner.read();
 
-        let r = inner_guard.deref();
-
-        r.0 > 0
+        inner_guard.deref().is_some()
     }
 }
 
 impl Clone for Page {
     fn clone(&self) -> Self {
-        let inner = Arc::clone(&self.inner);
+        let mut inner = Arc::clone(&self.inner);
 
         // TODO - how to detect if self is already locking ? to detect dead locks
         // TODO - can have other deadlocks when locking to increase the pin count
 
         // TODO - increase pin count using the unsafe?
 
-        if self.is_pinned {
-            let mut inner_guard = self.inner.write();
+        // If not pinned should decrease pin count
+        if !self.is_pinned {
+            assert!(Arc::strong_count(&inner) > 1, "Must clone Page with inner ref count greater than 1");
 
-            let r = inner_guard.deref_mut();
-
-            // Increase internal ref count
-            r.0 += 1;
+            // Clone and decrement strong count manually
+            let ptr = Arc::into_raw(inner);
+            unsafe {
+                inner = Arc::from_raw(ptr);
+                Arc::decrement_strong_count(ptr)
+            }
         }
 
         Page {
@@ -235,7 +251,7 @@ impl PartialEq for Page {
         let self_ref = self_guard.deref();
         let other_ref = other_guard.deref();
 
-        return self_ref.1.eq(&other_ref.1);
+        return self_ref.eq(&other_ref);
     }
 }
 
@@ -246,15 +262,27 @@ impl Drop for Page {
             return;
         }
 
-        let mut guard = self.inner.write();
+        // If the last one (as we create another one at creation)
+        // then manually decrease
+        if Arc::strong_count(&self.inner) == 2 {
+            // No need to decrease strong count twice as we gonna replace the self.inner value which will replace the old ref with new ref
+            let cloned_arc = Arc::clone(&self.inner);
 
-        guard.deref_mut().0 -= 1;
+            let ptr = Arc::into_raw(cloned_arc);
+            unsafe {
+                self.inner = Arc::from_raw(ptr);
 
-        // If the last ref
-        // TODO - should really do that? as when no other refs it will drop automatically
-        if guard.deref().0 == 0 {
-            guard.deref_mut().1 = None;
+                // Change it back to 1 and after this drop function will finish the original strong ref will be cleaned up as well
+                Arc::decrement_strong_count(ptr);
+            }
+
+            let mut guard = self.inner.write();
+
+            // If the last ref
+            // TODO - should really do that? as when no other refs it will drop automatically
+            *guard.deref_mut() = None;
         }
+
     }
 }
 
@@ -326,6 +354,20 @@ mod tests {
         assert_eq!(page.is_pinned(), true);
         assert_eq!(page.is_unpinned(), false);
         assert_eq!(page.get_pin_count(), 1);
+    }
+
+    #[test]
+    fn should_create_with_2_refs_with_only_page_id() {
+        let page = Page::new(1);
+
+        assert_eq!(Arc::strong_count(&page.inner), 2);
+    }
+
+    #[test]
+    fn should_create_with_2_refs_with_page_id_and_data() {
+        let page = Page::create_with_data(1, [2; BUSTUB_PAGE_SIZE]);
+
+        assert_eq!(Arc::strong_count(&page.inner), 2);
     }
 
     // #########################
@@ -758,8 +800,13 @@ mod tests {
     fn clone_on_unpinned_page_should_keep_dirty_status() {
         let backup = Page::new(1);
 
+        let c1 = Arc::strong_count(&backup.inner);
+
         let mut page = backup.clone();
+
+        let c2 = Arc::strong_count(&backup.inner);
         page.unpin();
+        let c3 = Arc::strong_count(&backup.inner);
         assert_eq!(page.is_pinned(), false);
 
         assert_eq!(page.is_dirty(), false);
@@ -767,6 +814,7 @@ mod tests {
         assert_eq!(page.is_dirty(), true);
 
         let other_unpinned = page.clone();
+        let c4 = Arc::strong_count(&backup.inner);
 
         assert_eq!(page.is_dirty(), true);
         assert_eq!(other_unpinned.is_dirty(), true);
