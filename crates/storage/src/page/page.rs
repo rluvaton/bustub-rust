@@ -7,23 +7,15 @@ use anyhow::anyhow;
 // static_assert(sizeof(page_id_t) == 4);
 // static_assert(sizeof(lsn_t) == 4);
 
-#[derive(Debug)]
-enum PageRef {
-    Strong(UnderlyingPage),
-    Weak(UnderlyingPage),
-}
-
 /**
  * Page is the basic unit of storage within the database system. Page provides a wrapper for actual data pages being
  * held in main memory. Page also contains book-keeping information that is used by the buffer pool manager, e.g.
  * pin count, dirty flag, page id, etc.
  */
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct Page {
-    // TODO - wrap this with arc? as this is not really the data
-    inner: Arc<ReaderWriterLatch<(usize, PageRef)>>,
-    //
-    // ref_count: usize
+    inner: Arc<ReaderWriterLatch<(usize, Option<UnderlyingPage>)>>,
+    is_pinned: bool,
 }
 
 impl Page {
@@ -41,22 +33,22 @@ impl Page {
 
     pub fn create_with_data(page_id: PageId, data: PageData) -> Self {
         Page {
-            // ref_count: 1,
+            // Starting as pinned
+            is_pinned: true,
             inner: Arc::new(
-                ReaderWriterLatch::new((
-                    // Self
-                    1,
-                    PageRef::Strong(
-                        // Arc::new(
-                        UnderlyingPage::new(
-                            page_id,
-                            data,
+                ReaderWriterLatch::new(
+                    (
+                        // Ref count
+                        1,
+                        Some(
+                            UnderlyingPage::new(
+                                page_id,
+                                data,
+                            )
                         )
-                        // )
                     )
                 )
-                )
-            )
+            ),
         }
     }
 
@@ -74,19 +66,18 @@ impl Page {
     }
 
     pub fn try_get_page_id(&self) -> Option<PageId> {
+        /// We don't lock as the data cant be changed in the middle as
+        /// 1. it's behind `Arc` so we hold reference to the data, and the underlying data won't be dropped in the middle
+        /// 2. We use `ReaderWriterLatch` so no one can change in the middle
         let inner_guard = self.inner.read();
 
-        let r = inner_guard.deref();
+        let (_, underlying) = inner_guard.deref();
 
-        match &r.1 {
-            PageRef::Strong(underlying) => {
-                Some(underlying.get_page_id())
-            }
-            PageRef::Weak(w) => {
-                // Some(w.upgrade()?.get_page_id())
-                Some(w.get_page_id())
-            }
+        if let Some(p) = underlying {
+            return Some(p.get_page_id());
         }
+
+        None
     }
 
     /** @return the pin count of this page */
@@ -95,16 +86,7 @@ impl Page {
 
         let r = inner_guard.deref();
 
-        return r.0;
-
-        // match &r.1 {
-        //     PageRef::Strong(underlying) => {
-        //         Arc::strong_count(&underlying)
-        //     }
-        //     PageRef::Weak(w) => {
-        //         Weak::strong_count(&w)
-        //     }
-        // }
+        r.0
     }
 
     /// Set page dirty state
@@ -123,34 +105,14 @@ impl Page {
     pub fn try_set_is_dirty(&self, is_dirty: bool) -> Option<()> {
         let mut inner_guard = self.inner.write();
 
-        let r = inner_guard.deref_mut();
+        let (_, underlying) = inner_guard.deref_mut();
 
-        match &mut r.1 {
-            PageRef::Strong(underlying) => {
-                // Arc::get_mut(underlying)
-                //
-                //     // This is probably not true as there are multiple refs
-                //     .expect("must be able to get mut ref as no other ref currently hold the lock")
-                //     .set_is_dirty(is_dirty);
-                underlying
-                    .set_is_dirty(is_dirty);
-
-                Some(())
-            }
-            PageRef::Weak(underlying) => {
-                // Arc::get_mut(
-                //     &mut underlying.upgrade()?
-                // )
-                //     // This is probably not true as there are multiple refs
-                //     .expect("must be able to get mut ref as no other ref currently hold the lock")
-                //     .set_is_dirty(is_dirty);
-
-                underlying
-                    .set_is_dirty(is_dirty);
-
-                Some(())
-            }
+        if let Some(p) = underlying {
+            p.set_is_dirty(is_dirty);
+            return Some(());
         }
+
+        None
     }
 
     /// Check if page is dirty
@@ -169,20 +131,21 @@ impl Page {
     pub fn try_is_dirty(&self) -> Option<bool> {
         let inner_guard = self.inner.read();
 
-        let r = inner_guard.deref();
+        let (_, underlying) = inner_guard.deref();
 
-        match &r.1 {
-            PageRef::Strong(underlying) => {
-                Some(underlying.is_dirty())
-            }
-            PageRef::Weak(underlying) => {
-                // Some(underlying.upgrade()?.is_dirty())
-                Some(underlying.is_dirty())
-            }
+        if let Some(p) = underlying {
+            return Some(p.is_dirty());
         }
+
+        None
     }
 
     pub fn pin(&mut self) -> Option<()> {
+        if self.is_pinned {
+            // Already pinned
+            return Some(());
+        }
+
         let mut inner_guard = self.inner.write();
 
         let r = inner_guard.deref_mut();
@@ -192,61 +155,33 @@ impl Page {
             return None;
         }
 
-        match &r.1 {
-            PageRef::Strong(_) => {
-                // Already pinned
-                Some(())
-            }
-            PageRef::Weak(w) => {
-                inner_guard.0 += 1;
-                // let upgrade_res = w.upgrade();
-                //
-                // if upgrade_res.is_none() {
-                //     // Was not able to make the pin
-                //     return None;
-                // }
-                //
-                // *inner_guard = (inner_guard.deref().0, PageRef::Strong(upgrade_res.expect("Must exist")));
-                //
-                // Pinned
-                Some(())
-            }
-        }
+        inner_guard.0 += 1;
+        self.is_pinned = true;
+
+        Some(())
     }
 
     pub fn unpin(&mut self) {
+        if !self.is_pinned {
+            // Already unpinned
+            return;
+        }
+
+        self.is_pinned = false;
         let mut inner_guard = self.inner.write();
 
         let r = inner_guard.deref_mut();
 
-        if r.0 == 0 {
-            return;
-        }
+        r.0 -= 1;
 
-        match &r.1 {
-            PageRef::Strong(s) => {
-                r.0 -= 1;
-                // *inner_guard = (r.0 - 1, PageRef::Weak(Arc::downgrade(&s)));
-            }
-            PageRef::Weak(_) => {
-                // Already unpinned
-            }
+        if r.0 == 0 {
+            // TODO - should remove the underlying page on unpin everything?
+            r.1 = None
         }
     }
 
     pub fn is_pinned(&self) -> bool {
-        let inner_guard = self.inner.read();
-
-        let r = inner_guard.deref();
-
-        match &r.1 {
-            PageRef::Strong(_) => {
-                true
-            }
-            PageRef::Weak(_) => {
-                false
-            }
-        }
+        self.is_pinned
     }
 
     pub fn is_unpinned(&self) -> bool {
@@ -258,62 +193,29 @@ impl Page {
 
         let r = inner_guard.deref();
 
-        return r.0 > 0;
-
-        // match &r.1 {
-        //     PageRef::Strong(_) => {
-        //         true
-        //     }
-        //     PageRef::Weak(w) => {
-        //         w.upgrade().is_some()
-        //     }
-        // }
-    }
-
-    fn eq_both_weak(a: &Weak<UnderlyingPage>, b: &Weak<UnderlyingPage>) -> bool {
-        let self_strong = a.upgrade();
-        let other_strong = b.upgrade();
-
-        if self_strong.is_some() && other_strong.is_some() {
-            let self_underlying = self_strong.unwrap();
-            let other_underlying = other_strong.unwrap();
-
-            return self_underlying.eq(&other_underlying);
-        }
-
-        self_strong.is_none() == other_strong.is_none()
-    }
-
-    fn eq_combined(strong: &Arc<UnderlyingPage>, weak: &Weak<UnderlyingPage>) -> bool {
-        let weak_as_strong = weak.upgrade();
-
-        if weak_as_strong.is_none() {
-            return false;
-        }
-
-        strong.eq(&weak_as_strong.unwrap())
+        r.0 > 0
     }
 }
 
-// impl Clone for Page {
-//     fn clone(&self) -> Self {
-//         // TODO - should clone the lock while also update the ref underlying
-//         Page {
-//             // ref_count: 1,
-//             inner: Arc::clone(&self.inner),
-//         }
-//         // let inner_guard = self.inner.read();
-//         //
-//         // match inner_guard.deref() {
-//         //     PageRef::Strong(underlying) => {
-//         //         Some(underlying.get_page_id())
-//         //     }
-//         //     PageRef::Weak(w) => {
-//         //         Some(w.upgrade()?.get_page_id())
-//         //     }
-//         // }
-//     }
-// }
+impl Clone for Page {
+    fn clone(&self) -> Self {
+        let inner = Arc::clone(&self.inner);
+
+        if self.is_pinned {
+            let mut inner_guard = self.inner.write();
+
+            let r = inner_guard.deref_mut();
+
+            // Increase internal ref count
+            r.0 += 1;
+        }
+
+        Page {
+            is_pinned: self.is_pinned,
+            inner,
+        }
+    }
+}
 
 impl Default for Page {
     fn default() -> Self {
@@ -329,38 +231,25 @@ impl PartialEq for Page {
         let self_ref = self_guard.deref();
         let other_ref = other_guard.deref();
 
-        // return self_ref.1.eq(&other_ref.1);
+        return self_ref.1.eq(&other_ref.1);
+    }
+}
 
-        match &self_ref.1 {
-            PageRef::Strong(self_strong) => {
-                match &other_ref.1 {
-                    PageRef::Strong(other_strong) => {
-                        // Both strong
-                        self_strong.eq(other_strong)
-                    }
+impl Drop for Page {
+    fn drop(&mut self) {
+        // Avoid decreasing count if this page instance is not pinned
+        if !self.is_pinned {
+            return;
+        }
 
-                    PageRef::Weak(other_weak) => {
-                        // Strong and weak
-                        self_strong.eq(other_weak)
-                        // Page::eq_combined(self_strong, other_weak)
-                    }
-                }
-            }
-            PageRef::Weak(self_weak) => {
-                match &other_ref.1 {
-                    PageRef::Strong(other_strong) => {
-                        self_weak.eq(other_strong)
-                        // Weak and strong
-                        // Page::eq_combined(other_strong, self_weak)
-                    }
-                    PageRef::Weak(other_weak) => {
-                        self_weak.eq(other_weak)
+        let mut guard = self.inner.write();
 
-                        // Both weak
-                        // Page::eq_both_weak(self_weak, other_weak)
-                    }
-                }
-            }
+        guard.deref_mut().0 -= 1;
+
+        // If the last ref
+        // TODO - should really do that? as when no other refs it will drop automatically
+        if guard.deref().0 == 0 {
+            guard.deref_mut().1 = None;
         }
     }
 }
@@ -416,7 +305,7 @@ mod tests {
     #[test]
     fn should_be_able_to_mark_as_dirty_when_have_weak_ref() {
         let page_og = Page::new(1);
-        // Avoid the being dropped
+        // Avoid the value being cleaned up
         let mut page = page_og.clone();
         page.unpin();
 
@@ -425,6 +314,7 @@ mod tests {
         assert_eq!(page.try_is_dirty().unwrap(), false);
         assert_eq!(page_og.try_is_dirty().unwrap(), false);
 
+        // Set as dirty and check that the original and the cloned are in sync
         page.set_is_dirty(true);
 
         assert_eq!(page.is_dirty(), true);
@@ -432,6 +322,7 @@ mod tests {
         assert_eq!(page.try_is_dirty().unwrap(), true);
         assert_eq!(page_og.try_is_dirty().unwrap(), true);
 
+        // Set as not dirty and check that the original and the cloned are in sync
         page_og.set_is_dirty(false);
 
         assert_eq!(page_og.is_dirty(), false);
@@ -440,56 +331,85 @@ mod tests {
         assert_eq!(page.try_is_dirty().unwrap(), false);
     }
 
-    // TODO
-    #[ignore]
     #[test]
-    fn should_not_be_able_to_mark_as_dirty_when_have_weak_ref_with_dropped_value() {
-        todo!()
+    fn should_not_be_able_to_set_dirty_state_when_have_weak_ref_with_dropped_value() {
+        let mut page = Page::new(1);
+
+        page.unpin();
+
+        assert_eq!(page.try_set_is_dirty(true), None);
+        assert_eq!(page.try_set_is_dirty(false), None);
     }
 
     // ##################
     //        Pin
     // ##################
-    // TODO
-    #[ignore]
     #[test]
     fn should_be_able_to_pin_page_with_already_strong_ref() {
-        todo!()
+        let mut page = Page::new(1);
+
+        page.pin().expect("should be able to pin");
+
+        assert_eq!(page.is_pinned(), true);
     }
 
-    // TODO
-    #[ignore]
     #[test]
     fn should_be_able_to_pin_page_with_existing_weak_ref() {
-        todo!()
+        let page_og = Page::new(1);
+        // Avoid the value being cleaned up
+        let mut page = page_og.clone();
+        page.unpin();
+
+        assert_eq!(page_og.is_pinned(), true);
+        assert_eq!(page.is_pinned(), false);
+
+        page.pin().expect("should be able to pin");
+
+        assert_eq!(page.is_pinned(), true);
     }
 
-    // TODO
-    #[ignore]
     #[test]
     fn should_not_be_able_to_pin_page_with_dropped_weak_ref() {
-        todo!()
+        let mut page = Page::new(1);
+        page.unpin();
+
+        assert_eq!(page.pin(), None, "should not be able to pin when there are no references to existing");
     }
 
-    // TODO
-    #[ignore]
-    #[test]
-    fn should_increase_pin_count_on_pin_weak() {
-        todo!()
-    }
-
-    // TODO
-    #[ignore]
     #[test]
     fn should_keep_pin_count_on_pin_strong() {
-        todo!()
+        let mut page = Page::new(1);
+
+        let original_pin_count = page.get_pin_count();
+        assert_eq!(original_pin_count, 1);
+
+        page.pin().expect("should be able to pin");
+
+        assert_eq!(page.get_pin_count(), original_pin_count);
     }
 
-    // TODO
-    #[ignore]
+    #[test]
+    fn should_increase_pin_count_on_pin_weak() {
+        let mut page = Page::new(1);
+
+        let original_pin_count = page.get_pin_count();
+        assert_eq!(original_pin_count, 1);
+
+        page.pin().expect("should be able to pin");
+
+        assert_eq!(page.get_pin_count(), original_pin_count);
+    }
+
     #[test]
     fn should_keep_pin_count_on_pin_weak_dropped() {
-        todo!()
+        let mut page = Page::new(1);
+        page.unpin();
+
+        assert_eq!(page.get_pin_count(), 0);
+
+        assert_eq!(page.pin(), None, "should not be able to pin when there are no references to existing");
+
+        assert_eq!(page.get_pin_count(), 0);
     }
 
     // ##################
