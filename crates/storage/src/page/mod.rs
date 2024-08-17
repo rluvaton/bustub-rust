@@ -1,11 +1,9 @@
-mod strong_page;
+mod page;
 mod page_guards;
 mod underlying_page;
-mod weak_page;
 
 use common::config::{PageData, BUSTUB_PAGE_SIZE};
-pub use strong_page::{StrongPage as Page};
-pub use weak_page::WeakPage;
+pub use page::Page;
 pub use underlying_page::UnderlyingPage;
 pub use page_guards::{BasicPageGuard, ReadPageGuard, WritePageGuard};
 

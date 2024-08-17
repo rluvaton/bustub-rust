@@ -108,6 +108,7 @@ impl UnderlyingPage {
     pub fn set_is_dirty(&mut self, is_dirty: bool) {
         self.is_dirty = is_dirty;
     }
+
     pub fn set_data(&mut self, data: PageData) {
         self.data = data;
     }
