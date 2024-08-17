@@ -26,8 +26,8 @@ mod tests {
         let promise2 = disk_scheduler.create_promise();
         let future2 = promise2.get_future();
 
-        let data = Arc::new(Box::from(data));
-        let buf = Arc::new(Mutex::new(Box::from(buf)));
+        let data = Arc::new(data);
+        let buf = Arc::new(Mutex::new(buf));
 
         disk_scheduler.schedule(
             WriteDiskRequest {

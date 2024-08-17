@@ -1,6 +1,6 @@
 use std::sync::{Arc};
 use parking_lot::Mutex;
-use common::config::PageId;
+use common::config::{PageData, PageId};
 use common::Promise;
 
 /**
@@ -11,13 +11,23 @@ pub struct ReadDiskRequest {
      *  Pointer to the start of the memory location where a page is being read into from disk (on a read).
     Having box will reduce performance as it will need to create in the heap
      */
-    pub data: Arc<Mutex<Box<[u8]>>>,
+    pub data: Arc<Mutex<PageData>>,
 
     /** ID of the page being read from disk. */
     pub page_id: PageId,
 
     /** Callback used to signal to the request issuer when the request has been completed. */
     pub callback: Promise<bool>,
+}
+
+impl ReadDiskRequest {
+    pub fn new(page_id: PageId, data: Arc<Mutex<PageData>>, callback: Promise<bool>) -> Self {
+        ReadDiskRequest {
+            page_id,
+            data: data.clone(),
+            callback
+        }
+    }
 }
 
 /**
@@ -29,13 +39,23 @@ pub struct WriteDiskRequest {
 
     Having box will reduce performance as it will need to create in the heap
      */
-    pub data: Arc<Box<[u8]>>,
+    pub data: Arc<PageData>,
 
     /** ID of the page being written to disk. */
     pub page_id: PageId,
 
     /** Callback used to signal to the request issuer when the request has been completed. */
     pub callback: Promise<bool>,
+}
+
+impl WriteDiskRequest {
+    pub fn new(page_id: PageId, data: Arc<PageData>, callback: Promise<bool>) -> Self {
+        WriteDiskRequest {
+            page_id,
+            data: data.clone(),
+            callback
+        }
+    }
 }
 
 pub enum DiskRequestType {

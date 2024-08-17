@@ -1,5 +1,5 @@
 
-use std::collections::HashMap;
+use std::collections::{HashMap, LinkedList};
 use std::sync::Arc;
 use parking_lot::Mutex;
 use common::config::{AtomicPageId, FrameId, PageId};
@@ -14,13 +14,13 @@ pub struct BufferPoolManager {
     /** Number of pages in the buffer pool. */
     pub(crate) pool_size: usize,
     /** The next page id to be allocated  */
-    // TODO - default 0
     pub(crate) next_page_id: AtomicPageId,
 
     /** Array of buffer pool pages. */
+    // The index is the frame_id
     pub(crate) pages: Vec<Page>,
-    /** Pointer to the disk sheduler. */
-    pub(crate) disk_scheduler: Arc<DiskScheduler>,
+    /** Pointer to the disk scheduler. */
+    pub(crate) disk_scheduler: Arc<Mutex<DiskScheduler>>,
 
     /** Pointer to the log manager. Please ignore this for P1. */
     // LogManager *log_manager_ __attribute__((__unused__));
@@ -36,7 +36,7 @@ pub struct BufferPoolManager {
 
     /** List of free frames that don't have any pages on them. */
     // std::list<frame_id_t> free_list_;
-    pub(crate) free_list: Vec<FrameId>,
+    pub(crate) free_list: LinkedList<FrameId>,
     /** This latch protects shared data structures. We recommend updating this comment to describe what it protects. */
     pub(crate) latch: Mutex<()>,
 }

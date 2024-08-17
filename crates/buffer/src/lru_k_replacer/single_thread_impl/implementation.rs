@@ -7,14 +7,14 @@ use std::sync::Arc;
 use crate::lru_k_replacer::LRUKReplacerImpl;
 
 impl LRUKReplacerImpl {
-    /// a new `LRUKReplacer`
+    /// a new `LRUKReplacerImpl`
     ///
     /// # Arguments
     ///
     /// * `num_frames`: the maximum number of frames the LRUReplacer will be required to store
     /// * `k`: the `k` in the LRU-K
     ///
-    /// returns: LRUKReplacer
+    /// returns: LRUKReplacerImpl
     ///
     pub(crate) fn new(num_frames: usize, k: usize) -> Self {
         LRUKReplacerImpl {
