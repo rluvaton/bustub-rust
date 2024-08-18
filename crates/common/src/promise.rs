@@ -54,7 +54,7 @@ impl<T> Future<T> {
 mod tests {
     use std::thread;
     use std::time::Duration;
-    use crate::Future;
+    
     use crate::promise::Promise;
 
     #[test]

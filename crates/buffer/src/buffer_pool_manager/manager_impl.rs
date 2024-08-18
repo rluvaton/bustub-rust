@@ -1,5 +1,4 @@
 use std::collections::{HashMap, LinkedList};
-use std::ops::{Deref, DerefMut, Index};
 use std::sync::Arc;
 use std::sync::atomic::Ordering;
 use parking_lot::Mutex;
@@ -100,12 +99,12 @@ impl BufferPoolManager {
 
         self.page_table.insert(new_page_id, frame_id);
 
-        let mut old_page: Option<&mut Page> = self.pages.get_mut(frame_id as usize);
+        let old_page: Option<&mut Page> = self.pages.get_mut(frame_id as usize);
 
         // If no page was in the pages already
         if old_page.is_none() {
             // Create it
-            let mut new_page = Page::new(new_page_id);
+            let new_page = Page::new(new_page_id);
 
             let mut new_page_in_ref = new_page.clone();
             new_page_in_ref.unpin();
@@ -216,7 +215,7 @@ impl BufferPoolManager {
         }
 
         // No page exists on that frame
-        let mut page: Page = Page::new(page_id);
+        let page: Page = Page::new(page_id);
 
 
         page.with_write(|mut underlying| {
@@ -316,7 +315,7 @@ impl BufferPoolManager {
             return false;
         }
 
-        let mut page = page.unwrap();
+        let page = page.unwrap();
 
         // Also, set the dirty flag on the page to indicate if the page was modified.
         if is_dirty {
