@@ -54,14 +54,6 @@ impl Page {
         }
     }
 
-    /// Returns the page id
-    pub fn get_page_id(&self) -> PageId {
-        let inner_guard = self.inner.read();
-
-        let underlying = inner_guard.deref();
-
-        underlying.get_page_id()
-    }
 
     /** @return the pin count of this page */
     pub fn get_pin_count(&self) -> usize {
@@ -133,6 +125,8 @@ impl Page {
     /// use storage::Page;
     ///
     /// let page = Page::new(1);
+    /// let page_id = page.with_read(|u| u.get_page_id());
+    ///
     /// page.with_read(|u| {
     ///     assert_eq!(u.is_dirty(), false);
     /// });
@@ -150,6 +144,17 @@ impl Page {
     /// * `with_write_lock`: function to run with write lock that get the underlying page
     ///
     /// returns: R `with_write_lock` return value
+    ///
+    /// # Examples
+    /// ```
+    /// use storage::Page;
+    ///
+    /// let page = Page::new(1);
+    ///
+    /// page.with_write(|u| {
+    ///     u.set_is_dirty(true);
+    /// });
+    /// ```
     pub fn with_write<F: FnOnce(&mut UnderlyingPage) -> R, R>(&self, with_write_lock: F) -> R {
         let mut inner_guard = self.inner.write();
 
