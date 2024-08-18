@@ -6,7 +6,7 @@ use parking_lot::Mutex;
 use common::config::{AtomicPageId, FrameId, PageId, INVALID_PAGE_ID, LRUK_REPLACER_K};
 use common::Promise;
 use recovery::LogManager;
-use storage::{BasicPageGuard, DiskManager, DiskScheduler, Page, ReadPageGuard, WritePageGuard, UnderlyingPage, WriteDiskRequest, ReadDiskRequest, WeakPage};
+use storage::{BasicPageGuard, DiskManager, DiskScheduler, Page, ReadPageGuard, WritePageGuard, UnderlyingPage, WriteDiskRequest, ReadDiskRequest};
 use crate::buffer_pool_manager::manager::BufferPoolManager;
 use crate::lru_k_replacer::{AccessType, LRUKReplacer};
 
@@ -111,7 +111,7 @@ impl BufferPoolManager {
 
         self.page_table.insert(new_page_id, frame_id);
 
-        let mut old_page: Option<&Page> = self.pages.get(frame_id as usize);
+        let mut old_page: Option<&mut Page> = self.pages.get_mut(frame_id as usize);
 
         // If no page was in the pages already
         if old_page.is_none() {
@@ -125,22 +125,23 @@ impl BufferPoolManager {
 
         // If already had old page, need to flush to disk
         let old_page = old_page.unwrap();
+        let cloned = old_page.clone();
 
-        // Clear old reference
-        self.page_table.remove(&old_page.get_page_id());
+        cloned.with_write(|mut underlying| {
+            // Clear old reference
+            self.page_table.remove(&underlying.get_page_id());
 
-        let mut underlying = old_page.underlying_page.write();
+            if underlying.is_dirty() {
+                // If the replacement frame has a dirty page,
+                //      * you should write it back to the disk first. You also need to reset the memory and metadata for the new page.
+                self.flush_specific_page_unchecked(&mut underlying);
+            }
 
-        if underlying.is_dirty() {
-            // If the replacement frame has a dirty page,
-            //      * you should write it back to the disk first. You also need to reset the memory and metadata for the new page.
-            self.flush_specific_page_unchecked(underlying.deref_mut());
-        }
+            // Reset the memory and metadata for the new page.
+            underlying.reset(new_page_id);
+        });
 
-        // Reset the memory and metadata for the new page.
-        underlying.reset(new_page_id);
-
-        Some(old_page.clone())
+        Some(cloned)
     }
 
     /**
@@ -230,14 +231,12 @@ impl BufferPoolManager {
             Page::new(page_id)
         });
 
-        // If this is a different page
-        if page.get_page_id() != page_id {
-            // TODO - should have lock here as well on the page table
-            self.page_table.remove(&page.get_page_id());
-        }
-
-        {
-            let mut underlying = page.underlying_page.write();
+        page.with_write(|mut underlying| {
+            // If this is a different page
+            if underlying.get_page_id() != page_id {
+                // TODO - should have lock here as well on the page table
+                self.page_table.remove(&underlying.get_page_id());
+            }
 
             // TODO - should already have a lock on the pages and page table here to avoid page removed in the meantime
 
@@ -250,14 +249,14 @@ impl BufferPoolManager {
             if underlying.is_dirty() {
                 // If the replacement frame has a dirty page,
                 //      * you should write it back to the disk first. You also need to reset the memory and metadata for the new page.
-                self.flush_specific_page_unchecked(underlying.deref_mut());
+                self.flush_specific_page_unchecked(&mut underlying);
             }
 
             // Update page id if we're replacing an existing page
             underlying.replace_page_id_without_content_update(page_id);
 
             self.fetch_specific_page_unchecked(&mut underlying);
-        }
+        });
 
         Some(page)
     }
@@ -317,10 +316,12 @@ impl BufferPoolManager {
      * @param access_type type of access to the page, only needed for leaderboard tests. TODO - default  = AccessType::Unknown
      * @return false if the page is not in the page table or its pin count is <= 0 before this call, true otherwise
      */
-    pub fn unpin_page(&mut self, page: &Page, is_dirty: bool, access_type: AccessType) -> bool {
+    pub fn unpin_page(&mut self, page: &mut Page, is_dirty: bool, access_type: AccessType) -> bool {
         // TODO - should acquire lock?
 
-        let frame_id = self.page_table.get(&page.get_page_id());
+        let page_id = page.with_read(|u| u.get_page_id());
+
+        let frame_id = self.page_table.get(&page_id);
 
         // If page_id is not in the buffer pool, return false
         if frame_id.is_none() {
@@ -333,20 +334,19 @@ impl BufferPoolManager {
 
         // Also, set the dirty flag on the page to indicate if the page was modified.
         if is_dirty {
-            page.mark_as_dirty();
+            page.with_write(|u| u.set_is_dirty(true));
         }
 
         let pin_count = page.get_pin_count();
 
-        if pin_count == 1 {
+        // If page's pin count is already 0, return false
+        if pin_count == 0 {
             return false;
         }
 
-        // If nothing hold the pin
-        // If the pin count reaches 0, the frame should be evictable by the replacer.
-        if pin_count == 2 {
-            // In the current implementation returning false if the pin already 0 does not make sense
-            // As we don't manually manage the pin count and 0 means that the page is dropped
+        // If pin count is 1, and we are the one holding the pin
+        if pin_count == 1 && page.is_pinned() {
+            page.unpin();
 
             self.replacer.set_evictable(*frame_id, true);
         }
@@ -368,27 +368,30 @@ impl BufferPoolManager {
 
         self.replacer.record_access(*frame_id, access_type);
 
-        let page: Option<&Page> = self.pages.get(*frame_id as usize);
+        let page: Option<&mut Page> = self.pages.get_mut(*frame_id as usize);
 
         if page.is_none() {
             // TODO - log warning or something as this mean we have corruption
             return false;
         }
 
-        let page = page.unwrap();
+        let mut page = page.unwrap();
 
         // Also, set the dirty flag on the page to indicate if the page was modified.
         if is_dirty {
-            page.mark_as_dirty();
+            page.with_write(|u| u.set_is_dirty(true));
         }
 
         let pin_count = page.get_pin_count();
 
-        // If nothing hold the pin
-        // If the pin count reaches 0, the frame should be evictable by the replacer.
-        if pin_count == 1 {
-            // In the current implementation returning false if the pin already 0 does not make sense
-            // As we don't manually manage the pin count and 0 means that the page is dropped
+        // If page's pin count is already 0, return false
+        if pin_count == 0 {
+            return false;
+        }
+
+        // If pin count is 1, and we are the one holding the pin
+        if pin_count == 1 && page.is_pinned() {
+            page.unpin();
 
             self.replacer.set_evictable(*frame_id, true);
         }
@@ -422,9 +425,7 @@ impl BufferPoolManager {
 
         let page = &self.pages[page_id as usize];
 
-        let mut underlying = page.underlying_page.write();
-
-        self.flush_specific_page_unchecked(underlying.deref_mut())
+        page.with_write(|u| self.flush_specific_page_unchecked(u))
     }
 
     fn flush_specific_page_unchecked(&self, page: &mut UnderlyingPage) {
