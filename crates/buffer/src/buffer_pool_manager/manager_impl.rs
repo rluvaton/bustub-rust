@@ -119,17 +119,7 @@ impl BufferPoolManager {
         let old_page = old_page.unwrap();
         let cloned = old_page.clone();
 
-        cloned.with_write(|mut underlying| {
-            // Clear old reference
-            self.page_table.remove(&underlying.get_page_id());
-
-            if underlying.is_dirty() {
-                // If the replacement frame has a dirty page,
-                //      * you should write it back to the disk first. You also need to reset the memory and metadata for the new page.
-                self.flush_specific_page_unchecked(&mut underlying);
-            }
-
-            // Reset the memory and metadata for the new page.
+        self.replace_page(&cloned, new_page_id, |_, new_page_id, underlying| {
             underlying.reset(new_page_id);
         });
 
@@ -208,30 +198,18 @@ impl BufferPoolManager {
 
         // Different page exists on the same frame, meaning that we need to flush that page if needed
         if let Some(page) = self.pages.get_mut(frame_id as usize) {
+
             // clone increase pin count
-            let mut pinned_page_clone = page.clone();
+            let pinned_page_clone = page.clone();
 
-            pinned_page_clone.with_write(|mut underlying| {
-                // If this is a different page
-                if underlying.get_page_id() != page_id {
-                    // TODO - should have lock here as well on the page table
-                    self.page_table.remove(&underlying.get_page_id());
-                }
+            // TODO - should already have a lock on the pages and page table here to avoid page removed in the meantime
+            self.page_table.insert(page_id, frame_id);
 
-                // TODO - should already have a lock on the pages and page table here to avoid page removed in the meantime
-
-                self.page_table.insert(page_id, frame_id);
-
-                if underlying.is_dirty() {
-                    // If the replacement frame has a dirty page,
-                    // you should write it back to the disk first. You also need to reset the memory and metadata for the new page.
-                    self.flush_specific_page_unchecked(&mut underlying);
-                }
-
+            self.replace_page(&pinned_page_clone, page_id, |this, new_page_id, underlying| {
                 // Update page id if we're replacing an existing page
-                underlying.replace_page_id_without_content_update(page_id);
+                underlying.replace_page_id_without_content_update(new_page_id);
 
-                self.fetch_specific_page_unchecked(&mut underlying);
+                this.fetch_specific_page_unchecked(underlying);
             });
 
             return Some(pinned_page_clone);
@@ -240,7 +218,6 @@ impl BufferPoolManager {
         // No page exists on that frame
         let mut page: Page = Page::new(page_id);
 
-        page.pin();
 
         page.with_write(|mut underlying| {
 
@@ -477,7 +454,29 @@ impl BufferPoolManager {
             // pick replacement from the replacer, can't be empty
             self.replacer.evict()
         }
+    }
 
+
+    /// Replace page with another page id, if `old_page`, `page_id` is the same as `new_page_id` don't do anything and return false
+    fn replace_page<F: FnOnce(&mut Self, PageId, &mut UnderlyingPage)>(&mut self, old_page: &Page, new_page_id: PageId, new_page_reset_fn: F) -> bool {
+        old_page.with_write(|mut underlying| {
+            if new_page_id == underlying.get_page_id() {
+                return false
+            }
+
+            // Clear old reference
+            self.page_table.remove(&underlying.get_page_id());
+
+            if underlying.is_dirty() {
+                // If the replacement frame has a dirty page,
+                //      * you should write it back to the disk first. You also need to reset the memory and metadata for the new page.
+                self.flush_specific_page_unchecked(&mut underlying);
+            }
+
+            new_page_reset_fn(self, new_page_id, underlying);
+
+            true
+        })
     }
 
     /**
