@@ -1,5 +1,4 @@
 use crate::metrics::clock_ms;
-use std::fmt::Display;
 
 pub struct BpmMetrics {
     start_time: u64,

@@ -36,7 +36,7 @@ fn main() {
 
 
     let disk_manager = Arc::new(Mutex::new(DiskManagerUnlimitedMemory::new()));
-    let mut bpm: Arc<Mutex<BufferPoolManager>> = Arc::new(Mutex::new(BufferPoolManager::new(
+    let bpm: Arc<Mutex<BufferPoolManager>> = Arc::new(Mutex::new(BufferPoolManager::new(
         bustub_bpm_size,
         Arc::clone(&disk_manager),
         Some(lru_k_size),
@@ -63,7 +63,7 @@ fn main() {
 
     println!("[info] benchmark start");
 
-    let mut total_metrics = Arc::new(Mutex::new(BpmTotalMetrics::new()));
+    let total_metrics = Arc::new(Mutex::new(BpmTotalMetrics::new()));
 
     total_metrics.lock().begin();
 
@@ -94,7 +94,7 @@ fn main() {
                 let page = page.unwrap();
 
                 page.with_write(|u| unsafe {
-                    let mut seed = records.get_mut(&page_idx).expect("Must exists");
+                    let seed = records.get_mut(&page_idx).expect("Must exists");
 
                     check_page_consistent(u.get_data(), page_idx as usize, *seed);
                     *seed = *seed + 1;
@@ -123,7 +123,7 @@ fn main() {
         let t = thread::spawn(move || {
             // thread_id, &page_ids, &bpm, &total_metrics
             let mut rng = rand::thread_rng();
-            let mut dist = zipf::ZipfDistribution::new(bustub_page_cnt - 1, 0.8).unwrap();
+            let dist = zipf::ZipfDistribution::new(bustub_page_cnt - 1, 0.8).unwrap();
 
 
             let mut metrics: BpmMetrics = BpmMetrics::new(format!("get  {:>2}", thread_id), duration_ms);

@@ -1,4 +1,4 @@
-use std::fmt::{Debug, Display, Formatter};
+use std::fmt::{Display, Formatter};
 use parking_lot::Mutex;
 use crate::metrics::clock_ms;
 

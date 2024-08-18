@@ -1,6 +1,5 @@
 use std::process::abort;
 use common::config::PageData;
-use storage::Page;
 
 // #[repr(C)]
 struct BustubBenchPageHeader {
