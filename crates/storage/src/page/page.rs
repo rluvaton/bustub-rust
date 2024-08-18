@@ -63,26 +63,11 @@ impl Page {
         underlying.get_page_id()
     }
 
-
     /** @return the pin count of this page */
     pub fn get_pin_count(&self) -> usize {
         // This can never be 0
         // Ignore own + 1 we did in the new function
         Arc::strong_count(&self.inner) - 1
-    }
-
-    /// Set page dirty state
-    pub fn set_is_dirty(&self, is_dirty: bool) {
-        let mut inner_guard = self.inner.write();
-
-        inner_guard.deref_mut().set_is_dirty(is_dirty);
-    }
-
-    /// Check if page is dirty
-    pub fn is_dirty(&self) -> bool {
-        let inner_guard = self.inner.read();
-
-        inner_guard.deref().is_dirty()
     }
 
     pub fn pin(&mut self) {
@@ -133,6 +118,42 @@ impl Page {
 
     pub fn is_unpinned(&self) -> bool {
         !self.is_pinned()
+    }
+
+    /// Run function with read lock and get the underlying page
+    ///
+    /// # Arguments
+    ///
+    /// * `with_read_lock`: function to run with `read` lock that get the underlying page
+    ///
+    /// returns: R `with_read_lock` return value
+    ///
+    /// # Examples
+    /// ```
+    /// use storage::Page;
+    ///
+    /// let page = Page::new(1);
+    /// page.with_read(|u| {
+    ///     assert_eq!(u.is_dirty(), false);
+    /// });
+    /// ```
+    pub fn with_read<F: FnOnce(&UnderlyingPage) -> R, R>(&self, with_read_lock: F) -> R {
+        let mut inner_guard = self.inner.read();
+
+        with_read_lock(inner_guard.deref())
+    }
+
+    /// Run function with write lock and get the underlying page
+    ///
+    /// # Arguments
+    ///
+    /// * `with_write_lock`: function to run with write lock that get the underlying page
+    ///
+    /// returns: R `with_write_lock` return value
+    pub fn with_write<F: FnOnce(&mut UnderlyingPage) -> R, R>(&self, with_write_lock: F) -> R {
+        let mut inner_guard = self.inner.write();
+
+        with_write_lock(inner_guard.deref_mut())
     }
 }
 
@@ -297,11 +318,11 @@ mod tests {
         let mut page = Page::new(1);
         page.pin();
 
-        assert_eq!(page.is_dirty(), false);
+        assert_eq!(page.with_read(|u| u.is_dirty()), false);
 
-        page.set_is_dirty(true);
+        page.with_write(|u| u.set_is_dirty(true));
 
-        assert_eq!(page.is_dirty(), true);
+        assert_eq!(page.with_read(|u| u.is_dirty()), true);
     }
 
     #[test]
@@ -311,20 +332,20 @@ mod tests {
         let mut page = page_og.clone();
         page.unpin();
 
-        assert_eq!(page.is_dirty(), false);
-        assert_eq!(page_og.is_dirty(), false);
+        assert_eq!(page.with_read(|u| u.is_dirty()), false);
+        assert_eq!(page_og.with_read(|u| u.is_dirty()), false);
 
         // Set as dirty and check that the original and the cloned are in sync
-        page.set_is_dirty(true);
+        page.with_write(|u| u.set_is_dirty(true));
 
-        assert_eq!(page.is_dirty(), true);
-        assert_eq!(page_og.is_dirty(), true);
+        assert_eq!(page.with_read(|u| u.is_dirty()), true);
+        assert_eq!(page_og.with_read(|u| u.is_dirty()), true);
 
         // Set as not dirty and check that the original and the cloned are in sync
-        page_og.set_is_dirty(false);
+        page_og.with_write(|u| u.set_is_dirty(false));
 
-        assert_eq!(page_og.is_dirty(), false);
-        assert_eq!(page.is_dirty(), false);
+        assert_eq!(page_og.with_read(|u| u.is_dirty()), false);
+        assert_eq!(page.with_read(|u| u.is_dirty()), false);
     }
 
     #[test]
@@ -333,9 +354,9 @@ mod tests {
 
         page.unpin();
 
-        page.set_is_dirty(true);
+        page.with_write(|u| u.set_is_dirty(true));
 
-        assert_eq!(page.is_dirty(), true);
+        assert_eq!(page.with_read(|u| u.is_dirty()), true);
     }
 
     // ##################
@@ -561,16 +582,16 @@ mod tests {
     fn clone_on_pinned_should_keep_dirty_status() {
         let mut page = Page::new(1);
 
-        assert_eq!(page.is_dirty(), false);
-        page.set_is_dirty(true);
-        assert_eq!(page.is_dirty(), true);
+        assert_eq!(page.with_read(|u| u.is_dirty()), false);
+        page.with_write(|u| u.set_is_dirty(true));
+        assert_eq!(page.with_read(|u| u.is_dirty()), true);
 
         assert_eq!(page.is_pinned(), true);
 
         let other_page = page.clone();
 
-        assert_eq!(page.is_dirty(), true);
-        assert_eq!(other_page.is_dirty(), true);
+        assert_eq!(page.with_read(|u| u.is_dirty()), true);
+        assert_eq!(other_page.with_read(|u| u.is_dirty()), true);
     }
 
     #[test]
@@ -637,18 +658,18 @@ mod tests {
     fn clone_on_pinned_should_sync_dirty_status_changes() {
         let mut page = Page::new(1);
 
-        assert_eq!(page.is_dirty(), false);
+        assert_eq!(page.with_read(|u| u.is_dirty()), false);
 
         assert_eq!(page.is_pinned(), true);
 
         let other_page = page.clone();
 
-        assert_eq!(page.is_dirty(), false);
-        assert_eq!(other_page.is_dirty(), false);
+        assert_eq!(page.with_read(|u| u.is_dirty()), false);
+        assert_eq!(other_page.with_read(|u| u.is_dirty()), false);
 
-        page.set_is_dirty(true);
-        assert_eq!(page.is_dirty(), true);
-        assert_eq!(other_page.is_dirty(), true);
+        page.with_write(|u| u.set_is_dirty(true));
+        assert_eq!(page.with_read(|u| u.is_dirty()), true);
+        assert_eq!(other_page.with_read(|u| u.is_dirty()), true);
     }
 
     #[test]
@@ -715,16 +736,15 @@ mod tests {
         page.unpin();
         assert_eq!(page.is_pinned(), false);
 
-        assert_eq!(page.is_dirty(), false);
-        page.set_is_dirty(true);
-        assert_eq!(page.is_dirty(), true);
+        assert_eq!(page.with_read(|u| u.is_dirty()), false);
+        page.with_write(|u| u.set_is_dirty(true));
+        assert_eq!(page.with_read(|u| u.is_dirty()), true);
 
         let other_unpinned = page.clone();
 
-        assert_eq!(page.is_dirty(), true);
-        assert_eq!(other_unpinned.is_dirty(), true);
+        assert_eq!(page.with_read(|u| u.is_dirty()), true);
+        assert_eq!(other_unpinned.with_read(|u| u.is_dirty()), true);
     }
-
 
     #[test]
     fn clone_on_unpinned_should_keep_lock_state() {
@@ -795,16 +815,16 @@ mod tests {
         page.unpin();
         assert_eq!(page.is_pinned(), false);
 
-        assert_eq!(page.is_dirty(), false);
+        assert_eq!(page.with_read(|u| u.is_dirty()), false);
 
         let other_page = page.clone();
 
-        assert_eq!(page.is_dirty(), false);
-        assert_eq!(other_page.is_dirty(), false);
+        assert_eq!(page.with_read(|u| u.is_dirty()), false);
+        assert_eq!(other_page.with_read(|u| u.is_dirty()), false);
 
-        page.set_is_dirty(true);
-        assert_eq!(page.is_dirty(), true);
-        assert_eq!(other_page.is_dirty(), true);
+        page.with_write(|u| u.set_is_dirty(true));
+        assert_eq!(page.with_read(|u| u.is_dirty()), true);
+        assert_eq!(other_page.with_read(|u| u.is_dirty()), true);
     }
 
     #[test]
@@ -837,5 +857,106 @@ mod tests {
 
         assert_eq!(page.inner.is_locked(), false);
         assert_eq!(other_page.inner.is_locked(), false);
+    }
+
+    // ##################
+    //     with_read
+    // ##################
+
+    #[test]
+    fn with_read_should_acquire_read_lock() {
+        let page = Page::new(1);
+
+        page.with_read(|_| {
+            assert_eq!(page.inner.is_locked(), true, "should be locked");
+            assert_eq!(page.inner.is_locked_exclusive(), false, "Should not be locked in write mode");
+        });
+    }
+
+    #[test]
+    fn with_read_should_release_lock_after_scope() {
+        let page = Page::new(1);
+
+        page.with_read(|_| {});
+
+        assert_eq!(page.inner.is_locked(), false, "should not be locked");
+    }
+
+    #[test]
+    fn with_read_should_get_the_underlying_page() {
+        let page = Page::new(1);
+
+        page.with_read(|u| {
+            assert_eq!(u.get_page_id(), 1);
+        });
+    }
+
+    #[test]
+    fn with_read_should_return_the_function_return_value() {
+        let page = Page::new(1);
+
+
+        let res = page.with_read(|u| {
+            5
+        });
+
+        assert_eq!(res, 5);
+    }
+
+    // ##################
+    //     with_write
+    // ##################
+
+    #[test]
+    fn with_write_should_acquire_write_lock() {
+        let page = Page::new(1);
+
+        page.with_write(|_| {
+            assert_eq!(page.inner.is_locked(), true, "should be locked");
+            assert_eq!(page.inner.is_locked_exclusive(), true, "Should be locked in write mode");
+        });
+    }
+
+    #[test]
+    fn with_write_should_release_lock_after_scope() {
+        let page = Page::new(1);
+
+        page.with_write(|_| {});
+
+        assert_eq!(page.inner.is_locked(), false, "should not be locked");
+    }
+
+    #[test]
+    fn with_write_should_get_the_underlying_page() {
+        let page = Page::new(1);
+
+        page.with_write(|u| {
+            assert_eq!(u.get_page_id(), 1);
+        });
+    }
+
+    #[test]
+    fn with_write_should_be_able_to_mutate_inner_page() {
+        let page = Page::new(1);
+
+        assert_eq!(page.with_read(|u| u.is_dirty()), false);
+
+        page.with_write(|u| {
+            u.set_is_dirty(true)
+        });
+
+        assert_eq!(page.with_read(|u| u.is_dirty()), true);
+    }
+
+    #[test]
+    fn with_write_should_return_the_function_return_value() {
+        let page = Page::new(1);
+
+
+        let res = page.with_write(|u| {
+            5
+        });
+
+        assert_eq!(res, 5);
     }
 }
