@@ -13,7 +13,7 @@ use std::sync::Arc;
  */
 #[derive(Debug)]
 pub struct Page {
-    inner: Arc<ReaderWriterLatch<Option<UnderlyingPage>>>,
+    inner: Arc<ReaderWriterLatch<UnderlyingPage>>,
     is_pinned: bool,
 }
 
@@ -33,11 +33,9 @@ impl Page {
     pub fn create_with_data(page_id: PageId, data: PageData) -> Self {
         let mut inner = Arc::new(
             ReaderWriterLatch::new(
-                Some(
-                    UnderlyingPage::new(
-                        page_id,
-                        data,
-                    )
+                UnderlyingPage::new(
+                    page_id,
+                    data,
                 )
             )
         );
@@ -57,32 +55,14 @@ impl Page {
     }
 
     /// Returns the page id
-    ///
-    /// Because this function may panic, its use is generally discouraged.
-    /// Instead, prefer to use [`Page::try_get_page_id`].
-    ///
-    /// # Panics
-    ///
-    /// Panics if the underlying page has weak ref and cant upgrade to a strong one
-    ///
     pub fn get_page_id(&self) -> PageId {
-        self.try_get_page_id().unwrap()
-    }
-
-    pub fn try_get_page_id(&self) -> Option<PageId> {
-        /// We don't lock as the data cant be changed in the middle as
-        /// 1. it's behind `Arc` so we hold reference to the data, and the underlying data won't be dropped in the middle
-        /// 2. We use `ReaderWriterLatch` so no one can change in the middle
         let inner_guard = self.inner.read();
 
         let underlying = inner_guard.deref();
 
-        if let Some(p) = underlying {
-            return Some(p.get_page_id());
-        }
-
-        None
+        underlying.get_page_id()
     }
+
 
     /** @return the pin count of this page */
     pub fn get_pin_count(&self) -> usize {
@@ -92,61 +72,23 @@ impl Page {
     }
 
     /// Set page dirty state
-    ///
-    /// Because this function may panic, its use is generally discouraged.
-    /// Instead, prefer to use [`Page::try_set_is_dirty`].
-    ///
-    /// # Panics
-    ///
-    /// Panics if the underlying page has weak ref and cant upgrade to a strong one
-    ///
     pub fn set_is_dirty(&self, is_dirty: bool) {
-        self.try_set_is_dirty(is_dirty).expect("Must be able to set dirty state")
-    }
-
-    pub fn try_set_is_dirty(&self, is_dirty: bool) -> Option<()> {
         let mut inner_guard = self.inner.write();
 
-        if let Some(p) = inner_guard.deref_mut() {
-            p.set_is_dirty(is_dirty);
-            return Some(());
-        }
-
-        None
+        inner_guard.deref_mut().set_is_dirty(is_dirty);
     }
 
     /// Check if page is dirty
-    ///
-    /// Because this function may panic, its use is generally discouraged.
-    /// Instead, prefer to use [`Page::try_is_dirty`].
-    ///
-    /// # Panics
-    ///
-    /// Panics if the underlying page has weak ref and cant upgrade to a strong one
-    ///
     pub fn is_dirty(&self) -> bool {
-        self.try_is_dirty().expect("Must be able to check if dirty")
-    }
-
-    pub fn try_is_dirty(&self) -> Option<bool> {
         let inner_guard = self.inner.read();
 
-        if let Some(p) = inner_guard.deref() {
-            return Some(p.is_dirty());
-        }
-
-        None
+        inner_guard.deref().is_dirty()
     }
 
-    pub fn pin(&mut self) -> Option<()> {
+    pub fn pin(&mut self) {
         if self.is_pinned {
             // Already pinned
-            return Some(());
-        }
-
-        if self.get_pin_count() == 0 {
-            // Already dropped
-            return None;
+            return;
         }
 
         {
@@ -162,8 +104,6 @@ impl Page {
         }
 
         self.is_pinned = true;
-
-        Some(())
     }
 
     pub fn unpin(&mut self) {
@@ -185,13 +125,6 @@ impl Page {
         }
 
         self.is_pinned = false;
-
-        // TODO - should remove the underlying page on unpin everything?
-        if self.get_pin_count() == 0 {
-            let mut inner_guard = self.inner.write();
-
-            *inner_guard.deref_mut() = None
-        }
     }
 
     pub fn is_pinned(&self) -> bool {
@@ -200,12 +133,6 @@ impl Page {
 
     pub fn is_unpinned(&self) -> bool {
         !self.is_pinned()
-    }
-
-    pub fn exists(&self) -> bool {
-        let inner_guard = self.inner.read();
-
-        inner_guard.deref().is_some()
     }
 }
 
@@ -275,14 +202,7 @@ impl Drop for Page {
                 // Change it back to 1 and after this drop function will finish the original strong ref will be cleaned up as well
                 Arc::decrement_strong_count(ptr);
             }
-
-            let mut guard = self.inner.write();
-
-            // If the last ref
-            // TODO - should really do that? as when no other refs it will drop automatically
-            *guard.deref_mut() = None;
         }
-
     }
 }
 
@@ -340,7 +260,6 @@ mod tests {
     fn should_create_as_pinned_with_only_page_id() {
         let page = Page::new(1);
 
-        assert_eq!(page.exists(), true);
         assert_eq!(page.is_pinned(), true);
         assert_eq!(page.is_unpinned(), false);
         assert_eq!(page.get_pin_count(), 1);
@@ -350,7 +269,6 @@ mod tests {
     fn should_create_as_pinned_with_page_id_and_data() {
         let page = Page::create_with_data(1, [2; BUSTUB_PAGE_SIZE]);
 
-        assert_eq!(page.exists(), true);
         assert_eq!(page.is_pinned(), true);
         assert_eq!(page.is_unpinned(), false);
         assert_eq!(page.get_pin_count(), 1);
@@ -380,12 +298,10 @@ mod tests {
         page.pin();
 
         assert_eq!(page.is_dirty(), false);
-        assert_eq!(page.try_is_dirty().unwrap(), false);
 
         page.set_is_dirty(true);
 
         assert_eq!(page.is_dirty(), true);
-        assert_eq!(page.try_is_dirty().unwrap(), true);
     }
 
     #[test]
@@ -397,34 +313,29 @@ mod tests {
 
         assert_eq!(page.is_dirty(), false);
         assert_eq!(page_og.is_dirty(), false);
-        assert_eq!(page.try_is_dirty().unwrap(), false);
-        assert_eq!(page_og.try_is_dirty().unwrap(), false);
 
         // Set as dirty and check that the original and the cloned are in sync
         page.set_is_dirty(true);
 
         assert_eq!(page.is_dirty(), true);
         assert_eq!(page_og.is_dirty(), true);
-        assert_eq!(page.try_is_dirty().unwrap(), true);
-        assert_eq!(page_og.try_is_dirty().unwrap(), true);
 
         // Set as not dirty and check that the original and the cloned are in sync
         page_og.set_is_dirty(false);
 
         assert_eq!(page_og.is_dirty(), false);
         assert_eq!(page.is_dirty(), false);
-        assert_eq!(page_og.try_is_dirty().unwrap(), false);
-        assert_eq!(page.try_is_dirty().unwrap(), false);
     }
 
     #[test]
-    fn should_not_be_able_to_set_dirty_state_when_unpinned_page_with_dropped_value() {
+    fn should_be_able_to_set_dirty_state_on_unpinned_page_last_ref() {
         let mut page = Page::new(1);
 
         page.unpin();
 
-        assert_eq!(page.try_set_is_dirty(true), None);
-        assert_eq!(page.try_set_is_dirty(false), None);
+        page.set_is_dirty(true);
+
+        assert_eq!(page.is_dirty(), true);
     }
 
     // ##################
@@ -434,7 +345,7 @@ mod tests {
     fn should_be_able_to_pin_page_with_already_pinned() {
         let mut page = Page::new(1);
 
-        page.pin().expect("should be able to pin");
+        page.pin();
 
         assert_eq!(page.is_pinned(), true);
     }
@@ -449,17 +360,19 @@ mod tests {
         assert_eq!(page_og.is_pinned(), true);
         assert_eq!(page.is_pinned(), false);
 
-        page.pin().expect("should be able to pin");
+        page.pin();
 
         assert_eq!(page.is_pinned(), true);
     }
 
     #[test]
-    fn should_not_be_able_to_pin_page_with_dropped_unpinned_page() {
+    fn should_be_able_to_pin_page_that_has_no_pinned_refs() {
         let mut page = Page::new(1);
         page.unpin();
 
-        assert_eq!(page.pin(), None, "should not be able to pin when there are no references to existing");
+        page.pin();
+
+        assert_eq!(page.is_pinned(), true);
     }
 
     #[test]
@@ -469,7 +382,7 @@ mod tests {
         let original_pin_count = page.get_pin_count();
         assert_eq!(original_pin_count, 1);
 
-        page.pin().expect("should be able to pin");
+        page.pin();
 
         assert_eq!(page.get_pin_count(), original_pin_count);
     }
@@ -481,21 +394,21 @@ mod tests {
         let original_pin_count = page.get_pin_count();
         assert_eq!(original_pin_count, 1);
 
-        page.pin().expect("should be able to pin");
+        page.pin();
 
         assert_eq!(page.get_pin_count(), original_pin_count);
     }
 
     #[test]
-    fn should_keep_pin_count_on_pin_unpinned_page_dropped() {
+    fn should_increase_pin_count_on_pin_last_unpinned_page() {
         let mut page = Page::new(1);
         page.unpin();
 
         assert_eq!(page.get_pin_count(), 0);
 
-        assert_eq!(page.pin(), None, "should not be able to pin when there are no references to existing");
+        page.pin();
 
-        assert_eq!(page.get_pin_count(), 0);
+        assert_eq!(page.get_pin_count(), 1);
     }
 
     // ##################
@@ -528,9 +441,8 @@ mod tests {
     }
 
     #[test]
-    fn should_unpin_page_with_dropped_unpinned_page() {
+    fn should_unpin_last_unpinned_page() {
         let mut page = Page::new(1);
-        // dropped ref
         page.unpin();
 
         assert_eq!(page.is_pinned(), false);
@@ -606,6 +518,15 @@ mod tests {
         page.unpin();
 
         assert_eq!(page.is_pinned(), false);
+        assert_eq!(page.get_pin_count(), 0);
+    }
+
+    #[test]
+    fn should_return_0_for_pin_count_when_no_page_has_any_pin_left() {
+        let mut page = Page::new(1);
+
+        page.unpin();
+
         assert_eq!(page.get_pin_count(), 0);
     }
 
@@ -761,31 +682,22 @@ mod tests {
     }
 
     #[test]
-    fn clone_on_pinned_should_sync_data_changes() {
-        todo!()
-    }
-
-    #[test]
     fn clone_on_unpinned_page_should_keep_the_pin_count() {
-        let backup = Page::new(1);
-
-        let mut page = backup.clone();
+        let mut page = Page::new(1);
         page.unpin();
 
         assert_eq!(page.is_pinned(), false);
-        assert_eq!(page.get_pin_count(), 1);
+        assert_eq!(page.get_pin_count(), 0);
 
         let other_unpinned = page.clone();
 
-        assert_eq!(page.get_pin_count(), 1);
-        assert_eq!(other_unpinned.get_pin_count(), 1);
+        assert_eq!(page.get_pin_count(), 0);
+        assert_eq!(other_unpinned.get_pin_count(), 0);
     }
 
     #[test]
     fn clone_on_unpinned_page_should_keep_unpinned() {
-        let backup = Page::new(1);
-
-        let mut page = backup.clone();
+        let mut page = Page::new(1);
         page.unpin();
 
         assert_eq!(page.is_pinned(), false);
@@ -798,15 +710,9 @@ mod tests {
 
     #[test]
     fn clone_on_unpinned_page_should_keep_dirty_status() {
-        let backup = Page::new(1);
+        let mut page = Page::new(1);
 
-        let c1 = Arc::strong_count(&backup.inner);
-
-        let mut page = backup.clone();
-
-        let c2 = Arc::strong_count(&backup.inner);
         page.unpin();
-        let c3 = Arc::strong_count(&backup.inner);
         assert_eq!(page.is_pinned(), false);
 
         assert_eq!(page.is_dirty(), false);
@@ -814,7 +720,6 @@ mod tests {
         assert_eq!(page.is_dirty(), true);
 
         let other_unpinned = page.clone();
-        let c4 = Arc::strong_count(&backup.inner);
 
         assert_eq!(page.is_dirty(), true);
         assert_eq!(other_unpinned.is_dirty(), true);
@@ -826,9 +731,7 @@ mod tests {
         // Running in separate thread to avoid pausing the current thread in case of a deadlock
         run_test_in_separate_thread(
             || {
-                let backup = Page::new(1);
-
-                let mut page = backup.clone();
+                let mut page = Page::new(1);
                 page.unpin();
 
                 assert_eq!(page.inner.is_locked(), false);
@@ -849,9 +752,7 @@ mod tests {
         // Running in separate thread to avoid pausing the current thread in case of a deadlock
         run_test_in_separate_thread(
             || {
-                let backup = Page::new(1);
-
-                let mut page = backup.clone();
+                let mut page = Page::new(1);
                 page.unpin();
 
                 assert_eq!(page.inner.is_locked(), false);
@@ -872,9 +773,7 @@ mod tests {
         // Running in separate thread to avoid pausing the current thread in case of a deadlock
         run_test_in_separate_thread(
             || {
-                let backup = Page::new(1);
-
-                let mut page = backup.clone();
+                let mut page = Page::new(1);
                 page.unpin();
 
                 assert_eq!(page.inner.is_locked(), false);
@@ -892,9 +791,7 @@ mod tests {
 
     #[test]
     fn clone_on_unpinned_page_should_sync_dirty_status_changes() {
-        let backup = Page::new(1);
-
-        let mut page = backup.clone();
+        let mut page = Page::new(1);
         page.unpin();
         assert_eq!(page.is_pinned(), false);
 
@@ -912,9 +809,7 @@ mod tests {
 
     #[test]
     fn clone_on_unpinned_page_should_sync_lock_changes() {
-        let backup = Page::new(1);
-
-        let mut page = backup.clone();
+        let mut page = Page::new(1);
         page.unpin();
 
         let other_page = page.clone();
@@ -942,10 +837,5 @@ mod tests {
 
         assert_eq!(page.inner.is_locked(), false);
         assert_eq!(other_page.inner.is_locked(), false);
-    }
-
-    #[test]
-    fn clone_on_unpinned_page_should_sync_data_changes() {
-        todo!()
     }
 }
