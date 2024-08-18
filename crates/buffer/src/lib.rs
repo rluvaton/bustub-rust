@@ -1,17 +1,5 @@
 mod lru_k_replacer;
 mod buffer_pool_manager;
 
-pub fn add(left: usize, right: usize) -> usize {
-    left + right
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
-    }
-}
+pub use buffer_pool_manager::BufferPoolManager;
+pub use lru_k_replacer::AccessType;

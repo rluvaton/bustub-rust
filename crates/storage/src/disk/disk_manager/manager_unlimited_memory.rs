@@ -47,10 +47,10 @@ pub struct DiskManagerUnlimitedMemory {
     latency_simulator_enabled: bool,
 
     // Access together so grouped together
-    latency_processor_mutex: Mutex<LatencyProcessor>,
+    latency_processor_mutex: Arc<Mutex<LatencyProcessor>>,
 
     // Access the data using the lock for thread safety
-    data: Mutex<DiskManagerUnlimitedMemoryData>,
+    data: Arc<Mutex<DiskManagerUnlimitedMemoryData>>,
 }
 
 impl DiskManagerUnlimitedMemory {
@@ -62,17 +62,17 @@ impl DiskManagerUnlimitedMemory {
         DiskManagerUnlimitedMemory {
             latency_simulator_enabled: false,
 
-            latency_processor_mutex: Mutex::new(LatencyProcessor {
+            latency_processor_mutex: Arc::new(Mutex::new(LatencyProcessor {
                 recent_access: [0; 4],
                 access_ptr: 0,
-            }),
+            })),
 
-            data: Mutex::new(
+            data: Arc::new(Mutex::new(
                 DiskManagerUnlimitedMemoryData {
                     pages: vec![],
                     thread_id: None,
                 }
-            ),
+            )),
         }
     }
 
@@ -112,7 +112,7 @@ impl DiskManagerUnlimitedMemory {
         latency_processor.access_ptr = (access_ptr + 1) % latency_processor.recent_access.len() as u64;
     }
 
-    fn enable_latency_simulator(&mut self, enabled: bool) {
+    pub fn enable_latency_simulator(&mut self, enabled: bool) {
         self.latency_simulator_enabled = enabled;
     }
 

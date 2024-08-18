@@ -1,7 +1,11 @@
 [workspace]
 members = [
+
+    "tools/bpm_bench",
+
     "crates/buffer",
     "crates/common",
-    "crates/primer", "crates/recovery",
+    "crates/primer",
+    "crates/recovery",
     "crates/storage"
 ]

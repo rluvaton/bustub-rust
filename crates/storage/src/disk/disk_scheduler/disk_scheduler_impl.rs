@@ -10,7 +10,7 @@ use std::thread;
 type DiskSchedulerPromise = Promise<bool>;
 
 impl DiskScheduler {
-    pub fn new(disk_manager: Arc<Mutex<(impl DiskManager + Send + 'static)>>) -> Self {
+    pub fn new(disk_manager: Arc<Mutex<impl DiskManager + 'static>>) -> Self {
         // TODO(P1): remove this line after you have implemented the disk scheduler API
         // unimplemented!(
         //     "DiskScheduler is not implemented yet. If you have finished implementing the disk scheduler, please remove the throw exception line in `disk_scheduler.cpp`.");
@@ -76,7 +76,7 @@ impl DiskSchedulerWorker {
      * The background thread needs to process requests while the DiskScheduler exists, i.e., this function should not
      * return until ~DiskScheduler() is called. At that point you need to make sure that the function does return.
      */
-    fn new(disk_manager: Arc<Mutex<(impl DiskManager + Send + 'static)>>, receiver: Arc<Mutex<Receiver<DiskSchedulerWorkerMessage>>>) -> DiskSchedulerWorker {
+    fn new(disk_manager: Arc<Mutex<dyn DiskManager + Send + Sync>>, receiver: Arc<Mutex<Receiver<DiskSchedulerWorkerMessage>>>) -> DiskSchedulerWorker {
         let thread = thread::spawn(move || {
             loop {
                 let job = receiver.lock().recv().unwrap();

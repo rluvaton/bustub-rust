@@ -1,0 +1,15 @@
+[package]
+name = "bpm_bench"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+clap = { version = "4.5.16", features = ["derive"] }
+parking_lot = "0.12.3"
+rand = "0.8"
+zipf = "7"
+
+buffer = {path = "../../crates/buffer"}
+storage = {path = "../../crates/storage"}
+common = {path = "../../crates/common"}
+

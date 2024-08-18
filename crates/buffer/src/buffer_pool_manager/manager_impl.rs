@@ -13,7 +13,7 @@ use crate::lru_k_replacer::{AccessType, LRUKReplacer};
 impl BufferPoolManager {
     pub fn new(
         pool_size: usize,
-        disk_manager: Arc<Mutex<(impl DiskManager + Send + 'static)>>,
+        disk_manager: Arc<Mutex<(impl DiskManager + 'static)>>,
         replacer_k: Option<usize>,
         log_manager: Option<LogManager>,
     ) -> Self {
