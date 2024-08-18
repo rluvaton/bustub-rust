@@ -40,7 +40,6 @@ pub struct LRUKNode {
     #[allow(dead_code)]
     pub(crate) frame_id: FrameId,
 
-    // TODO - set default to false
     #[allow(dead_code)]
     pub(crate) is_evictable: bool,
 }

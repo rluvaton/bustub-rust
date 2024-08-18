@@ -2,11 +2,11 @@
 mod tests {
     use crate::buffer_pool_manager::manager::BufferPoolManager;
     use crate::lru_k_replacer::AccessType;
-    use common::config::{PageData, BUSTUB_PAGE_SIZE};
+    use common::config::{PageData, PageId, BUSTUB_PAGE_SIZE};
     use parking_lot::Mutex;
     use rand::Rng;
     use std::sync::Arc;
-    use storage::{AlignToPageData, DefaultDiskManager, UnderlyingPage};
+    use storage::{AlignToPageData, DefaultDiskManager, Page, UnderlyingPage};
 
     use tempdir::TempDir;
 
@@ -66,9 +66,8 @@ mod tests {
         }
 
         // Scenario: After unpinning pages {0, 1, 2, 3, 4}, we should be able to create 5 new pages
-        assert_eq!(bpm.unpin_page(&mut page0, true, AccessType::default()), true);
-        for i in 1..5 {
-            assert_eq!(bpm.unpin_page_by_id(i, true, AccessType::default()), true);
+        for i in 0..5 {
+            assert_eq!(bpm.unpin_page(i, true, AccessType::default()), true, "Failed to unpin page {}", i);
 
             bpm.flush_page(i);
         }
@@ -78,7 +77,7 @@ mod tests {
             let page_id = page.with_read(|u| u.get_page_id());
 
             // Unpin the page here to allow future fetching
-            bpm.unpin_page(&mut page, false, AccessType::default());
+            bpm.unpin_page(page_id, false, AccessType::default());
         }
 
         // Scenario: We should be able to fetch the data we wrote a while ago.
@@ -89,7 +88,7 @@ mod tests {
         // EXPECT_EQ(0, memcmp(page0->GetData(), random_binary_data, BUSTUB_PAGE_SIZE));
         page0.with_read(|u| assert_eq!(u.get_data(), random_binary_data.as_slice()));
 
-        assert_eq!(bpm.unpin_page(&mut page0, true, AccessType::default()), true);
+        assert_eq!(bpm.unpin_page(0, true, AccessType::default()), true);
 
         // Shutdown the disk manager and remove the temporary file we created.
         // TODO - shutdown
@@ -124,7 +123,7 @@ mod tests {
         let expected_data = "Hello";
 
         page0.with_write(|u| u.get_data_mut()[..expected_data.len()].copy_from_slice(expected_data.as_bytes()));
-            // TODO - this is different from the original test that check the entire data
+        // TODO - this is different from the original test that check the entire data
         page0.with_read(|u| assert_eq!(u.get_data(), &expected_data.as_bytes().align_to_page_data()));
 
         // Scenario: We should be able to create new pages until we fill up the buffer pool.
@@ -139,10 +138,10 @@ mod tests {
 
         // Scenario: After unpinning pages {0, 1, 2, 3, 4} and pinning another 4 new pages,
         // there would still be one buffer page left for reading page 0.
-        bpm.unpin_page(&mut page0, true, AccessType::default());
-        for i in 1..5 {
-            assert!(bpm.unpin_page_by_id(i, true, AccessType::default()));
+        for i in 0..5 {
+            assert!(bpm.unpin_page(i, true, AccessType::default()));
         }
+
         for _ in 0..4 {
             assert_ne!(bpm.new_page(), None);
         }
@@ -153,7 +152,7 @@ mod tests {
 
         // Scenario: If we unpin page 0 and then make a new page, all the buffer pages should
         // now be pinned. Fetching page 0 again should fail.
-        assert!(bpm.unpin_page(&mut page0, true, AccessType::default()));
+        assert!(bpm.unpin_page(0, true, AccessType::default()));
         bpm.new_page().expect("Should create new page");
         assert_eq!(bpm.fetch_page(0, AccessType::default()), None);
 

@@ -177,6 +177,20 @@ impl LRUKReplacerImpl {
         node.is_evictable = set_evictable;
     }
 
+    pub(crate) fn is_evictable(&self, frame_id: FrameId) -> Option<bool> {
+        if !self.node_store.contains_key(&frame_id) {
+            return None;
+        }
+
+        unsafe { Some(self.is_evictable_unchecked(frame_id)) }
+    }
+
+    pub(crate) unsafe fn is_evictable_unchecked(&self, frame_id: FrameId) -> bool {
+        let node = self.node_store.get(&frame_id).expect("frame id must exists");
+
+        node.is_evictable
+    }
+
     /// Remove an evictable frame from replacer, along with its access history.
     /// This function should also decrement replacer's size if removal is successful.
     ///

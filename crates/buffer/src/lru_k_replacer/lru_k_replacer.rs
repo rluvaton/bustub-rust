@@ -78,6 +78,14 @@ impl LRUKReplacer {
         self.replacer.lock().unwrap().set_evictable(frame_id, set_evictable)
     }
 
+    pub fn is_evictable(&self, frame_id: FrameId) -> Option<bool> {
+        self.replacer.lock().unwrap().is_evictable(frame_id)
+    }
+
+    pub unsafe fn is_evictable_unchecked(&self, frame_id: FrameId) -> bool {
+        self.replacer.lock().unwrap().is_evictable_unchecked(frame_id)
+    }
+
     /// Remove an evictable frame from replacer, along with its access history.
     /// This function should also decrement replacer's size if removal is successful.
     ///
