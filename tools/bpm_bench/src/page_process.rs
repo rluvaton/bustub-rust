@@ -1,46 +1,41 @@
 use std::process::abort;
 use common::config::PageData;
 
-// #[repr(C)]
+// This is the structure of the page
 struct BustubBenchPageHeader {
     seed: u64,
     page_id: u64,
-    // No `data` here, we will handle it with raw pointers.
+
+    // Until end of page data
+    data: &'static [u8]
 }
 
 pub(crate) unsafe fn modify_page(page: &mut PageData, page_idx: usize, seed: u64) {
-    // Cast the data pointer to a BustubBenchPageHeader pointer
-    let pg = page.as_mut_ptr() as *mut BustubBenchPageHeader;
-
-    // Modify the header fields
-    (*pg).seed = seed;
-    (*pg).page_id = page_idx as u64;
-
-    // Access the flexible data array
-    let data_array = page.as_mut_ptr().add(std::mem::size_of::<BustubBenchPageHeader>());
-    *data_array.add((*pg).seed as usize % 4000) = ((*pg).seed % 256) as u8;
+    page[0..8].copy_from_slice(&u64::to_ne_bytes(seed));
+    page[8..16].copy_from_slice(&u64::to_ne_bytes(page_idx as u64));
+    page[16 + (seed as usize % 4000)] = (seed % 256) as u8;
 }
 
 
 /// Check the page and verify the data inside
 pub unsafe fn check_page_consistent_no_seed(data: &PageData, page_idx: usize) {
     // Cast the data pointer to a BustubBenchPageHeader pointer
-    let pg = data.as_ptr() as *mut BustubBenchPageHeader;
+    let data_seed = u64::from_ne_bytes(data[0..8].try_into().unwrap());
+    let data_page_id = u64::from_ne_bytes(data[8..16].try_into().unwrap());
 
-    if (*pg).page_id != page_idx as u64 {
-        eprintln!("Page header not consistent: page_id={} page_idx={}", (*pg).page_id, page_idx);
+    if data_page_id != page_idx as u64 {
+        eprintln!("Page header not consistent: page_id={} page_idx={}", data_page_id, page_idx);
         abort();
     }
 
-
-    let left = *data.as_ptr().add(std::mem::size_of::<BustubBenchPageHeader>() + ((*pg).seed % 4000) as usize) as u8;
-    let right = ((*pg).seed % 256) as u8;
+    let left = data[(16 + (data_seed % 4000)) as usize];
+    let right = (data_seed % 256) as u8;
 
     // Check if the data content is consistent
     if left != right {
         eprintln!(
-            "page content not consistent: data_[{}]={} seed_ % 256={}",
-            (*pg).seed % 4000,
+            "page content not consistent: data[{}]={} seed % 256={}",
+            (16 + (data_seed % 4000)),
             left,
             right
         );
@@ -49,31 +44,19 @@ pub unsafe fn check_page_consistent_no_seed(data: &PageData, page_idx: usize) {
 }
 
 pub unsafe fn check_page_consistent(data: &PageData, page_idx: usize, seed: u64) {
-    let pg = data.as_ptr() as *const BustubBenchPageHeader;
+    let data_seed = u64::from_ne_bytes(data[0..8].try_into().unwrap());
 
     // Check if the seed matches the expected seed
-    if (*pg).seed != seed {
+    if data_seed != seed {
         eprintln!(
-            "page seed not consistent: page.seed={} seed={}",
-            (*pg).seed, seed
+            "{} page seed not consistent: page.seed={} seed={}",
+            page_idx, data_seed, seed
         );
         abort();
     }
 
     check_page_consistent_no_seed(data, page_idx);
 }
-
-//
-// /// Check the page and verify the data inside
-// auto CheckPageConsistent(const char *data, size_t page_idx, uint64_t seed) -> void {
-// const auto *pg = reinterpret_cast<const BustubBenchPageHeader *>(data);
-// if (pg->seed_ != seed) {
-// fmt::println(stderr, "page seed not consistent: seed_={} seed={}", pg->seed_, seed);
-// std::terminate();
-// }
-// CheckPageConsistentNoSeed(data, page_idx);
-// }
-
 
 #[cfg(test)]
 mod test {
@@ -101,11 +84,3 @@ mod test {
     }
 }
 
-
-// /// Modify the page and save some data inside
-// auto ModifyPage(char *data, size_t page_idx, uint64_t seed) -> void {
-// auto *pg = reinterpret_cast<BustubBenchPageHeader *>(data);
-// pg->seed_ = seed;
-// pg->page_id_ = page_idx;
-// pg->data_[pg->seed_ % 4000] = pg->seed_ % 256;
-// }

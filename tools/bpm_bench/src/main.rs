@@ -18,6 +18,12 @@ mod cli;
 mod page_process;
 mod metrics;
 
+// Single lock for bpm
+// <<< BEGIN
+// scan: 20211.485900939937
+// get: 20915.072328511433
+// >>> END
+
 fn main() {
     let args = Args::parse();
     println!("args: {:?}", args);
@@ -34,7 +40,6 @@ fn main() {
              bustub_page_cnt, duration_ms, enable_latency, lru_k_size, bustub_bpm_size, scan_thread_n, get_thread_n
     );
 
-
     let disk_manager = Arc::new(Mutex::new(DiskManagerUnlimitedMemory::new()));
     let bpm: Arc<Mutex<BufferPoolManager>> = Arc::new(Mutex::new(BufferPoolManager::new(
         bustub_bpm_size,
@@ -45,14 +50,15 @@ fn main() {
     let page_ids: Arc<RwLock<Vec<PageId>>> = Arc::new(RwLock::new(vec![]));
 
     for i in 0..bustub_page_cnt {
-        let page = bpm.lock().new_page().expect("Must be able to create a page");
+        let mut bpm = bpm.lock();
+        let page = bpm.new_page().expect("Must be able to create a page");
         let page_id = page.with_read(|u| u.get_page_id());
 
         page.with_write(|u| unsafe {
             modify_page(u.get_data_mut(), i, 0);
         });
 
-        bpm.lock().unpin_page(page_id, true, AccessType::default());
+        bpm.unpin_page(page_id, true, AccessType::default());
 
         page_ids.write().push(page_id);
     }
@@ -76,7 +82,6 @@ fn main() {
         let page_ids = Arc::clone(&page_ids);
 
         let t = thread::spawn(move || {
-            // &page_ids, &bpm, &total_metrics
             let mut records: ModifyRecord = HashMap::new();
 
             let mut metrics: BpmMetrics = BpmMetrics::new(format!("scan {:>2}", thread_id), duration_ms);
@@ -86,7 +91,9 @@ fn main() {
             let mut page_idx = page_idx_start;
 
             while !metrics.should_finish() {
-                let page = bpm.lock().fetch_page(page_ids.read()[page_idx as usize], AccessType::Scan);
+
+                let mut bpm = bpm.lock();
+                let page = bpm.fetch_page(page_ids.read()[page_idx as usize], AccessType::Scan);
                 if page.is_none() {
                     continue;
                 }
@@ -94,14 +101,18 @@ fn main() {
                 let page = page.unwrap();
 
                 page.with_write(|u| unsafe {
-                    let seed = records.get_mut(&page_idx).expect("Must exists");
+                    if !records.contains_key(&page_idx) {
+                        records.insert(page_idx, 0);
+                    }
+
+                    let mut seed = records.get_mut(&page_idx).expect("Must exists");
 
                     check_page_consistent(u.get_data(), page_idx as usize, *seed);
                     *seed = *seed + 1;
                     modify_page(u.get_data_mut(), page_idx as usize, *seed);
                 });
 
-                bpm.lock().unpin_page(page.with_read(|u| u.get_page_id()), true, AccessType::Scan);
+                bpm.unpin_page(page.with_read(|u| u.get_page_id()), true, AccessType::Scan);
                 page_idx += 1;
                 if page_idx >= page_idx_end {
                     page_idx = page_idx_start;
@@ -121,17 +132,17 @@ fn main() {
         let page_ids = Arc::clone(&page_ids);
 
         let t = thread::spawn(move || {
-            // thread_id, &page_ids, &bpm, &total_metrics
             let mut rng = rand::thread_rng();
             let dist = zipf::ZipfDistribution::new(bustub_page_cnt - 1, 0.8).unwrap();
-
 
             let mut metrics: BpmMetrics = BpmMetrics::new(format!("get  {:>2}", thread_id), duration_ms);
             metrics.begin();
 
             while !metrics.should_finish() {
+                let mut bpm = bpm.lock();
+
                 let page_idx = dist.sample(&mut rng);
-                let page = bpm.lock().fetch_page(page_ids.read()[page_idx], AccessType::Lookup);
+                let page = bpm.fetch_page(page_ids.read()[page_idx], AccessType::Lookup);
 
                 if page.is_none() {
                     eprintln!("cannot fetch page");
@@ -147,7 +158,7 @@ fn main() {
                     check_page_consistent_no_seed(u.get_data(), page_idx);
                 });
 
-                bpm.lock().unpin_page(page_id, false, AccessType::Lookup);
+                bpm.unpin_page(page_id, false, AccessType::Lookup);
 
                 metrics.tick();
                 metrics.report();
