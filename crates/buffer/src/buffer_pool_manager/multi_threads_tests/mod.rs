@@ -40,7 +40,7 @@ fn check_page_consistent_no_seed(data: &PageData, page_idx: usize) {
 
     if data_page_id != page_idx as u64 {
         eprintln!("Page header not consistent: page_id={} page_idx={}", data_page_id, page_idx);
-        abort();
+        panic!();
     }
 
     let left = data[(16 + (data_seed % 4000)) as usize];
@@ -54,7 +54,7 @@ fn check_page_consistent_no_seed(data: &PageData, page_idx: usize) {
             left,
             right
         );
-        abort();
+        panic!();
     }
 }
 
@@ -67,7 +67,7 @@ fn check_page_consistent(data: &PageData, page_idx: usize, seed: u64) {
             "{} page seed not consistent: page.seed={} seed={}",
             page_idx, data_seed, seed
         );
-        abort();
+        panic!();
     }
 
     check_page_consistent_no_seed(data, page_idx);
@@ -157,7 +157,7 @@ fn run_multi_threads_tests(options: Options) {
 
                 if page.is_none() {
                     eprintln!("cannot fetch page");
-                    abort();
+                    panic!();
                 }
 
                 let page = page.unwrap();
@@ -178,6 +178,8 @@ fn run_multi_threads_tests(options: Options) {
     for t in join_handles {
         t.join().unwrap();
     }
+
+    println!("[info] finish");
 }
 
 fn init_buffer_pool_manager_for_test(options: &Options, temp_dir: Option<TempDir>) -> (Vec<PageId>, BufferPoolManager) {
