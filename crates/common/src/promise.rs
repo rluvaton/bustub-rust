@@ -26,6 +26,7 @@ impl<T> Promise<T> {
     }
 }
 
+#[derive(Debug)]
 pub struct Future<T> {
     result: Arc<(Mutex<(bool, Option<T>)>, Condvar)>,
 }
