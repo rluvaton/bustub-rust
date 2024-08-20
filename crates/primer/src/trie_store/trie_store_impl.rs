@@ -43,8 +43,14 @@ impl TrieStore {
         // create new trie
         let new_root = write_guard.put(key, value);
 
+        // ###### Update root
+
         // Lock again the root so we can modify it
-        self.update_root(new_root, write_guard);
+        let mut guard = self.root_lock.lock().unwrap();
+
+        *guard = Arc::clone(&new_root);
+        *write_guard = Arc::clone(&new_root);
+        self.root = Arc::clone(&new_root)
 
         // Release the write lock
     }
@@ -61,13 +67,19 @@ impl TrieStore {
         // create new trie
         let new_root = write_guard.remove(key);
 
+        // ###### Update root
         // Lock again the root so we can modify it
-        self.update_root(new_root, write_guard);
+        let mut guard = self.root_lock.lock().unwrap();
+
+        *guard = Arc::clone(&new_root);
+        *write_guard = Arc::clone(&new_root);
+        self.root = Arc::clone(&new_root)
 
         // Release the write lock
     }
 
-    fn update_root(&mut self, new_root: Arc<Trie>, write_guard: MutexGuard<Arc<Trie>>) {
+    // TODO - fix this function error
+    fn update_root(&mut self, new_root: &Arc<Trie>, mut write_guard: MutexGuard<Arc<Trie>>) {
         // Lock again the root so we can modify it
         let mut guard = self.root_lock.lock().unwrap();
 
