@@ -2,11 +2,11 @@
 mod tests {
     use crate::buffer_pool_manager::manager::BufferPoolManager;
     use crate::lru_k_replacer::AccessType;
-    use common::config::{PageData, PageId, BUSTUB_PAGE_SIZE};
+    use common::config::BUSTUB_PAGE_SIZE;
     use parking_lot::Mutex;
     use rand::Rng;
     use std::sync::Arc;
-    use storage::{AlignToPageData, DefaultDiskManager, Page, UnderlyingPage};
+    use storage::{AlignToPageData, DefaultDiskManager};
 
     use tempdir::TempDir;
 
@@ -139,7 +139,7 @@ mod tests {
         // Scenario: After unpinning pages {0, 1, 2, 3, 4} and pinning another 4 new pages,
         // there would still be one buffer page left for reading page 0.
         for i in 0..5 {
-            assert!(bpm.unpin_page(i, true, AccessType::default()));
+            assert_eq!(bpm.unpin_page(i, true, AccessType::default()), true, "Failed to unpin page {}", i);
         }
 
         for _ in 0..4 {
@@ -164,4 +164,6 @@ mod tests {
         // delete bpm;
         // delete disk_manager;
     }
+
+    // TODO - add test that 2 threads request the same page and should only fetch once and they point to the same page
 }
