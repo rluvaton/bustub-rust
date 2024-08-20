@@ -1,21 +1,29 @@
-
+use crate::lru_k_replacer::LRUKReplacer;
+use common::config::{AtomicPageId, FrameId, PageId};
+use parking_lot::Mutex;
+use recovery::LogManager;
 use std::collections::{HashMap, LinkedList};
 use std::sync::Arc;
-use parking_lot::Mutex;
-use common::config::{AtomicPageId, FrameId, PageId};
-use recovery::LogManager;
 use storage::{DiskScheduler, Page};
-use crate::lru_k_replacer::LRUKReplacer;
 
 /**
  * BufferPoolManager reads disk pages to and from its internal buffer pool.
  */
 pub struct BufferPoolManager {
+
     /** Number of pages in the buffer pool. */
     pub(crate) pool_size: usize,
+    /** This latch protects shared data structures. We recommend updating this comment to describe what it protects. */
+    pub(crate) latch: Mutex<InnerBufferPoolManager>,
+}
+
+/**
+ * BufferPoolManager reads disk pages to and from its internal buffer pool.
+ */
+pub(crate) struct InnerBufferPoolManager {
+
     /** The next page id to be allocated  */
     pub(crate) next_page_id: AtomicPageId,
-
     /** Array of buffer pool pages. */
     // The index is the frame_id
     pub(crate) pages: Vec<Page>,
@@ -37,6 +45,4 @@ pub struct BufferPoolManager {
     /** List of free frames that don't have any pages on them. */
     // std::list<frame_id_t> free_list_;
     pub(crate) free_list: LinkedList<FrameId>,
-    /** This latch protects shared data structures. We recommend updating this comment to describe what it protects. */
-    pub(crate) latch: Mutex<()>,
 }

@@ -1,4 +1,4 @@
 extern crate derive_builder;
 mod options;
 mod helpers;
-mod test;
+mod tests;
