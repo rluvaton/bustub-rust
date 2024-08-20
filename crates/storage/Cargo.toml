@@ -7,6 +7,7 @@ edition = "2021"
 common = {path = "../common"}
 anyhow = "1.0.86"
 parking_lot = "0.12.3"
+log = "0.4.22"
 
 [dev-dependencies]
 tempdir = "0.3.7"

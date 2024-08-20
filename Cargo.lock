@@ -104,6 +104,7 @@ dependencies = [
  "chrono",
  "common",
  "derive_builder",
+ "log",
  "parking_lot",
  "rand 0.8.5",
  "recovery",
@@ -551,6 +552,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "common",
+ "log",
  "parking_lot",
  "tempdir",
 ]
