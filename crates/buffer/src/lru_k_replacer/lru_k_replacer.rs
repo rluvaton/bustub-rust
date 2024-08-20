@@ -1,7 +1,9 @@
 use crate::lru_k_replacer::access_type::AccessType;
-use common::config::FrameId;
-use std::sync::{Arc, Mutex};
 use crate::lru_k_replacer::LRUKReplacerImpl;
+use common::config::FrameId;
+use parking_lot::Mutex;
+use std::ops::DerefMut;
+use std::sync::Arc;
 
 // Cloning does not actually clone the underlying data but just increment the ref count
 #[derive(Debug, Clone)]
@@ -42,7 +44,7 @@ impl LRUKReplacer {
     ///          got evicted
     ///
     pub fn evict(&mut self) -> Option<FrameId> {
-        self.replacer.lock().unwrap().evict()
+        self.replacer.lock().evict()
     }
 
     /// Record the event that the given frame id is accessed at current timestamp.
@@ -57,7 +59,7 @@ impl LRUKReplacer {
     ///                  This parameter is only needed for leaderboard tests.
     ///
     pub fn record_access(&mut self, frame_id: FrameId, access_type: AccessType) {
-        self.replacer.lock().unwrap().record_access(frame_id, access_type)
+        self.replacer.lock().record_access(frame_id, access_type)
     }
 
     /// Toggle whether a frame is evictable or non-evictable. This function also
@@ -75,15 +77,15 @@ impl LRUKReplacer {
     /// * `set_evictable`: whether the given frame should be evictable or not
     ///
     pub fn set_evictable(&mut self, frame_id: FrameId, set_evictable: bool) {
-        self.replacer.lock().unwrap().set_evictable(frame_id, set_evictable)
+        self.replacer.lock().set_evictable(frame_id, set_evictable)
     }
 
     pub fn is_evictable(&self, frame_id: FrameId) -> Option<bool> {
-        self.replacer.lock().unwrap().is_evictable(frame_id)
+        self.replacer.lock().is_evictable(frame_id)
     }
 
     pub unsafe fn is_evictable_unchecked(&self, frame_id: FrameId) -> bool {
-        self.replacer.lock().unwrap().is_evictable_unchecked(frame_id)
+        self.replacer.lock().is_evictable_unchecked(frame_id)
     }
 
     /// Remove an evictable frame from replacer, along with its access history.
@@ -100,7 +102,7 @@ impl LRUKReplacer {
     /// * `frame_id`: Frame ID to remove, the frame must be evictable
     ///
     pub fn remove(&mut self, frame_id: FrameId) {
-        self.replacer.lock().unwrap().remove(frame_id)
+        self.replacer.lock().remove(frame_id)
     }
 
     /// Replacer's size, which tracks the number of evictable frames.
@@ -108,11 +110,17 @@ impl LRUKReplacer {
     /// returns: isize the number of evictable frames
     ///
     pub fn size(&self) -> usize {
-        self.replacer.lock().unwrap().size()
+        self.replacer.lock().size()
     }
 
     pub(super) fn get_order_of_eviction(&self) -> Vec<FrameId> {
-        self.replacer.lock().unwrap().get_order_of_eviction()
+        self.replacer.lock().get_order_of_eviction()
+    }
+
+    pub fn with_lock<F: FnOnce(&mut LRUKReplacerImpl) -> R, R>(&self, with_lock: F) -> R {
+        let mut inner_guard = self.replacer.lock();
+
+        with_lock(inner_guard.deref_mut())
     }
 }
 
