@@ -1,9 +1,11 @@
+use std::cmp::min;
 use crate::page::underlying_page::UnderlyingPage;
 use common::config::{PageData, PageId, BUSTUB_PAGE_SIZE, INVALID_PAGE_ID};
 use common::ReaderWriterLatch;
 use std::ops::{Deref, DerefMut};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicIsize, AtomicUsize, Ordering};
+use log::warn;
 // static_assert(sizeof(page_id_t) == 4);
 // static_assert(sizeof(lsn_t) == 4);
 
@@ -15,10 +17,6 @@ use std::sync::atomic::{AtomicIsize, AtomicUsize, Ordering};
 #[derive(Debug)]
 pub struct Page {
     inner: Arc<ReaderWriterLatch<UnderlyingPage>>,
-
-    // Using isize to be able to go to -1 before changing back to 0
-    weak_ref_count: Arc<AtomicIsize>,
-    strong_ref_count: Arc<AtomicIsize>,
 }
 
 impl Page {
@@ -36,9 +34,6 @@ impl Page {
 
     pub fn create_with_data(page_id: PageId, data: PageData) -> Self {
         Page {
-            // Starting as pinned
-            strong_ref_count: Arc::new(AtomicIsize::new(1)),
-            weak_ref_count: Arc::new(AtomicIsize::new(0)),
             inner: Arc::new(
                 ReaderWriterLatch::new(
                     UnderlyingPage::new(
@@ -53,50 +48,61 @@ impl Page {
 
     /** @return the pin count of this page */
     pub fn get_pin_count(&self) -> usize {
-        self.strong_ref_count.load(Ordering::SeqCst) as usize
+        self.with_read(|u| u.get_pin_count())
     }
 
-    /// Pin page
+    /// Pin page and return the current number of pins
     ///
     /// # Safety
     /// Calling pin multiple times can increase the pin counter more than needed
     ///
     /// only pin once per thread
-    pub fn pin(&mut self) {
-        // TODO - make the add and min in the same atomic operation
-        self.strong_ref_count.fetch_add(1, Ordering::SeqCst);
+    pub fn pin(&mut self) -> usize {
+        self.with_write(|u| {
+            let mut p = u.get_pin_count();
 
-        // Can't have more pins than refs, safety measure
-        self.strong_ref_count.fetch_min(Arc::strong_count(&self.inner) as isize, Ordering::SeqCst);
+            p += 1;
+            let ref_count = Arc::strong_count(&self.inner);
 
-        self.weak_ref_count.fetch_sub(1, Ordering::SeqCst);
+            if p > ref_count {
+                warn!("Got more pins than references to the page, this is probably a mistake");
 
-        // Can't have fewer pins than 0, safety measure
-        self.weak_ref_count.fetch_max(0, Ordering::SeqCst);
+                // Cant be more than there are references to the page
+                p = ref_count;
+            }
+
+            u.set_pin_count(p);
+
+            p
+        })
     }
 
 
-    /// Unpin page
+    /// Unpin page and return the current number of pins
     ///
     /// # Safety
     /// Calling unpin multiple times can decrease the pin counter more than needed
     ///
     /// only unpin after each pin
-    pub fn unpin(&mut self) {
-        // TODO - make the add and min in the same atomic operation
-        self.weak_ref_count.fetch_add(1, Ordering::SeqCst);
+    pub fn unpin(&mut self) -> usize {
+        self.with_write(|u| {
+            let mut p = u.get_pin_count();
 
-        // Can't have more pins than refs, safety measure
-        self.weak_ref_count.fetch_min(Arc::strong_count(&self.inner) as isize, Ordering::SeqCst);
+            if p == 0 {
+                warn!("Trying to unpin page which has no pins this is a mistake");
+                return 0;
+            }
 
-        self.strong_ref_count.fetch_sub(1, Ordering::SeqCst);
+            p -= 1;
 
-        // Can't have fewer pins than 0, safety measure
-        self.strong_ref_count.fetch_max(0, Ordering::SeqCst);
+            u.set_pin_count(p);
+
+            p
+        })
     }
 
     pub fn is_pinned(&self) -> bool {
-        self.strong_ref_count.load(Ordering::SeqCst) > 0
+        self.get_pin_count() > 0
     }
 
     pub fn is_unpinned(&self) -> bool {
@@ -157,21 +163,11 @@ impl Clone for Page {
     fn clone(&self) -> Self {
         let mut inner = Arc::clone(&self.inner);
 
-        // TODO - how to detect if self is already locking ? to detect dead locks
-        // TODO - can have other deadlocks when locking to increase the pin count
-
-        // TODO - increase pin count using the unsafe?
-
-        // If not pinned should decrease pin count
-
         let page = Page {
             inner,
-            strong_ref_count: Arc::clone(&self.strong_ref_count),
-            weak_ref_count: Arc::clone(&self.weak_ref_count),
         };
 
-        // If pinned, then add to the strong count another strong
-        self.strong_ref_count.fetch_add(1, Ordering::SeqCst);
+        // Clone should not increase pin, this should be done by the consumer of the page
 
         page
     }
@@ -197,7 +193,7 @@ impl PartialEq for Page {
 
 impl Drop for Page {
     fn drop(&mut self) {
-        self.strong_ref_count.fetch_sub(1, Ordering::SeqCst);
+        // Drop reference does not change a pin
     }
 }
 

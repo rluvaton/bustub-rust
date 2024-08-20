@@ -22,7 +22,8 @@ pub struct UnderlyingPage {
     page_id: PageId,
 
     /** The pin count of this page. */
-    // pin_count: i32,
+    pin_count: usize,
+
     /** True if the page is dirty, i.e. it is different from its corresponding page on disk. */
     is_dirty: bool,
 
@@ -39,7 +40,7 @@ impl UnderlyingPage {
         UnderlyingPage {
             page_id,
             is_dirty: false,
-            // pin_count: 0,
+            pin_count: 0,
             // rwlatch: ReaderWriterLatch::new(()),
             data,
         }
@@ -61,9 +62,14 @@ impl UnderlyingPage {
     }
 
     /** @return the pin count of this page */
-    // pub fn get_pin_count(&self) -> i32 {
-    //     self.pin_count
-    // }
+    pub fn get_pin_count(&self) -> usize {
+        self.pin_count
+    }
+
+    /** @return the pin count of this page */
+    pub fn set_pin_count(&mut self, pin_count: usize) {
+        self.pin_count = pin_count;
+    }
 
     /** @return true if the page in memory has been modified from the page on disk, false otherwise */
     pub fn is_dirty(&self) -> bool {
@@ -90,7 +96,8 @@ impl UnderlyingPage {
     pub fn reset(&mut self, page_id: PageId) {
         self.page_id = page_id;
         self.data = [0u8; BUSTUB_PAGE_SIZE];
-        self.is_dirty = true
+        self.is_dirty = true;
+        self.pin_count = 0;
     }
 
     // When replacing content of page with different
@@ -99,6 +106,7 @@ impl UnderlyingPage {
         self.is_dirty = false;
         self.page_id = page_id;
         self.data = data;
+        self.pin_count = 0;
     }
 
     pub fn replace_page_id_without_content_update(&mut self, page_id: PageId) {
