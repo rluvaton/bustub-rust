@@ -391,7 +391,15 @@ impl BufferPoolManager {
     fn flush_page_unchecked(inner: &InnerBufferPoolManager, page_id: PageId) {
         assert_ne!(page_id, INVALID_PAGE_ID);
 
-        let page = &inner.pages[page_id as usize];
+        let frame_id = inner.page_table.get(&page_id);
+
+        if frame_id.is_none() {
+            return;
+        }
+
+        let frame_id = *frame_id.unwrap();
+
+        let page = &inner.pages[frame_id as usize];
 
         page.with_write(|u| Self::flush_specific_page_unchecked(inner, u))
     }
@@ -461,7 +469,7 @@ impl BufferPoolManager {
 
         // TODO - what about if page is dirty?
 
-        inner.page_table.remove(&frame_id_value);
+        inner.page_table.remove(&page_id);
         inner.free_list.push_front(frame_id_value);
 
         inner.replacer.remove(frame_id_value);
