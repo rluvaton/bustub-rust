@@ -24,6 +24,12 @@ mod metrics;
 // get: 20915.072328511433
 // >>> END
 
+// Single lock for BPM but no Arc and mutex in the benchmark itself
+// <<< BEGIN
+// scan: 21303.056564781175
+// get: 19764.5411819606
+// >>> END
+
 fn main() {
     let args = Args::parse();
     println!("args: {:?}", args);
@@ -41,16 +47,15 @@ fn main() {
     );
 
     let disk_manager = Arc::new(Mutex::new(DiskManagerUnlimitedMemory::new()));
-    let bpm: Arc<Mutex<BufferPoolManager>> = Arc::new(Mutex::new(BufferPoolManager::new(
+    let bpm: BufferPoolManager = BufferPoolManager::new(
         bustub_bpm_size,
         Arc::clone(&disk_manager),
         Some(lru_k_size),
         None, /* log manager */
-    )));
+    );
     let page_ids: Arc<RwLock<Vec<PageId>>> = Arc::new(RwLock::new(vec![]));
 
     for i in 0..bustub_page_cnt {
-        let mut bpm = bpm.lock();
         let page = bpm.new_page().expect("Must be able to create a page");
         let page_id = page.with_read(|u| u.get_page_id());
 
@@ -77,7 +82,7 @@ fn main() {
     type ModifyRecord = HashMap<PageId, u64>;
 
     for thread_id in 0..scan_thread_n {
-        let bpm = Arc::clone(&bpm);
+        let bpm = bpm.clone();
         let total_metrics = Arc::clone(&total_metrics);
         let page_ids = Arc::clone(&page_ids);
 
@@ -92,7 +97,6 @@ fn main() {
 
             while !metrics.should_finish() {
 
-                let mut bpm = bpm.lock();
                 let page = bpm.fetch_page(page_ids.read()[page_idx as usize], AccessType::Scan);
                 if page.is_none() {
                     continue;
@@ -127,7 +131,8 @@ fn main() {
     }
 
     for thread_id in 0..get_thread_n {
-        let bpm = Arc::clone(&bpm);
+        let bpm = bpm.clone();
+
         let total_metrics = Arc::clone(&total_metrics);
         let page_ids = Arc::clone(&page_ids);
 
@@ -139,7 +144,6 @@ fn main() {
             metrics.begin();
 
             while !metrics.should_finish() {
-                let mut bpm = bpm.lock();
 
                 let page_idx = dist.sample(&mut rng);
                 let page = bpm.fetch_page(page_ids.read()[page_idx], AccessType::Lookup);
