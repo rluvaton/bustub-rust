@@ -1,3 +1,4 @@
+use std::cell::UnsafeCell;
 use std::collections::{HashMap, HashSet, LinkedList};
 use std::ops::DerefMut;
 use std::sync::Arc;
@@ -34,7 +35,7 @@ impl BufferPoolManager {
 
         BufferPoolManager {
             pool_size,
-            latch: Arc::new(Mutex::new(InnerBufferPoolManager {
+            latch: UnsafeCell::new(InnerBufferPoolManager {
                 next_page_id: AtomicPageId::new(0),
                 log_manager,
 
@@ -50,7 +51,7 @@ impl BufferPoolManager {
                 disk_scheduler: Arc::new(Mutex::new(DiskScheduler::new(disk_manager))),
                 page_table: HashMap::with_capacity(pool_size),
                 free_list,
-            })),
+            }),
 
         }
     }
@@ -83,8 +84,8 @@ impl BufferPoolManager {
      * Original: @param[out] page_id id of created page, (--- no need as can get from the page itself ---)
      * Original: @return nullptr if no new pages could be created, otherwise pointer to new page
      */
-    pub fn new_page(&self) -> Option<Page> {
-        let mut inner = self.latch.lock();
+    pub fn new_page(&mut self) -> Option<Page> {
+        let mut inner = unsafe { self.latch.get_mut() };
 
         // Check if there is a frame available
         let frame_id = Self::find_replacement_frame(inner.deref_mut())?;
@@ -175,22 +176,22 @@ impl BufferPoolManager {
     }
 
     unsafe fn fetch_page_unchecked(&self, page_id: PageId, access_type: AccessType) -> Option<Page> {
-        let mut inner = self.latch.lock();
+        let mut inner = unsafe { self.latch.get() };
 
         assert_ne!(page_id, INVALID_PAGE_ID);
 
         // TODO - should lock?
         // First search for page_id in the buffer pool
-        if let Some(&frame_id) = inner.page_table.get(&page_id) {
+        if let Some(&frame_id) = (*inner).page_table.get(&page_id) {
             // Page exists in the table
 
             // Prevent the frame to be evictable
-            inner.replacer.with_lock(|replacer| {
+            (*inner).replacer.with_lock(|replacer| {
                 replacer.set_evictable(frame_id, false);
                 replacer.record_access(frame_id, access_type);
             });
 
-            let mut p = inner.pages[frame_id as usize].clone();
+            let mut p = (*inner).pages[frame_id as usize].clone();
 
             // Pin before returning to the caller to avoid page to be evicted in the meantime
             p.pin();
@@ -199,9 +200,9 @@ impl BufferPoolManager {
         }
 
         // Need to fetch from disk
-        let frame_id = Self::find_replacement_frame(inner.deref_mut())?;
+        let frame_id = Self::find_replacement_frame(&mut (*inner))?;
 
-        inner.replacer.with_lock(|replacer| {
+        (*inner).replacer.with_lock(|replacer| {
             // Record access so the frame will be inserted and the LRU-k algorithm will work
             replacer.record_access(frame_id, AccessType::Unknown);
 
@@ -214,16 +215,16 @@ impl BufferPoolManager {
         // TODO - cleanup and extract to helper functions
 
         // Different page exists on the same frame, meaning that we need to flush that page if needed
-        if let Some(page) = inner.pages.get_mut(frame_id as usize) {
+        if let Some(page) = (*inner).pages.get_mut(frame_id as usize) {
             let pinned_page_clone = page.clone();
 
             // Pin before returning to the caller to avoid page to be evicted in the meantime
             page.pin();
 
             // TODO - should already have a lock on the pages and page table here to avoid page removed in the meantime
-            inner.page_table.insert(page_id, frame_id);
+            (*inner).page_table.insert(page_id, frame_id);
 
-            Self::replace_page(&mut inner, &pinned_page_clone, page_id, |inner, new_page_id, underlying| {
+            Self::replace_page(&mut (*inner), &pinned_page_clone, page_id, |inner, new_page_id, underlying| {
                 // Update page id if we're replacing an existing page
                 underlying.replace_page_id_without_content_update(new_page_id);
 
@@ -238,14 +239,14 @@ impl BufferPoolManager {
 
         // Pin before returning to the caller to avoid page to be evicted in the meantime
         page.pin();
-        inner.page_table.insert(page_id, frame_id);
+        (*inner).page_table.insert(page_id, frame_id);
         // Insert page to pages list
         let page_to_insert = page.clone();
-        inner.pages.insert(frame_id as usize, page_to_insert);
+        (*inner).pages.insert(frame_id as usize, page_to_insert);
 
         page.with_write(|mut underlying| {
             // TODO - should already have a lock on the pages and page table here to avoid page removed in the meantime
-            Self::fetch_specific_page_unchecked(&inner, &mut underlying);
+            Self::fetch_specific_page_unchecked(&(*inner), &mut underlying);
         });
 
         Some(page)
@@ -306,11 +307,12 @@ impl BufferPoolManager {
      * @param access_type type of access to the page, only needed for leaderboard tests. TODO - default  = AccessType::Unknown
      * @return false if the page is not in the page table or its pin count is <= 0 before this call, true otherwise
      */
-    pub fn unpin_page(&self, page_id: PageId, is_dirty: bool, access_type: AccessType) -> bool {
+    pub unsafe fn unpin_page(&self, page_id: PageId, is_dirty: bool, access_type: AccessType) -> bool {
         // TODO - should acquire lock?
-        let mut inner = self.latch.lock();
 
-        let frame_id = inner.page_table.get(&page_id);
+        let mut inner = unsafe { self.latch.get() };
+
+        let frame_id = (*inner).page_table.get(&page_id);
 
         // If page_id is not in the buffer pool, return false
         if frame_id.is_none() {
@@ -323,7 +325,7 @@ impl BufferPoolManager {
         // TODO not need to record access
         // self.replacer.record_access(*frame_id, access_type);
 
-        let page: Option<&mut Page> = inner.pages.get_mut(frame_id_ref as usize);
+        let page: Option<&mut Page> = (*inner).pages.get_mut(frame_id_ref as usize);
 
         if page.is_none() {
             warn!("Could not find requested page to unpin, it shouldn't be possible");
@@ -349,7 +351,7 @@ impl BufferPoolManager {
 
         // If pin count reaches 0, mark as evictable
         if pin_count_before_unpin == 1 {
-            inner.replacer.set_evictable(frame_id_ref, true);
+            (*inner).replacer.set_evictable(frame_id_ref, true);
         }
 
         true
@@ -366,8 +368,9 @@ impl BufferPoolManager {
      * @param page_id id of page to be flushed, cannot be INVALID_PAGE_ID
      * @return false if the page could not be found in the page table, true otherwise
      */
-    pub fn flush_page(&self, page_id: PageId) -> bool {
-        let inner = self.latch.lock();
+    pub fn flush_page(&mut self, page_id: PageId) -> bool {
+
+        let mut inner = unsafe { self.latch.get_mut() };
 
         if !inner.page_table.contains_key(&page_id) {
             return false;
@@ -414,8 +417,8 @@ impl BufferPoolManager {
      *
      * @brief Flush all the pages in the buffer pool to disk.
      */
-    pub fn flush_all_pages(&self) {
-        let inner = self.latch.lock();
+    pub fn flush_all_pages(&mut self) {
+        let mut inner = unsafe { self.latch.get_mut() };
 
         inner.page_table.keys().for_each(|page_id| {
             Self::flush_page_unchecked(&inner, *page_id);
@@ -436,8 +439,8 @@ impl BufferPoolManager {
      * @param page_id id of page to be deleted
      * @return false if the page exists but could not be deleted, true if the page didn't exist or deletion succeeded
      */
-    pub fn delete_page(&self, page_id: PageId) -> bool {
-        let mut inner = self.latch.lock();
+    pub fn delete_page(&mut self, page_id: PageId) -> bool {
+        let mut inner = unsafe { self.latch.get_mut() };
 
         let frame_id_value: FrameId;
         {

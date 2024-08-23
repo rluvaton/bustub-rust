@@ -1,3 +1,4 @@
+use std::cell::UnsafeCell;
 use crate::lru_k_replacer::LRUKReplacer;
 use common::config::{AtomicPageId, FrameId, PageId};
 use parking_lot::Mutex;
@@ -9,13 +10,14 @@ use storage::{DiskScheduler, Page};
 /**
  * BufferPoolManager reads disk pages to and from its internal buffer pool.
  */
-#[derive(Clone)]
 pub struct BufferPoolManager {
     /** Number of pages in the buffer pool. */
     pub(crate) pool_size: usize,
     /** This latch protects shared data structures. We recommend updating this comment to describe what it protects. */
-    pub(crate) latch: Arc<Mutex<InnerBufferPoolManager>>,
+    pub(crate) latch: UnsafeCell<InnerBufferPoolManager>,
 }
+
+unsafe impl Sync for BufferPoolManager { }
 
 /**
  * BufferPoolManager reads disk pages to and from its internal buffer pool.

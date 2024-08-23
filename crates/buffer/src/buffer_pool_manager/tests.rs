@@ -67,7 +67,7 @@ mod tests {
 
         // Scenario: After unpinning pages {0, 1, 2, 3, 4}, we should be able to create 5 new pages
         for i in 0..5 {
-            assert_eq!(bpm.unpin_page(i, true, AccessType::default()), true, "Failed to unpin page {}", i);
+            unsafe { assert_eq!(bpm.unpin_page(i, true, AccessType::default()), true, "Failed to unpin page {}", i); }
 
             bpm.flush_page(i);
         }
@@ -77,7 +77,7 @@ mod tests {
             let page_id = page.with_read(|u| u.get_page_id());
 
             // Unpin the page here to allow future fetching
-            bpm.unpin_page(page_id, false, AccessType::default());
+            unsafe { bpm.unpin_page(page_id, false, AccessType::default()); }
         }
 
         // Scenario: We should be able to fetch the data we wrote a while ago.
@@ -88,7 +88,7 @@ mod tests {
         // EXPECT_EQ(0, memcmp(page0->GetData(), random_binary_data, BUSTUB_PAGE_SIZE));
         page0.with_read(|u| assert_eq!(u.get_data(), random_binary_data.as_slice()));
 
-        assert_eq!(bpm.unpin_page(0, true, AccessType::default()), true);
+        unsafe { assert_eq!(bpm.unpin_page(0, true, AccessType::default()), true); }
 
         // Shutdown the disk manager and remove the temporary file we created.
         // TODO - shutdown
@@ -139,7 +139,7 @@ mod tests {
         // Scenario: After unpinning pages {0, 1, 2, 3, 4} and pinning another 4 new pages,
         // there would still be one buffer page left for reading page 0.
         for i in 0..5 {
-            assert_eq!(bpm.unpin_page(i, true, AccessType::default()), true, "Failed to unpin page {}", i);
+            unsafe { assert_eq!(bpm.unpin_page(i, true, AccessType::default()), true, "Failed to unpin page {}", i); }
         }
 
         for _ in 0..4 {
@@ -152,7 +152,7 @@ mod tests {
 
         // Scenario: If we unpin page 0 and then make a new page, all the buffer pages should
         // now be pinned. Fetching page 0 again should fail.
-        assert!(bpm.unpin_page(0, true, AccessType::default()));
+        unsafe { assert!(bpm.unpin_page(0, true, AccessType::default())); }
         bpm.new_page().expect("Should create new page");
         assert_eq!(bpm.fetch_page(0, AccessType::default()), None);
 

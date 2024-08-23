@@ -84,6 +84,7 @@ fn run_multi_threads_tests(options: Options) {
 
     let (page_ids, bpm) = init_buffer_pool_manager_for_test(&options, temp_dir);
 
+    let bpm = Arc::new(bpm);
     let page_ids = Arc::new(RwLock::new(page_ids));
 
     println!("[info] start");
@@ -92,10 +93,11 @@ fn run_multi_threads_tests(options: Options) {
     type ModifyRecord = HashMap<PageId, u64>;
 
     for thread_id in 0..scan_thread_n {
-        let bpm = bpm.clone();
+        let bpm = Arc::clone(&bpm);
+
         let page_ids = Arc::clone(&page_ids);
 
-        let t = thread::spawn(move || {
+        let t = thread::spawn(move || unsafe {
             let mut records: ModifyRecord = HashMap::new();
 
             let run_timer = RunTimer::new(duration_ms);
@@ -136,10 +138,10 @@ fn run_multi_threads_tests(options: Options) {
     }
 
     for _ in 0..get_thread_n {
-        let bpm = bpm.clone();
+        let bpm = Arc::clone(&bpm);
         let page_ids = Arc::clone(&page_ids);
 
-        let t = thread::spawn(move || {
+        let t = thread::spawn(move || unsafe {
             let mut rng = rand::thread_rng();
             let dist = zipf::ZipfDistribution::new(bustub_page_cnt - 1, 0.8).unwrap();
 
@@ -185,7 +187,7 @@ fn init_buffer_pool_manager_for_test(options: &Options, temp_dir: Option<TempDir
     // with the different impl of disk manager
     // TODO - cleanup if possible
     match options.disk_manager_specific.clone() {
-        DiskManagerImplementationOptions::Default(o) => {
+        DiskManagerImplementationOptions::Default(o) => unsafe {
             let file_path = o.file_path.unwrap_or_else(|| {
                 temp_dir.unwrap().into_path().join("data.db")
             });
@@ -196,7 +198,7 @@ fn init_buffer_pool_manager_for_test(options: &Options, temp_dir: Option<TempDir
 
             initialize_bpm_pages(&options, &mut page_ids, &mut bpm_raw);
         }
-        DiskManagerImplementationOptions::UnlimitedMemory(o) => {
+        DiskManagerImplementationOptions::UnlimitedMemory(o) => unsafe {
             let manager = Arc::new(Mutex::new(DiskManagerUnlimitedMemory::new()));
             let cloned_manager = Arc::clone(&manager);
 
@@ -212,7 +214,7 @@ fn init_buffer_pool_manager_for_test(options: &Options, temp_dir: Option<TempDir
     (page_ids, bpm_raw)
 }
 
-fn initialize_bpm_pages(options: &Options, page_ids: &mut Vec<PageId>, bpm: &mut BufferPoolManager) {
+unsafe fn initialize_bpm_pages(options: &Options, page_ids: &mut Vec<PageId>, bpm: &mut BufferPoolManager) {
     for i in 0..options.db_size {
         let page = bpm.new_page().expect("Must be able to create a page");
         let page_id = page.with_read(|u| u.get_page_id());
