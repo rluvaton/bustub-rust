@@ -1,4 +1,4 @@
-use std::cell::UnsafeCell;
+use std::cell::{Cell, UnsafeCell};
 use crate::lru_k_replacer::LRUKReplacer;
 use common::config::{AtomicPageId, FrameId, PageId};
 use parking_lot::Mutex;
@@ -11,10 +11,19 @@ use storage::{DiskScheduler, Page};
  * BufferPoolManager reads disk pages to and from its internal buffer pool.
  */
 pub struct BufferPoolManager {
-    /** Number of pages in the buffer pool. */
+    /// Number of pages in the buffer pool
+    /// This will not change after initial set
+    /// TODO - remove pub(crate) and expose getter to avoid user setting the value
     pub(crate) pool_size: usize,
-    /** This latch protects shared data structures. We recommend updating this comment to describe what it protects. */
-    pub(crate) latch: UnsafeCell<InnerBufferPoolManager>,
+
+    // TODO - panic will release the parking lot Mutex lock which can leave undesired state
+    //        replace to original Mutex
+    /// This latch protects the root level data until we get to the actual page instance, this is here to be the gateway in the inner data
+    pub(crate) root_level_latch: Mutex<()>,
+
+    /// This is just container to the inner buffer pool manager, so we can do locking with better granularity
+    /// as it allow for multiple mutable reference at the same time but it's ok as we are managing it
+    pub(crate) inner: UnsafeCell<InnerBufferPoolManager>,
 }
 
 unsafe impl Sync for BufferPoolManager { }
@@ -26,18 +35,25 @@ pub(crate) struct InnerBufferPoolManager {
 
     /** The next page id to be allocated  */
     pub(crate) next_page_id: AtomicPageId,
+
     /** Array of buffer pool pages. */
     // The index is the frame_id
     pub(crate) pages: Vec<Page>,
-    /** Pointer to the disk scheduler. */
+
+    /// Pointer to the disk scheduler.
+    /// This is mutex to avoid writing and reading the same page twice
     pub(crate) disk_scheduler: Arc<Mutex<DiskScheduler>>,
 
     /** Pointer to the log manager. Please ignore this for P1. */
     // LogManager *log_manager_ __attribute__((__unused__));
     pub(crate) log_manager: Option<LogManager>,
 
-    /** Page table for keeping track of buffer pool pages. */
-    // std::unordered_map<page_id_t, frame_id_t> page_table_;
+    /// Page table for keeping track of buffer pool pages.
+    ///
+    /// ## Original type:
+    /// ```cpp
+    /// std::unordered_map<page_id_t, frame_id_t> page_table_;
+    /// ```
     pub(crate) page_table: HashMap<PageId, FrameId>,
 
     /** Replacer to find unpinned pages for replacement. */

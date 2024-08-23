@@ -66,6 +66,11 @@ impl UnderlyingPage {
         self.pin_count
     }
 
+    /// Increment pin count without the safety check for number of references to the page
+    pub unsafe fn increment_pin_count_unchecked(&mut self) {
+        self.pin_count += 1;
+    }
+
     /** @return the pin count of this page */
     pub fn set_pin_count(&mut self, pin_count: usize) {
         self.pin_count = pin_count;
@@ -94,8 +99,12 @@ impl UnderlyingPage {
     }
 
     pub fn reset(&mut self, page_id: PageId) {
-        self.page_id = page_id;
+        self.partial_reset(page_id);
         self.data = [0u8; BUSTUB_PAGE_SIZE];
+    }
+
+    pub fn partial_reset(&mut self, page_id: PageId) {
+        self.page_id = page_id;
         self.is_dirty = true;
         self.pin_count = 0;
     }

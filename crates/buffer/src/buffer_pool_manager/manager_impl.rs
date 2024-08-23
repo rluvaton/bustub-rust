@@ -1,6 +1,6 @@
-use std::cell::UnsafeCell;
+use std::cell::{Cell, UnsafeCell};
 use std::collections::{HashMap, HashSet, LinkedList};
-use std::ops::DerefMut;
+use std::ops::{Deref, DerefMut};
 use std::sync::Arc;
 use std::sync::atomic::Ordering;
 use parking_lot::Mutex;
@@ -35,9 +35,12 @@ impl BufferPoolManager {
 
         BufferPoolManager {
             pool_size,
-            latch: UnsafeCell::new(InnerBufferPoolManager {
+
+            root_level_latch: Mutex::new(()),
+
+            inner: UnsafeCell::new(InnerBufferPoolManager {
                 next_page_id: AtomicPageId::new(0),
-                log_manager,
+                log_manager: log_manager,
 
                 // we allocate a consecutive memory space for the buffer pool
                 // TODO - change to array
@@ -51,6 +54,7 @@ impl BufferPoolManager {
                 disk_scheduler: Arc::new(Mutex::new(DiskScheduler::new(disk_manager))),
                 page_table: HashMap::with_capacity(pool_size),
                 free_list,
+
             }),
 
         }
@@ -84,54 +88,79 @@ impl BufferPoolManager {
      * Original: @param[out] page_id id of created page, (--- no need as can get from the page itself ---)
      * Original: @return nullptr if no new pages could be created, otherwise pointer to new page
      */
-    pub fn new_page(&mut self) -> Option<Page> {
-        let mut inner = unsafe { self.latch.get_mut() };
+    pub fn new_page(&self) -> Option<Page> {
+        // First acquire the lock for thread safety
+        let root_latch_guard = self.root_level_latch.lock();
 
-        // Check if there is a frame available
-        let frame_id = Self::find_replacement_frame(inner.deref_mut())?;
+        // Get the inner data
+        let mut inner = unsafe { self.inner.get() };
 
-        inner.replacer.with_lock(|replacer| {
-            // Record access so the frame will be inserted and the LRU-k algorithm will work
-            replacer.record_access(frame_id, AccessType::Unknown);
+        unsafe {
+            let frame_id = Self::find_replacement_frame(&mut (*inner))?;
 
-            // Then set evictable state after frame inserted
-            // "Pin" the frame so that the replacer wouldn't evict the frame before the buffer pool manager "Unpin"s it.
-            replacer.set_evictable(frame_id, false);
-        });
+            // Add to The Replacement Policy
+            (*inner).replacer.with_lock(|replacer| {
+                // Record access so the frame will be inserted and the LRU-k algorithm will work
+                replacer.record_access(frame_id, AccessType::Unknown);
 
-        // TODO - avoid having the same page twice when asked simultaneously
-        // TODO - should acquire lock
-        let new_page_id = Self::allocate_page(&mut inner);
+                // Then set evictable state after frame inserted
+                // "Pin" the frame so that the replacer wouldn't evict the frame before the buffer pool manager "Unpin"s it.
+                replacer.set_evictable(frame_id, false);
+            });
 
-        inner.page_table.insert(new_page_id, frame_id);
+            // Get new page id
+            let new_page_id = Self::allocate_page(&mut *inner);
 
-        let old_page: Option<&mut Page> = inner.pages.get_mut(frame_id as usize);
+            // Add it to the page id to the frame mapping
+            (*inner).page_table.insert(new_page_id, frame_id);
 
-        // If no page was in the pages already
-        if old_page.is_none() {
-            // Create it
+            let old_page: Option<&mut Page> = (*inner).pages.get_mut(frame_id as usize);
+
+            // If we evicted and we have old page we will release the root lock to avoid blocking other processes while we flush the old page to disk
+            if let Some(old_page) = old_page {
+
+                // 1. Hold writable lock on the page to make sure no one can access the page content before we finish
+                //    replacing the old page content with the new one
+                old_page.with_write(|mut underlying| {
+                    // 1. Remove reference to the old page in the page table
+                    (*inner).page_table.remove(&underlying.get_page_id());
+
+                    // #############################################################################
+                    //                              Root Lock Release
+                    // #############################################################################
+                    // 2. Once we hold the lock we can release the root lock
+                    // Until we finish flushing we don't want to allow fetching the old page id,
+                    // and it will not as the disk scheduler is behind a Mutex
+                    drop(root_latch_guard);
+
+                    // 3. Flush the old page content if it's dirty
+                    if underlying.is_dirty() {
+                        Self::flush_specific_page_unchecked(&mut *inner, &mut underlying);
+                    }
+
+                    // 3. Create new page
+                    underlying.reset(new_page_id);
+
+                    // 4. Pin the old page as it will be our new page
+                    unsafe { underlying.increment_pin_count_unchecked(); }
+                });
+
+                return Some(old_page.clone());
+            }
+
+            // In new page we're holding the root lock until we finish creating the new page
+
+            // If we have a new page, create it
             let mut new_page = Page::new(new_page_id);
 
-            inner.pages.insert(frame_id as usize, new_page.clone());
+            // Add to the frame table
+            (*inner).pages.insert(frame_id as usize, new_page.clone());
 
             // Pin before returning to the caller to avoid page to be evicted in the meantime
             new_page.pin();
 
-            return Some(new_page);
+            Some(new_page)
         }
-
-        // If already had old page, need to flush to disk
-        let old_page = old_page.unwrap();
-        let mut cloned = old_page.clone();
-
-        Self::replace_page(inner.deref_mut(), &cloned, new_page_id, |_, new_page_id, underlying| {
-            underlying.reset(new_page_id);
-        });
-
-        // Pin before returning to the caller to avoid page to be evicted in the meantime
-        cloned.pin();
-
-        Some(cloned)
     }
 
     /**
@@ -175,81 +204,115 @@ impl BufferPoolManager {
         unsafe { self.fetch_page_unchecked(page_id, access_type) }
     }
 
-    unsafe fn fetch_page_unchecked(&self, page_id: PageId, access_type: AccessType) -> Option<Page> {
-        let mut inner = unsafe { self.latch.get() };
-
+    fn fetch_page_unchecked(&self, page_id: PageId, access_type: AccessType) -> Option<Page> {
         assert_ne!(page_id, INVALID_PAGE_ID);
 
-        // TODO - should lock?
-        // First search for page_id in the buffer pool
-        if let Some(&frame_id) = (*inner).page_table.get(&page_id) {
-            // Page exists in the table
+        // First acquire the lock for thread safety
+        let root_latch_guard = self.root_level_latch.lock();
 
-            // Prevent the frame to be evictable
+        unsafe {
+            // Get the inner data
+            let mut inner = self.inner.get();
+
+            // First search for page_id in the buffer pool
+            if let Some(&frame_id) = (*inner).page_table.get(&page_id) {
+                // Page exists in the table
+
+                // Prevent the frame to be evictable
+                (*inner).replacer.with_lock(|replacer| {
+                    replacer.set_evictable(frame_id, false);
+                    replacer.record_access(frame_id, access_type);
+                });
+
+                let mut p = (*inner).pages[frame_id as usize].clone();
+
+                // Pin before returning to the caller to avoid page to be evicted in the meantime
+                p.pin();
+
+                // We keep the root lock while we have the page id in the buffer pool as it's not a long operation
+                return Some(p);
+            }
+
+            // Need to fetch from disk
+
+            let frame_id = Self::find_replacement_frame(&mut (*inner))?;
+
+            // Add to The Replacement Policy
             (*inner).replacer.with_lock(|replacer| {
+                // Record access so the frame will be inserted and the LRU-k algorithm will work
+                replacer.record_access(frame_id, AccessType::Unknown);
+
+                // Then set evictable state after frame inserted
+                // "Pin" the frame so that the replacer wouldn't evict the frame before the buffer pool manager "Unpin"s it.
                 replacer.set_evictable(frame_id, false);
-                replacer.record_access(frame_id, access_type);
             });
 
-            let mut p = (*inner).pages[frame_id as usize].clone();
-
-            // Pin before returning to the caller to avoid page to be evicted in the meantime
-            p.pin();
-
-            return Some(p);
-        }
-
-        // Need to fetch from disk
-        let frame_id = Self::find_replacement_frame(&mut (*inner))?;
-
-        (*inner).replacer.with_lock(|replacer| {
-            // Record access so the frame will be inserted and the LRU-k algorithm will work
-            replacer.record_access(frame_id, AccessType::Unknown);
-
-            // Then set evictable state after frame inserted
-            // "Pin" the frame so that the replacer wouldn't evict the frame before the buffer pool manager "Unpin"s it.
-            replacer.set_evictable(frame_id, false);
-        });
-
-
-        // TODO - cleanup and extract to helper functions
-
-        // Different page exists on the same frame, meaning that we need to flush that page if needed
-        if let Some(page) = (*inner).pages.get_mut(frame_id as usize) {
-            let pinned_page_clone = page.clone();
-
-            // Pin before returning to the caller to avoid page to be evicted in the meantime
-            page.pin();
-
-            // TODO - should already have a lock on the pages and page table here to avoid page removed in the meantime
+            // Add it to the page id to the frame mapping
             (*inner).page_table.insert(page_id, frame_id);
 
-            Self::replace_page(&mut (*inner), &pinned_page_clone, page_id, |inner, new_page_id, underlying| {
-                // Update page id if we're replacing an existing page
-                underlying.replace_page_id_without_content_update(new_page_id);
+            let old_page: Option<&mut Page> = (*inner).pages.get_mut(frame_id as usize);
 
-                Self::fetch_specific_page_unchecked(inner, underlying);
+            // If we evicted and we have old page we will release the root lock to avoid blocking other processes while we flush the old page to disk
+            if let Some(old_page) = old_page {
+                // 1. Hold writable lock on the page to make sure no one can access the page content before we finish
+                //    replacing the old page content with the new one
+                old_page.with_write(|mut underlying| {
+                    // 1. Remove reference to the old page in the page table
+                    (*inner).page_table.remove(&underlying.get_page_id());
+
+                    // #############################################################################
+                    //                              Root Lock Release
+                    // #############################################################################
+                    // 2. Once we hold the lock we can release the root lock
+                    // Until we finish flushing we don't want to allow fetching the old page id,
+                    // and it will not as the disk scheduler is behind a Mutex
+                    drop(root_latch_guard);
+
+                    // 3. Flush the old page content if it's dirty
+                    if underlying.is_dirty() {
+                        Self::flush_specific_page_unchecked(&mut *inner, &mut underlying);
+                    }
+
+                    // 3. Create new page
+                    underlying.partial_reset(page_id);
+
+                    // 4. Pin the old page as it will be our new page
+                    unsafe { underlying.increment_pin_count_unchecked(); }
+
+                    // 5. Fetch data from disk
+                    Self::fetch_specific_page_unchecked(&mut *inner, underlying);
+                });
+
+                return Some(old_page.clone());
+            }
+
+            // We create a new page
+
+            let mut page: Page = Page::new(page_id);
+
+            // 1. Pin the page
+            page.pin();
+
+            // 2. Add to the page table
+            (*inner).page_table.insert(page_id, frame_id);
+
+            // 3. Add to the frame list
+            (*inner).pages.insert(frame_id as usize, page.clone());
+
+            page.with_write(|mut underlying| {
+                // #############################################################################
+                //                              Root Lock Release
+                // #############################################################################
+                // 1. Once we hold the lock we can release the root lock
+                // Until we finish flushing we don't want to allow fetching the old page id,
+                // and it will not as the disk scheduler is behind a Mutex
+                drop(root_latch_guard);
+
+                Self::fetch_specific_page_unchecked(&mut *inner, &mut underlying);
             });
 
-            return Some(pinned_page_clone);
+            Some(page)
         }
-
-        // No page exists on that frame
-        let mut page: Page = Page::new(page_id);
-
-        // Pin before returning to the caller to avoid page to be evicted in the meantime
-        page.pin();
-        (*inner).page_table.insert(page_id, frame_id);
-        // Insert page to pages list
-        let page_to_insert = page.clone();
-        (*inner).pages.insert(frame_id as usize, page_to_insert);
-
-        page.with_write(|mut underlying| {
-            // TODO - should already have a lock on the pages and page table here to avoid page removed in the meantime
-            Self::fetch_specific_page_unchecked(&(*inner), &mut underlying);
-        });
-
-        Some(page)
     }
 
     fn fetch_specific_page_unchecked(inner: &InnerBufferPoolManager, page: &mut UnderlyingPage) {
@@ -308,9 +371,10 @@ impl BufferPoolManager {
      * @return false if the page is not in the page table or its pin count is <= 0 before this call, true otherwise
      */
     pub unsafe fn unpin_page(&self, page_id: PageId, is_dirty: bool, access_type: AccessType) -> bool {
-        // TODO - should acquire lock?
+        // First acquire the lock for thread safety
+        let root_latch_guard = self.root_level_latch.lock();
 
-        let mut inner = unsafe { self.latch.get() };
+        let mut inner = unsafe { self.inner.get() };
 
         let frame_id = (*inner).page_table.get(&page_id);
 
@@ -321,9 +385,6 @@ impl BufferPoolManager {
 
         let frame_id = frame_id.unwrap();
         let frame_id_ref = *frame_id;
-
-        // TODO not need to record access
-        // self.replacer.record_access(*frame_id, access_type);
 
         let page: Option<&mut Page> = (*inner).pages.get_mut(frame_id_ref as usize);
 
@@ -369,33 +430,37 @@ impl BufferPoolManager {
      * @return false if the page could not be found in the page table, true otherwise
      */
     pub fn flush_page(&mut self, page_id: PageId) -> bool {
-
-        let mut inner = unsafe { self.latch.get_mut() };
-
-        if !inner.page_table.contains_key(&page_id) {
-            return false;
-        }
-
-        Self::flush_page_unchecked(&inner, page_id);
-
-        true
-    }
-
-    fn flush_page_unchecked(inner: &InnerBufferPoolManager, page_id: PageId) {
         assert_ne!(page_id, INVALID_PAGE_ID);
+
+        let root_latch_guard = self.root_level_latch.lock();
+
+        let mut inner = unsafe { self.inner.get_mut() };
 
         let frame_id = inner.page_table.get(&page_id);
 
         if frame_id.is_none() {
-            return;
+            return false;
         }
 
         let frame_id = *frame_id.unwrap();
 
         let page = &inner.pages[frame_id as usize];
 
-        page.with_write(|u| Self::flush_specific_page_unchecked(inner, u))
+        page.with_write(|u| {
+            // #############################################################################
+            //                              Root Lock Release
+            // #############################################################################
+            // 1. Once we hold the lock we can release the root lock
+            // Until we finish flushing we don't want to allow fetching the old page id,
+            // and it will not as the disk scheduler is behind a Mutex
+            drop(root_latch_guard);
+
+            Self::flush_specific_page_unchecked(inner, u)
+        });
+
+        true
     }
+
 
     fn flush_specific_page_unchecked(inner: &InnerBufferPoolManager, page: &mut UnderlyingPage) {
         let data = Arc::new(*page.get_data());
@@ -418,12 +483,13 @@ impl BufferPoolManager {
      * @brief Flush all the pages in the buffer pool to disk.
      */
     pub fn flush_all_pages(&mut self) {
-        let mut inner = unsafe { self.latch.get_mut() };
-
-        inner.page_table.keys().for_each(|page_id| {
-            Self::flush_page_unchecked(&inner, *page_id);
-        });
-
+        // TODO - should acquire lock?
+        // let mut inner = unsafe { self.inner.get_mut() };
+        //
+        // (*inner).page_table.keys().for_each(|page_id| {
+        //     Self::flush_page(self, page_id.clone());
+        // });
+        unimplemented!()
     }
 
     /**
@@ -440,7 +506,10 @@ impl BufferPoolManager {
      * @return false if the page exists but could not be deleted, true if the page didn't exist or deletion succeeded
      */
     pub fn delete_page(&mut self, page_id: PageId) -> bool {
-        let mut inner = unsafe { self.latch.get_mut() };
+
+        let root_latch_guard = self.root_level_latch.lock();
+
+        let mut inner = unsafe { self.inner.get_mut() };
 
         let frame_id_value: FrameId;
         {
