@@ -34,7 +34,7 @@ impl BufferPoolManager {
 
         BufferPoolManager {
             pool_size,
-            latch: Mutex::new(InnerBufferPoolManager {
+            latch: Arc::new(Mutex::new(InnerBufferPoolManager {
                 next_page_id: AtomicPageId::new(0),
                 log_manager,
 
@@ -50,7 +50,7 @@ impl BufferPoolManager {
                 disk_scheduler: Arc::new(Mutex::new(DiskScheduler::new(disk_manager))),
                 page_table: HashMap::with_capacity(pool_size),
                 free_list,
-            }),
+            })),
 
         }
     }
@@ -83,7 +83,7 @@ impl BufferPoolManager {
      * Original: @param[out] page_id id of created page, (--- no need as can get from the page itself ---)
      * Original: @return nullptr if no new pages could be created, otherwise pointer to new page
      */
-    pub fn new_page(&mut self) -> Option<Page> {
+    pub fn new_page(&self) -> Option<Page> {
         let mut inner = self.latch.lock();
 
         // Check if there is a frame available
@@ -145,7 +145,7 @@ impl BufferPoolManager {
      * @param[out] page_id, the id of the new page
      * @return BasicPageGuard holding a new page
      */
-    pub fn new_page_guarded(&mut self, page_id: PageId) -> BasicPageGuard {
+    pub fn new_page_guarded(&self, page_id: PageId) -> BasicPageGuard {
         unimplemented!()
     }
 
@@ -166,7 +166,7 @@ impl BufferPoolManager {
      * @param access_type type of access to the page, only needed for leaderboard tests. - TODO - default for  = AccessType::Unknown
      * @return nullptr if page_id cannot be fetched, otherwise pointer to the requested page
      */
-    pub fn fetch_page(&mut self, page_id: PageId, access_type: AccessType) -> Option<Page> {
+    pub fn fetch_page(&self, page_id: PageId, access_type: AccessType) -> Option<Page> {
         if page_id == INVALID_PAGE_ID {
             return None;
         }
@@ -174,7 +174,7 @@ impl BufferPoolManager {
         unsafe { self.fetch_page_unchecked(page_id, access_type) }
     }
 
-    unsafe fn fetch_page_unchecked(&mut self, page_id: PageId, access_type: AccessType) -> Option<Page> {
+    unsafe fn fetch_page_unchecked(&self, page_id: PageId, access_type: AccessType) -> Option<Page> {
         let mut inner = self.latch.lock();
 
         assert_ne!(page_id, INVALID_PAGE_ID);
@@ -282,13 +282,13 @@ impl BufferPoolManager {
      * @param page_id, the id of the page to fetch
      * @return PageGuard holding the fetched page
      */
-    pub fn fetch_page_basic(&mut self, page_id: PageId) -> BasicPageGuard {
+    pub fn fetch_page_basic(&self, page_id: PageId) -> BasicPageGuard {
         unimplemented!()
     }
-    pub fn fetch_page_read(&mut self, page_id: PageId) -> ReadPageGuard {
+    pub fn fetch_page_read(&self, page_id: PageId) -> ReadPageGuard {
         unimplemented!()
     }
-    pub fn fetch_page_write(&mut self, page_id: PageId) -> WritePageGuard {
+    pub fn fetch_page_write(&self, page_id: PageId) -> WritePageGuard {
         unimplemented!()
     }
 
@@ -306,7 +306,7 @@ impl BufferPoolManager {
      * @param access_type type of access to the page, only needed for leaderboard tests. TODO - default  = AccessType::Unknown
      * @return false if the page is not in the page table or its pin count is <= 0 before this call, true otherwise
      */
-    pub fn unpin_page(&mut self, page_id: PageId, is_dirty: bool, access_type: AccessType) -> bool {
+    pub fn unpin_page(&self, page_id: PageId, is_dirty: bool, access_type: AccessType) -> bool {
         // TODO - should acquire lock?
         let mut inner = self.latch.lock();
 
@@ -366,7 +366,7 @@ impl BufferPoolManager {
      * @param page_id id of page to be flushed, cannot be INVALID_PAGE_ID
      * @return false if the page could not be found in the page table, true otherwise
      */
-    pub fn flush_page(&mut self, page_id: PageId) -> bool {
+    pub fn flush_page(&self, page_id: PageId) -> bool {
         let inner = self.latch.lock();
 
         if !inner.page_table.contains_key(&page_id) {
@@ -414,7 +414,7 @@ impl BufferPoolManager {
      *
      * @brief Flush all the pages in the buffer pool to disk.
      */
-    pub fn flush_all_pages(&mut self) {
+    pub fn flush_all_pages(&self) {
         let inner = self.latch.lock();
 
         inner.page_table.keys().for_each(|page_id| {
@@ -436,7 +436,7 @@ impl BufferPoolManager {
      * @param page_id id of page to be deleted
      * @return false if the page exists but could not be deleted, true if the page didn't exist or deletion succeeded
      */
-    pub fn delete_page(&mut self, page_id: PageId) -> bool {
+    pub fn delete_page(&self, page_id: PageId) -> bool {
         let mut inner = self.latch.lock();
 
         let frame_id_value: FrameId;

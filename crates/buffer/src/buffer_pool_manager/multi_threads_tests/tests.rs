@@ -1,6 +1,5 @@
 extern crate derive_builder;
 
-
 use crate::{AccessType, BufferPoolManager};
 use common::config::{PageData, PageId};
 use parking_lot::{Mutex, RwLock};
@@ -85,7 +84,6 @@ fn run_multi_threads_tests(options: Options) {
 
     let (page_ids, bpm) = init_buffer_pool_manager_for_test(&options, temp_dir);
 
-    let bpm = Arc::new(Mutex::new(bpm));
     let page_ids = Arc::new(RwLock::new(page_ids));
 
     println!("[info] start");
@@ -94,7 +92,7 @@ fn run_multi_threads_tests(options: Options) {
     type ModifyRecord = HashMap<PageId, u64>;
 
     for thread_id in 0..scan_thread_n {
-        let bpm = Arc::clone(&bpm);
+        let bpm = bpm.clone();
         let page_ids = Arc::clone(&page_ids);
 
         let t = thread::spawn(move || {
@@ -108,7 +106,7 @@ fn run_multi_threads_tests(options: Options) {
 
             while !run_timer.should_finish() {
                 let page_id = page_ids.read()[page_idx as usize];
-                let page = bpm.lock().fetch_page(page_id, AccessType::Scan);
+                let page = bpm.fetch_page(page_id, AccessType::Scan);
                 if page.is_none() {
                     continue;
                 }
@@ -127,7 +125,7 @@ fn run_multi_threads_tests(options: Options) {
                     modify_page(u.get_data_mut(), page_idx as usize, *seed);
                 });
 
-                bpm.lock().unpin_page(page_id, true, AccessType::Scan);
+                bpm.unpin_page(page_id, true, AccessType::Scan);
                 page_idx += 1;
                 if page_idx >= page_idx_end {
                     page_idx = page_idx_start;
@@ -138,7 +136,7 @@ fn run_multi_threads_tests(options: Options) {
     }
 
     for _ in 0..get_thread_n {
-        let bpm = Arc::clone(&bpm);
+        let bpm = bpm.clone();
         let page_ids = Arc::clone(&page_ids);
 
         let t = thread::spawn(move || {
@@ -149,7 +147,7 @@ fn run_multi_threads_tests(options: Options) {
 
             while !run_timer.should_finish() {
                 let page_idx = dist.sample(&mut rng);
-                let page = bpm.lock().fetch_page(page_ids.read()[page_idx], AccessType::Lookup);
+                let page = bpm.fetch_page(page_ids.read()[page_idx], AccessType::Lookup);
 
                 if page.is_none() {
                     eprintln!("cannot fetch page");
@@ -165,7 +163,7 @@ fn run_multi_threads_tests(options: Options) {
                     check_page_consistent_no_seed(u.get_data(), page_idx);
                 });
 
-                bpm.lock().unpin_page(page_id, false, AccessType::Lookup);
+                bpm.unpin_page(page_id, false, AccessType::Lookup);
             }
         });
         join_handles.push(t);
