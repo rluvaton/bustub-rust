@@ -148,7 +148,7 @@ impl DiskManager for DiskManagerUnlimitedMemory {
             }
 
             if page_id >= data.pages.len() as i32 {
-                data.pages.resize((page_id + 1) as usize, Arc::new(Mutex::new(None)))
+                data.pages.resize_with((page_id + 1) as usize, || Arc::new(Mutex::new(None)));
             }
 
             page_ref = Arc::clone(&data.pages[page_id as usize]);
@@ -164,13 +164,13 @@ impl DiskManager for DiskManagerUnlimitedMemory {
 
 
         // Get the value from the page
-        let mut value = page_lock.take().unwrap();
+        let mut value = (*page_lock).unwrap();
 
-        // Modify it
-        value[0..BUSTUB_PAGE_SIZE].copy_from_slice(page_data);
+        // Using clone to avoid data being modified when using that page_data reference
+        value[0..BUSTUB_PAGE_SIZE].clone_from_slice(page_data);
 
         // Set it back
-        page_lock.replace(value);
+        *page_lock = Some(value);
 
         self.post_process_latency(page_id);
 
@@ -196,8 +196,7 @@ impl DiskManager for DiskManagerUnlimitedMemory {
             }
 
             if page_id >= data.pages.len() as i32 {
-                // TODO - output to stderr
-                println!("page {} not in range", page_id);
+                eprintln!("page {} not in range", page_id);
                 panic!("page {} not in range", page_id);
             }
 
@@ -208,8 +207,7 @@ impl DiskManager for DiskManagerUnlimitedMemory {
         }
 
         if page_lock.is_none() {
-            // TODO - output to stderr
-            println!("page {} not exists", page_id);
+            eprintln!("page {} not exists", page_id);
             panic!("page {} not exists", page_id);
         }
 
