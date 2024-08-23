@@ -107,7 +107,6 @@ fn run_multi_threads_tests(options: Options) {
             let mut page_idx = page_idx_start;
 
             while !run_timer.should_finish() {
-                // let mut bpm = bpm.lock();
                 let page_id = page_ids.read()[page_idx as usize];
                 let page = bpm.lock().fetch_page(page_id, AccessType::Scan);
                 if page.is_none() {
@@ -149,8 +148,6 @@ fn run_multi_threads_tests(options: Options) {
             let run_timer = RunTimer::new(duration_ms);
 
             while !run_timer.should_finish() {
-                // let mut bpm = bpm.lock();
-
                 let page_idx = dist.sample(&mut rng);
                 let page = bpm.lock().fetch_page(page_ids.read()[page_idx], AccessType::Lookup);
 

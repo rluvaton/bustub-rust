@@ -522,9 +522,4 @@ impl BufferPoolManager {
     fn deallocate_page(_page_id: PageId) {
         // This is a no-nop right now without a more complex data structure to track deallocated pages
     }
-
-    // TODO - for debugging
-    pub fn lock(&mut self) -> &mut Self {
-        return self;
-    }
 }
