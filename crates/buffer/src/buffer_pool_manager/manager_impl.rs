@@ -248,7 +248,6 @@ impl BufferPoolManager {
             Self::fetch_specific_page_unchecked(&inner, &mut underlying);
         });
 
-
         Some(page)
     }
 
@@ -343,15 +342,6 @@ impl BufferPoolManager {
 
         // If page's pin count is already 0, return false
         if pin_count_before_unpin == 0 {
-            // return inner.replacer.with_lock(|replacer| {
-            //     let is_evictable = unsafe { replacer.is_evictable_unchecked(frame_id_ref) };
-            //
-            //     replacer.set_evictable(frame_id_ref, true);
-            //
-            //     // If was not evictable return true as we fixed the pin count,
-            //     // if it was evictable, then we did nothing and return false
-            //     return !is_evictable;
-            // });
             return false;
         }
 

@@ -116,7 +116,7 @@ fn run_multi_threads_tests(options: Options) {
 
                 let page = page.unwrap();
 
-                page.with_write(|u| unsafe {
+                page.with_write(|u| {
                     if !records.contains_key(&page_idx) {
                         records.insert(page_idx, 0);
                     }
@@ -163,7 +163,7 @@ fn run_multi_threads_tests(options: Options) {
 
                 let mut page_id: PageId = 0;
 
-                page.with_read(|u| unsafe {
+                page.with_read(|u| {
                     page_id = u.get_page_id();
                     check_page_consistent_no_seed(u.get_data(), page_idx);
                 });
