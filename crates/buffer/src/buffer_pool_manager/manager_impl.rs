@@ -1,16 +1,16 @@
-use std::cell::{Cell, UnsafeCell};
-use std::collections::{HashMap, HashSet, LinkedList};
-use std::ops::{Deref, DerefMut};
-use std::sync::Arc;
-use std::sync::atomic::Ordering;
-use parking_lot::Mutex;
+use crate::buffer_pool_manager::manager::{BufferPoolManager, InnerBufferPoolManager};
+use crate::lru_k_replacer::{AccessType, LRUKReplacer};
 use common::config::{AtomicPageId, FrameId, PageId, INVALID_PAGE_ID, LRUK_REPLACER_K};
 use common::Promise;
 use log::warn;
+use parking_lot::Mutex;
 use recovery::LogManager;
-use storage::{BasicPageGuard, DiskManager, DiskScheduler, Page, ReadPageGuard, WritePageGuard, UnderlyingPage, WriteDiskRequest, ReadDiskRequest};
-use crate::buffer_pool_manager::manager::{BufferPoolManager, InnerBufferPoolManager};
-use crate::lru_k_replacer::{AccessType, LRUKReplacer};
+use std::cell::{Cell, UnsafeCell};
+use std::collections::{HashMap, HashSet, LinkedList};
+use std::ops::{Deref, DerefMut};
+use std::sync::atomic::Ordering;
+use std::sync::Arc;
+use storage::{BasicPageGuard, DiskManager, DiskScheduler, Page, ReadDiskRequest, ReadPageGuard, UnderlyingPage, WriteDiskRequest, WritePageGuard};
 
 impl BufferPoolManager {
     pub fn new(
@@ -93,7 +93,7 @@ impl BufferPoolManager {
         let root_latch_guard = self.root_level_latch.lock();
 
         // Get the inner data
-        let mut inner = unsafe { self.inner.get() };
+        let inner = self.inner.get();
 
         unsafe {
             let frame_id = Self::find_replacement_frame(&mut (*inner))?;
@@ -142,7 +142,7 @@ impl BufferPoolManager {
                     underlying.reset(new_page_id);
 
                     // 4. Pin the old page as it will be our new page
-                    unsafe { underlying.increment_pin_count_unchecked(); }
+                    underlying.increment_pin_count_unchecked();
                 });
 
                 return Some(old_page.clone());
@@ -201,7 +201,7 @@ impl BufferPoolManager {
             return None;
         }
 
-        unsafe { self.fetch_page_unchecked(page_id, access_type) }
+        self.fetch_page_unchecked(page_id, access_type)
     }
 
     fn fetch_page_unchecked(&self, page_id: PageId, access_type: AccessType) -> Option<Page> {
@@ -212,7 +212,7 @@ impl BufferPoolManager {
 
         unsafe {
             // Get the inner data
-            let mut inner = self.inner.get();
+            let inner = self.inner.get();
 
             // First search for page_id in the buffer pool
             if let Some(&frame_id) = (*inner).page_table.get(&page_id) {
@@ -277,7 +277,7 @@ impl BufferPoolManager {
                     underlying.partial_reset(page_id);
 
                     // 4. Pin the old page as it will be our new page
-                    unsafe { underlying.increment_pin_count_unchecked(); }
+                    underlying.increment_pin_count_unchecked();
 
                     // 5. Fetch data from disk
                     Self::fetch_specific_page_unchecked(&mut *inner, underlying);
@@ -370,52 +370,55 @@ impl BufferPoolManager {
      * @param access_type type of access to the page, only needed for leaderboard tests. TODO - default  = AccessType::Unknown
      * @return false if the page is not in the page table or its pin count is <= 0 before this call, true otherwise
      */
-    pub unsafe fn unpin_page(&self, page_id: PageId, is_dirty: bool, access_type: AccessType) -> bool {
+    pub fn unpin_page(&self, page_id: PageId, is_dirty: bool, _access_type: AccessType) -> bool {
         // First acquire the lock for thread safety
-        let root_latch_guard = self.root_level_latch.lock();
+        let _root_latch_guard = self.root_level_latch.lock();
 
-        let mut inner = unsafe { self.inner.get() };
+        let inner = self.inner.get() ;
 
-        let frame_id = (*inner).page_table.get(&page_id);
 
-        // If page_id is not in the buffer pool, return false
-        if frame_id.is_none() {
-            return false;
+        unsafe {
+            let frame_id = (*inner).page_table.get(&page_id);
+
+            // If page_id is not in the buffer pool, return false
+            if frame_id.is_none() {
+                return false;
+            }
+
+            let frame_id = frame_id.unwrap();
+            let frame_id_ref = *frame_id;
+
+            let page: Option<&mut Page> = (*inner).pages.get_mut(frame_id_ref as usize);
+
+            if page.is_none() {
+                warn!("Could not find requested page to unpin, it shouldn't be possible");
+                // TODO - log warning or something as this mean we have corruption
+                return false;
+            }
+
+            let page = page.unwrap();
+
+            // Also, set the dirty flag on the page to indicate if the page was modified.
+            if is_dirty {
+                page.with_write(|u| u.set_is_dirty(true));
+            }
+
+            let pin_count_before_unpin = page.get_pin_count();
+
+            // If page's pin count is already 0, return false
+            if pin_count_before_unpin == 0 {
+                return false;
+            }
+
+            page.unpin();
+
+            // If pin count reaches 0, mark as evictable
+            if pin_count_before_unpin == 1 {
+                (*inner).replacer.set_evictable(frame_id_ref, true);
+            }
+
+            true
         }
-
-        let frame_id = frame_id.unwrap();
-        let frame_id_ref = *frame_id;
-
-        let page: Option<&mut Page> = (*inner).pages.get_mut(frame_id_ref as usize);
-
-        if page.is_none() {
-            warn!("Could not find requested page to unpin, it shouldn't be possible");
-            // TODO - log warning or something as this mean we have corruption
-            return false;
-        }
-
-        let page = page.unwrap();
-
-        // Also, set the dirty flag on the page to indicate if the page was modified.
-        if is_dirty {
-            page.with_write(|u| u.set_is_dirty(true));
-        }
-
-        let pin_count_before_unpin = page.get_pin_count();
-
-        // If page's pin count is already 0, return false
-        if pin_count_before_unpin == 0 {
-            return false;
-        }
-
-        page.unpin();
-
-        // If pin count reaches 0, mark as evictable
-        if pin_count_before_unpin == 1 {
-            (*inner).replacer.set_evictable(frame_id_ref, true);
-        }
-
-        true
     }
 
     /**
@@ -434,7 +437,7 @@ impl BufferPoolManager {
 
         let root_latch_guard = self.root_level_latch.lock();
 
-        let mut inner = unsafe { self.inner.get_mut() };
+        let inner = self.inner.get_mut();
 
         let frame_id = inner.page_table.get(&page_id);
 
@@ -507,9 +510,9 @@ impl BufferPoolManager {
      */
     pub fn delete_page(&mut self, page_id: PageId) -> bool {
 
-        let root_latch_guard = self.root_level_latch.lock();
+        let _root_latch_guard = self.root_level_latch.lock();
 
-        let mut inner = unsafe { self.inner.get_mut() };
+        let inner = self.inner.get_mut();
 
         let frame_id_value: FrameId;
         {

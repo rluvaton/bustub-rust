@@ -38,7 +38,7 @@ mod tests {
         // Scenario: The buffer pool is empty. We should be able to create a new page.
         assert_ne!(page0, None);
 
-        let mut page0 = page0.unwrap();
+        let page0 = page0.unwrap();
 
         assert_eq!(page0.with_read(|u| u.get_page_id()), 0);
 
@@ -73,7 +73,7 @@ mod tests {
         }
 
         for _ in 0..5 {
-            let mut page = bpm.new_page().expect("Must be able to create a new page");
+            let page = bpm.new_page().expect("Must be able to create a new page");
             let page_id = page.with_read(|u| u.get_page_id());
 
             // Unpin the page here to allow future fetching

@@ -1,10 +1,8 @@
-use std::cmp::min;
 use crate::page::underlying_page::UnderlyingPage;
 use common::config::{PageData, PageId, BUSTUB_PAGE_SIZE, INVALID_PAGE_ID};
 use common::ReaderWriterLatch;
 use std::ops::{Deref, DerefMut};
 use std::sync::Arc;
-use std::sync::atomic::{AtomicIsize, AtomicUsize, Ordering};
 use log::warn;
 // static_assert(sizeof(page_id_t) == 4);
 // static_assert(sizeof(lsn_t) == 4);
@@ -129,7 +127,7 @@ impl Page {
     /// });
     /// ```
     pub fn with_read<F: FnOnce(&UnderlyingPage) -> R, R>(&self, with_read_lock: F) -> R {
-        let mut inner_guard = self.inner.read();
+        let inner_guard = self.inner.read();
 
         with_read_lock(inner_guard.deref())
     }
@@ -161,7 +159,7 @@ impl Page {
 
 impl Clone for Page {
     fn clone(&self) -> Self {
-        let mut inner = Arc::clone(&self.inner);
+        let inner = Arc::clone(&self.inner);
 
         let page = Page {
             inner,

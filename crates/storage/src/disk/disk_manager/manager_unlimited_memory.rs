@@ -14,16 +14,6 @@ fn create_page() -> Page {
     [0u8; BUSTUB_PAGE_SIZE]
 }
 
-fn create_new_protected_page() -> ProtectedPage {
-    Arc::new(
-        Mutex::new(
-            Some(
-                create_page()
-            )
-        )
-    )
-}
-
 pub(crate) struct LatencyProcessor {
     recent_access: [PageId; 4],
     access_ptr: u64,
@@ -185,7 +175,7 @@ impl DiskManager for DiskManagerUnlimitedMemory {
     fn read_page(&mut self, page_id: PageId, page_data: &mut [u8]) {
         self.process_latency(page_id);
 
-        let mut page_ref: Arc<Mutex<Option<Page>>>;
+        let page_ref: Arc<Mutex<Option<Page>>>;
         let page_lock: MutexGuard<Option<Page>>;
 
         {

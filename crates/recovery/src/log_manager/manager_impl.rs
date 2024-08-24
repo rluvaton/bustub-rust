@@ -28,7 +28,7 @@ impl LogManager {
         unimplemented!()
     }
 
-    pub fn append_log_record(&mut self, log_record: &LogRecord) -> LSN {
+    pub fn append_log_record(&mut self, _log_record: &LogRecord) -> LSN {
         unimplemented!()
     }
 
