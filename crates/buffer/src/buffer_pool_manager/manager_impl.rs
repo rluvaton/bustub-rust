@@ -509,23 +509,18 @@ impl BufferPoolManager {
      * @return false if the page exists but could not be deleted, true if the page didn't exist or deletion succeeded
      */
     pub fn delete_page(&mut self, page_id: PageId) -> bool {
-
         let _root_latch_guard = self.root_level_latch.lock();
 
         let inner = self.inner.get_mut();
 
-        let frame_id_value: FrameId;
-        {
-            // TODO - should lock
-            let frame_id = inner.page_table.get(&page_id);
+        let frame_id = inner.page_table.get(&page_id);
 
-            if frame_id.is_none() {
-                return true;
-            }
-            frame_id_value = frame_id.cloned().unwrap();
+        if frame_id.is_none() {
+            return true;
         }
+        let frame_id = frame_id.cloned().unwrap();
 
-        let page: &mut Page = inner.pages.get_mut(frame_id_value as usize).expect("page must exists as it is in the page table");
+        let page: &mut Page = inner.pages.get_mut(frame_id as usize).expect("page must exists as it is in the page table");
 
         // If not evictable
         if page.get_pin_count() > 0 {
@@ -535,10 +530,10 @@ impl BufferPoolManager {
         // TODO - what about if page is dirty?
 
         inner.page_table.remove(&page_id);
-        inner.free_list.push_front(frame_id_value);
+        inner.free_list.push_front(frame_id);
 
-        inner.replacer.remove(frame_id_value);
-        inner.pages.remove(frame_id_value as usize);
+        inner.replacer.remove(frame_id);
+        inner.pages.remove(frame_id as usize);
 
 
         Self::deallocate_page(page_id);
