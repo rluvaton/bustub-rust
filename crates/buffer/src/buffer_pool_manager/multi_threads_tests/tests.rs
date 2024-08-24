@@ -10,7 +10,7 @@ use std::thread::JoinHandle;
 use storage::{DefaultDiskManager, DiskManager, DiskManagerUnlimitedMemory};
 use tempdir::TempDir;
 
-use crate::buffer_pool_manager::multi_threads_tests::helpers::{get_tmp_dir, RunTimer};
+use crate::buffer_pool_manager::multi_threads_tests::helpers::get_tmp_dir;
 use crate::buffer_pool_manager::multi_threads_tests::options::{DiskManagerImplementationOptions, Options};
 use rand::distributions::Distribution;
 
@@ -30,7 +30,7 @@ fn modify_page(page: &mut PageData, page_idx: usize, seed: u64) {
 }
 
 /// Check the page and verify the data inside
-fn check_page_consistent_no_seed(data: &PageData, page_idx: usize) {
+fn check_page_consistent_no_seed(data: &PageData, page_idx: PageId) {
     // Cast the data pointer to a BustubBenchPageHeader pointer
     let data_seed = u64::from_ne_bytes(data[0..8].try_into().unwrap());
     let data_page_id = u64::from_ne_bytes(data[8..16].try_into().unwrap());
@@ -55,7 +55,7 @@ fn check_page_consistent_no_seed(data: &PageData, page_idx: usize) {
     }
 }
 
-fn check_page_consistent(data: &PageData, page_idx: usize, seed: u64) {
+fn check_page_consistent(data: &PageData, page_idx: PageId, seed: u64) {
     let data_seed = u64::from_ne_bytes(data[0..8].try_into().unwrap());
 
     // Check if the seed matches the expected seed
@@ -71,15 +71,18 @@ fn check_page_consistent(data: &PageData, page_idx: usize, seed: u64) {
 }
 
 fn run_multi_threads_tests(options: Options) {
-    let duration_ms = options.duration_ms;
+    // let duration_ms = options.duration_ms;
     let scan_thread_n = options.scan_thread_n;
     let get_thread_n = options.get_thread_n;
     let bustub_page_cnt = options.db_size;
+    let get_thread_page_id_type = options.get_thread_page_id_type.clone();
+    let get_thread_duration_type = options.get_thread_duration_type.clone();
+    let scan_thread_duration_type = options.scan_thread_duration_type.clone();
 
     // Create temp dir here, so it will be cleaned when the value is dropped
     let temp_dir = match options.disk_manager_specific.clone() {
         DiskManagerImplementationOptions::Default(d) => if d.file_path.is_some() { None } else { Some(get_tmp_dir()) },
-        (_) => None
+        _ => None
     };
 
     let (page_ids, bpm) = init_buffer_pool_manager_for_test(&options, temp_dir);
@@ -94,19 +97,19 @@ fn run_multi_threads_tests(options: Options) {
 
     for thread_id in 0..scan_thread_n {
         let bpm = Arc::clone(&bpm);
-
         let page_ids = Arc::clone(&page_ids);
+        let duration_type = scan_thread_duration_type.clone();
 
         let t = thread::spawn(move || unsafe {
             let mut records: ModifyRecord = HashMap::new();
 
-            let run_timer = RunTimer::new(duration_ms);
+            let mut duration_runner = duration_type.create_runner();
 
             let page_idx_start = (bustub_page_cnt * thread_id / scan_thread_n) as PageId;
             let page_idx_end = (bustub_page_cnt * (thread_id + 1) / scan_thread_n) as PageId;
             let mut page_idx = page_idx_start;
 
-            while !run_timer.should_finish() {
+            while !duration_runner.should_finish() {
                 let page_id = page_ids.read()[page_idx as usize];
                 let page = bpm.fetch_page(page_id, AccessType::Scan);
                 if page.is_none() {
@@ -122,7 +125,7 @@ fn run_multi_threads_tests(options: Options) {
 
                     let mut seed = records.get_mut(&page_idx).expect("Must exists");
 
-                    check_page_consistent(u.get_data(), page_idx as usize, *seed);
+                    check_page_consistent(u.get_data(), page_idx, *seed);
                     *seed = *seed + 1;
                     modify_page(u.get_data_mut(), page_idx as usize, *seed);
                 });
@@ -140,16 +143,17 @@ fn run_multi_threads_tests(options: Options) {
     for _ in 0..get_thread_n {
         let bpm = Arc::clone(&bpm);
         let page_ids = Arc::clone(&page_ids);
+        let get_thread_page_id_type = get_thread_page_id_type.clone();
+        let duration_type = get_thread_duration_type.clone();
 
-        let t = thread::spawn(move || unsafe {
-            let mut rng = rand::thread_rng();
-            let dist = zipf::ZipfDistribution::new(bustub_page_cnt - 1, 0.8).unwrap();
+        let t = thread::spawn(move || {
+            let mut page_id_getter = get_thread_page_id_type.create_getter(0, (bustub_page_cnt - 1) as PageId);
 
-            let run_timer = RunTimer::new(duration_ms);
+            let mut duration_runner = duration_type.create_runner();
 
-            while !run_timer.should_finish() {
-                let page_idx = dist.sample(&mut rng);
-                let page = bpm.fetch_page(page_ids.read()[page_idx], AccessType::Lookup);
+            while !duration_runner.should_finish() {
+                let page_idx = page_id_getter.get();
+                let page = bpm.fetch_page(page_ids.read()[page_idx as usize], AccessType::Lookup);
 
                 if page.is_none() {
                     eprintln!("cannot fetch page");
@@ -238,291 +242,353 @@ fn create_bpm(options: &Options, m: Arc<Mutex<(impl DiskManager + 'static)>>) ->
     )
 }
 
-use crate::buffer_pool_manager::multi_threads_tests::options::{OptionsBuilder, UnlimitedMemoryDiskManagerOptions};
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::buffer_pool_manager::multi_threads_tests::options::{DurationType, OptionsBuilder, UnlimitedMemoryDiskManagerOptions};
 
 
-// ########################
-//     Unlimited Memory
-// ########################
+    // ########################
+    //     Unlimited Memory
+    // ########################
 
-#[test]
-fn multi_threaded_memory_disk_manager() {
-    let options = OptionsBuilder::default()
-        .disk_manager_specific(
-            DiskManagerImplementationOptions::UnlimitedMemory(
-                UnlimitedMemoryDiskManagerOptions {
-                    enable_latency: false
-                }
+    #[test]
+    fn multi_threaded_memory_disk_manager() {
+        let options = OptionsBuilder::default()
+            .disk_manager_specific(
+                DiskManagerImplementationOptions::UnlimitedMemory(
+                    UnlimitedMemoryDiskManagerOptions {
+                        enable_latency: false
+                    }
+                )
             )
-        )
-        .build()
-        .unwrap();
+            .build()
+            .unwrap();
 
-    run_multi_threads_tests(options)
-}
+        run_multi_threads_tests(options)
+    }
 
-#[test]
-fn multi_threaded_memory_disk_manager_5s() {
-    let options = OptionsBuilder::default()
-        // 5s
-        .duration_ms(5000)
-        .disk_manager_specific(
-            DiskManagerImplementationOptions::UnlimitedMemory(
-                UnlimitedMemoryDiskManagerOptions {
-                    enable_latency: false
-                }
+    #[test]
+    fn multi_threaded_memory_disk_manager_5s() {
+        let options = OptionsBuilder::default()
+            // 5s
+            .scan_thread_duration_type(DurationType::TimeAsMilliseconds(5000))
+            .get_thread_duration_type(DurationType::TimeAsMilliseconds(5000))
+            .disk_manager_specific(
+                DiskManagerImplementationOptions::UnlimitedMemory(
+                    UnlimitedMemoryDiskManagerOptions {
+                        enable_latency: false
+                    }
+                )
             )
-        )
-        .build()
-        .unwrap();
+            .build()
+            .unwrap();
 
-    run_multi_threads_tests(options)
-}
+        run_multi_threads_tests(options)
+    }
 
-#[test]
-fn multi_threaded_memory_disk_manager_with_latency() {
-    let options = OptionsBuilder::default()
-        // 4s
-        .duration_ms(4000)
+    #[test]
+    fn multi_threaded_memory_disk_manager_with_latency() {
+        let options = OptionsBuilder::default()
+            // 4s
+            .scan_thread_duration_type(DurationType::TimeAsMilliseconds(4000))
+            .get_thread_duration_type(DurationType::TimeAsMilliseconds(4000))
 
-        .disk_manager_specific(
-            DiskManagerImplementationOptions::UnlimitedMemory(
-                UnlimitedMemoryDiskManagerOptions {
-                    enable_latency: true
-                }
+            .disk_manager_specific(
+                DiskManagerImplementationOptions::UnlimitedMemory(
+                    UnlimitedMemoryDiskManagerOptions {
+                        enable_latency: true
+                    }
+                )
             )
-        )
-        .build()
-        .unwrap();
+            .build()
+            .unwrap();
 
-    run_multi_threads_tests(options)
+        run_multi_threads_tests(options)
+    }
+
+    #[test]
+    fn multi_threaded_memory_disk_manager_0_scan_and_1_get_threads() {
+        let options = OptionsBuilder::default()
+            .scan_thread_n(0)
+            .get_thread_n(1)
+
+            .disk_manager_specific(DiskManagerImplementationOptions::get_unlimited_memory())
+
+            .build()
+            .unwrap();
+
+        run_multi_threads_tests(options)
+    }
+
+    #[test]
+    fn multi_threaded_memory_disk_manager_1_scan_and_0_get_threads() {
+        let options = OptionsBuilder::default()
+            .scan_thread_n(1)
+            .get_thread_n(0)
+
+            .disk_manager_specific(DiskManagerImplementationOptions::get_unlimited_memory())
+
+            .build()
+            .unwrap();
+
+        run_multi_threads_tests(options)
+    }
+
+    #[test]
+    fn multi_threaded_memory_disk_manager_1_scan_and_1_get_threads() {
+        let options = OptionsBuilder::default()
+            .scan_thread_n(1)
+            .get_thread_n(1)
+
+            .disk_manager_specific(DiskManagerImplementationOptions::get_unlimited_memory())
+
+            .build()
+            .unwrap();
+
+        run_multi_threads_tests(options)
+    }
+
+    #[test]
+    fn multi_threaded_memory_disk_manager_1_scan_and_2_get_threads() {
+        let options = OptionsBuilder::default()
+            .scan_thread_n(1)
+            .get_thread_n(2)
+
+            .disk_manager_specific(DiskManagerImplementationOptions::get_unlimited_memory())
+
+            .build()
+            .unwrap();
+
+        run_multi_threads_tests(options)
+    }
+
+    #[test]
+    fn multi_threaded_memory_disk_manager_1_scan_and_10_get_threads() {
+        let options = OptionsBuilder::default()
+            .scan_thread_n(1)
+            .get_thread_n(10)
+
+            .disk_manager_specific(DiskManagerImplementationOptions::get_unlimited_memory())
+
+            .build()
+            .unwrap();
+
+        run_multi_threads_tests(options)
+    }
+
+    #[test]
+    fn multi_threaded_memory_disk_manager_2_scan_and_1_get_threads() {
+        let options = OptionsBuilder::default()
+            .scan_thread_n(2)
+            .get_thread_n(1)
+
+            .disk_manager_specific(DiskManagerImplementationOptions::get_unlimited_memory())
+
+            .build()
+            .unwrap();
+
+        run_multi_threads_tests(options)
+    }
+
+    #[test]
+    fn multi_threaded_memory_disk_manager_10_scan_and_1_get_threads() {
+        let options = OptionsBuilder::default()
+            .scan_thread_n(10)
+            .get_thread_n(1)
+
+            .disk_manager_specific(DiskManagerImplementationOptions::get_unlimited_memory())
+
+            .build()
+            .unwrap();
+
+        run_multi_threads_tests(options)
+    }
+
+    #[test]
+    fn multi_threaded_memory_disk_manager_2_scan_and_2_get_threads() {
+        let options = OptionsBuilder::default()
+            .scan_thread_n(2)
+            .get_thread_n(2)
+
+            .disk_manager_specific(DiskManagerImplementationOptions::get_unlimited_memory())
+
+            .build()
+            .unwrap();
+
+        run_multi_threads_tests(options)
+    }
+
+    #[test]
+    fn multi_threaded_memory_disk_manager_10_scan_and_10_get_threads() {
+        let options = OptionsBuilder::default()
+            .scan_thread_n(10)
+            .get_thread_n(10)
+
+            .disk_manager_specific(DiskManagerImplementationOptions::get_unlimited_memory())
+
+            .build()
+            .unwrap();
+
+        run_multi_threads_tests(options)
+    }
+
+    // ########################
+    //         Default
+    // ########################
+
+    #[test]
+    fn multi_threaded_default_disk_manager() {
+        let options = OptionsBuilder::default()
+            .disk_manager_specific(
+                DiskManagerImplementationOptions::get_default()
+            )
+            .build()
+            .unwrap();
+
+        run_multi_threads_tests(options)
+    }
+
+    #[test]
+    fn multi_threaded_default_disk_manager_5s() {
+        let options = OptionsBuilder::default()
+
+            // 5s
+            .scan_thread_duration_type(DurationType::TimeAsMilliseconds(5000))
+            .get_thread_duration_type(DurationType::TimeAsMilliseconds(5000))
+
+            .disk_manager_specific(
+                DiskManagerImplementationOptions::get_default()
+            )
+            .build()
+            .unwrap();
+
+        run_multi_threads_tests(options)
+    }
+
+    #[test]
+    fn multi_threaded_default_disk_manager_0_scan_and_1_get_threads() {
+        let options = OptionsBuilder::default()
+            .scan_thread_n(0)
+            .get_thread_n(1)
+
+            .disk_manager_specific(DiskManagerImplementationOptions::get_default())
+
+            .build()
+            .unwrap();
+
+        run_multi_threads_tests(options)
+    }
+
+    #[test]
+    fn multi_threaded_default_disk_manager_1_scan_and_0_get_threads() {
+        let options = OptionsBuilder::default()
+            .scan_thread_n(1)
+            .get_thread_n(0)
+
+            .disk_manager_specific(DiskManagerImplementationOptions::get_default())
+
+            .build()
+            .unwrap();
+
+        run_multi_threads_tests(options)
+    }
+
+    #[test]
+    fn multi_threaded_default_disk_manager_1_scan_and_1_get_threads() {
+        let options = OptionsBuilder::default()
+            .scan_thread_n(1)
+            .get_thread_n(1)
+
+            .disk_manager_specific(DiskManagerImplementationOptions::get_default())
+
+            .build()
+            .unwrap();
+
+        run_multi_threads_tests(options)
+    }
+
+    #[test]
+    fn multi_threaded_default_disk_manager_1_scan_and_2_get_threads() {
+        let options = OptionsBuilder::default()
+            .scan_thread_n(1)
+            .get_thread_n(2)
+
+            .disk_manager_specific(DiskManagerImplementationOptions::get_default())
+
+            .build()
+            .unwrap();
+
+        run_multi_threads_tests(options)
+    }
+
+    #[test]
+    fn multi_threaded_default_disk_manager_1_scan_and_10_get_threads() {
+        let options = OptionsBuilder::default()
+            .scan_thread_n(1)
+            .get_thread_n(10)
+
+            .disk_manager_specific(DiskManagerImplementationOptions::get_default())
+
+            .build()
+            .unwrap();
+
+        run_multi_threads_tests(options)
+    }
+
+    #[test]
+    fn multi_threaded_default_disk_manager_2_scan_and_1_get_threads() {
+        let options = OptionsBuilder::default()
+            .scan_thread_n(2)
+            .get_thread_n(1)
+
+            .disk_manager_specific(DiskManagerImplementationOptions::get_default())
+
+            .build()
+            .unwrap();
+
+        run_multi_threads_tests(options)
+    }
+
+    #[test]
+    fn multi_threaded_default_disk_manager_10_scan_and_1_get_threads() {
+        let options = OptionsBuilder::default()
+            .scan_thread_n(10)
+            .get_thread_n(1)
+
+            .disk_manager_specific(DiskManagerImplementationOptions::get_default())
+
+            .build()
+            .unwrap();
+
+        run_multi_threads_tests(options)
+    }
+
+    #[test]
+    fn multi_threaded_default_disk_manager_2_scan_and_2_get_threads() {
+        let options = OptionsBuilder::default()
+            .scan_thread_n(2)
+            .get_thread_n(2)
+
+            .disk_manager_specific(DiskManagerImplementationOptions::get_default())
+
+            .build()
+            .unwrap();
+
+        run_multi_threads_tests(options)
+    }
+
+    #[test]
+    fn multi_threaded_default_disk_manager_10_scan_and_10_get_threads() {
+        let options = OptionsBuilder::default()
+            .scan_thread_n(10)
+            .get_thread_n(10)
+
+            .disk_manager_specific(DiskManagerImplementationOptions::get_default())
+
+            .build()
+            .unwrap();
+
+        run_multi_threads_tests(options)
+    }
 }
-
-#[test]
-fn multi_threaded_memory_disk_manager_1_scan_and_1_get_threads() {
-    let options = OptionsBuilder::default()
-        .scan_thread_n(1)
-        .get_thread_n(1)
-
-        .disk_manager_specific(DiskManagerImplementationOptions::get_unlimited_memory())
-
-        .build()
-        .unwrap();
-
-    run_multi_threads_tests(options)
-}
-
-#[test]
-fn multi_threaded_memory_disk_manager_1_scan_and_2_get_threads() {
-    let options = OptionsBuilder::default()
-        .scan_thread_n(1)
-        .get_thread_n(2)
-
-        .disk_manager_specific(DiskManagerImplementationOptions::get_unlimited_memory())
-
-        .build()
-        .unwrap();
-
-    run_multi_threads_tests(options)
-}
-
-#[test]
-fn multi_threaded_memory_disk_manager_1_scan_and_10_get_threads() {
-    let options = OptionsBuilder::default()
-        .scan_thread_n(1)
-        .get_thread_n(10)
-
-        .disk_manager_specific(DiskManagerImplementationOptions::get_unlimited_memory())
-
-        .build()
-        .unwrap();
-
-    run_multi_threads_tests(options)
-}
-
-#[test]
-fn multi_threaded_memory_disk_manager_2_scan_and_1_get_threads() {
-    let options = OptionsBuilder::default()
-        .scan_thread_n(2)
-        .get_thread_n(1)
-
-        .disk_manager_specific(DiskManagerImplementationOptions::get_unlimited_memory())
-
-        .build()
-        .unwrap();
-
-    run_multi_threads_tests(options)
-}
-
-#[test]
-fn multi_threaded_memory_disk_manager_10_scan_and_1_get_threads() {
-    let options = OptionsBuilder::default()
-        .scan_thread_n(10)
-        .get_thread_n(1)
-
-        .disk_manager_specific(DiskManagerImplementationOptions::get_unlimited_memory())
-
-        .build()
-        .unwrap();
-
-    run_multi_threads_tests(options)
-}
-
-#[test]
-fn multi_threaded_memory_disk_manager_2_scan_and_2_get_threads() {
-    let options = OptionsBuilder::default()
-        .scan_thread_n(2)
-        .get_thread_n(2)
-
-        .disk_manager_specific(DiskManagerImplementationOptions::get_unlimited_memory())
-
-        .build()
-        .unwrap();
-
-    run_multi_threads_tests(options)
-}
-
-#[test]
-fn multi_threaded_memory_disk_manager_10_scan_and_10_get_threads() {
-    let options = OptionsBuilder::default()
-        .scan_thread_n(10)
-        .get_thread_n(10)
-
-        .disk_manager_specific(DiskManagerImplementationOptions::get_unlimited_memory())
-
-        .build()
-        .unwrap();
-
-    run_multi_threads_tests(options)
-}
-
-// ########################
-//         Default
-// ########################
-
-#[test]
-fn multi_threaded_default_disk_manager() {
-    let options = OptionsBuilder::default()
-        .disk_manager_specific(
-            DiskManagerImplementationOptions::get_default()
-        )
-        .build()
-        .unwrap();
-
-    run_multi_threads_tests(options)
-}
-
-#[test]
-fn multi_threaded_default_disk_manager_5s() {
-    let options = OptionsBuilder::default()
-
-        // 5s
-        .duration_ms(5000)
-
-        .disk_manager_specific(
-            DiskManagerImplementationOptions::get_default()
-        )
-        .build()
-        .unwrap();
-
-    run_multi_threads_tests(options)
-}
-
-#[test]
-fn multi_threaded_default_disk_manager_1_scan_and_1_get_threads() {
-    let options = OptionsBuilder::default()
-        .scan_thread_n(1)
-        .get_thread_n(1)
-
-        .disk_manager_specific(DiskManagerImplementationOptions::get_default())
-
-        .build()
-        .unwrap();
-
-    run_multi_threads_tests(options)
-}
-
-#[test]
-fn multi_threaded_default_disk_manager_1_scan_and_2_get_threads() {
-    let options = OptionsBuilder::default()
-        .scan_thread_n(1)
-        .get_thread_n(2)
-
-        .disk_manager_specific(DiskManagerImplementationOptions::get_default())
-
-        .build()
-        .unwrap();
-
-    run_multi_threads_tests(options)
-}
-
-#[test]
-fn multi_threaded_default_disk_manager_1_scan_and_10_get_threads() {
-    let options = OptionsBuilder::default()
-        .scan_thread_n(1)
-        .get_thread_n(10)
-
-        .disk_manager_specific(DiskManagerImplementationOptions::get_default())
-
-        .build()
-        .unwrap();
-
-    run_multi_threads_tests(options)
-}
-
-#[test]
-fn multi_threaded_default_disk_manager_2_scan_and_1_get_threads() {
-    let options = OptionsBuilder::default()
-        .scan_thread_n(2)
-        .get_thread_n(1)
-
-        .disk_manager_specific(DiskManagerImplementationOptions::get_default())
-
-        .build()
-        .unwrap();
-
-    run_multi_threads_tests(options)
-}
-
-#[test]
-fn multi_threaded_default_disk_manager_10_scan_and_1_get_threads() {
-    let options = OptionsBuilder::default()
-        .scan_thread_n(10)
-        .get_thread_n(1)
-
-        .disk_manager_specific(DiskManagerImplementationOptions::get_default())
-
-        .build()
-        .unwrap();
-
-    run_multi_threads_tests(options)
-}
-
-#[test]
-fn multi_threaded_default_disk_manager_2_scan_and_2_get_threads() {
-    let options = OptionsBuilder::default()
-        .scan_thread_n(2)
-        .get_thread_n(2)
-
-        .disk_manager_specific(DiskManagerImplementationOptions::get_default())
-
-        .build()
-        .unwrap();
-
-    run_multi_threads_tests(options)
-}
-
-#[test]
-fn multi_threaded_default_disk_manager_10_scan_and_10_get_threads() {
-    let options = OptionsBuilder::default()
-        .scan_thread_n(10)
-        .get_thread_n(10)
-
-        .disk_manager_specific(DiskManagerImplementationOptions::get_default())
-
-        .build()
-        .unwrap();
-
-    run_multi_threads_tests(options)
-}
-
