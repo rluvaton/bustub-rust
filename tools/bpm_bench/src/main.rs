@@ -19,15 +19,28 @@ mod page_process;
 mod metrics;
 
 // Single lock for bpm
+// Debug:
 // <<< BEGIN
 // scan: 20211.485900939937
 // get: 20915.072328511433
 // >>> END
+//
+// Release:
+// <<< BEGIN
+// scan: 61088.29705676477
+// get: 68200.29332355589
+// >>> END
 
 // Single lock for BPM but no Arc and mutex in the benchmark itself
+// Debug
 // <<< BEGIN
 // scan: 21303.056564781175
 // get: 19764.5411819606
+// >>> END
+// Release:
+// <<< BEGIN
+// scan: 58489.01703276557
+// get: 43897.136762107926
 // >>> END
 
 // Fine granularity lock
