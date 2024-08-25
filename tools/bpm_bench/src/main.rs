@@ -30,6 +30,12 @@ mod metrics;
 // scan: 61088.29705676477
 // get: 68200.29332355589
 // >>> END
+//
+// Release with latency:
+// <<< BEGIN
+// scan: 230.8101990546568
+// get: 255.20937354370548
+// >>> END
 
 // Single lock for BPM but no Arc and mutex in the benchmark itself
 // Debug
@@ -37,10 +43,17 @@ mod metrics;
 // scan: 21303.056564781175
 // get: 19764.5411819606
 // >>> END
+//
 // Release:
 // <<< BEGIN
 // scan: 58489.01703276557
 // get: 43897.136762107926
+// >>> END
+//
+// Release with latency:
+// <<< BEGIN
+// scan: 241.85860471317622
+// get: 253.25822472584247
 // >>> END
 
 // Fine granularity lock
