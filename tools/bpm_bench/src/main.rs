@@ -31,9 +31,16 @@ mod metrics;
 // >>> END
 
 // Fine granularity lock
+// Debug:
 // <<< BEGIN
 // scan: 19685.5104829839
 // get: 17487.217092763574
+// >>> END
+//
+// Release:
+// <<< BEGIN
+// scan: 34082.597246758436
+// get: 32525.449151694942
 // >>> END
 
 fn main() {
