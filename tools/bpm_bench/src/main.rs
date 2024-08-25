@@ -30,6 +30,12 @@ mod metrics;
 // get: 19764.5411819606
 // >>> END
 
+// Fine granularity lock
+// <<< BEGIN
+// scan: 19685.5104829839
+// get: 17487.217092763574
+// >>> END
+
 fn main() {
     let args = Args::parse();
     println!("args: {:?}", args);
@@ -47,12 +53,13 @@ fn main() {
     );
 
     let disk_manager = Arc::new(Mutex::new(DiskManagerUnlimitedMemory::new()));
-    let bpm: BufferPoolManager = BufferPoolManager::new(
+
+    let bpm: Arc<BufferPoolManager> = Arc::new(BufferPoolManager::new(
         bustub_bpm_size,
         Arc::clone(&disk_manager),
         Some(lru_k_size),
         None, /* log manager */
-    );
+    ));
     let page_ids: Arc<RwLock<Vec<PageId>>> = Arc::new(RwLock::new(vec![]));
 
     for i in 0..bustub_page_cnt {
@@ -82,7 +89,7 @@ fn main() {
     type ModifyRecord = HashMap<PageId, u64>;
 
     for thread_id in 0..scan_thread_n {
-        let bpm = bpm.clone();
+        let bpm = Arc::clone(&bpm);
         let total_metrics = Arc::clone(&total_metrics);
         let page_ids = Arc::clone(&page_ids);
 
@@ -131,7 +138,7 @@ fn main() {
     }
 
     for thread_id in 0..get_thread_n {
-        let bpm = bpm.clone();
+        let bpm = Arc::clone(&bpm);
 
         let total_metrics = Arc::clone(&total_metrics);
         let page_ids = Arc::clone(&page_ids);
