@@ -1,6 +1,6 @@
 use crate::buffer_pool_manager::manager::{BufferPoolManager, InnerBufferPoolManager};
 use crate::lru_k_replacer::{AccessType, LRUKReplacer};
-use common::config::{AtomicPageId, FrameId, PageId, INVALID_PAGE_ID, LRUK_REPLACER_K};
+use common::config::{AtomicPageId, FrameId, PageId, BUSTUB_PAGE_SIZE, INVALID_PAGE_ID, LRUK_REPLACER_K};
 use common::Promise;
 use log::warn;
 use parking_lot::Mutex;
@@ -125,17 +125,21 @@ impl BufferPoolManager {
                     // 1. Remove reference to the old page in the page table
                     (*inner).page_table.remove(&underlying.get_page_id());
 
-                    // #############################################################################
-                    //                              Root Lock Release
-                    // #############################################################################
-                    // 2. Once we hold the lock we can release the root lock
-                    // Until we finish flushing we don't want to allow fetching the old page id,
-                    // and it will not as the disk scheduler is behind a Mutex
-                    drop(root_latch_guard);
 
-                    // 3. Flush the old page content if it's dirty
                     if underlying.is_dirty() {
-                        Self::flush_specific_page_unchecked(&mut *inner, &mut underlying);
+                        let mut scheduler = (*inner).disk_scheduler.lock();
+
+                        // #############################################################################
+                        //                              Root Lock Release
+                        // #############################################################################
+                        // 2. Once we hold the lock for the page and the disk scheduler we can release the root lock
+                        // Until we finish flushing we don't want to allow fetching the old page id,
+                        // and it will not as the disk scheduler is behind a Mutex
+                        drop(root_latch_guard);
+
+
+                        // 3. Flush the old page content if it's dirty
+                        Self::flush_specific_page_unchecked(&mut *scheduler, &mut underlying);
                     }
 
                     // 3. Create new page
@@ -260,17 +264,20 @@ impl BufferPoolManager {
                     // 1. Remove reference to the old page in the page table
                     (*inner).page_table.remove(&underlying.get_page_id());
 
+                    // 2. Acquire the scheduler lock
+                    let mut scheduler = (*inner).disk_scheduler.lock();
+
                     // #############################################################################
                     //                              Root Lock Release
                     // #############################################################################
-                    // 2. Once we hold the lock we can release the root lock
+                    // 2. Once we hold the lock for the page and the disk scheduler we can release the root lock
                     // Until we finish flushing we don't want to allow fetching the old page id,
                     // and it will not as the disk scheduler is behind a Mutex
                     drop(root_latch_guard);
 
                     // 3. Flush the old page content if it's dirty
                     if underlying.is_dirty() {
-                        Self::flush_specific_page_unchecked(&mut *inner, &mut underlying);
+                        Self::flush_specific_page_unchecked(&mut *scheduler, &mut underlying);
                     }
 
                     // 3. Create new page
@@ -280,7 +287,7 @@ impl BufferPoolManager {
                     underlying.increment_pin_count_unchecked();
 
                     // 5. Fetch data from disk
-                    Self::fetch_specific_page_unchecked(&mut *inner, underlying);
+                    Self::fetch_specific_page_unchecked(&mut *scheduler, underlying);
                 });
 
                 return Some(old_page.clone());
@@ -300,22 +307,25 @@ impl BufferPoolManager {
             (*inner).pages.insert(frame_id as usize, page.clone());
 
             page.with_write(|mut underlying| {
+                // 1. Acquire the scheduler lock
+                let mut scheduler = (*inner).disk_scheduler.lock();
+
                 // #############################################################################
                 //                              Root Lock Release
                 // #############################################################################
-                // 1. Once we hold the lock we can release the root lock
+                // 2. Once we hold the lock for the page and the disk scheduler we can release the root lock
                 // Until we finish flushing we don't want to allow fetching the old page id,
                 // and it will not as the disk scheduler is behind a Mutex
                 drop(root_latch_guard);
 
-                Self::fetch_specific_page_unchecked(&mut *inner, &mut underlying);
+                Self::fetch_specific_page_unchecked(&mut *scheduler, &mut underlying);
             });
 
             Some(page)
         }
     }
 
-    fn fetch_specific_page_unchecked(inner: &InnerBufferPoolManager, page: &mut UnderlyingPage) {
+    fn fetch_specific_page_unchecked(disk_scheduler: &mut DiskScheduler, page: &mut UnderlyingPage) {
         // TODO - this will clone the data rather than passing it so it will write on it
         // TODO - fix this -
         // TODO - ##################### should update in place
@@ -324,8 +334,7 @@ impl BufferPoolManager {
         let future = promise.get_future();
         let req = ReadDiskRequest::new(page.get_page_id(), Arc::clone(&data), promise);
 
-        let mut scheduler = inner.disk_scheduler.lock();
-        scheduler.schedule(req.into());
+        disk_scheduler.schedule(req.into());
 
         // TODO - should wait for X ms and then timeout?
         assert_eq!(future.wait(), true, "Should be able to fetch");
@@ -375,7 +384,6 @@ impl BufferPoolManager {
         let _root_latch_guard = self.root_level_latch.lock();
 
         let inner = self.inner.get() ;
-
 
         unsafe {
             let frame_id = (*inner).page_table.get(&page_id);
@@ -432,47 +440,51 @@ impl BufferPoolManager {
      * @param page_id id of page to be flushed, cannot be INVALID_PAGE_ID
      * @return false if the page could not be found in the page table, true otherwise
      */
-    pub fn flush_page(&mut self, page_id: PageId) -> bool {
+    pub fn flush_page(&self, page_id: PageId) -> bool {
         assert_ne!(page_id, INVALID_PAGE_ID);
 
         let root_latch_guard = self.root_level_latch.lock();
 
-        let inner = self.inner.get_mut();
+        let inner = self.inner.get();
 
-        let frame_id = inner.page_table.get(&page_id);
+        unsafe {
+            let frame_id = (*inner).page_table.get(&page_id);
 
-        if frame_id.is_none() {
-            return false;
+            if frame_id.is_none() {
+                return false;
+            }
+
+            let frame_id = *frame_id.unwrap();
+
+            let page = &(*inner).pages[frame_id as usize];
+
+            page.with_write(|u| {
+                // 1. Acquire the scheduler lock
+                let mut scheduler = (*inner).disk_scheduler.lock();
+
+                // #############################################################################
+                //                              Root Lock Release
+                // #############################################################################
+                // 2. Once we hold the lock for the page and the disk scheduler we can release the root lock
+                // Until we finish flushing we don't want to allow fetching the old page id,
+                // and it will not as the disk scheduler is behind a Mutex
+                drop(root_latch_guard);
+
+                Self::flush_specific_page_unchecked(&mut scheduler, u)
+            });
+
+            true
         }
-
-        let frame_id = *frame_id.unwrap();
-
-        let page = &inner.pages[frame_id as usize];
-
-        page.with_write(|u| {
-            // #############################################################################
-            //                              Root Lock Release
-            // #############################################################################
-            // 1. Once we hold the lock we can release the root lock
-            // Until we finish flushing we don't want to allow fetching the old page id,
-            // and it will not as the disk scheduler is behind a Mutex
-            drop(root_latch_guard);
-
-            Self::flush_specific_page_unchecked(inner, u)
-        });
-
-        true
     }
 
 
-    fn flush_specific_page_unchecked(inner: &InnerBufferPoolManager, page: &mut UnderlyingPage) {
+    fn flush_specific_page_unchecked(disk_scheduler: &mut DiskScheduler, page: &mut UnderlyingPage) {
         let data = Arc::new(*page.get_data());
         let promise = Promise::new();
         let future = promise.get_future();
         let req = WriteDiskRequest::new(page.get_page_id(), data, promise);
 
-        let mut scheduler = inner.disk_scheduler.lock();
-        scheduler.schedule(req.into());
+        disk_scheduler.schedule(req.into());
 
         // TODO - should wait for X ms and then timeout?
         assert_eq!(future.wait(), true, "Should be able to write");
@@ -566,9 +578,11 @@ impl BufferPoolManager {
             inner.page_table.remove(&old_page_id);
 
             if underlying.is_dirty() {
+                let mut scheduler = (*inner).disk_scheduler.lock();
+
                 // If the replacement frame has a dirty page,
                 //      * you should write it back to the disk first. You also need to reset the memory and metadata for the new page.
-                Self::flush_specific_page_unchecked(inner, &mut underlying);
+                Self::flush_specific_page_unchecked(&mut *scheduler, &mut underlying);
             }
 
             new_page_reset_fn(inner, new_page_id, underlying);
