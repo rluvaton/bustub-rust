@@ -55,6 +55,12 @@ mod metrics;
 // scan: 34082.597246758436
 // get: 32525.449151694942
 // >>> END
+//
+// Release with latency:
+// <<< BEGIN
+// scan: 189.69079035052647
+// get: 187.25842996134878
+// >>> END
 
 fn main() {
     let args = Args::parse();
