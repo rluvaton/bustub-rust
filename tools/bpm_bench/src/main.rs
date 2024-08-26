@@ -74,6 +74,12 @@ mod metrics;
 // scan: 189.69079035052647
 // get: 187.25842996134878
 // >>> END
+//
+// Release without latency and without cloning data:
+// <<< BEGIN
+// scan: 39509.91633612213
+// get: 36550.64831172294
+// >>> END
 
 fn main() {
     let args = Args::parse();
