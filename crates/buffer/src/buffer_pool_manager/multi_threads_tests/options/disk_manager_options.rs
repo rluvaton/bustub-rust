@@ -14,28 +14,28 @@ pub(crate) struct UnlimitedMemoryDiskManagerOptions {
 
 #[derive(Debug, Clone)]
 pub(crate) enum DiskManagerImplementationOptions {
-    Default(crate::buffer_pool_manager::multi_threads_tests::options::DefaultDiskManagerOptions),
-    UnlimitedMemory(crate::buffer_pool_manager::multi_threads_tests::options::UnlimitedMemoryDiskManagerOptions),
+    Default(DefaultDiskManagerOptions),
+    UnlimitedMemory(UnlimitedMemoryDiskManagerOptions),
 }
 
-impl crate::buffer_pool_manager::multi_threads_tests::options::DiskManagerImplementationOptions {
-    pub(crate) fn get_default() -> crate::buffer_pool_manager::multi_threads_tests::options::DiskManagerImplementationOptions {
-        crate::buffer_pool_manager::multi_threads_tests::options::DiskManagerImplementationOptions::Default(
-            crate::buffer_pool_manager::multi_threads_tests::options::DefaultDiskManagerOptions {
+impl DiskManagerImplementationOptions {
+    pub(crate) fn get_default() -> DiskManagerImplementationOptions {
+        DiskManagerImplementationOptions::Default(
+            DefaultDiskManagerOptions {
                 file_path: None
             }
         )
     }
-    pub(crate) fn get_unlimited_memory() -> crate::buffer_pool_manager::multi_threads_tests::options::DiskManagerImplementationOptions {
-        crate::buffer_pool_manager::multi_threads_tests::options::DiskManagerImplementationOptions::UnlimitedMemory(
-            crate::buffer_pool_manager::multi_threads_tests::options::UnlimitedMemoryDiskManagerOptions {
+    pub(crate) fn get_unlimited_memory() -> DiskManagerImplementationOptions {
+        DiskManagerImplementationOptions::UnlimitedMemory(
+            UnlimitedMemoryDiskManagerOptions {
                 enable_latency: false
             }
         )
     }
 }
 
-impl Default for crate::buffer_pool_manager::multi_threads_tests::options::DiskManagerImplementationOptions {
+impl Default for DiskManagerImplementationOptions {
     fn default() -> Self {
         Self::get_default()
     }

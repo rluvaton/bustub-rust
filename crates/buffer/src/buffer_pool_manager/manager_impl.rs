@@ -378,7 +378,7 @@ impl BufferPoolManager {
         // First acquire the lock for thread safety
         let _root_latch_guard = self.root_level_latch.lock();
 
-        let inner = self.inner.get() ;
+        let inner = self.inner.get();
 
         unsafe {
             let frame_id = (*inner).page_table.get(&page_id);

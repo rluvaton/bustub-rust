@@ -1,8 +1,8 @@
-use std::cell::{Cell, UnsafeCell};
 use crate::lru_k_replacer::LRUKReplacer;
 use common::config::{AtomicPageId, FrameId, PageId};
 use parking_lot::Mutex;
 use recovery::LogManager;
+use std::cell::UnsafeCell;
 use std::collections::{HashMap, LinkedList};
 use std::sync::Arc;
 use storage::{DiskScheduler, Page};

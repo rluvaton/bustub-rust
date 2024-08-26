@@ -13,3 +13,6 @@ buffer = {path = "../../crates/buffer"}
 storage = {path = "../../crates/storage"}
 common = {path = "../../crates/common"}
 
+[profile.release]
+debug = true
+
