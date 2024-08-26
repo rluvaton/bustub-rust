@@ -326,10 +326,7 @@ impl BufferPoolManager {
     }
 
     fn fetch_specific_page_unchecked(disk_scheduler: &mut DiskScheduler, page: &mut UnderlyingPage) {
-        // TODO - this will clone the data rather than passing it so it will write on it
-        // TODO - fix this -
-        // TODO - ##################### should update in place
-        let data = Arc::new(Mutex::new(*page.get_data()));
+        let data = Arc::new(Mutex::new(page.get_data_mut().as_mut_ptr()));
         let promise = Promise::new();
         let future = promise.get_future();
         let req = ReadDiskRequest::new(page.get_page_id(), Arc::clone(&data), promise);
@@ -338,8 +335,6 @@ impl BufferPoolManager {
 
         // TODO - should wait for X ms and then timeout?
         assert_eq!(future.wait(), true, "Should be able to fetch");
-
-        page.set_data(*data.lock());
     }
 
     /**
@@ -479,7 +474,7 @@ impl BufferPoolManager {
 
 
     fn flush_specific_page_unchecked(disk_scheduler: &mut DiskScheduler, page: &mut UnderlyingPage) {
-        let data = Arc::new(*page.get_data());
+        let data = Arc::new(page.get_data().as_ptr());
         let promise = Promise::new();
         let future = promise.get_future();
         let req = WriteDiskRequest::new(page.get_page_id(), data, promise);
