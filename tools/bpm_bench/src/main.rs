@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::fmt::format;
 use std::process::abort;
 use std::sync::Arc;
 use std::thread;
@@ -13,6 +14,11 @@ use metrics::bpm_total_metrics::BpmTotalMetrics;
 use crate::cli::Args;
 use crate::metrics::bpm_metrics::BpmMetrics;
 use crate::page_process::{check_page_consistent, check_page_consistent_no_seed, modify_page};
+use tracy_client::*;
+
+#[global_allocator]
+static GLOBAL: ProfiledAllocator<std::alloc::System> =
+    ProfiledAllocator::new(std::alloc::System, 100);
 
 mod cli;
 mod page_process;
@@ -82,7 +88,12 @@ mod metrics;
 // >>> END
 
 fn main() {
+    let client = Client::start();
+
     let args = Args::parse();
+
+    client.message("starting", 10);
+
     println!("args: {:?}", args);
 
     let duration_ms = args.duration;
@@ -107,17 +118,24 @@ fn main() {
     ));
     let page_ids: Arc<RwLock<Vec<PageId>>> = Arc::new(RwLock::new(vec![]));
 
-    for i in 0..bustub_page_cnt {
-        let page = bpm.new_page().expect("Must be able to create a page");
-        let page_id = page.with_read(|u| u.get_page_id());
+    {
+        let span = span!("init pages");
 
-        page.with_write(|u| unsafe {
-            modify_page(u.get_data_mut(), i, 0);
-        });
+        client.message("Init pages", 10);
 
-        bpm.unpin_page(page_id, true, AccessType::default());
+        for i in 0..bustub_page_cnt {
+            let page = bpm.new_page().expect("Must be able to create a page");
+            let page_id = page.with_read(|u| u.get_page_id());
 
-        page_ids.write().push(page_id);
+            page.with_write(|u| unsafe {
+                modify_page(u.get_data_mut(), i, 0);
+            });
+
+            bpm.unpin_page(page_id, true, AccessType::default());
+
+            page_ids.write().push(page_id);
+            span.emit_text(format!("page {} written", page_id).as_str());
+        }
     }
 
 
@@ -149,26 +167,44 @@ fn main() {
 
             while !metrics.should_finish() {
 
+                let scan_iteration = span!("scan thread");
+
+                let fetch_page = span!("scan thread - fetch page");
                 let page = bpm.fetch_page(page_ids.read()[page_idx as usize], AccessType::Scan);
+                drop(fetch_page);
+
                 if page.is_none() {
                     continue;
                 }
 
                 let page = page.unwrap();
 
-                page.with_write(|u| unsafe {
-                    if !records.contains_key(&page_idx) {
-                        records.insert(page_idx, 0);
-                    }
 
-                    let mut seed = records.get_mut(&page_idx).expect("Must exists");
+                {
+                    let _update_page = span!("scan thread - Updating page");
 
-                    check_page_consistent(u.get_data(), page_idx as usize, *seed);
-                    *seed = *seed + 1;
-                    modify_page(u.get_data_mut(), page_idx as usize, *seed);
-                });
+                    let get_write_lock_page = span!("scan thread - Acquiring write lock");
 
-                bpm.unpin_page(page.with_read(|u| u.get_page_id()), true, AccessType::Scan);
+                    page.with_write(|u| unsafe {
+                        drop(get_write_lock_page);
+
+                        if !records.contains_key(&page_idx) {
+                            records.insert(page_idx, 0);
+                        }
+
+                        let mut seed = records.get_mut(&page_idx).expect("Must exists");
+
+                        check_page_consistent(u.get_data(), page_idx as usize, *seed);
+                        *seed = *seed + 1;
+                        modify_page(u.get_data_mut(), page_idx as usize, *seed);
+                    });
+                }
+
+                {
+                    let _unpin_page_span = span!("scan thread - Unpin page");
+                    bpm.unpin_page(page.with_read(|u| u.get_page_id()), true, AccessType::Scan);
+                }
+
                 page_idx += 1;
                 if page_idx >= page_idx_end {
                     page_idx = page_idx_start;
@@ -196,9 +232,14 @@ fn main() {
             metrics.begin();
 
             while !metrics.should_finish() {
+                let span = span!("get thread");
 
                 let page_idx = dist.sample(&mut rng);
+
+
+                let fetch_page_span = span!("get thread - fetch page");
                 let page = bpm.fetch_page(page_ids.read()[page_idx], AccessType::Lookup);
+                drop(fetch_page_span);
 
                 if page.is_none() {
                     eprintln!("cannot fetch page");
@@ -209,12 +250,22 @@ fn main() {
 
                 let mut page_id: PageId = 0;
 
-                page.with_read(|u| unsafe {
-                    page_id = u.get_page_id();
-                    check_page_consistent_no_seed(u.get_data(), page_idx);
-                });
+                {
+                    let _verify_page = span!("get thread - verify page");
 
-                bpm.unpin_page(page_id, false, AccessType::Lookup);
+                    let get_read_lock_page = span!("get thread - Acquiring read lock");
+
+                    page.with_read(|u| unsafe {
+                        drop(get_read_lock_page);
+
+                        page_id = u.get_page_id();
+                        check_page_consistent_no_seed(u.get_data(), page_idx);
+                    });
+                }
+                {
+                    let _unpin_page_span = span!("get thread - Unpin page");
+                    bpm.unpin_page(page_id, false, AccessType::Lookup);
+                }
 
                 metrics.tick();
                 metrics.report();

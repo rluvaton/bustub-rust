@@ -10,6 +10,7 @@ use std::collections::{HashMap, HashSet, LinkedList};
 use std::ops::{Deref, DerefMut};
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
+use tracy_client::{non_continuous_frame, secondary_frame_mark, span};
 use storage::{BasicPageGuard, DiskManager, DiskScheduler, Page, ReadDiskRequest, ReadPageGuard, UnderlyingPage, WriteDiskRequest, WritePageGuard};
 
 impl BufferPoolManager {
@@ -89,8 +90,14 @@ impl BufferPoolManager {
      * Original: @return nullptr if no new pages could be created, otherwise pointer to new page
      */
     pub fn new_page(&self) -> Option<Page> {
+        let acquiring_root_latch = span!("Acquiring root latch");
         // First acquire the lock for thread safety
         let root_latch_guard = self.root_level_latch.lock();
+        drop(acquiring_root_latch);
+        secondary_frame_mark!("new_page");
+
+
+        let holding_root_latch = span!("Holding root latch");
 
         // Get the inner data
         let inner = self.inner.get();
@@ -136,6 +143,8 @@ impl BufferPoolManager {
                         // Until we finish flushing we don't want to allow fetching the old page id,
                         // and it will not as the disk scheduler is behind a Mutex
                         drop(root_latch_guard);
+
+                        drop(holding_root_latch);
 
 
                         // 3. Flush the old page content if it's dirty
@@ -211,8 +220,15 @@ impl BufferPoolManager {
     fn fetch_page_unchecked(&self, page_id: PageId, access_type: AccessType) -> Option<Page> {
         assert_ne!(page_id, INVALID_PAGE_ID);
 
+        let acquiring_root_latch = span!("Acquiring root latch");
         // First acquire the lock for thread safety
         let root_latch_guard = self.root_level_latch.lock();
+        drop(acquiring_root_latch);
+        // secondary_frame_mark!("fetch_page");
+        let f = non_continuous_frame!("fetch_page");
+
+
+        let holding_root_latch = span!("Holding root latch");
 
         unsafe {
             // Get the inner data
@@ -274,6 +290,8 @@ impl BufferPoolManager {
                     // Until we finish flushing we don't want to allow fetching the old page id,
                     // and it will not as the disk scheduler is behind a Mutex
                     drop(root_latch_guard);
+                    drop(holding_root_latch);
+                    drop(f);
 
                     // 3. Flush the old page content if it's dirty
                     if underlying.is_dirty() {
@@ -317,6 +335,8 @@ impl BufferPoolManager {
                 // Until we finish flushing we don't want to allow fetching the old page id,
                 // and it will not as the disk scheduler is behind a Mutex
                 drop(root_latch_guard);
+                drop(holding_root_latch);
+                drop(f);
 
                 Self::fetch_specific_page_unchecked(&mut *scheduler, &mut underlying);
             });
@@ -375,8 +395,14 @@ impl BufferPoolManager {
      * @return false if the page is not in the page table or its pin count is <= 0 before this call, true otherwise
      */
     pub fn unpin_page(&self, page_id: PageId, is_dirty: bool, _access_type: AccessType) -> bool {
+        let acquiring_root_latch = span!("Acquiring root latch");
         // First acquire the lock for thread safety
         let _root_latch_guard = self.root_level_latch.lock();
+        drop(acquiring_root_latch);
+        // secondary_frame_mark!("unpin_page");
+        let f = non_continuous_frame!("unpin_page");
+
+        let _holding_root_latch = span!("Holding root latch");
 
         let inner = self.inner.get();
 
@@ -403,6 +429,7 @@ impl BufferPoolManager {
 
             // Also, set the dirty flag on the page to indicate if the page was modified.
             if is_dirty {
+                let _update_dirty = span!("Update dirty");
                 page.with_write(|u| u.set_is_dirty(true));
             }
 
@@ -413,7 +440,11 @@ impl BufferPoolManager {
                 return false;
             }
 
-            page.unpin();
+            {
+                let _unpin = span!("Unpin");
+
+                page.unpin();
+            }
 
             // If pin count reaches 0, mark as evictable
             if pin_count_before_unpin == 1 {
@@ -438,7 +469,16 @@ impl BufferPoolManager {
     pub fn flush_page(&self, page_id: PageId) -> bool {
         assert_ne!(page_id, INVALID_PAGE_ID);
 
+
+        let acquiring_root_latch = span!("Acquiring root latch");
+        // First acquire the lock for thread safety
         let root_latch_guard = self.root_level_latch.lock();
+        drop(acquiring_root_latch);
+        let f = non_continuous_frame!("flush_page");
+
+        // secondary_frame_mark!("flush_page");
+
+        let holding_root_latch = span!("Holding root latch");
 
         let inner = self.inner.get();
 
@@ -464,6 +504,8 @@ impl BufferPoolManager {
                 // Until we finish flushing we don't want to allow fetching the old page id,
                 // and it will not as the disk scheduler is behind a Mutex
                 drop(root_latch_guard);
+                drop(holding_root_latch);
+                drop(f);
 
                 Self::flush_specific_page_unchecked(&mut scheduler, u)
             });
@@ -516,7 +558,16 @@ impl BufferPoolManager {
      * @return false if the page exists but could not be deleted, true if the page didn't exist or deletion succeeded
      */
     pub fn delete_page(&mut self, page_id: PageId) -> bool {
+
+
+
+        let acquiring_root_latch = span!("Acquiring root latch");
+        // First acquire the lock for thread safety
         let _root_latch_guard = self.root_level_latch.lock();
+        drop(acquiring_root_latch);
+        let _f = non_continuous_frame!("delete_page");
+        // secondary_frame_mark!("delete_page");
+        let _holding_root_latch = span!("Holding root latch");
 
         let inner = self.inner.get_mut();
 

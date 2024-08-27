@@ -4,6 +4,7 @@ use crate::lru_k_replacer::lru_k_node::LRUKNode;
 use common::config::FrameId;
 use std::collections::HashMap;
 use std::sync::Arc;
+use tracy_client::span;
 use crate::lru_k_replacer::LRUKReplacerImpl;
 
 impl LRUKReplacerImpl {
@@ -43,6 +44,8 @@ impl LRUKReplacerImpl {
     ///          got evicted
     ///
     pub fn evict(&mut self) -> Option<FrameId> {
+        let _unpin = span!("Evict");
+
         // No frame is evictable
         if self.size() == 0 {
             return None;

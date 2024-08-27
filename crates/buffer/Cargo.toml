@@ -15,6 +15,9 @@ parking_lot = "0.12.3"
 derive_builder = "0.20.0"
 log = "0.4.22"
 
+# Profiling
+tracy-client = { version = "0.17.3", default-features = false, features = ["enable"] }
+
 [dev-dependencies]
 tempdir = "0.3.7"
 zipf = "7"
