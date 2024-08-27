@@ -700,6 +700,7 @@ dependencies = [
  "log",
  "parking_lot",
  "tempdir",
+ "tracy-client",
 ]
 
 [[package]]

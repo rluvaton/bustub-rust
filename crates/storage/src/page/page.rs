@@ -4,8 +4,16 @@ use common::ReaderWriterLatch;
 use std::ops::{Deref, DerefMut};
 use std::sync::Arc;
 use log::warn;
+use tracy_client::span;
 // static_assert(sizeof(page_id_t) == 4);
 // static_assert(sizeof(lsn_t) == 4);
+
+
+// While waiting - red-ish (darker than page lock)
+const PAGE_LOCK_WAITING_COLOR: u32 = 0xCC0000;
+
+// While holding the page lock - green-ish (darker than page lock)
+const PAGE_LOCK_HOLDING_COLOR: u32 = 0x006A4E;
 
 /**
  * Page is the basic unit of storage within the database system. Page provides a wrapper for actual data pages being
@@ -127,7 +135,18 @@ impl Page {
     /// });
     /// ```
     pub fn with_read<F: FnOnce(&UnderlyingPage) -> R, R>(&self, with_read_lock: F) -> R {
-        let inner_guard = self.inner.read();
+        let acquiring_page_latch = span!("Acquiring read page latch");
+
+        // Red color while waiting
+        acquiring_page_latch.emit_color(PAGE_LOCK_WAITING_COLOR);
+        let  inner_guard = self.inner.read();
+
+        drop(acquiring_page_latch);
+
+        let holding_page_latch = span!("Holding read page latch");
+
+        // Green color while holding
+        holding_page_latch.emit_color(PAGE_LOCK_HOLDING_COLOR);
 
         with_read_lock(inner_guard.deref())
     }
@@ -151,7 +170,19 @@ impl Page {
     /// });
     /// ```
     pub fn with_write<F: FnOnce(&mut UnderlyingPage) -> R, R>(&self, with_write_lock: F) -> R {
+
+        let acquiring_page_latch = span!("Acquiring write page latch");
+
+        // Red color while waiting
+        acquiring_page_latch.emit_color(PAGE_LOCK_WAITING_COLOR);
         let mut inner_guard = self.inner.write();
+
+        drop(acquiring_page_latch);
+
+        let holding_page_latch = span!("Holding write page latch");
+
+        // Green color while holding
+        holding_page_latch.emit_color(PAGE_LOCK_HOLDING_COLOR);
 
         with_write_lock(inner_guard.deref_mut())
     }
