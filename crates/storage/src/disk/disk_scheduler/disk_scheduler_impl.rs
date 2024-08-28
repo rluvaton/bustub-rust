@@ -98,7 +98,7 @@ impl DiskSchedulerWorker {
                 match req {
                     DiskRequestType::Read(req) => {
                         let data = req.data.clone();
-                        let mut lock = data.lock();
+                        let mut lock = data.get();
                         let page = unsafe { std::slice::from_raw_parts_mut(*lock, BUSTUB_PAGE_SIZE) };
                         manager.read_page(req.page_id, page);
                         req.callback.set_value(true);

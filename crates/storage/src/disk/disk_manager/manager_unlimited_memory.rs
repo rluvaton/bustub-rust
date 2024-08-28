@@ -1,3 +1,4 @@
+use std::cell::UnsafeCell;
 use crate::disk::disk_manager::disk_manager_trait::DiskManager;
 use common::config::{PageId, BUSTUB_PAGE_SIZE};
 use std::sync::{Arc};
@@ -40,8 +41,18 @@ pub struct DiskManagerUnlimitedMemory {
     latency_processor_mutex: Arc<Mutex<LatencyProcessor>>,
 
     // Access the data using the lock for thread safety
-    data: Arc<Mutex<DiskManagerUnlimitedMemoryData>>,
+    data: Arc<DiskWrapper>,
 }
+
+pub struct DiskWrapper {
+
+    // Access the data using the lock for thread safety
+    pub(crate) data: UnsafeCell<DiskManagerUnlimitedMemoryData>,
+}
+
+unsafe impl Sync for DiskWrapper {}
+unsafe impl Send for DiskManagerUnlimitedMemory {}
+
 
 impl DiskManagerUnlimitedMemory {
     /**
@@ -57,12 +68,14 @@ impl DiskManagerUnlimitedMemory {
                 access_ptr: 0,
             })),
 
-            data: Arc::new(Mutex::new(
-                DiskManagerUnlimitedMemoryData {
-                    pages: vec![],
-                    thread_id: None,
-                }
-            )),
+            data: Arc::new(DiskWrapper {
+                data: UnsafeCell::new(
+                    DiskManagerUnlimitedMemoryData {
+                        pages: vec![],
+                        thread_id: None,
+                    }
+                )
+            }),
         }
     }
 
@@ -107,10 +120,10 @@ impl DiskManagerUnlimitedMemory {
     }
 
     fn get_last_read_thread_and_clear(&mut self) -> Option<ThreadId> {
-        let mut lock = self.data.lock();
-        let t = lock.thread_id;
+        let mut lock = self.data.data.get();
+        let t = unsafe { (*lock).thread_id };
 
-        lock.thread_id = None;
+        unsafe { (*lock).thread_id = None; }
 
         t
     }
@@ -125,46 +138,48 @@ impl DiskManager for DiskManagerUnlimitedMemory {
      * @param page_data raw page data
      */
     fn write_page(&mut self, page_id: PageId, page_data: &[u8]) {
-        self.process_latency(page_id);
+        unsafe {
+            self.process_latency(page_id);
 
-        let page_ref: Arc<Mutex<Option<Page>>>;
-        let mut page_lock: MutexGuard<Option<Page>>;
+            let page_ref: Arc<Mutex<Option<Page>>>;
+            let mut page_lock: MutexGuard<Option<Page>>;
 
-        {
-            let mut data = self.data.lock();
+            {
+                let mut data = self.data.data.get();
 
-            if data.thread_id.is_none() {
-                data.thread_id = Some(thread::current().id());
+                if (*data).thread_id.is_none() {
+                    (*data).thread_id = Some(thread::current().id());
+                }
+
+                if page_id >= (*data).pages.len() as i32 {
+                    (*data).pages.resize_with((page_id + 1) as usize, || Arc::new(Mutex::new(None)));
+                }
+
+                page_ref = Arc::clone(&(*data).pages[page_id as usize]);
+
+                page_lock = page_ref.lock()
+
+                // Unlock the page table lock
             }
 
-            if page_id >= data.pages.len() as i32 {
-                data.pages.resize_with((page_id + 1) as usize, || Arc::new(Mutex::new(None)));
+            if page_lock.is_none() {
+                *page_lock = Some(create_page());
             }
 
-            page_ref = Arc::clone(&data.pages[page_id as usize]);
 
-            page_lock = page_ref.lock()
+            // Get the value from the page
+            let mut value = (*page_lock).unwrap();
 
-            // Unlock the page table lock
+            // Using clone to avoid data being modified when using that page_data reference
+            value[0..BUSTUB_PAGE_SIZE].clone_from_slice(page_data);
+
+            // Set it back
+            *page_lock = Some(value);
+
+            self.post_process_latency(page_id);
+
+            // Unlock the single page lock
         }
-
-        if page_lock.is_none() {
-            *page_lock = Some(create_page());
-        }
-
-
-        // Get the value from the page
-        let mut value = (*page_lock).unwrap();
-
-        // Using clone to avoid data being modified when using that page_data reference
-        value[0..BUSTUB_PAGE_SIZE].clone_from_slice(page_data);
-
-        // Set it back
-        *page_lock = Some(value);
-
-        self.post_process_latency(page_id);
-
-        // Unlock the single page lock
     }
 
     /**
@@ -178,19 +193,19 @@ impl DiskManager for DiskManagerUnlimitedMemory {
         let page_ref: Arc<Mutex<Option<Page>>>;
         let page_lock: MutexGuard<Option<Page>>;
 
-        {
-            let mut data = self.data.lock();
+        unsafe {
+            let mut data = self.data.data.get();
 
-            if data.thread_id.is_none() {
-                data.thread_id = Some(thread::current().id());
+            if (*data).thread_id.is_none() {
+                (*data).thread_id = Some(thread::current().id());
             }
 
-            if page_id >= data.pages.len() as i32 {
+            if page_id >= (*data).pages.len() as i32 {
                 eprintln!("page {} not in range", page_id);
                 panic!("page {} not in range", page_id);
             }
 
-            page_ref = Arc::clone(&data.pages[page_id as usize]);
+            page_ref = Arc::clone(&(*data).pages[page_id as usize]);
             page_lock = page_ref.lock()
 
             // Page table lock dropped

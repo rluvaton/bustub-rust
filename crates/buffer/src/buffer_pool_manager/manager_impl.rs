@@ -374,7 +374,7 @@ impl BufferPoolManager {
 
     fn fetch_specific_page_unchecked(disk_scheduler: &mut DiskScheduler, page: &mut UnderlyingPage) {
         let _fetch = span!("fetch page");
-        let data = Arc::new(Mutex::new(page.get_data_mut().as_mut_ptr()));
+        let data = Arc::new(UnsafeCell::new(page.get_data_mut().as_mut_ptr()));
         let promise = Promise::new();
         let future = promise.get_future();
         let req = ReadDiskRequest::new(page.get_page_id(), Arc::clone(&data), promise);

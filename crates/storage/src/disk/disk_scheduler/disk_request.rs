@@ -1,3 +1,4 @@
+use std::cell::UnsafeCell;
 use common::config::PageId;
 use common::Promise;
 use parking_lot::Mutex;
@@ -11,7 +12,7 @@ pub struct ReadDiskRequest {
      *  Pointer to the start of the memory location where a page is being read into from disk (on a read).
     Having box will reduce performance as it will need to create in the heap
      */
-    pub data: Arc<Mutex<*mut u8>>,
+    pub data: Arc<UnsafeCell<*mut u8>>,
 
     /** ID of the page being read from disk. */
     pub page_id: PageId,
@@ -23,7 +24,7 @@ pub struct ReadDiskRequest {
 unsafe impl Send for ReadDiskRequest {}
 
 impl ReadDiskRequest {
-    pub fn new(page_id: PageId, data: Arc<Mutex<*mut u8>>, callback: Promise<bool>) -> Self {
+    pub fn new(page_id: PageId, data: Arc<UnsafeCell<*mut u8>>, callback: Promise<bool>) -> Self {
         ReadDiskRequest {
             page_id,
             data: data.clone(),
