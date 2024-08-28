@@ -280,15 +280,18 @@ impl BufferPoolManager {
 
             let frame_id = Self::find_replacement_frame(&mut (*inner))?;
 
-            // Add to The Replacement Policy
-            (*inner).replacer.with_lock(|replacer| {
-                // Record access so the frame will be inserted and the LRU-k algorithm will work
-                replacer.record_access(frame_id, AccessType::Unknown);
+            {
+                let _span = span!("Update replacement policy");
+                // Add to The Replacement Policy
+                (*inner).replacer.with_lock(|replacer| {
+                    // Record access so the frame will be inserted and the LRU-k algorithm will work
+                    replacer.record_access(frame_id, AccessType::Unknown);
 
-                // Then set evictable state after frame inserted
-                // "Pin" the frame so that the replacer wouldn't evict the frame before the buffer pool manager "Unpin"s it.
-                replacer.set_evictable(frame_id, false);
-            });
+                    // Then set evictable state after frame inserted
+                    // "Pin" the frame so that the replacer wouldn't evict the frame before the buffer pool manager "Unpin"s it.
+                    replacer.set_evictable(frame_id, false);
+                });
+            }
 
             // Add it to the page id to the frame mapping
             (*inner).page_table.insert(page_id, frame_id);
@@ -297,6 +300,7 @@ impl BufferPoolManager {
 
             // If we evicted and we have old page we will release the root lock to avoid blocking other processes while we flush the old page to disk
             if let Some(old_page) = old_page {
+
                 // 1. Hold writable lock on the page to make sure no one can access the page content before we finish
                 //    replacing the old page content with the new one
                 old_page.with_write(|mut underlying| {
@@ -348,7 +352,6 @@ impl BufferPoolManager {
             (*inner).pages.insert(frame_id as usize, page.clone());
 
             page.with_write(|mut underlying| {
-
                 // 1. Acquire the scheduler lock
                 let mut scheduler = (*inner).disk_scheduler.lock();
 
@@ -370,6 +373,7 @@ impl BufferPoolManager {
     }
 
     fn fetch_specific_page_unchecked(disk_scheduler: &mut DiskScheduler, page: &mut UnderlyingPage) {
+        let _fetch = span!("fetch page");
         let data = Arc::new(Mutex::new(page.get_data_mut().as_mut_ptr()));
         let promise = Promise::new();
         let future = promise.get_future();
@@ -555,6 +559,7 @@ impl BufferPoolManager {
 
 
     fn flush_specific_page_unchecked(disk_scheduler: &mut DiskScheduler, page: &mut UnderlyingPage) {
+        let _flush_page = span!("Flush page");
         let data = Arc::new(page.get_data().as_ptr());
         let promise = Promise::new();
         let future = promise.get_future();
