@@ -2,7 +2,7 @@ use crate::disk::disk_manager::DiskManager;
 use crate::disk::disk_scheduler::disk_request::DiskRequestType;
 use crate::disk::disk_scheduler::disk_scheduler::{DiskScheduler, DiskSchedulerWorker, DiskSchedulerWorkerMessage};
 use common::config::BUSTUB_PAGE_SIZE;
-use common::Promise;
+use common::{Channel, Promise};
 use parking_lot::Mutex;
 use std::sync::mpsc::Receiver;
 use std::sync::{mpsc, Arc};
@@ -16,14 +16,14 @@ impl DiskScheduler {
         // unimplemented!(
         //     "DiskScheduler is not implemented yet. If you have finished implementing the disk scheduler, please remove the throw exception line in `disk_scheduler.cpp`.");
 
-        let (sender, receiver) = mpsc::channel();
+        // let (sender, receiver) = mpsc::channel();
 
-        let receiver = Arc::new(Mutex::new(receiver));
+        let channel = Arc::new(Channel::new());
 
         let scheduler = DiskScheduler {
             // disk_manager: Arc::new(Mutex::new(disk_manager)),
-            worker: DiskSchedulerWorker::new(disk_manager, Arc::clone(&receiver)),
-            sender,
+            worker: DiskSchedulerWorker::new(disk_manager, Arc::clone(&channel)),
+            sender: Arc::clone(&channel),
         };
 
         scheduler
@@ -41,7 +41,7 @@ impl DiskScheduler {
         // The `DiskRequest` struct specifies whether the request is for a read/write, where the data should be written into/from, and the page ID for the operation.
         // The `DiskRequest` also includes a `std::promise` whose value should be set to true once the request is processed.
         //
-        self.sender.send(DiskSchedulerWorkerMessage::NewJob(r)).unwrap()
+        self.sender.put(DiskSchedulerWorkerMessage::NewJob(r))
     }
 
 
@@ -58,7 +58,7 @@ impl DiskScheduler {
 
 impl Drop for DiskScheduler {
     fn drop(&mut self) {
-        self.sender.send(DiskSchedulerWorkerMessage::Terminate).unwrap();
+        self.sender.put(DiskSchedulerWorkerMessage::Terminate);
 
         if let Some(thread) = self.worker.thread.take() {
             thread.join().unwrap();
@@ -77,10 +77,10 @@ impl DiskSchedulerWorker {
      * The background thread needs to process requests while the DiskScheduler exists, i.e., this function should not
      * return until ~DiskScheduler() is called. At that point you need to make sure that the function does return.
      */
-    fn new(disk_manager: Arc<Mutex<dyn DiskManager + Send + Sync>>, receiver: Arc<Mutex<Receiver<DiskSchedulerWorkerMessage>>>) -> DiskSchedulerWorker {
+    fn new(disk_manager: Arc<Mutex<dyn DiskManager + Send + Sync>>, receiver: Arc<Channel<DiskSchedulerWorkerMessage>>) -> DiskSchedulerWorker {
         let thread = thread::spawn(move || {
             loop {
-                let job = receiver.lock().recv().unwrap();
+                let job = receiver.get();
 
                 let mut manager = disk_manager.lock();
 

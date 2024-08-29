@@ -22,6 +22,7 @@ pub struct ReadDiskRequest {
 }
 
 unsafe impl Send for ReadDiskRequest {}
+unsafe impl Sync for ReadDiskRequest {}
 
 impl ReadDiskRequest {
     pub fn new(page_id: PageId, data: Arc<UnsafeCell<*mut u8>>, callback: Promise<bool>) -> Self {
@@ -52,6 +53,7 @@ pub struct WriteDiskRequest {
 }
 
 unsafe impl Send for WriteDiskRequest {}
+unsafe impl Sync for WriteDiskRequest {}
 
 
 impl WriteDiskRequest {
