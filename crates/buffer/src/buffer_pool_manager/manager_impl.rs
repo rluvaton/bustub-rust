@@ -278,12 +278,22 @@ impl BufferPoolManager {
                     replacer.record_access(frame_id, access_type);
                 });
 
-                let mut p = (*inner).pages[frame_id as usize].clone();
-
                 // Pin before returning to the caller to avoid page to be evicted in the meantime
-                p.pin();
+                (*inner).pages[frame_id as usize].pin();
 
-                // We keep the root lock while we have the page id in the buffer pool as it's not a long operation
+
+                drop(holding_root_latch);
+                drop(holding_root_latch_span);
+                drop(f);
+                // #############################################################################
+                //                              Root Lock Release
+                // #############################################################################
+                // After pinned we can release the lock as nothing will change the page
+                drop(root_latch_guard);
+
+
+                let p = (*inner).pages[frame_id as usize].clone();
+
                 return Some(p);
             }
 
