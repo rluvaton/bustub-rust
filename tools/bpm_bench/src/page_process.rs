@@ -18,7 +18,7 @@ pub(crate) unsafe fn modify_page(page: &mut PageData, page_idx: usize, seed: u64
 
 
 /// Check the page and verify the data inside
-pub unsafe fn check_page_consistent_no_seed(data: &PageData, page_idx: usize) {
+pub fn check_page_consistent_no_seed(data: &PageData, page_idx: usize) {
     // Cast the data pointer to a BustubBenchPageHeader pointer
     let data_seed = u64::from_ne_bytes(data[0..8].try_into().unwrap());
     let data_page_id = u64::from_ne_bytes(data[8..16].try_into().unwrap());
@@ -43,7 +43,7 @@ pub unsafe fn check_page_consistent_no_seed(data: &PageData, page_idx: usize) {
     }
 }
 
-pub unsafe fn check_page_consistent(data: &PageData, page_idx: usize, seed: u64) {
+pub fn check_page_consistent(data: &PageData, page_idx: usize, seed: u64) {
     let data_seed = u64::from_ne_bytes(data[0..8].try_into().unwrap());
 
     // Check if the seed matches the expected seed
