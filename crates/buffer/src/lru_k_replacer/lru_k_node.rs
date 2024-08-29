@@ -76,30 +76,8 @@ impl LRUKNode {
 
     pub(crate) fn marked_accessed(&mut self, counter: &AtomicU64Counter) {
 
-
-        // Why we only don't need to recalculate the pair duration
-        // now: x
-        // item1: i_1
-        // item2: i_2
-        // itemN: i_n
-
-        // Example for having 5 items
-        // = (x - i_5) + (i_5 - i_4) + (i_4 - i_3) + (i_3 - i_2) + (i_2 - i_1)
-        // = x - i_5 + i_5 - i_4 + i_4 - i_3 + i_3 - i_2 + i_2 - i_1
-        // = x + 0 + 0 + 0 - i_1
-        // = x - i_1
-
-        // When need to remove the first item and add new item instead at the beginning
-        // = (x - i_6) + (i_6 - i_5) + (i_5 - i_4) + (i_4 - i_3) + (i_3 - i_2)
-        // = x - i_6 + i_6 - i_5 + i_5 - i_4 + i_4 - i_3 + i_3 - i_2
-        // = x + 0 + 0 + 0 - i_2
-        // = x - i_2
-
-        // when need to just add item without removing
-        // = (x - i_7) + (i_7 - i_6) + (i_6 - i_5) + (i_5 - i_4) + (i_4 - i_3) + (i_3 - i_2)
-        // = x - i_7 + i_7 - i_6 + i_6 - i_5 + i_5 - i_4 + i_4 - i_3 + i_3 - i_2
-        // = x + 0 + 0 + 0 - i_2
-        // = x - i_2
+        // LRU-K evicts the page whose K-th most recent access is furthest in the past.
+        // So we only need to calculate
 
 
         let new_val = Self::get_new_access_record_now(counter);
@@ -108,8 +86,7 @@ impl LRUKNode {
         if self.history.len() >= self.k {
             let removed = self.history.pop_front().unwrap();
 
-            self.interval += removed.1;
-            self.interval -= new_val.1;
+            self.interval += removed.1 - new_val.1;
         }
 
         self.history.push_back(new_val);
