@@ -1,9 +1,13 @@
+use std::cell::UnsafeCell;
+use std::cmp::Ordering;
 use crate::lru_k_replacer::access_type::AccessType;
 use crate::lru_k_replacer::counter::AtomicU64Counter;
 use crate::lru_k_replacer::lru_k_node::LRUKNode;
 use common::config::FrameId;
-use std::collections::HashMap;
+use std::collections::{HashMap};
+use std::rc::Rc;
 use std::sync::Arc;
+use mut_binary_heap::{BinaryHeap, FnComparator};
 use tracy_client::span;
 use crate::lru_k_replacer::LRUKReplacerImpl;
 
@@ -20,6 +24,11 @@ impl LRUKReplacerImpl {
     pub(crate) fn new(num_frames: usize, k: usize) -> Self {
         LRUKReplacerImpl {
             node_store: HashMap::with_capacity(num_frames),
+            evictable_heap: BinaryHeap::with_capacity_by(num_frames, |a, b| {
+                unsafe {
+                    (*a.get()).cmp(&*b.get())
+                }
+            }),
             k,
 
             replacer_size: num_frames,
@@ -102,14 +111,26 @@ impl LRUKReplacerImpl {
         let node = self.node_store.get_mut(&frame_id);
 
         if node.is_none() {
+            let node = Arc::new(UnsafeCell::new(LRUKNode::new(self.k, frame_id, &self.history_access_counter)));
             // TODO - should we evict another frame?
-            self.node_store.insert(frame_id, LRUKNode::new(self.k, frame_id, &self.history_access_counter));
+            self.node_store.insert(frame_id, node);
+
+            // Not inserting to evictable frames as new frame is not evictable by default
             return;
         }
 
         let node = node.unwrap();
 
-        node.marked_accessed(&self.history_access_counter)
+        unsafe {
+            let inner = node.get();
+            (*inner).marked_accessed(&self.history_access_counter);
+
+            // if evictable, the node should be reinserted as it's location would be updated
+            if (*inner).is_evictable {
+                // Update the heap with the updated value
+                self.evictable_heap.push(frame_id, Arc::clone(&node));
+            }
+        }
     }
 
     /// Toggle whether a frame is evictable or non-evictable. This function also
@@ -165,19 +186,25 @@ impl LRUKReplacerImpl {
 
         let node = node.unwrap();
 
+        let node_inner = node.get();
+
         // Nothing to change
-        if node.is_evictable == set_evictable {
+        if (*node_inner).is_evictable == set_evictable {
             return;
         }
 
         // If evictable, mark as no longer evictable or vice versa
-        if node.is_evictable {
+        if (*node_inner).is_evictable {
             self.evictable_frames -= 1;
+
+            self.evictable_heap.remove(&frame_id);
         } else {
             self.evictable_frames += 1;
+
+            self.evictable_heap.push(frame_id, Arc::clone(&node));
         }
 
-        node.is_evictable = set_evictable;
+        (*node_inner).is_evictable = set_evictable;
     }
 
     pub(crate) fn is_evictable(&self, frame_id: FrameId) -> Option<bool> {
@@ -191,7 +218,7 @@ impl LRUKReplacerImpl {
     pub(crate) unsafe fn is_evictable_unchecked(&self, frame_id: FrameId) -> bool {
         let node = self.node_store.get(&frame_id).expect("frame id must exists");
 
-        node.is_evictable
+        (*node.get()).is_evictable
     }
 
     /// Remove an evictable frame from replacer, along with its access history.
@@ -209,8 +236,11 @@ impl LRUKReplacerImpl {
     ///
     pub fn remove(&mut self, frame_id: FrameId) {
         let frame = self.node_store.get(&frame_id);
-        if frame.is_none() || !frame.unwrap().is_evictable {
-            return;
+
+        unsafe {
+            if frame.is_none() || !(*frame.unwrap().get()).is_evictable {
+                return;
+            }
         }
 
         unsafe {
@@ -247,13 +277,15 @@ impl LRUKReplacerImpl {
 
         let frame = frame.unwrap();
 
-        assert_eq!(frame.is_evictable, true, "Frame must be evictable");
+        assert_eq!((*frame.get()).is_evictable, true, "Frame must be evictable");
 
         // If somehow deleted in the middle only decrease in case actually removed
         if self.node_store.remove(&frame_id).is_some() {
             // Decrease evictable frames
             self.evictable_frames -= 1;
         }
+
+        self.evictable_heap.remove(&frame_id);
     }
 
     /// Replacer's size, which tracks the number of evictable frames.
@@ -274,36 +306,14 @@ impl LRUKReplacerImpl {
 
     /// Helper for debugging in tests
     pub(crate) fn get_order_of_eviction(&self) -> Vec<FrameId> {
-        let now = LRUKNode::get_current_time();
-
-        let mut evictable_frames: Vec<(&LRUKNode, i64)> = self.node_store
-            .values()
-            .filter(|item| item.is_evictable)
-            // (node, interval)
-            .map(|item| (item, item.calculate_intervals(now)))
-            .collect::<Vec<(&LRUKNode, i64)>>();
-
-        evictable_frames
-            .sort_unstable_by(LRUKNode::next_to_evict_compare);
-
-        evictable_frames
-            .into_iter()
-            .map(|item| item.0.frame_id)
-            .collect::<Vec<FrameId>>()
+        unsafe {
+            self.evictable_heap.clone().into_iter_sorted().map(|item| (*item.get()).frame_id).collect()
+        }
     }
 
-    fn get_next_to_evict(&self) -> Option<FrameId> {
-        let now = LRUKNode::get_current_time();
+    fn get_next_to_evict(&mut self) -> Option<FrameId> {
+        let top = self.evictable_heap.peek()?;
 
-        // Not the most performant as we keep filtering here, and it's not already sorted
-        self.node_store
-            .values()
-            .filter(|item| item.is_evictable)
-            // (node, interval) - done this for caching, so we won't keep recalculating
-            .map(|item| (item, item.calculate_intervals(now)))
-
-            // Min here as the next evict to compare will be at the beginning
-            .min_by(LRUKNode::next_to_evict_compare)
-            .map(|item| item.0.frame_id)
+        unsafe { Some((*top.get()).frame_id) }
     }
 }

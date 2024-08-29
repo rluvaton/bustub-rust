@@ -20,6 +20,14 @@ type LRUKNodeCompareItem<'a> = (
     i64
 );
 
+const INF_INTERVAL: i64 = i64::MAX;
+
+// In order to avoid getting the current time when wanting to calculate the interval,
+// we will use this large number that we will never reach and consider it as current time
+const IMAGINARY_NOW: i64 = i64::MAX / 2;
+
+// In order to avoid
+
 #[derive(Clone, Debug)]
 pub struct LRUKNode {
 
@@ -42,30 +50,66 @@ pub struct LRUKNode {
 
     #[allow(dead_code)]
     pub(crate) is_evictable: bool,
+
+    pub(crate) interval: i64,
 }
 
 impl LRUKNode {
     pub(crate) fn new(k: usize, frame_id: FrameId, counter: &AtomicU64Counter) -> Self {
-        assert!(k > 0, "K >= 0");
+        assert!(k > 0, "K > 0");
 
         let mut history = LinkedList::new();
 
-        history.push_back(Self::get_new_access_record_now(counter));
+        let now = Self::get_new_access_record_now(counter);
+        let interval = IMAGINARY_NOW - now.1;
+
+        history.push_back(now);
 
         LRUKNode {
             history,
             k,
             frame_id,
             is_evictable: false,
+            interval,
         }
     }
 
     pub(crate) fn marked_accessed(&mut self, counter: &AtomicU64Counter) {
+
+
+        // Why we only don't need to recalculate the pair duration
+        // now: x
+        // item1: i_1
+        // item2: i_2
+        // itemN: i_n
+
+        // Example for having 5 items
+        // = (x - i_5) + (i_5 - i_4) + (i_4 - i_3) + (i_3 - i_2) + (i_2 - i_1)
+        // = x - i_5 + i_5 - i_4 + i_4 - i_3 + i_3 - i_2 + i_2 - i_1
+        // = x + 0 + 0 + 0 - i_1
+        // = x - i_1
+
+        // When need to remove the first item and add new item instead at the beginning
+        // = (x - i_6) + (i_6 - i_5) + (i_5 - i_4) + (i_4 - i_3) + (i_3 - i_2)
+        // = x - i_6 + i_6 - i_5 + i_5 - i_4 + i_4 - i_3 + i_3 - i_2
+        // = x + 0 + 0 + 0 - i_2
+        // = x - i_2
+
+        // when need to just add item without removing
+        // = (x - i_7) + (i_7 - i_6) + (i_6 - i_5) + (i_5 - i_4) + (i_4 - i_3) + (i_3 - i_2)
+        // = x - i_7 + i_7 - i_6 + i_6 - i_5 + i_5 - i_4 + i_4 - i_3 + i_3 - i_2
+        // = x + 0 + 0 + 0 - i_2
+        // = x - i_2
+
+
         let new_val = Self::get_new_access_record_now(counter);
 
         // If reached the size, remove the first item and add to the end
         if self.history.len() >= self.k {
-            self.history.pop_front();
+            let removed = self.history.pop_front().unwrap();
+
+            self.interval += removed.1;
+            self.interval -= new_val.1;
         }
 
         self.history.push_back(new_val);
@@ -74,19 +118,30 @@ impl LRUKNode {
     pub(crate) fn calculate_intervals(&self, now: i64) -> i64 {
         if self.history.len() < self.k {
             // If less than the number of records just make it the largest so it would be first to evict
-            return i64::MAX;
+            return INF_INTERVAL;
         }
 
-        let mut diff = 0;
-        let last = self.history.front().expect("K cant be 0");
-        let mut last = last.1;
+        let to_now_duration = now - self.history.back().expect("should have at least 1").1;
 
-        for (_id, timestamp) in self.history.iter().skip(1) {
-            diff += timestamp - last;
-            last = *timestamp;
+        self.interval + to_now_duration
+    }
+
+    #[inline]
+    pub(crate) fn get_interval(&self) -> i64 {
+        if self.history.len() < self.k {
+            return (
+                // If less than the number of records just make it the largest so it would be first to evict
+                INF_INTERVAL -
+
+                    // Fallback to LRU
+                    // Not using timestamp as counter will not depend on the machine clock precision
+
+                    // Subtracting the current message id to make sure most recent (largest message id) will have smaller value than the least recent node (smallest message id)
+                    self.get_current_message_id() as i64
+            );
         }
 
-        diff + (now - last)
+        self.interval
     }
 
     pub(crate) fn get_current_timestamp(&self) -> i64 {
@@ -151,5 +206,28 @@ impl LRUKNode {
         // We want larger value to be at the beginning - reversed
         // larger value at the beginning as this mean that the difference between access time is the largest
         b.1.cmp(&a.1)
+    }
+
+    /// Return which node is first_to_evict
+    ///
+    /// # Algorithm
+    /// if both a and b does not have enough history records, go by LRU, least recently used would be first
+    /// if only one of them does not have enough history record make it first
+    /// if both have enough, make the one that has the largest gap between access times the first
+    ///
+    /// # Arguments
+    ///
+    /// * `a`: item 1
+    /// * `b`: item 2
+    ///
+    /// returns: Ordering
+    ///
+    /// # Examples
+    ///
+    /// ```
+    ///
+    /// ```
+    pub(crate) fn cmp(&self, other: &Self) -> Ordering {
+        self.get_interval().cmp(&other.get_interval())
     }
 }

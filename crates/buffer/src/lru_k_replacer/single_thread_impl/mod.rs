@@ -1,10 +1,15 @@
 pub mod implementation;
 
+use std::cell::{Cell, RefCell, UnsafeCell};
+use std::cmp::Ordering;
 use crate::lru_k_replacer::counter::AtomicU64Counter;
 use crate::lru_k_replacer::lru_k_node::LRUKNode;
 use common::config::FrameId;
-use std::collections::HashMap;
+use std::collections::{HashMap};
 use std::sync::Arc;
+use mut_binary_heap::{BinaryHeap, FnComparator};
+
+type LRUKNodeWrapper = Arc<UnsafeCell<LRUKNode>>;
 
 /**
  * LRUKReplacer implements the LRU-k replacement policy.
@@ -23,13 +28,9 @@ pub struct LRUKReplacerImpl {
     // Remove #[allow(dead_code)] if you start using them.
 
     /// in cpp it was unordered_map
-    /// # Performance improvement idea
-    /// the following idea will improve eviction time but decrease record access time
-    ///
-    /// split to 2 parts, evictable and non-evictable
-    /// evictable is sorted by first to evict and each time updating access it will update the location of the frame id
-    #[allow(dead_code)]
-    pub(crate) node_store: HashMap<FrameId, LRUKNode>,
+    pub(crate) node_store: HashMap<FrameId, LRUKNodeWrapper>,
+
+    pub(crate) evictable_heap: BinaryHeap<FrameId, LRUKNodeWrapper, FnComparator<fn(&LRUKNodeWrapper, &LRUKNodeWrapper) -> Ordering>>,
 
     // TODO - set default to 0
     // #[allow(dead_code)]
@@ -39,10 +40,8 @@ pub struct LRUKReplacerImpl {
     // #[allow(dead_code)]
     // pub(crate) curr_size: isize,
 
-    #[allow(dead_code)]
     pub(crate) replacer_size: usize,
 
-    #[allow(dead_code)]
     pub(crate) k: usize,
 
     // Tracks the number of evictable frames
@@ -50,3 +49,5 @@ pub struct LRUKReplacerImpl {
 
     pub(crate) history_access_counter: Arc<AtomicU64Counter>,
 }
+
+unsafe impl Send for LRUKReplacerImpl {}
