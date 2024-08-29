@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::fmt::format;
 use std::process::abort;
 use std::sync::Arc;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::thread;
 use std::thread::JoinHandle;
 use clap::Parser;
@@ -90,7 +91,6 @@ mod metrics;
 // >>> END
 
 
-
 fn setup() -> TempDir {
     TempDir::new("bpm_bench").expect("Should create tmp directory")
 }
@@ -134,25 +134,8 @@ fn main() {
     ));
     let page_ids: Arc<RwLock<Vec<PageId>>> = Arc::new(RwLock::new(vec![]));
 
-    {
-        let span = span!("init pages");
-
-        client.message("Init pages", 10);
-
-        for i in 0..bustub_page_cnt {
-            let page = bpm.new_page().expect("Must be able to create a page");
-            let page_id = page.with_read(|u| u.get_page_id());
-
-            page.with_write(|u| unsafe {
-                modify_page(u.get_data_mut(), i, 0);
-            });
-
-            bpm.unpin_page(page_id, true, AccessType::default());
-
-            page_ids.write().push(page_id);
-            span.emit_text(format!("page {} written", page_id).as_str());
-        }
-    }
+    init_pages(bustub_page_cnt, &bpm, &page_ids);
+    // validate_initialized_pages(bustub_page_cnt, &bpm, &page_ids);
 
 
     // enable disk latency after creating all pages
@@ -182,7 +165,6 @@ fn main() {
             let mut page_idx = page_idx_start;
 
             while !metrics.should_finish() {
-
                 let scan_iteration = span!("scan thread");
 
                 let fetch_page = span!("scan thread - fetch page");
@@ -306,3 +288,81 @@ fn main() {
     println!("{}", bpm.clone().get_stats());
 }
 
+fn init_pages(bustub_page_cnt: usize, bpm: &Arc<BufferPoolManager>, page_ids: &Arc<RwLock<Vec<PageId>>>) {
+    let _span = span!("init pages");
+
+    let current_page_index = Arc::new(Mutex::new(0usize));
+
+    let mut join_handles: Vec<JoinHandle<()>> = vec![];
+    type ModifyRecord = HashMap<PageId, u64>;
+
+    for _ in 0..1000 {
+        let bpm = Arc::clone(&bpm);
+        let page_ids = Arc::clone(&page_ids);
+
+        let current_page_index = Arc::clone(&current_page_index);
+
+        let t = thread::spawn(move || {
+
+            let mut guard = current_page_index.lock();
+            let mut i = guard.clone();
+
+            while i < bustub_page_cnt {
+                *guard += 1;
+
+                let page = bpm.new_page().expect("Must be able to create a page");
+                let page_id = page.with_read(|u| u.get_page_id());
+                page_ids.write().push(page_id);
+
+                page.with_write(|u| unsafe {
+                    modify_page(u.get_data_mut(), i, 0);
+                });
+
+                drop(guard);
+
+                bpm.unpin_page(page_id, true, AccessType::default());
+
+                guard = current_page_index.lock();
+
+                i = guard.clone();
+            }
+        });
+
+        join_handles.push(t);
+    }
+
+    for handle in join_handles {
+        handle.join().unwrap()
+    }
+}
+
+
+fn validate_initialized_pages(bustub_page_cnt: usize, bpm: &Arc<BufferPoolManager>, page_ids: &Arc<RwLock<Vec<PageId>>>) {
+    println!("Validate pages");
+
+    for page_idx in 0..bustub_page_cnt {
+        if page_idx % (bustub_page_cnt / 1000) == 0 {
+            println!("{}/{}", page_idx, bustub_page_cnt);
+        }
+
+        let page = bpm.fetch_page(page_ids.read()[page_idx], AccessType::Lookup);
+
+        if page.is_none() {
+            eprintln!("cannot fetch page");
+            abort();
+        }
+
+        let page = page.unwrap();
+
+        let mut page_id: PageId = 0;
+
+        page.with_read(|u| {
+            page_id = u.get_page_id();
+            check_page_consistent_no_seed(u.get_data(), page_idx);
+        });
+
+        bpm.unpin_page(page_id, false, AccessType::Lookup);
+    }
+
+    println!("Validation finish");
+}
