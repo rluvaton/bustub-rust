@@ -8,4 +8,4 @@ members = [
     "crates/primer",
     "crates/recovery",
     "crates/storage"
-]
+, "crates/stats"]

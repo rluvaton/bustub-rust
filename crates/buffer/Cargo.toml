@@ -7,6 +7,7 @@ edition = "2021"
 common = {path = "../common"}
 storage = {path = "../storage"}
 recovery = {path = "../recovery"}
+stats = {path = "../stats"}
 
 # TODO - remove unused features
 chrono = "0.4.38"
@@ -14,9 +15,12 @@ rand = "0.8"
 parking_lot = "0.12.3"
 derive_builder = "0.20.0"
 log = "0.4.22"
+num-format = "0.4.4"
 
 # Profiling
-tracy-client = { version = "0.17.3", default-features = false, features = ["enable"] }
+tracy-client = { version = "0.17.3", default-features = false, features = [
+    "enable"
+] }
 
 [dev-dependencies]
 tempdir = "0.3.7"

@@ -54,7 +54,10 @@ impl Page {
 
     /** @return the pin count of this page */
     pub fn get_pin_count(&self) -> usize {
-        self.with_read(|u| u.get_pin_count())
+        self.with_read(
+            #[inline(always)]
+            |u| u.get_pin_count()
+        )
     }
 
     /// Pin page and return the current number of pins
@@ -64,7 +67,9 @@ impl Page {
     ///
     /// only pin once per thread
     pub fn pin(&mut self) -> usize {
-        self.with_write(|u| {
+        self.with_write(
+            #[inline(always)]
+            |u| {
             let mut p = u.get_pin_count();
 
             p += 1;
@@ -91,7 +96,9 @@ impl Page {
     ///
     /// only unpin after each pin
     pub fn unpin(&mut self) -> usize {
-        self.with_write(|u| {
+        self.with_write(
+            #[inline(always)]
+            |u| {
             let mut p = u.get_pin_count();
 
             if p == 0 {
@@ -134,6 +141,7 @@ impl Page {
     ///     assert_eq!(u.is_dirty(), false);
     /// });
     /// ```
+    #[inline(always)]
     pub fn with_read<F: FnOnce(&UnderlyingPage) -> R, R>(&self, with_read_lock: F) -> R {
         let acquiring_page_latch = span!("Acquiring read page latch");
 
@@ -169,6 +177,7 @@ impl Page {
     ///     u.set_is_dirty(true);
     /// });
     /// ```
+    #[inline(always)]
     pub fn with_write<F: FnOnce(&mut UnderlyingPage) -> R, R>(&self, with_write_lock: F) -> R {
 
         let acquiring_page_latch = span!("Acquiring write page latch");

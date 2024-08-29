@@ -7,18 +7,20 @@ use std::thread::JoinHandle;
 use clap::Parser;
 use parking_lot::{Mutex, RwLock};
 use rand::distributions::Distribution;
+use tempdir::TempDir;
 use buffer::{AccessType, BufferPoolManager};
 use common::config::PageId;
-use storage::DiskManagerUnlimitedMemory;
+use storage::{DefaultDiskManager, DiskManagerUnlimitedMemory};
 use metrics::bpm_total_metrics::BpmTotalMetrics;
 use crate::cli::Args;
 use crate::metrics::bpm_metrics::BpmMetrics;
 use crate::page_process::{check_page_consistent, check_page_consistent_no_seed, modify_page};
 use tracy_client::*;
 
-#[global_allocator]
-static GLOBAL: ProfiledAllocator<std::alloc::System> =
-    ProfiledAllocator::new(std::alloc::System, 100);
+// Tracking Memory usage
+// #[global_allocator]
+// static GLOBAL: ProfiledAllocator<std::alloc::System> =
+//     ProfiledAllocator::new(std::alloc::System, 100);
 
 mod cli;
 mod page_process;
@@ -87,6 +89,12 @@ mod metrics;
 // get: 36550.64831172294
 // >>> END
 
+
+
+fn setup() -> TempDir {
+    TempDir::new("bpm_bench").expect("Should create tmp directory")
+}
+
 fn main() {
     let client = Client::start();
 
@@ -108,7 +116,15 @@ fn main() {
              bustub_page_cnt, duration_ms, enable_latency, lru_k_size, bustub_bpm_size, scan_thread_n, get_thread_n
     );
 
-    let disk_manager = Arc::new(Mutex::new(DiskManagerUnlimitedMemory::new()));
+
+    let tmpdir = setup();
+    let db_name = tmpdir.path().join("test.db");
+
+    // let disk_manager = DefaultDiskManager::new(db_name).expect("should create disk manager");
+    let disk_manager = DiskManagerUnlimitedMemory::new();
+
+
+    let disk_manager = Arc::new(Mutex::new(disk_manager));
 
     let bpm: Arc<BufferPoolManager> = Arc::new(BufferPoolManager::new(
         bustub_bpm_size,
@@ -140,7 +156,7 @@ fn main() {
 
 
     // enable disk latency after creating all pages
-    disk_manager.lock().enable_latency_simulator(enable_latency);
+    // disk_manager.lock().enable_latency_simulator(enable_latency);
 
     println!("[info] benchmark start");
 
@@ -281,5 +297,12 @@ fn main() {
     }
 
     total_metrics.lock().report();
+
+    println!("\n\n");
+    println!("###################");
+    println!("       Stats       ");
+    println!("###################");
+    println!();
+    println!("{}", bpm.clone().get_stats());
 }
 

@@ -10,7 +10,8 @@ parking_lot = "0.12.3"
 log = "0.4.22"
 
 # Profiling
-tracy-client = { version = "0.17.3", default-features = false, features = ["enable"] }
-
+tracy-client = { version = "0.17.3", default-features = false, features = [
+        "enable"
+] }
 [dev-dependencies]
 tempdir = "0.3.7"

@@ -6,6 +6,7 @@ use std::cell::UnsafeCell;
 use std::collections::{HashMap, LinkedList};
 use std::sync::Arc;
 use storage::{DiskScheduler, Page};
+use crate::buffer_pool_manager::manager_stats::BufferPoolManagerStats;
 
 /**
  * BufferPoolManager reads disk pages to and from its internal buffer pool.
@@ -24,6 +25,8 @@ pub struct BufferPoolManager {
     /// This is just container to the inner buffer pool manager, so we can do locking with better granularity
     /// as it allow for multiple mutable reference at the same time but it's ok as we are managing it
     pub(crate) inner: UnsafeCell<InnerBufferPoolManager>,
+
+    pub(crate) stats: BufferPoolManagerStats,
 }
 
 unsafe impl Sync for BufferPoolManager { }
