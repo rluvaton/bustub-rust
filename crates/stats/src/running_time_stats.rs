@@ -45,7 +45,14 @@ impl RunningTimeStats {
 
     /// This should be done after finishing adding all data for correct result
     pub fn calculate_average(&self) -> Duration {
-        Duration::from_nanos(self.total_duration.load(Ordering::SeqCst) / self.number_of_runs.load(Ordering::SeqCst))
+        let duration = self.total_duration.load(Ordering::SeqCst);
+        let number_of_runs = self.number_of_runs.load(Ordering::SeqCst);
+
+        if number_of_runs == 0 {
+            return Duration::ZERO;
+        }
+
+        Duration::from_nanos(duration / number_of_runs)
     }
 
     /// This should be done after finishing adding all data for correct result
