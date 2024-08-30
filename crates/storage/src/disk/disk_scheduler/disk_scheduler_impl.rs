@@ -97,6 +97,8 @@ impl DiskSchedulerWorker {
 
                 match req {
                     DiskRequestType::Read(req) => {
+
+                        // TODO - remove raw pointers usage
                         let data = req.data.clone();
                         let mut lock = data.get();
                         let page = unsafe { std::slice::from_raw_parts_mut(*lock, BUSTUB_PAGE_SIZE) };
@@ -105,6 +107,7 @@ impl DiskSchedulerWorker {
                     }
                     DiskRequestType::Write(req) => {
                         let data = req.data.clone();
+                        // TODO - remove raw pointers usage
                         let page = unsafe { std::slice::from_raw_parts(*data, BUSTUB_PAGE_SIZE) };
                         manager.write_page(req.page_id, page);
                         req.callback.set_value(true);
