@@ -28,6 +28,8 @@ pub struct LRUKReplacerImpl {
     /// in cpp it was unordered_map
     pub(crate) node_store: HashMap<FrameId, LRUKNodeWrapper>,
 
+    /// Heap for evictable LRU-K nodes for best performance for finding evictable frames
+    /// This is mutable Heap to allow for updating LRU-K Node without removing and reinserting
     pub(crate) evictable_heap: BinaryHeap<FrameId, LRUKNodeWrapper, FnComparator<fn(&LRUKNodeWrapper, &LRUKNodeWrapper) -> Ordering>>,
 
 
