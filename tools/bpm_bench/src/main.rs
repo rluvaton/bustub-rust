@@ -184,7 +184,7 @@ fn main() {
 
                     let get_write_lock_page = span!("scan thread - Acquiring write lock");
 
-                    page.with_write(|u| unsafe {
+                    page.with_write(|u| {
                         drop(get_write_lock_page);
 
                         if !records.contains_key(&page_idx) {
@@ -314,7 +314,7 @@ fn init_pages(bustub_page_cnt: usize, bpm: &Arc<BufferPoolManager>, page_ids: &A
                 let page_id = page.with_read(|u| u.get_page_id());
                 page_ids.write().push(page_id);
 
-                page.with_write(|u| unsafe {
+                page.with_write(|u| {
                     modify_page(u.get_data_mut(), i, 0);
                 });
 

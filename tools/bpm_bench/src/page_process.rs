@@ -11,7 +11,7 @@ struct BustubBenchPageHeader {
     data: &'static [u8]
 }
 
-pub(crate) unsafe fn modify_page(page: &mut PageData, page_idx: usize, seed: u64) {
+pub(crate) fn modify_page(page: &mut PageData, page_idx: usize, seed: u64) {
     page[0..8].copy_from_slice(&u64::to_ne_bytes(seed));
     page[8..16].copy_from_slice(&u64::to_ne_bytes(page_idx as u64));
     page[16 + (seed as usize % 4000)] = (seed % 256) as u8;
@@ -67,7 +67,7 @@ mod test {
         let seed = 1;
         let page_id = 2;
 
-        page.with_write(|u| unsafe {
+        page.with_write(|u| {
             super::modify_page(u.get_data_mut(), page_id, seed);
         });
 

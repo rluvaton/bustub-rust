@@ -239,9 +239,7 @@ impl Drop for Page {
 #[cfg(test)]
 mod tests {
     use crate::page::page::Page;
-    use common::config::BUSTUB_PAGE_SIZE;
     use parking_lot::Mutex;
-    use std::fmt::{Debug, Display};
     use std::sync::Arc;
     use std::time::Duration;
     use std::{panic, thread};
@@ -770,7 +768,7 @@ mod tests {
         let page = Page::new(1);
 
 
-        let res = page.with_read(|u| {
+        let res = page.with_read(|_| {
             5
         });
 

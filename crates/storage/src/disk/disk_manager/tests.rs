@@ -2,8 +2,7 @@
 mod tests {
     use crate::disk::disk_manager::{DefaultDiskManager, DiskManager, DiskManagerUnlimitedMemory};
     use common::config::BUSTUB_PAGE_SIZE;
-    use std::fs;
-    use std::path::{Path, PathBuf};
+    use std::path::PathBuf;
     use tempdir::TempDir;
 
     fn setup() -> TempDir {
@@ -79,7 +78,6 @@ mod tests {
     fn read_write_page_unlimited_memory() {
         let mut buf = [0u8; BUSTUB_PAGE_SIZE];
         let mut data = [0u8; BUSTUB_PAGE_SIZE];
-        let tmp_dir = setup();
 
         let mut dm = DiskManagerUnlimitedMemory::new();
         let val = "A test string.";
