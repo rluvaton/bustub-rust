@@ -282,28 +282,6 @@ mod tests {
     }
 
     // #########################
-    //         Create
-    // #########################
-
-    #[test]
-    fn should_create_as_pinned_with_only_page_id() {
-        let page = Page::new(1);
-
-        assert_eq!(page.is_pinned(), true);
-        assert_eq!(page.is_unpinned(), false);
-        assert_eq!(page.get_pin_count(), 1);
-    }
-
-    #[test]
-    fn should_create_as_pinned_with_page_id_and_data() {
-        let page = Page::create_with_data(1, [2; BUSTUB_PAGE_SIZE]);
-
-        assert_eq!(page.is_pinned(), true);
-        assert_eq!(page.is_unpinned(), false);
-        assert_eq!(page.get_pin_count(), 1);
-    }
-
-    // #########################
     //        Set is dirty
     // #########################
 
@@ -388,27 +366,15 @@ mod tests {
     }
 
     #[test]
-    fn should_keep_pin_count_on_pinned() {
-        let mut page = Page::new(1);
-
-        let original_pin_count = page.get_pin_count();
-        assert_eq!(original_pin_count, 1);
-
-        page.pin();
-
-        assert_eq!(page.get_pin_count(), original_pin_count);
-    }
-
-    #[test]
     fn should_increase_pin_count_on_pin_unpinned_page() {
         let mut page = Page::new(1);
 
         let original_pin_count = page.get_pin_count();
-        assert_eq!(original_pin_count, 1);
+        assert_eq!(original_pin_count, 0);
 
         page.pin();
 
-        assert_eq!(page.get_pin_count(), original_pin_count);
+        assert_eq!(page.get_pin_count(), 1);
     }
 
     #[test]
@@ -430,20 +396,7 @@ mod tests {
     #[test]
     fn should_unpin_pinned_page() {
         let mut page = Page::new(1);
-
-        assert_eq!(page.is_pinned(), true);
-
-        page.unpin();
-
-        assert_eq!(page.is_pinned(), false);
-    }
-
-    #[test]
-    fn should_unpin_page_with_existing_unpinned_page() {
-        let page_og = Page::new(1);
-        // Avoid the value being cleaned up
-        let mut page = page_og.clone();
-        page.unpin();
+        page.pin();
 
         assert_eq!(page.is_pinned(), true);
 
@@ -467,7 +420,9 @@ mod tests {
     #[test]
     fn should_decrease_pin_count_on_unpin_pinned_page() {
         let mut page = Page::new(1);
+        page.pin();
         let mut other_page = page.clone();
+        other_page.pin();
 
         assert_eq!(page.is_pinned(), true);
         assert_eq!(page.get_pin_count(), 2);
@@ -520,6 +475,7 @@ mod tests {
     #[test]
     fn should_not_fail_to_unpin_last_pinned_page() {
         let mut page = Page::new(1);
+        page.pin();
 
         assert_eq!(page.is_pinned(), true);
         assert_eq!(page.get_pin_count(), 1);
@@ -549,15 +505,20 @@ mod tests {
     // ##################
 
     #[test]
-    fn clone_on_pinned_should_increase_pin_count() {
+    fn clone_on_pinned_should_keep_pin_count() {
         let mut page = Page::new(1);
+        assert_eq!(page.is_pinned(), false);
+        assert_eq!(page.get_pin_count(), 0);
+
+        page.pin();
         assert_eq!(page.is_pinned(), true);
         assert_eq!(page.get_pin_count(), 1);
 
+
         let mut other_page = page.clone();
 
-        assert_eq!(page.get_pin_count(), 2);
-        assert_eq!(other_page.get_pin_count(), 2);
+        assert_eq!(page.get_pin_count(), 1);
+        assert_eq!(other_page.get_pin_count(), 1);
     }
 
     #[test]
@@ -565,6 +526,10 @@ mod tests {
         let mut page: Page;
         {
             let mut new_page = Page::new(1);
+
+            assert_eq!(new_page.is_pinned(), false);
+            assert_eq!(new_page.get_pin_count(), 0);
+
             new_page.unpin();
             page = new_page.clone();
         }
@@ -575,6 +540,9 @@ mod tests {
     #[test]
     fn clone_on_pinned_should_keep_pinned() {
         let mut page = Page::new(1);
+        assert_eq!(page.is_pinned(), false);
+
+        page.pin();
         assert_eq!(page.is_pinned(), true);
 
         let mut other_page = page.clone();
@@ -591,6 +559,7 @@ mod tests {
         page.with_write(|u| u.set_is_dirty(true));
         assert_eq!(page.with_read(|u| u.is_dirty()), true);
 
+        page.pin();
         assert_eq!(page.is_pinned(), true);
 
         let other_page = page.clone();
@@ -600,7 +569,7 @@ mod tests {
     }
 
     #[test]
-    fn clone_on_pinned_should_keep_lock_state() {
+    fn clone_should_keep_lock_state() {
         // Running in separate thread to avoid pausing the current thread in case of a deadlock
         run_test_in_separate_thread(
             || {
@@ -625,6 +594,7 @@ mod tests {
         run_test_in_separate_thread(
             || {
                 let mut page = Page::new(1);
+                page.pin();
 
                 assert_eq!(page.inner.is_locked(), false);
                 let guard = page.inner.read();
@@ -645,6 +615,7 @@ mod tests {
         run_test_in_separate_thread(
             || {
                 let mut page = Page::new(1);
+                page.pin();
 
                 assert_eq!(page.inner.is_locked(), false);
                 let guard = page.inner.write();
@@ -660,12 +631,10 @@ mod tests {
     }
 
     #[test]
-    fn clone_on_pinned_should_sync_dirty_status_changes() {
+    fn clone_should_sync_dirty_status_changes() {
         let mut page = Page::new(1);
 
         assert_eq!(page.with_read(|u| u.is_dirty()), false);
-
-        assert_eq!(page.is_pinned(), true);
 
         let other_page = page.clone();
 
@@ -678,7 +647,7 @@ mod tests {
     }
 
     #[test]
-    fn clone_on_pinned_should_sync_lock_changes() {
+    fn clone_should_sync_lock_changes() {
         let mut page = Page::new(1);
         let other_page = page.clone();
 
@@ -708,68 +677,18 @@ mod tests {
     }
 
     #[test]
-    fn clone_on_unpinned_page_should_increase_pin_count() {
+    fn clone_on_unpinned_page_should_keep_pin_count() {
         let mut page = Page::new(1);
-        page.unpin();
 
         assert_eq!(page.is_pinned(), false);
         assert_eq!(page.get_pin_count(), 0);
 
         let cloned_pinned = page.clone();
 
-        assert_eq!(page.get_pin_count(), 1);
-        assert_eq!(cloned_pinned.get_pin_count(), 1);
-    }
-
-    #[test]
-    fn clone_on_unpinned_page_should_now_be_pinned() {
-        let mut page = Page::new(1);
-        page.unpin();
-
         assert_eq!(page.is_pinned(), false);
-
-        let other_unpinned = page.clone();
-
-        assert_eq!(page.is_pinned(), true);
-        assert_eq!(other_unpinned.is_pinned(), true);
-    }
-
-    #[test]
-    fn clone_on_unpinned_page_should_keep_dirty_status() {
-        let mut page = Page::new(1);
-
-        page.unpin();
-        assert_eq!(page.is_pinned(), false);
-
-        assert_eq!(page.with_read(|u| u.is_dirty()), false);
-        page.with_write(|u| u.set_is_dirty(true));
-        assert_eq!(page.with_read(|u| u.is_dirty()), true);
-
-        let other_unpinned = page.clone();
-
-        assert_eq!(page.with_read(|u| u.is_dirty()), true);
-        assert_eq!(other_unpinned.with_read(|u| u.is_dirty()), true);
-    }
-
-    #[test]
-    fn clone_on_unpinned_should_keep_lock_state() {
-        // Running in separate thread to avoid pausing the current thread in case of a deadlock
-        run_test_in_separate_thread(
-            || {
-                let mut page = Page::new(1);
-                page.unpin();
-
-                assert_eq!(page.inner.is_locked(), false);
-                let guard = page.inner.read();
-                assert_eq!(page.inner.is_locked(), true);
-
-                let other_page = page.clone();
-
-                assert_eq!(other_page.inner.is_locked(), true)
-            },
-            // 200ms for the test is more than enough for the lock to finish
-            200,
-        )
+        assert_eq!(page.get_pin_count(), 0);
+        assert_eq!(cloned_pinned.is_pinned(), false);
+        assert_eq!(cloned_pinned.get_pin_count(), 0);
     }
 
     #[test]
@@ -812,56 +731,6 @@ mod tests {
             // 200ms for the test is more than enough for the lock to finish
             200,
         )
-    }
-
-    #[test]
-    fn clone_on_unpinned_page_should_sync_dirty_status_changes() {
-        let mut page = Page::new(1);
-        page.unpin();
-        assert_eq!(page.is_pinned(), false);
-
-        assert_eq!(page.with_read(|u| u.is_dirty()), false);
-
-        let other_page = page.clone();
-
-        assert_eq!(page.with_read(|u| u.is_dirty()), false);
-        assert_eq!(other_page.with_read(|u| u.is_dirty()), false);
-
-        page.with_write(|u| u.set_is_dirty(true));
-        assert_eq!(page.with_read(|u| u.is_dirty()), true);
-        assert_eq!(other_page.with_read(|u| u.is_dirty()), true);
-    }
-
-    #[test]
-    fn clone_on_unpinned_page_should_sync_lock_changes() {
-        let mut page = Page::new(1);
-        page.unpin();
-
-        let other_page = page.clone();
-
-        assert_eq!(page.inner.is_locked(), false);
-        assert_eq!(other_page.inner.is_locked(), false);
-
-        {
-            let guard = page.inner.read();
-
-            assert_eq!(page.inner.is_locked(), true);
-            assert_eq!(other_page.inner.is_locked(), true);
-        }
-
-        assert_eq!(page.inner.is_locked(), false);
-        assert_eq!(other_page.inner.is_locked(), false);
-
-        {
-            let guard = other_page.inner.read();
-
-            assert_eq!(page.inner.is_locked(), true);
-            assert_eq!(other_page.inner.is_locked(), true);
-        }
-
-
-        assert_eq!(page.inner.is_locked(), false);
-        assert_eq!(other_page.inner.is_locked(), false);
     }
 
     // ##################
