@@ -76,8 +76,6 @@ impl DiskSchedulerWorker {
             loop {
                 let job = receiver.get();
 
-                let mut manager = disk_manager.lock();
-
                 let req: DiskRequestType;
 
                 match job {
@@ -91,11 +89,11 @@ impl DiskSchedulerWorker {
 
                 match req {
                     DiskRequestType::Read(req) => unsafe {
-                        manager.read_page(req.page_id, req.data.clone().get_mut().as_mut_slice());
+                        disk_manager.lock().read_page(req.page_id, req.data.clone().get_mut().as_mut_slice());
                         req.callback.set_value(true);
                     }
                     DiskRequestType::Write(req) => unsafe {
-                        manager.write_page(req.page_id, req.data.get().as_slice());
+                        disk_manager.lock().write_page(req.page_id, req.data.get().as_slice());
                         req.callback.set_value(true);
                     }
                 }

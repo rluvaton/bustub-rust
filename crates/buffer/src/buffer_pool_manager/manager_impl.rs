@@ -2,7 +2,7 @@ use crate::buffer_pool_manager::manager::{BufferPoolManager, InnerBufferPoolMana
 use crate::buffer_pool_manager::BufferPoolManagerStats;
 use crate::lru_k_replacer::{AccessType, LRUKReplacer};
 use common::config::{AtomicPageId, FrameId, PageId, INVALID_PAGE_ID, LRUK_REPLACER_K};
-use common::{Promise, UnsafeSingleReferenceReadData, UnsafeSingleReferenceWriteData};
+use common::{Promise, UnsafeSingleRefData, UnsafeSingleRefMutData};
 use log::warn;
 use parking_lot::Mutex;
 use recovery::LogManager;
@@ -394,7 +394,7 @@ impl BufferPoolManager {
 
         // SAFETY: because this function hold the lock on the page we are certain that the page data reference won't
         //         drop as we wait here
-        let data = unsafe { UnsafeSingleReferenceWriteData::new(page.get_data_mut()) };
+        let data = unsafe { UnsafeSingleRefMutData::new(page.get_data_mut()) };
 
         let promise = Promise::new();
         let future = promise.get_future();
@@ -599,7 +599,7 @@ impl BufferPoolManager {
 
         // SAFETY: because this function hold the lock on the page we are certain that the page data reference won't
         //         drop as we wait here
-        let data = unsafe { UnsafeSingleReferenceReadData::new(page.get_data()) };
+        let data = unsafe { UnsafeSingleRefData::new(page.get_data()) };
         let promise = Promise::new();
         let future = promise.get_future();
         let req = WriteDiskRequest::new(page.get_page_id(), data, promise);

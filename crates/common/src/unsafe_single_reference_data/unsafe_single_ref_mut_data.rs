@@ -8,16 +8,16 @@ use super::AsPtr;
 /// The user must make sure:
 /// 1. The data will not be `drop`ped or else there will be dangling pointers!
 /// 2. The data will not be mutated by other reference or this will lead to undefined behavior!
-pub struct UnsafeSingleReferenceWriteData<Ref: AsPtr> {
+pub struct UnsafeSingleRefMutData<Ref: AsPtr> {
     r: Arc<*mut Ref::Data>,
 }
 
-unsafe impl<Ref: AsPtr> Send for UnsafeSingleReferenceWriteData<Ref> {}
-unsafe impl<Ref: AsPtr> Sync for UnsafeSingleReferenceWriteData<Ref> {}
+unsafe impl<Ref: AsPtr> Send for UnsafeSingleRefMutData<Ref> {}
+unsafe impl<Ref: AsPtr> Sync for UnsafeSingleRefMutData<Ref> {}
 
-impl<Ref: AsPtr> UnsafeSingleReferenceWriteData<Ref> {
-    pub unsafe fn new(r: &mut Ref) -> UnsafeSingleReferenceWriteData<Ref> {
-        UnsafeSingleReferenceWriteData {
+impl<Ref: AsPtr> UnsafeSingleRefMutData<Ref> {
+    pub unsafe fn new(r: &mut Ref) -> UnsafeSingleRefMutData<Ref> {
+        UnsafeSingleRefMutData {
             r: Arc::new(r.get_mut_ptr())
         }
     }
@@ -28,9 +28,9 @@ impl<Ref: AsPtr> UnsafeSingleReferenceWriteData<Ref> {
 }
 
 
-impl<Ref: AsPtr> Clone for UnsafeSingleReferenceWriteData<Ref> {
+impl<Ref: AsPtr> Clone for UnsafeSingleRefMutData<Ref> {
     fn clone(&self) -> Self {
-        UnsafeSingleReferenceWriteData {
+        UnsafeSingleRefMutData {
             r: self.r.clone()
         }
     }

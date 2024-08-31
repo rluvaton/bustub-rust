@@ -543,7 +543,7 @@ mod tests {
         page.pin();
         assert_eq!(page.is_pinned(), true);
 
-        let mut other_page = page.clone();
+        let other_page = page.clone();
 
         assert_eq!(page.is_pinned(), true);
         assert_eq!(other_page.is_pinned(), true);

@@ -1,5 +1,5 @@
 use common::config::{PageData, PageId};
-use common::{Promise, UnsafeSingleReferenceReadData, UnsafeSingleReferenceWriteData};
+use common::{Promise, UnsafeSingleRefData, UnsafeSingleRefMutData};
 
 /**
  * @brief Represents a Read request for the DiskManager to execute.
@@ -8,7 +8,7 @@ pub struct ReadDiskRequest {
     /**
      *  Pointer to the start of the memory location where a page is being read into from disk (on a read).
      */
-    pub data: UnsafeSingleReferenceWriteData<PageData>,
+    pub data: UnsafeSingleRefMutData<PageData>,
 
     /** ID of the page being read from disk. */
     pub page_id: PageId,
@@ -18,7 +18,7 @@ pub struct ReadDiskRequest {
 }
 
 impl ReadDiskRequest {
-    pub fn new(page_id: PageId, data: UnsafeSingleReferenceWriteData<PageData>, callback: Promise<bool>) -> Self {
+    pub fn new(page_id: PageId, data: UnsafeSingleRefMutData<PageData>, callback: Promise<bool>) -> Self {
         ReadDiskRequest {
             page_id,
             data,
@@ -36,7 +36,7 @@ pub struct WriteDiskRequest {
 
     Having box will reduce performance as it will need to create in the heap
      */
-    pub data: UnsafeSingleReferenceReadData<PageData>,
+    pub data: UnsafeSingleRefData<PageData>,
 
     /** ID of the page being written to disk. */
     pub page_id: PageId,
@@ -47,7 +47,7 @@ pub struct WriteDiskRequest {
 
 
 impl WriteDiskRequest {
-    pub fn new(page_id: PageId, data: UnsafeSingleReferenceReadData<PageData>, callback: Promise<bool>) -> Self {
+    pub fn new(page_id: PageId, data: UnsafeSingleRefData<PageData>, callback: Promise<bool>) -> Self {
         WriteDiskRequest {
             page_id,
             data,
