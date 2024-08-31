@@ -1,0 +1,14 @@
+[package]
+name = "concurrency_shared"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+parking_lot = "0.12.3"
+# TODO - only in tests
+shuttle = "0.7.1"
+loom = "0.7.2"
+
+
+[features]
+test_concurrency = []

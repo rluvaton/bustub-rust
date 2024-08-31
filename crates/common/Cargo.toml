@@ -4,4 +4,8 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+concurrency_shared = { path = "../concurrency_shared" }
 parking_lot = "0.12.3"
+
+[features]
+test_concurrency = ["concurrency_shared/test_concurrency"]

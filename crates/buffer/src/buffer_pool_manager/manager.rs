@@ -1,6 +1,8 @@
 use crate::lru_k_replacer::LRUKReplacer;
 use common::config::{AtomicPageId, FrameId, PageId};
-use parking_lot::Mutex;
+
+use concurrency_shared::locks::Mutex;
+
 use recovery::LogManager;
 use std::cell::UnsafeCell;
 use std::collections::{HashMap, LinkedList};
@@ -58,6 +60,8 @@ pub(crate) struct InnerBufferPoolManager {
     /// std::unordered_map<page_id_t, frame_id_t> page_table_;
     /// ```
     pub(crate) page_table: HashMap<PageId, FrameId>,
+
+    // pub(crate) pending_pages: HashMap<PageId, Promise<()>>,
 
     /** Replacer to find unpinned pages for replacement. */
     // std::unique_ptr<LRUKReplacer> replacer_;

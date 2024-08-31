@@ -1,4 +1,6 @@
-#[cfg(test)]
+
+
+#[cfg(all(test, not(feature = "test_concurrency")))]
 mod tests {
     use crate::buffer_pool_manager::manager::BufferPoolManager;
     use crate::lru_k_replacer::AccessType;

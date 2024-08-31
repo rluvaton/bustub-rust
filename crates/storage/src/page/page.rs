@@ -2,9 +2,9 @@ use crate::page::underlying_page::UnderlyingPage;
 use common::config::{PageData, PageId, BUSTUB_PAGE_SIZE, INVALID_PAGE_ID};
 use common::ReaderWriterLatch;
 use std::ops::{Deref, DerefMut};
-use std::sync::Arc;
 use log::warn;
 use tracy_client::span;
+use concurrency_shared::sync::Arc;
 // static_assert(sizeof(page_id_t) == 4);
 // static_assert(sizeof(lsn_t) == 4);
 

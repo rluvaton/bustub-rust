@@ -1,8 +1,7 @@
 use std::cell::UnsafeCell;
+use std::sync::Arc;
 use common::config::PageId;
 use common::Promise;
-use parking_lot::Mutex;
-use std::sync::Arc;
 
 /**
  * @brief Represents a Read request for the DiskManager to execute.

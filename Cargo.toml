@@ -2,10 +2,10 @@
 members = [
 
     "tools/bpm_bench",
-
     "crates/buffer",
     "crates/common",
     "crates/primer",
     "crates/recovery",
-    "crates/storage"
-, "crates/stats"]
+    "crates/storage",
+    "crates/stats",
+    "crates/concurrency_shared"]

@@ -1,12 +1,14 @@
 use std::cell::UnsafeCell;
+use std::thread::sleep;
 use crate::disk::disk_manager::disk_manager_trait::DiskManager;
 use common::config::{PageId, BUSTUB_PAGE_SIZE};
-use std::sync::{Arc};
-use parking_lot::{Mutex, MutexGuard};
-use std::thread;
-use std::thread::{sleep, ThreadId};
 use std::time::Duration;
 use common::Future;
+
+use concurrency_shared::locks::{Mutex, MutexGuard};
+use concurrency_shared::sync::Arc;
+use concurrency_shared::thread;
+use concurrency_shared::thread::{ThreadId};
 
 type Page = [u8; BUSTUB_PAGE_SIZE];
 type ProtectedPage = Arc<Mutex<Option<Page>>>;

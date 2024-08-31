@@ -1,9 +1,10 @@
+use concurrency_shared::sync::{Arc};
+use concurrency_shared::locks::Mutex;
+
 use crate::lru_k_replacer::access_type::AccessType;
 use crate::lru_k_replacer::LRUKReplacerImpl;
 use common::config::FrameId;
-use parking_lot::Mutex;
 use std::ops::DerefMut;
-use std::sync::Arc;
 
 // Cloning does not actually clone the underlying data but just increment the ref count
 #[derive(Debug, Clone)]

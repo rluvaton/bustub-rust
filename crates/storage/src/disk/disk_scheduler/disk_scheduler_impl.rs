@@ -1,12 +1,10 @@
+use std::sync::Arc;
+use concurrency_shared::{locks::Mutex, thread};
 use crate::disk::disk_manager::DiskManager;
 use crate::disk::disk_scheduler::disk_request::DiskRequestType;
 use crate::disk::disk_scheduler::disk_scheduler::{DiskScheduler, DiskSchedulerWorker, DiskSchedulerWorkerMessage};
 use common::config::BUSTUB_PAGE_SIZE;
 use common::{Channel, Promise};
-use parking_lot::Mutex;
-use std::sync::mpsc::Receiver;
-use std::sync::{mpsc, Arc};
-use std::thread;
 
 type DiskSchedulerPromise = Promise<bool>;
 
@@ -36,7 +34,7 @@ impl DiskScheduler {
      *
      * @param r The request to be scheduled.
      */
-    pub fn schedule(&mut self, r: DiskRequestType) {
+    pub fn schedule(&self, r: DiskRequestType) {
         // Schedules a request for the `DiskManager` to execute.
         // The `DiskRequest` struct specifies whether the request is for a read/write, where the data should be written into/from, and the page ID for the operation.
         // The `DiskRequest` also includes a `std::promise` whose value should be set to true once the request is processed.
@@ -81,6 +79,7 @@ impl DiskSchedulerWorker {
         let thread = thread::spawn(move || {
             loop {
                 let job = receiver.get();
+
 
                 let mut manager = disk_manager.lock();
 

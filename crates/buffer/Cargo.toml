@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 common = {path = "../common"}
+concurrency_shared = { path = "../concurrency_shared" }
 storage = {path = "../storage"}
 recovery = {path = "../recovery"}
 stats = {path = "../stats"}
@@ -26,3 +27,9 @@ tracy-client = { version = "0.17.3", default-features = false, features = [
 [dev-dependencies]
 tempdir = "0.3.7"
 zipf = "7"
+shuttle = "0.7.1"
+loom = "0.7.2"
+
+
+[features]
+test_concurrency = ["storage/test_concurrency", "common/test_concurrency", "concurrency_shared/test_concurrency"]

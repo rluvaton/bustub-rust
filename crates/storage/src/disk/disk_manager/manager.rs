@@ -4,14 +4,15 @@ use crate::disk::disk_manager::disk_manager_trait::DiskManager;
 use crate::disk::disk_manager::utils::get_file_size;
 use common::config::{PageId, BUSTUB_PAGE_SIZE};
 use common::Future;
-use parking_lot::Mutex;
 use std::fs::{File, OpenOptions};
 use std::io::{Read, Seek, SeekFrom, Write};
 use std::path::PathBuf;
 use std::time::Duration;
 
+use concurrency_shared::locks::{Mutex, StdMutex};
+
 // TODO - Why shared?
-static BUFFER_USED: Mutex<Option<Vec<u8>>> = Mutex::new(None);
+static BUFFER_USED: parking_lot::Mutex<Option<Vec<u8>>> = parking_lot::Mutex::new(None);
 
 /**
  * DiskManager takes care of the allocation and deallocation of pages within a database. It performs the reading and

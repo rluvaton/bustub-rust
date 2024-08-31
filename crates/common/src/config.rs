@@ -1,4 +1,4 @@
-use std::sync::atomic::AtomicI32;
+use concurrency_shared::sync::atomic::AtomicI32;
 
 /** Cycle detection is performed every CYCLE_DETECTION_INTERVAL milliseconds. */
 // extern std::chrono::milliseconds cycle_detection_interval;
