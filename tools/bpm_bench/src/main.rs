@@ -1,21 +1,20 @@
-use std::collections::HashMap;
-use std::fmt::format;
-use std::process::abort;
-use std::sync::Arc;
-use std::sync::atomic::{AtomicUsize, Ordering};
-use std::thread;
-use std::thread::JoinHandle;
-use clap::Parser;
-use parking_lot::{Mutex, RwLock};
-use rand::distributions::Distribution;
-use tempdir::TempDir;
-use buffer::{AccessType, BufferPoolManager};
-use common::config::PageId;
-use storage::{DefaultDiskManager, DiskManagerUnlimitedMemory};
-use metrics::bpm_total_metrics::BpmTotalMetrics;
 use crate::cli::Args;
 use crate::metrics::bpm_metrics::BpmMetrics;
 use crate::page_process::{check_page_consistent, check_page_consistent_no_seed, modify_page};
+use buffer::{AccessType, BufferPoolManager};
+use clap::Parser;
+use common::config::PageId;
+use metrics::bpm_total_metrics::BpmTotalMetrics;
+use parking_lot::{Mutex, RwLock};
+use rand::distributions::Distribution;
+use std::collections::HashMap;
+use std::process::abort;
+use std::sync::Arc;
+use std::thread;
+use std::thread::JoinHandle;
+#[allow(unused)]
+use storage::{DefaultDiskManager, DiskManagerUnlimitedMemory};
+use tempdir::TempDir;
 use tracy_client::*;
 
 // Tracking Memory usage
@@ -118,6 +117,8 @@ fn main() {
 
 
     let tmpdir = setup();
+
+    #[allow(unused)]
     let db_name = tmpdir.path().join("test.db");
 
     // let disk_manager = DefaultDiskManager::new(db_name).expect("should create disk manager");
@@ -165,7 +166,7 @@ fn main() {
             let mut page_idx = page_idx_start;
 
             while !metrics.should_finish() {
-                let scan_iteration = span!("scan thread");
+                let _scan_iteration = span!("scan thread");
 
                 let fetch_page = span!("scan thread - fetch page");
                 let page = bpm.fetch_page(page_ids.read()[page_idx as usize], AccessType::Scan);
@@ -190,7 +191,7 @@ fn main() {
                             records.insert(page_idx, 0);
                         }
 
-                        let mut seed = records.get_mut(&page_idx).expect("Must exists");
+                        let seed = records.get_mut(&page_idx).expect("Must exists");
 
                         check_page_consistent(u.get_data(), page_idx as usize, *seed);
                         *seed = *seed + 1;
@@ -230,7 +231,7 @@ fn main() {
             metrics.begin();
 
             while !metrics.should_finish() {
-                let span = span!("get thread");
+                let _span = span!("get thread");
 
                 let page_idx = dist.sample(&mut rng);
 
@@ -253,7 +254,7 @@ fn main() {
 
                     let get_read_lock_page = span!("get thread - Acquiring read lock");
 
-                    page.with_read(|u| unsafe {
+                    page.with_read(|u| {
                         drop(get_read_lock_page);
 
                         page_id = u.get_page_id();
@@ -294,7 +295,6 @@ fn init_pages(bustub_page_cnt: usize, bpm: &Arc<BufferPoolManager>, page_ids: &A
     let current_page_index = Arc::new(Mutex::new(0usize));
 
     let mut join_handles: Vec<JoinHandle<()>> = vec![];
-    type ModifyRecord = HashMap<PageId, u64>;
 
     for _ in 0..1000 {
         let bpm = Arc::clone(&bpm);
@@ -337,6 +337,7 @@ fn init_pages(bustub_page_cnt: usize, bpm: &Arc<BufferPoolManager>, page_ids: &A
 }
 
 
+#[allow(unused)]
 fn validate_initialized_pages(bustub_page_cnt: usize, bpm: &Arc<BufferPoolManager>, page_ids: &Arc<RwLock<Vec<PageId>>>) {
     println!("Validate pages");
 

@@ -32,8 +32,11 @@ pub struct UnderlyingPage {
 }
 
 impl UnderlyingPage {
+    #[allow(unused)]
     const SIZE_PAGE_HEADER: usize = 8;
+    #[allow(unused)]
     const OFFSET_PAGE_START: usize = 0;
+    #[allow(unused)]
     const OFFSET_LSN: usize = 4;
 
     pub fn new(page_id: PageId, data: PageData) -> Self {

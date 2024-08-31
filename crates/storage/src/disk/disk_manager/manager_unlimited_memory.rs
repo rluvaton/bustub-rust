@@ -119,8 +119,9 @@ impl DiskManagerUnlimitedMemory {
         self.latency_simulator_enabled = enabled;
     }
 
+    #[allow(unused)]
     fn get_last_read_thread_and_clear(&mut self) -> Option<ThreadId> {
-        let mut lock = self.data.data.get();
+        let lock = self.data.data.get();
         let t = unsafe { (*lock).thread_id };
 
         unsafe { (*lock).thread_id = None; }
@@ -145,7 +146,7 @@ impl DiskManager for DiskManagerUnlimitedMemory {
             let mut page_lock: MutexGuard<Option<Page>>;
 
             {
-                let mut data = self.data.data.get();
+                let data = self.data.data.get();
 
                 if (*data).thread_id.is_none() {
                     (*data).thread_id = Some(thread::current().id());
@@ -194,7 +195,7 @@ impl DiskManager for DiskManagerUnlimitedMemory {
         let page_lock: MutexGuard<Option<Page>>;
 
         unsafe {
-            let mut data = self.data.data.get();
+            let data = self.data.data.get();
 
             if (*data).thread_id.is_none() {
                 (*data).thread_id = Some(thread::current().id());

@@ -2,6 +2,7 @@ use std::process::abort;
 use common::config::PageData;
 
 // This is the structure of the page
+#[allow(unused)]
 struct BustubBenchPageHeader {
     seed: u64,
     page_id: u64,

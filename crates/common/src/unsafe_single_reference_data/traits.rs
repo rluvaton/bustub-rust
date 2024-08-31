@@ -1,5 +1,3 @@
-use crate::unsafe_single_reference_data::traits;
-
 pub trait AsPtr {
     type Data: ?Sized;
 
@@ -75,7 +73,7 @@ mod tests {
 
     #[test]
     fn should_get_same_data_from_ref() {
-        let mut arr = [1, 2, 3];
+        let arr = [1, 2, 3];
 
         let ptr = unsafe { arr.get_ptr() };
 

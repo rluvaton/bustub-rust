@@ -1,6 +1,5 @@
 use std::sync::Arc;
 use crate::disk::disk_scheduler::disk_request::DiskRequestType;
-use std::sync::mpsc::Sender;
 use std::thread::JoinHandle;
 use common::Channel;
 

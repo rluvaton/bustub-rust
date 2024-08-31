@@ -13,12 +13,6 @@ pub(crate) type HistoryRecord = (
     i64
 );
 
-type LRUKNodeCompareItem<'a> = (
-    &'a LRUKNode,
-
-    // Interval
-    i64
-);
 
 const INF_INTERVAL: i64 = i64::MAX;
 
@@ -92,37 +86,19 @@ impl LRUKNode {
         self.history.push_back(new_val);
     }
 
-    pub(crate) fn calculate_intervals(&self, now: i64) -> i64 {
-        if self.history.len() < self.k {
-            // If less than the number of records just make it the largest so it would be first to evict
-            return INF_INTERVAL;
-        }
-
-        let to_now_duration = now - self.history.back().expect("should have at least 1").1;
-
-        self.interval + to_now_duration
-    }
-
     #[inline]
     pub(crate) fn get_interval(&self) -> i64 {
         if self.history.len() < self.k {
-            return (
-                // If less than the number of records just make it the largest so it would be first to evict
-                INF_INTERVAL -
+            return INF_INTERVAL -
 
-                    // Fallback to LRU
-                    // Not using timestamp as counter will not depend on the machine clock precision
+                // Fallback to LRU
+                // Not using timestamp as counter will not depend on the machine clock precision
 
-                    // Subtracting the current message id to make sure most recent (largest message id) will have smaller value than the least recent node (smallest message id)
-                    self.get_current_message_id() as i64
-            );
+                // Subtracting the current message id to make sure most recent (largest message id) will have smaller value than the least recent node (smallest message id)
+                self.get_current_message_id() as i64;
         }
 
         self.interval
-    }
-
-    pub(crate) fn get_current_timestamp(&self) -> i64 {
-        self.history.back().expect("History can never be empty").1
     }
 
     pub(crate) fn get_current_message_id(&self) -> u64 {
@@ -142,68 +118,6 @@ impl LRUKNode {
     pub(crate) fn get_current_time() -> i64 {
         Utc::now().timestamp_micros()
     }
-
-    /// Return which node is first_to_evict
-    ///
-    /// # Algorithm
-    /// if both a and b does not have enough history records, go by LRU, least recently used would be first
-    /// if only one of them does not have enough history record make it first
-    /// if both have enough, make the one that has the largest gap between access times the first
-    ///
-    /// # Arguments
-    ///
-    /// * `a`: item 1
-    /// * `b`: item 2
-    ///
-    /// returns: Ordering
-    ///
-    /// # Examples
-    ///
-    /// ```
-    ///
-    /// ```
-    pub(crate) fn next_to_evict_compare(a: &LRUKNodeCompareItem, b: &LRUKNodeCompareItem) -> Ordering {
-        let k = a.0.k;
-
-        let does_a_not_having_enough_history = a.0.history.len() < k;
-        let does_b_not_having_enough_history = b.0.history.len() < k;
-
-        // If both not having enough history access
-        if does_a_not_having_enough_history && does_b_not_having_enough_history {
-            // Fallback to LRU
-            // Not using timestamp as counter will not depend on the machine clock precision
-            return a.0.get_current_message_id().cmp(&b.0.get_current_message_id());
-        }
-
-        // If 'A' or 'B' not having enough history, making them first
-        if does_a_not_having_enough_history || does_b_not_having_enough_history {
-            return does_b_not_having_enough_history.cmp(&does_a_not_having_enough_history);
-        }
-
-        // We want larger value to be at the beginning - reversed
-        // larger value at the beginning as this mean that the difference between access time is the largest
-        b.1.cmp(&a.1)
-    }
-
-    /// Return which node is first_to_evict
-    ///
-    /// # Algorithm
-    /// if both a and b does not have enough history records, go by LRU, least recently used would be first
-    /// if only one of them does not have enough history record make it first
-    /// if both have enough, make the one that has the largest gap between access times the first
-    ///
-    /// # Arguments
-    ///
-    /// * `a`: item 1
-    /// * `b`: item 2
-    ///
-    /// returns: Ordering
-    ///
-    /// # Examples
-    ///
-    /// ```
-    ///
-    /// ```
     pub(crate) fn cmp(&self, other: &Self) -> Ordering {
         self.get_interval().cmp(&other.get_interval())
     }

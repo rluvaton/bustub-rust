@@ -58,6 +58,7 @@ impl LRUKReplacer {
     /// * `access_type`: type of access that was received.
     ///                  This parameter is only needed for leaderboard tests.
     ///
+    #[allow(unused)]
     pub fn record_access(&mut self, frame_id: FrameId, access_type: AccessType) {
         self.replacer.lock().record_access(frame_id, access_type)
     }
@@ -78,14 +79,6 @@ impl LRUKReplacer {
     ///
     pub fn set_evictable(&mut self, frame_id: FrameId, set_evictable: bool) {
         self.replacer.lock().set_evictable(frame_id, set_evictable)
-    }
-
-    pub fn is_evictable(&self, frame_id: FrameId) -> Option<bool> {
-        self.replacer.lock().is_evictable(frame_id)
-    }
-
-    pub unsafe fn is_evictable_unchecked(&self, frame_id: FrameId) -> bool {
-        self.replacer.lock().is_evictable_unchecked(frame_id)
     }
 
     /// Remove an evictable frame from replacer, along with its access history.

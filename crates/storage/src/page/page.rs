@@ -448,7 +448,7 @@ mod tests {
     #[ignore]
     #[test]
     fn should_keep_pin_count_on_unpin_unpinned_page() {
-        let mut page = Page::new(1);
+        let page = Page::new(1);
         let mut other_page = page.clone();
 
         assert_eq!(page.is_pinned(), true);
@@ -515,7 +515,7 @@ mod tests {
         assert_eq!(page.get_pin_count(), 1);
 
 
-        let mut other_page = page.clone();
+        let other_page = page.clone();
 
         assert_eq!(page.get_pin_count(), 1);
         assert_eq!(other_page.get_pin_count(), 1);
@@ -523,7 +523,7 @@ mod tests {
 
     #[test]
     fn unpin_with_clone_should_not_crash() {
-        let mut page: Page;
+        let page: Page;
         {
             let mut new_page = Page::new(1);
 
@@ -573,10 +573,10 @@ mod tests {
         // Running in separate thread to avoid pausing the current thread in case of a deadlock
         run_test_in_separate_thread(
             || {
-                let mut page = Page::new(1);
+                let page = Page::new(1);
 
                 assert_eq!(page.inner.is_locked(), false);
-                let guard = page.inner.read();
+                let _guard = page.inner.read();
                 assert_eq!(page.inner.is_locked(), true);
 
                 let other_page = page.clone();
@@ -597,7 +597,7 @@ mod tests {
                 page.pin();
 
                 assert_eq!(page.inner.is_locked(), false);
-                let guard = page.inner.read();
+                let _guard = page.inner.read();
                 assert_eq!(page.inner.is_locked(), true);
 
                 let other_page = page.clone();
@@ -618,7 +618,7 @@ mod tests {
                 page.pin();
 
                 assert_eq!(page.inner.is_locked(), false);
-                let guard = page.inner.write();
+                let _guard = page.inner.write();
                 assert_eq!(page.inner.is_locked(), true);
 
                 let other_page = page.clone();
@@ -632,7 +632,7 @@ mod tests {
 
     #[test]
     fn clone_should_sync_dirty_status_changes() {
-        let mut page = Page::new(1);
+        let page = Page::new(1);
 
         assert_eq!(page.with_read(|u| u.is_dirty()), false);
 
@@ -648,14 +648,14 @@ mod tests {
 
     #[test]
     fn clone_should_sync_lock_changes() {
-        let mut page = Page::new(1);
+        let page = Page::new(1);
         let other_page = page.clone();
 
         assert_eq!(page.inner.is_locked(), false);
         assert_eq!(other_page.inner.is_locked(), false);
 
         {
-            let guard = page.inner.read();
+            let _guard = page.inner.read();
 
             assert_eq!(page.inner.is_locked(), true);
             assert_eq!(other_page.inner.is_locked(), true);
@@ -665,7 +665,7 @@ mod tests {
         assert_eq!(other_page.inner.is_locked(), false);
 
         {
-            let guard = other_page.inner.read();
+            let _guard = other_page.inner.read();
 
             assert_eq!(page.inner.is_locked(), true);
             assert_eq!(other_page.inner.is_locked(), true);
@@ -678,7 +678,7 @@ mod tests {
 
     #[test]
     fn clone_on_unpinned_page_should_keep_pin_count() {
-        let mut page = Page::new(1);
+        let page = Page::new(1);
 
         assert_eq!(page.is_pinned(), false);
         assert_eq!(page.get_pin_count(), 0);
@@ -700,7 +700,7 @@ mod tests {
                 page.unpin();
 
                 assert_eq!(page.inner.is_locked(), false);
-                let guard = page.inner.read();
+                let _guard = page.inner.read();
                 assert_eq!(page.inner.is_locked(), true);
 
                 let other_page = page.clone();
@@ -721,7 +721,7 @@ mod tests {
                 page.unpin();
 
                 assert_eq!(page.inner.is_locked(), false);
-                let guard = page.inner.write();
+                let _guard = page.inner.write();
                 assert_eq!(page.inner.is_locked(), true);
 
                 let other_page = page.clone();
@@ -827,7 +827,7 @@ mod tests {
         let page = Page::new(1);
 
 
-        let res = page.with_write(|u| {
+        let res = page.with_write(|_| {
             5
         });
 

@@ -10,10 +10,6 @@ mod tests {
         TempDir::new("disk_manager_tests").expect("Should create tmp directory")
     }
 
-    fn teardown(path: &Path) {
-        fs::remove_dir_all(path).expect("Should delete folder")
-    }
-
     #[test]
     fn read_write_page() {
         let mut buf = [0u8; BUSTUB_PAGE_SIZE];

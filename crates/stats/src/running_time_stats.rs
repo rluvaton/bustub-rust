@@ -124,7 +124,7 @@ mod tests {
         let r = RunningTimeStats::new("test");
 
         {
-            let s = r.create_single();
+            let _s = r.create_single();
             thread::sleep(Duration::from_millis(1));
         }
 
@@ -140,7 +140,7 @@ mod tests {
         let r = RunningTimeStats::new("test");
 
         {
-            let s = r.create_single();
+            let _s = r.create_single();
             thread::sleep(Duration::from_millis(10));
         }
 
@@ -155,19 +155,19 @@ mod tests {
         let r = RunningTimeStats::new("test");
 
         {
-            let s = r.create_single();
+            let _s = r.create_single();
 
             // 1.5ms
             thread::sleep(Duration::from_micros(1500));
         }
         {
-            let s = r.create_single();
+            let _s = r.create_single();
 
             // 1ms
             thread::sleep(Duration::from_micros(1000));
         }
         {
-            let s = r.create_single();
+            let _s = r.create_single();
 
             // 0.5ms
             thread::sleep(Duration::from_micros(500));
@@ -185,22 +185,19 @@ mod tests {
         let r = RunningTimeStats::new("test");
 
         {
-            let s = r.create_single();
+            let _s = r.create_single();
 
             block_sleep_microseconds(150);
-            // thread::sleep(Duration::from_micros(150));
         }
         {
-            let s = r.create_single();
+            let _s = r.create_single();
 
             block_sleep_microseconds(100);
-            // thread::sleep(Duration::from_micros(100));
         }
         {
-            let s = r.create_single();
+            let _s = r.create_single();
 
             block_sleep_microseconds(50);
-            // thread::sleep(Duration::from_micros(50));
         }
 
         let average = r.calculate_average();
@@ -218,21 +215,19 @@ mod tests {
         let r = RunningTimeStats::new("test");
 
         {
-            let s = r.create_single();
+            let _s = r.create_single();
 
             block_sleep_nanoseconds(150);
         }
         {
-            let s = r.create_single();
+            let _s = r.create_single();
 
             block_sleep_nanoseconds(100);
-            // thread::sleep(Duration::from_nanos(100));
         }
         {
-            let s = r.create_single();
+            let _s = r.create_single();
 
             block_sleep_nanoseconds(50);
-            // thread::sleep(Duration::from_nanos(50));
         }
 
         let average = r.calculate_average();

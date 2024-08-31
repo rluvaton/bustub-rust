@@ -1,15 +1,14 @@
 use crate::buffer_pool_manager::manager::{BufferPoolManager, InnerBufferPoolManager};
 use crate::buffer_pool_manager::BufferPoolManagerStats;
 use crate::lru_k_replacer::{AccessType, LRUKReplacer};
-use common::config::{AtomicPageId, FrameId, PageId, BUSTUB_PAGE_SIZE, INVALID_PAGE_ID, LRUK_REPLACER_K};
+use common::config::{AtomicPageId, FrameId, PageId, INVALID_PAGE_ID, LRUK_REPLACER_K};
 use common::{Promise, UnsafeSingleReferenceReadData, UnsafeSingleReferenceWriteData};
 use log::warn;
 use parking_lot::Mutex;
 use recovery::LogManager;
-use std::cell::{Cell, UnsafeCell};
-use std::collections::{HashMap, HashSet, LinkedList};
-use std::ops::{Deref, DerefMut};
-use std::sync::atomic::{AtomicUsize, Ordering};
+use std::cell::{UnsafeCell};
+use std::collections::{HashMap, LinkedList};
+use std::sync::atomic::{Ordering};
 use std::sync::Arc;
 use storage::{BasicPageGuard, DiskManager, DiskScheduler, Page, ReadDiskRequest, ReadPageGuard, UnderlyingPage, WriteDiskRequest, WritePageGuard};
 use tracy_client::{non_continuous_frame, secondary_frame_mark, span};
@@ -201,7 +200,7 @@ impl BufferPoolManager {
      * @param[out] page_id, the id of the new page
      * @return BasicPageGuard holding a new page
      */
-    pub fn new_page_guarded(&self, page_id: PageId) -> BasicPageGuard {
+    pub fn new_page_guarded(&self, _page_id: PageId) -> BasicPageGuard {
         unimplemented!()
     }
 
@@ -420,13 +419,13 @@ impl BufferPoolManager {
      * @param page_id, the id of the page to fetch
      * @return PageGuard holding the fetched page
      */
-    pub fn fetch_page_basic(&self, page_id: PageId) -> BasicPageGuard {
+    pub fn fetch_page_basic(&self, _page_id: PageId) -> BasicPageGuard {
         unimplemented!()
     }
-    pub fn fetch_page_read(&self, page_id: PageId) -> ReadPageGuard {
+    pub fn fetch_page_read(&self, _page_id: PageId) -> ReadPageGuard {
         unimplemented!()
     }
-    pub fn fetch_page_write(&self, page_id: PageId) -> WritePageGuard {
+    pub fn fetch_page_write(&self, _page_id: PageId) -> WritePageGuard {
         unimplemented!()
     }
 
@@ -460,7 +459,7 @@ impl BufferPoolManager {
         let _root_latch_guard = self.root_level_latch.lock();
         drop(waiting);
         drop(acquiring_root_latch);
-        let f = non_continuous_frame!("unpin_page");
+        let _f = non_continuous_frame!("unpin_page");
 
         let holding_root_latch_span = span!("Holding root latch");
 

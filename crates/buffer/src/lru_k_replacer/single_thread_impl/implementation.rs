@@ -1,13 +1,11 @@
 use std::cell::UnsafeCell;
-use std::cmp::Ordering;
 use crate::lru_k_replacer::access_type::AccessType;
 use crate::lru_k_replacer::counter::AtomicU64Counter;
 use crate::lru_k_replacer::lru_k_node::LRUKNode;
 use common::config::FrameId;
 use std::collections::{HashMap};
-use std::rc::Rc;
 use std::sync::Arc;
-use mut_binary_heap::{BinaryHeap, FnComparator};
+use mut_binary_heap::{BinaryHeap};
 use tracy_client::span;
 use crate::lru_k_replacer::LRUKReplacerImpl;
 
@@ -204,20 +202,6 @@ impl LRUKReplacerImpl {
         }
 
         (*node_inner).is_evictable = set_evictable;
-    }
-
-    pub(crate) fn is_evictable(&self, frame_id: FrameId) -> Option<bool> {
-        if !self.node_store.contains_key(&frame_id) {
-            return None;
-        }
-
-        unsafe { Some(self.is_evictable_unchecked(frame_id)) }
-    }
-
-    pub(crate) unsafe fn is_evictable_unchecked(&self, frame_id: FrameId) -> bool {
-        let node = self.node_store.get(&frame_id).expect("frame id must exists");
-
-        (*node.get()).is_evictable
     }
 
     /// Remove an evictable frame from replacer, along with its access history.

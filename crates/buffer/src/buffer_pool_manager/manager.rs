@@ -49,6 +49,7 @@ pub(crate) struct InnerBufferPoolManager {
 
     /** Pointer to the log manager. Please ignore this for P1. */
     // LogManager *log_manager_ __attribute__((__unused__));
+    #[allow(unused)]
     pub(crate) log_manager: Option<LogManager>,
 
     /// Page table for keeping track of buffer pool pages.

@@ -3,6 +3,8 @@ use std::time::{SystemTime, UNIX_EPOCH};
 #[derive(Debug, Clone)]
 pub(crate) enum DurationType {
     TimeAsMilliseconds(u64),
+
+    #[allow(unused)]
     Iteration(usize)
 }
 

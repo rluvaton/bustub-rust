@@ -31,7 +31,7 @@ mod tests {
         assert_eq!(upper_bound - lower_bound, 255);
 
         let disk_manager = DefaultDiskManager::new(db_name).expect("should create disk manager");
-        let mut bpm = BufferPoolManager::new(buffer_pool_size, Arc::new(Mutex::new(disk_manager)), Some(k), None);
+        let bpm = BufferPoolManager::new(buffer_pool_size, Arc::new(Mutex::new(disk_manager)), Some(k), None);
 
         let page0 = bpm.new_page();
 
@@ -67,7 +67,7 @@ mod tests {
 
         // Scenario: After unpinning pages {0, 1, 2, 3, 4}, we should be able to create 5 new pages
         for i in 0..5 {
-            unsafe { assert_eq!(bpm.unpin_page(i, true, AccessType::default()), true, "Failed to unpin page {}", i); }
+            assert_eq!(bpm.unpin_page(i, true, AccessType::default()), true, "Failed to unpin page {}", i);
 
             bpm.flush_page(i);
         }
@@ -77,18 +77,18 @@ mod tests {
             let page_id = page.with_read(|u| u.get_page_id());
 
             // Unpin the page here to allow future fetching
-            unsafe { bpm.unpin_page(page_id, false, AccessType::default()); }
+            bpm.unpin_page(page_id, false, AccessType::default());
         }
 
         // Scenario: We should be able to fetch the data we wrote a while ago.
         let page0 = bpm.fetch_page(0, AccessType::default());
         assert_ne!(page0, None);
-        let mut page0 = page0.unwrap();
+        let page0 = page0.unwrap();
 
         // EXPECT_EQ(0, memcmp(page0->GetData(), random_binary_data, BUSTUB_PAGE_SIZE));
         page0.with_read(|u| assert_eq!(u.get_data(), random_binary_data.as_slice()));
 
-        unsafe { assert_eq!(bpm.unpin_page(0, true, AccessType::default()), true); }
+        assert_eq!(bpm.unpin_page(0, true, AccessType::default()), true);
 
         // Shutdown the disk manager and remove the temporary file we created.
         // TODO - shutdown
@@ -107,14 +107,14 @@ mod tests {
         let k = 5;
 
         let disk_manager = DefaultDiskManager::new(db_name).expect("should create disk manager");
-        let mut bpm = BufferPoolManager::new(buffer_pool_size, Arc::new(Mutex::new(disk_manager)), Some(k), None);
+        let bpm = BufferPoolManager::new(buffer_pool_size, Arc::new(Mutex::new(disk_manager)), Some(k), None);
 
         let page0 = bpm.new_page();
 
         // Scenario: The buffer pool is empty. We should be able to create a new page.
         assert_ne!(page0, None);
 
-        let mut page0 = page0.unwrap();
+        let page0 = page0.unwrap();
 
         assert_eq!(page0.with_read(|u| u.get_page_id()), 0);
 
@@ -139,7 +139,7 @@ mod tests {
         // Scenario: After unpinning pages {0, 1, 2, 3, 4} and pinning another 4 new pages,
         // there would still be one buffer page left for reading page 0.
         for i in 0..5 {
-            unsafe { assert_eq!(bpm.unpin_page(i, true, AccessType::default()), true, "Failed to unpin page {}", i); }
+            assert_eq!(bpm.unpin_page(i, true, AccessType::default()), true, "Failed to unpin page {}", i);
         }
 
         for _ in 0..4 {
@@ -147,12 +147,12 @@ mod tests {
         }
 
         // Scenario: We should be able to fetch the data we wrote a while ago.
-        let mut page0 = bpm.fetch_page(0, AccessType::default()).expect("should be able to fetch the data we wrote a while ago");
+        let page0 = bpm.fetch_page(0, AccessType::default()).expect("should be able to fetch the data we wrote a while ago");
         page0.with_read(|u| assert_eq!(u.get_data(), &"Hello".as_bytes().align_to_page_data()));
 
         // Scenario: If we unpin page 0 and then make a new page, all the buffer pages should
         // now be pinned. Fetching page 0 again should fail.
-        unsafe { assert!(bpm.unpin_page(0, true, AccessType::default())); }
+        assert!(bpm.unpin_page(0, true, AccessType::default()));
         bpm.new_page().expect("Should create new page");
         assert_eq!(bpm.fetch_page(0, AccessType::default()), None);
 

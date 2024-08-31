@@ -7,4 +7,6 @@ mod options;
 pub(crate) use options::*;
 pub(crate) use duration_type::*;
 pub(crate) use disk_manager_options::*;
+
+#[allow(unused)]
 pub(crate) use get_thread_page_id_getter::*;

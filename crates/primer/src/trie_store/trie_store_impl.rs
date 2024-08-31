@@ -3,7 +3,7 @@
 use crate::trie::trie_node_value_types::TrieNodeValueTypes;
 use crate::trie_store::trie_store::TrieStore;
 use crate::Trie;
-use std::sync::{Arc, MutexGuard};
+use std::sync::{Arc};
 
 impl TrieStore {
     // This function returns a ValueGuard object that holds a reference to the value in the trie. If
@@ -76,15 +76,5 @@ impl TrieStore {
         self.root = Arc::clone(&new_root)
 
         // Release the write lock
-    }
-
-    // TODO - fix this function error
-    fn update_root(&mut self, new_root: &Arc<Trie>, mut write_guard: MutexGuard<Arc<Trie>>) {
-        // Lock again the root so we can modify it
-        let mut guard = self.root_lock.lock().unwrap();
-
-        *guard = Arc::clone(&new_root);
-        *write_guard = Arc::clone(&new_root);
-        self.root = Arc::clone(&new_root)
     }
 }

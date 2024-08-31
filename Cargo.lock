@@ -122,6 +122,7 @@ dependencies = [
  "common",
  "derive_builder",
  "log",
+ "mut-binary-heap",
  "num-format",
  "parking_lot",
  "rand 0.8.5",
@@ -223,6 +224,12 @@ version = "0.1.0"
 dependencies = [
  "parking_lot",
 ]
+
+[[package]]
+name = "compare"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "120133d4db2ec47efe2e26502ee984747630c67f51974fca0b6c1340cf2368d3"
 
 [[package]]
 name = "core-foundation-sys"
@@ -443,6 +450,15 @@ name = "memchr"
 version = "2.7.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "78ca9ab1a0babb1e7d5695e3530886289c18cf2f87ec19a575a0abdce112e3a3"
+
+[[package]]
+name = "mut-binary-heap"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "aabb01d356cce09d46edd0b283382a08e1cfe7615eccfa9baeb326718cc11520"
+dependencies = [
+ "compare",
+]
 
 [[package]]
 name = "nu-ansi-term"

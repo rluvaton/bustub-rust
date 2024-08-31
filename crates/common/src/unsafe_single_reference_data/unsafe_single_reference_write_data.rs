@@ -1,6 +1,5 @@
 use std::ops::Deref;
 use std::sync::Arc;
-use crate::UnsafeSingleReferenceReadData;
 use super::AsPtr;
 
 ///

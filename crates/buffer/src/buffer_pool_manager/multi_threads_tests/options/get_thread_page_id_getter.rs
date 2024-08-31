@@ -16,7 +16,7 @@ pub(crate) struct RandomPageIdGetter {
 
 impl RandomPageIdGetter {
     fn new(min_page_id: PageId, max_page_id: PageId) -> Self {
-        let mut rng = rand::thread_rng();
+        let rng = rand::thread_rng();
         let dist = ZipfDistribution::new((max_page_id - min_page_id) as usize, 0.8).unwrap();
 
         Self {
@@ -39,7 +39,7 @@ pub(crate) struct SeedableRandomPageIdGetter {
 
 impl SeedableRandomPageIdGetter {
     fn new(min_page_id: PageId, max_page_id: PageId, seed: <StdRng as SeedableRng>::Seed) -> Self {
-        let mut rng = StdRng::from_seed(seed);
+        let rng = StdRng::from_seed(seed);
         let dist = ZipfDistribution::new((max_page_id - min_page_id) as usize, 0.8).unwrap();
 
         Self {
@@ -120,9 +120,13 @@ impl GetThreadPageIdGetter for ReversedSequentialPageIdGetter {
 
 #[derive(Debug, Clone)]
 pub enum GetThreadPageId {
+    #[allow(unused)]
     Random,
+    #[allow(unused)]
     SeedableRandom(<StdRng as SeedableRng>::Seed),
+    #[allow(unused)]
     Sequential,
+    #[allow(unused)]
     SequentialReversed
 }
 
