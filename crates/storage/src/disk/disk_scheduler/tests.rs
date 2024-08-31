@@ -1,11 +1,10 @@
 #[cfg(test)]
 mod tests {
-    use std::ops::Deref;
     use crate::disk::disk_manager::DiskManagerUnlimitedMemory;
     use crate::disk::disk_scheduler::disk_request::{ReadDiskRequest, WriteDiskRequest};
     use crate::disk::disk_scheduler::disk_scheduler::DiskScheduler;
     use common::config::BUSTUB_PAGE_SIZE;
-    use common::Promise;
+    use common::{Promise, UnsafeSingleReferenceReadData, UnsafeSingleReferenceWriteData};
     use std::sync::{Arc};
     use parking_lot::Mutex;
 
@@ -26,19 +25,19 @@ mod tests {
         let promise2 = disk_scheduler.create_promise();
         let future2 = promise2.get_future();
 
-        let data = Arc::new(data);
-        let buf = Arc::new(Mutex::new(buf));
+        let data_ref = unsafe { UnsafeSingleReferenceReadData::new(&data) };
+        let buf_ref = unsafe { UnsafeSingleReferenceWriteData::new(&mut buf) };
 
         disk_scheduler.schedule(
             WriteDiskRequest {
-                data: Arc::clone(&data),
+                data: data_ref,
                 page_id: 0,
                 callback: promise1
             }.into(),
         );
         disk_scheduler.schedule(
             ReadDiskRequest {
-                data: Arc::clone(&buf),
+                data: buf_ref,
 
                 page_id: 0,
                 callback: promise2
@@ -48,10 +47,7 @@ mod tests {
         assert!(future1.wait());
         assert!(future2.wait());
 
-        let buf_ref = buf.clone();
-        let buf_data = buf_ref.lock();
-
-        assert_eq!(buf_data.deref(), data.deref());
+        assert_eq!(buf, data);
 
         // dm.shut_down();
     }

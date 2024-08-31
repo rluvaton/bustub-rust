@@ -1,7 +1,8 @@
 use crate::buffer_pool_manager::manager::{BufferPoolManager, InnerBufferPoolManager};
+use crate::buffer_pool_manager::BufferPoolManagerStats;
 use crate::lru_k_replacer::{AccessType, LRUKReplacer};
 use common::config::{AtomicPageId, FrameId, PageId, BUSTUB_PAGE_SIZE, INVALID_PAGE_ID, LRUK_REPLACER_K};
-use common::Promise;
+use common::{Promise, UnsafeSingleReferenceReadData, UnsafeSingleReferenceWriteData};
 use log::warn;
 use parking_lot::Mutex;
 use recovery::LogManager;
@@ -10,9 +11,8 @@ use std::collections::{HashMap, HashSet, LinkedList};
 use std::ops::{Deref, DerefMut};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
-use tracy_client::{non_continuous_frame, secondary_frame_mark, span};
 use storage::{BasicPageGuard, DiskManager, DiskScheduler, Page, ReadDiskRequest, ReadPageGuard, UnderlyingPage, WriteDiskRequest, WritePageGuard};
-use crate::buffer_pool_manager::BufferPoolManagerStats;
+use tracy_client::{non_continuous_frame, secondary_frame_mark, span};
 
 // While waiting - red-ish (brighter than page lock)
 const ROOT_LOCK_WAITING_COLOR: u32 = 0xEF0107;
@@ -28,13 +28,6 @@ impl BufferPoolManager {
         replacer_k: Option<usize>,
         log_manager: Option<LogManager>,
     ) -> Self {
-
-        // TODO(students): remove this line after you have implemented the buffer pool manager
-        // unimplemented!(
-        //     "BufferPoolManager is not implemented yet. If you have finished implementing BPM, please remove the throw "
-        //     "exception line in `buffer_pool_manager.cpp`.");
-
-
         // Initially, every page is in the free list.
         let mut free_list = LinkedList::new();
 
@@ -52,7 +45,6 @@ impl BufferPoolManager {
                 log_manager: log_manager,
 
                 // we allocate a consecutive memory space for the buffer pool
-                // TODO - change to array
                 pages: Vec::with_capacity(pool_size),
 
                 replacer: LRUKReplacer::new(
@@ -400,10 +392,14 @@ impl BufferPoolManager {
     #[inline(always)]
     fn fetch_specific_page_unchecked(disk_scheduler: &mut DiskScheduler, page: &mut UnderlyingPage) {
         let _fetch = span!("fetch page");
-        let data = Arc::new(UnsafeCell::new(page.get_data_mut().as_mut_ptr()));
+
+        // SAFETY: because this function hold the lock on the page we are certain that the page data reference won't
+        //         drop as we wait here
+        let data = unsafe { UnsafeSingleReferenceWriteData::new(page.get_data_mut()) };
+
         let promise = Promise::new();
         let future = promise.get_future();
-        let req = ReadDiskRequest::new(page.get_page_id(), Arc::clone(&data), promise);
+        let req = ReadDiskRequest::new(page.get_page_id(), data, promise);
 
         disk_scheduler.schedule(req.into());
 
@@ -458,11 +454,11 @@ impl BufferPoolManager {
         acquiring_root_latch.emit_color(ROOT_LOCK_WAITING_COLOR);
 
         // First acquire the lock for thread safety
-        // let waiting = self.stats.waiting_for_root_latch.create_single();
+        let waiting = self.stats.waiting_for_root_latch.create_single();
         // TODO - Should unpinning page hold the root latch? correctness said it should as everything that touch the `inner`
         //        property should hold a latch
-        // let _root_latch_guard = self.root_level_latch.lock();
-        // drop(waiting);
+        let _root_latch_guard = self.root_level_latch.lock();
+        drop(waiting);
         drop(acquiring_root_latch);
         let f = non_continuous_frame!("unpin_page");
 
@@ -602,7 +598,10 @@ impl BufferPoolManager {
 
     fn flush_specific_page_unchecked(disk_scheduler: &mut DiskScheduler, page: &mut UnderlyingPage) {
         let _flush_page = span!("Flush page");
-        let data = Arc::new(page.get_data().as_ptr());
+
+        // SAFETY: because this function hold the lock on the page we are certain that the page data reference won't
+        //         drop as we wait here
+        let data = unsafe { UnsafeSingleReferenceReadData::new(page.get_data()) };
         let promise = Promise::new();
         let future = promise.get_future();
         let req = WriteDiskRequest::new(page.get_page_id(), data, promise);

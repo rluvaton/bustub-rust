@@ -1,8 +1,5 @@
-use std::cell::UnsafeCell;
-use common::config::PageId;
-use common::Promise;
-use parking_lot::Mutex;
-use std::sync::Arc;
+use common::config::{PageData, PageId};
+use common::{Promise, UnsafeSingleReferenceReadData, UnsafeSingleReferenceWriteData};
 
 /**
  * @brief Represents a Read request for the DiskManager to execute.
@@ -10,9 +7,8 @@ use std::sync::Arc;
 pub struct ReadDiskRequest {
     /**
      *  Pointer to the start of the memory location where a page is being read into from disk (on a read).
-    Having box will reduce performance as it will need to create in the heap
      */
-    pub data: Arc<UnsafeCell<*mut u8>>,
+    pub data: UnsafeSingleReferenceWriteData<PageData>,
 
     /** ID of the page being read from disk. */
     pub page_id: PageId,
@@ -21,14 +17,11 @@ pub struct ReadDiskRequest {
     pub callback: Promise<bool>,
 }
 
-unsafe impl Send for ReadDiskRequest {}
-unsafe impl Sync for ReadDiskRequest {}
-
 impl ReadDiskRequest {
-    pub fn new(page_id: PageId, data: Arc<UnsafeCell<*mut u8>>, callback: Promise<bool>) -> Self {
+    pub fn new(page_id: PageId, data: UnsafeSingleReferenceWriteData<PageData>, callback: Promise<bool>) -> Self {
         ReadDiskRequest {
             page_id,
-            data: data.clone(),
+            data,
             callback
         }
     }
@@ -43,7 +36,7 @@ pub struct WriteDiskRequest {
 
     Having box will reduce performance as it will need to create in the heap
      */
-    pub data: Arc<*const u8>,
+    pub data: UnsafeSingleReferenceReadData<PageData>,
 
     /** ID of the page being written to disk. */
     pub page_id: PageId,
@@ -52,15 +45,12 @@ pub struct WriteDiskRequest {
     pub callback: Promise<bool>,
 }
 
-unsafe impl Send for WriteDiskRequest {}
-unsafe impl Sync for WriteDiskRequest {}
-
 
 impl WriteDiskRequest {
-    pub fn new(page_id: PageId, data: Arc<*const u8>, callback: Promise<bool>) -> Self {
+    pub fn new(page_id: PageId, data: UnsafeSingleReferenceReadData<PageData>, callback: Promise<bool>) -> Self {
         WriteDiskRequest {
             page_id,
-            data: data.clone(),
+            data,
             callback
         }
     }

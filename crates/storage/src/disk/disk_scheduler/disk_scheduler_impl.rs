@@ -1,11 +1,9 @@
 use crate::disk::disk_manager::DiskManager;
 use crate::disk::disk_scheduler::disk_request::DiskRequestType;
 use crate::disk::disk_scheduler::disk_scheduler::{DiskScheduler, DiskSchedulerWorker, DiskSchedulerWorkerMessage};
-use common::config::BUSTUB_PAGE_SIZE;
 use common::{Channel, Promise};
 use parking_lot::Mutex;
-use std::sync::mpsc::Receiver;
-use std::sync::{mpsc, Arc};
+use std::sync::Arc;
 use std::thread;
 
 type DiskSchedulerPromise = Promise<bool>;
@@ -96,20 +94,12 @@ impl DiskSchedulerWorker {
                 }
 
                 match req {
-                    DiskRequestType::Read(req) => {
-
-                        // TODO - remove raw pointers usage
-                        let data = req.data.clone();
-                        let mut lock = data.get();
-                        let page = unsafe { std::slice::from_raw_parts_mut(*lock, BUSTUB_PAGE_SIZE) };
-                        manager.read_page(req.page_id, page);
+                    DiskRequestType::Read(req) => unsafe {
+                        manager.read_page(req.page_id, req.data.clone().get_mut().as_mut_slice());
                         req.callback.set_value(true);
                     }
-                    DiskRequestType::Write(req) => {
-                        let data = req.data.clone();
-                        // TODO - remove raw pointers usage
-                        let page = unsafe { std::slice::from_raw_parts(*data, BUSTUB_PAGE_SIZE) };
-                        manager.write_page(req.page_id, page);
+                    DiskRequestType::Write(req) => unsafe {
+                        manager.write_page(req.page_id, req.data.get().as_slice());
                         req.callback.set_value(true);
                     }
                 }
