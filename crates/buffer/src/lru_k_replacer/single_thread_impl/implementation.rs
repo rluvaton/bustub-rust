@@ -112,7 +112,6 @@ impl LRUKReplacerImpl {
 
         if node.is_none() {
             let node = Arc::new(UnsafeCell::new(LRUKNode::new(self.k, frame_id, &self.history_access_counter)));
-            // TODO - should we evict another frame?
             self.node_store.insert(frame_id, node);
 
             // Not inserting to evictable frames as new frame is not evictable by default

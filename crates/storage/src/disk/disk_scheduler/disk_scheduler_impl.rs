@@ -10,10 +10,6 @@ type DiskSchedulerPromise = Promise<bool>;
 
 impl DiskScheduler {
     pub fn new(disk_manager: Arc<Mutex<impl DiskManager + 'static>>) -> Self {
-        // TODO(P1): remove this line after you have implemented the disk scheduler API
-        // unimplemented!(
-        //     "DiskScheduler is not implemented yet. If you have finished implementing the disk scheduler, please remove the throw exception line in `disk_scheduler.cpp`.");
-
         // let (sender, receiver) = mpsc::channel();
 
         let channel = Arc::new(Channel::new());

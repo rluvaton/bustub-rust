@@ -10,7 +10,6 @@ use std::io::{Read, Seek, SeekFrom, Write};
 use std::path::PathBuf;
 use std::time::Duration;
 
-// TODO - Why shared?
 static BUFFER_USED: Mutex<Option<Vec<u8>>> = Mutex::new(None);
 
 /**
@@ -30,11 +29,8 @@ pub struct DefaultDiskManager {
     // With multiple buffer pool instances, need to protect file access
     db_io_latch: Mutex<File>,
 
-    // todo - default 0
     num_flushes: i32,
-    // todo - default 0
     num_writes: i32,
-    // todo - default false
     flush_log: bool,
 
     // std::future<void> *flush_log_f_{nullptr};
@@ -216,15 +212,9 @@ impl DiskManager for DefaultDiskManager {
         let read_count = read_res.unwrap();
         if read_count < BUSTUB_PAGE_SIZE {
             println!("Read less than a page");
-            // std::cerr << "Read less than a page" << std::endl;
 
             // Set the rest of the to be 0
-
-
-            // TODO - find safer way
-            // memset(page_data + read_count, 0, BUSTUB_PAGE_SIZE - read_count);
             page_data[read_count..(BUSTUB_PAGE_SIZE) - read_count].fill(0);
-            // unsafe { write_bytes(&mut page_data[read_count..], 0, (BUSTUB_PAGE_SIZE) - read_count); }
         }
     }
 
@@ -310,13 +300,8 @@ impl DiskManager for DefaultDiskManager {
         let read_count = read_res.unwrap();
         if read_count < size as usize {
             println!("Read less than a page");
-            // std::cerr << "Read less than a page" << std::endl;
 
             // Set the rest of the to be 0
-
-
-            // TODO - find safer way
-            // memset(page_data + read_count, 0, BUSTUB_PAGE_SIZE - read_count);
             log_data[read_count..(size as usize) - read_count].fill(0);
         }
 

@@ -537,7 +537,6 @@ impl BufferPoolManager {
     pub fn flush_page(&self, page_id: PageId) -> bool {
         assert_ne!(page_id, INVALID_PAGE_ID);
 
-
         let acquiring_root_latch = span!("Acquiring root latch");
 
         // Red color while waiting
@@ -619,7 +618,7 @@ impl BufferPoolManager {
      *
      * @brief Flush all the pages in the buffer pool to disk.
      */
-    pub fn flush_all_pages(&mut self) {
+    pub fn flush_all_pages(&self) {
         // TODO - should acquire lock?
         // let mut inner = unsafe { self.inner.get_mut() };
         //

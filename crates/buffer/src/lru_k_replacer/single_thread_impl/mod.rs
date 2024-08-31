@@ -24,21 +24,12 @@ type LRUKNodeWrapper = Arc<UnsafeCell<LRUKNode>>;
  */
 #[derive(Clone, Debug)]
 pub struct LRUKReplacerImpl {
-    // TODO(student): implement me! You can replace these member variables as you like.
-    // Remove #[allow(dead_code)] if you start using them.
 
     /// in cpp it was unordered_map
     pub(crate) node_store: HashMap<FrameId, LRUKNodeWrapper>,
 
     pub(crate) evictable_heap: BinaryHeap<FrameId, LRUKNodeWrapper, FnComparator<fn(&LRUKNodeWrapper, &LRUKNodeWrapper) -> Ordering>>,
 
-    // TODO - set default to 0
-    // #[allow(dead_code)]
-    // pub(crate) current_timestamp: isize,
-
-    // TODO - set default to 0
-    // #[allow(dead_code)]
-    // pub(crate) curr_size: isize,
 
     pub(crate) replacer_size: usize,
 

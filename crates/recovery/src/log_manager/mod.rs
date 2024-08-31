@@ -8,7 +8,6 @@ pub type LogBuffer = [u8; LOG_BUFFER_SIZE];
 pub type FlushBuffer = [u8; LOG_BUFFER_SIZE];
 
 pub struct LogManager {
-    // TODO(students): you may add your own member variables
 
     /** The atomic counter which records the next log sequence number. */
     next_lsn: AtomicLSN,

@@ -123,7 +123,7 @@ mod tests {
         let expected_data = "Hello";
 
         page0.with_write(|u| u.get_data_mut()[..expected_data.len()].copy_from_slice(expected_data.as_bytes()));
-        // TODO - this is different from the original test that check the entire data
+        // this is different from the original test that check the entire data
         page0.with_read(|u| assert_eq!(u.get_data(), &expected_data.as_bytes().align_to_page_data()));
 
         // Scenario: We should be able to create new pages until we fill up the buffer pool.
