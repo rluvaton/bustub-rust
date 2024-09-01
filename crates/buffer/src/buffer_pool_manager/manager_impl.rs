@@ -1,5 +1,5 @@
 use crate::buffer_pool_manager::manager::{BufferPoolManager, InnerBufferPoolManager};
-use crate::buffer_pool_manager::BufferPoolManagerStats;
+use crate::buffer_pool_manager::{BasicPageGuard, BufferPoolManagerStats, ReadPageGuard, WritePageGuard};
 use crate::lru_k_replacer::{AccessType, LRUKReplacer};
 use common::config::{AtomicPageId, FrameId, PageId, INVALID_PAGE_ID, LRUK_REPLACER_K};
 use common::{Promise, UnsafeSingleRefData, UnsafeSingleRefMutData};
@@ -10,7 +10,7 @@ use std::cell::{UnsafeCell};
 use std::collections::{HashMap, LinkedList};
 use std::sync::atomic::{Ordering};
 use std::sync::Arc;
-use storage::{BasicPageGuard, DiskManager, DiskScheduler, Page, ReadDiskRequest, ReadPageGuard, UnderlyingPage, WriteDiskRequest, WritePageGuard};
+use storage::{DiskManager, DiskScheduler, Page, ReadDiskRequest, UnderlyingPage, WriteDiskRequest};
 use tracy_client::{non_continuous_frame, secondary_frame_mark, span};
 
 // While waiting - red-ish (brighter than page lock)

@@ -1,6 +1,7 @@
 mod basic_page_guard;
 mod read_page_guard;
 mod write_page_guard;
+mod tests;
 
 pub use basic_page_guard::BasicPageGuard;
 pub use read_page_guard::ReadPageGuard;

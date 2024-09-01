@@ -1,11 +1,9 @@
 mod page;
-mod page_guards;
 mod underlying_page;
 
 use common::config::{PageData, BUSTUB_PAGE_SIZE};
 pub use page::Page;
 pub use underlying_page::UnderlyingPage;
-pub use page_guards::{BasicPageGuard, ReadPageGuard, WritePageGuard};
 
 pub trait AlignToPageData {
     fn align_to_page_data(&self) -> PageData;
