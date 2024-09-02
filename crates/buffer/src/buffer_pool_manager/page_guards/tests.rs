@@ -40,11 +40,7 @@ mod tests {
         assert_eq!(page0.get_pin_count(), 0);
 
         {
-            let page2 = buffer_pool_manager.new_page().expect("Should be able to create a page");
-            // TODO: we acquire read latch before creating the guard?
-            //     page2->RLatch()
-            // Should both increment pin count and acquire read lock?
-            // let guard = PinReadPageGuard::new(Arc::clone(&buffer_pool_manager), page2);
+            let _page2 = buffer_pool_manager.new_page_guarded().expect("Should be able to create a page");
         }
 
         disk_manager.lock().shut_down();
