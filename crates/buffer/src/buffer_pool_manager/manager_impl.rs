@@ -200,8 +200,10 @@ impl BufferPoolManager {
      * @param[out] page_id, the id of the new page
      * @return BasicPageGuard holding a new page
      */
-    pub fn new_page_guarded(&self, _page_id: PageId) -> BasicPageGuard {
-        unimplemented!()
+    pub fn new_page_guarded(self: Arc<Self>) -> Option<PinPageGuard> {
+        let page = self.new_page()?;
+
+        Some(PinPageGuard::new(self, page))
     }
 
     /**
@@ -423,14 +425,48 @@ impl BufferPoolManager {
      * @param page_id, the id of the page to fetch
      * @return PageGuard holding the fetched page
      */
-    pub fn fetch_page_basic(&self, _page_id: PageId) -> PinPageGuard {
-        unimplemented!()
+    pub fn fetch_page_basic(self: Arc<Self>, page_id: PageId) -> Option<PinPageGuard> {
+        let page = self.fetch_page(page_id, AccessType::Unknown)?;
+
+        Some(PinPageGuard::new(self, page))
     }
-    pub fn fetch_page_read(&self, _page_id: PageId) -> PinReadPageGuard {
-        unimplemented!()
+
+    /**
+     * TODO(P2): Add implementation
+     *
+     * @brief PageGuard wrappers for fetch_page
+     *
+     * Functionality should be the same as fetch_page, except
+     * that, depending on the function called, a guard is returned.
+     * If FetchPageRead or FetchPageWrite is called, it is expected that
+     * the returned page already has a read or write latch held, respectively.
+     *
+     * @param page_id, the id of the page to fetch
+     * @return PageGuard holding the fetched page
+     */
+    pub fn fetch_page_read<'a>(self: Arc<Self>, page_id: PageId) -> Option<PinReadPageGuard<'a>> {
+        let page = self.fetch_page_basic(page_id)?;
+
+        Some(page.upgrade_read())
     }
-    pub fn fetch_page_write(&self, _page_id: PageId) -> PinWritePageGuard {
-        unimplemented!()
+
+    /**
+     * TODO(P2): Add implementation
+     *
+     * @brief PageGuard wrappers for fetch_page
+     *
+     * Functionality should be the same as fetch_page, except
+     * that, depending on the function called, a guard is returned.
+     * If FetchPageRead or FetchPageWrite is called, it is expected that
+     * the returned page already has a read or write latch held, respectively.
+     *
+     * @param page_id, the id of the page to fetch
+     * @return PageGuard holding the fetched page
+     */
+    pub fn fetch_page_write<'a>(self: Arc<Self>, page_id: PageId) -> Option<PinWritePageGuard<'a>> {
+        let page = self.fetch_page_basic(page_id)?;
+
+        Some(page.upgrade_write())
     }
 
     /**
@@ -596,7 +632,6 @@ impl BufferPoolManager {
             true
         }
     }
-
 
     fn flush_specific_page_unchecked(disk_scheduler: &mut DiskScheduler, page: &mut UnderlyingPage) {
         let _flush_page = span!("Flush page");
