@@ -1,5 +1,5 @@
 use crate::buffer_pool_manager::manager::{BufferPoolManager, InnerBufferPoolManager};
-use crate::buffer_pool_manager::{BasicPageGuard, BufferPoolManagerStats, ReadPageGuard, WritePageGuard};
+use crate::buffer_pool_manager::{PinPageGuard, BufferPoolManagerStats, PinReadPageGuard, PinWritePageGuard};
 use crate::lru_k_replacer::{AccessType, LRUKReplacer};
 use common::config::{AtomicPageId, FrameId, PageId, INVALID_PAGE_ID, LRUK_REPLACER_K};
 use common::{Promise, UnsafeSingleRefData, UnsafeSingleRefMutData};
@@ -392,9 +392,13 @@ impl BufferPoolManager {
     fn fetch_specific_page_unchecked(disk_scheduler: &mut DiskScheduler, page: &mut UnderlyingPage) {
         let _fetch = span!("fetch page");
 
-        // SAFETY: because this function hold the lock on the page we are certain that the page data reference won't
-        //         drop as we wait here
-        let data = unsafe { UnsafeSingleRefMutData::new(page.get_data_mut()) };
+        // SAFETY:
+        //
+        // UnsafeSingleRefMutData: because this function hold the lock on the page we are certain that the page data reference won't
+        // drop as we wait here
+        //
+        // get_data_mut_unchecked: we don't want to set dirty flag to true in here as we are fetching the data
+        let data = unsafe { UnsafeSingleRefMutData::new(page.get_data_mut_unchecked()) };
 
         let promise = Promise::new();
         let future = promise.get_future();
@@ -419,13 +423,13 @@ impl BufferPoolManager {
      * @param page_id, the id of the page to fetch
      * @return PageGuard holding the fetched page
      */
-    pub fn fetch_page_basic(&self, _page_id: PageId) -> BasicPageGuard {
+    pub fn fetch_page_basic(&self, _page_id: PageId) -> PinPageGuard {
         unimplemented!()
     }
-    pub fn fetch_page_read(&self, _page_id: PageId) -> ReadPageGuard {
+    pub fn fetch_page_read(&self, _page_id: PageId) -> PinReadPageGuard {
         unimplemented!()
     }
-    pub fn fetch_page_write(&self, _page_id: PageId) -> WritePageGuard {
+    pub fn fetch_page_write(&self, _page_id: PageId) -> PinWritePageGuard {
         unimplemented!()
     }
 

@@ -1,8 +1,8 @@
-mod basic_page_guard;
-mod read_page_guard;
-mod write_page_guard;
+mod pin_page_guard;
+mod pin_read_page_guard;
+mod pin_write_page_guard;
 mod tests;
 
-pub use basic_page_guard::BasicPageGuard;
-pub use read_page_guard::ReadPageGuard;
-pub use write_page_guard::WritePageGuard;
+pub use pin_page_guard::PinPageGuard;
+pub use pin_read_page_guard::PinReadPageGuard;
+pub use pin_write_page_guard::PinWritePageGuard;

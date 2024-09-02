@@ -2,7 +2,7 @@ mod page;
 mod underlying_page;
 
 use common::config::{PageData, BUSTUB_PAGE_SIZE};
-pub use page::Page;
+pub use page::{Page, PageWriteGuard, PageReadGuard};
 pub use underlying_page::UnderlyingPage;
 
 pub trait AlignToPageData {

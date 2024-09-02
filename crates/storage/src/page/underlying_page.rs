@@ -1,8 +1,10 @@
 use common::config::{PageData, PageId, BUSTUB_PAGE_SIZE, INVALID_PAGE_ID, LSN};
 use std::mem::size_of;
 
-// static_assert(sizeof(page_id_t) == 4);
-// static_assert(sizeof(lsn_t) == 4);
+//noinspection RsAssertEqual
+const _:() = assert!(size_of::<PageId>() == 4);
+//noinspection RsAssertEqual
+const _:() = assert!(size_of::<LSN>() == 4);
 
 
 /**
@@ -44,7 +46,6 @@ impl UnderlyingPage {
             page_id,
             is_dirty: false,
             pin_count: 0,
-            // rwlatch: ReaderWriterLatch::new(()),
             data,
         }
     }
@@ -54,8 +55,31 @@ impl UnderlyingPage {
         &self.data
     }
 
-    /** @return the actual data contained within this page */
+    /// Get Mutable reference to the data and set the dirty flag to true
+    ///
+    /// Returns: the actual data contained within this page
     pub fn get_data_mut(&mut self) -> &mut PageData {
+        // Set as dirty if getting mutable data
+        self.is_dirty = true;
+
+        &mut self.data
+    }
+
+    pub fn cast<T>(&self) -> &T {
+        unsafe { &*(self.data.as_ptr() as *const PageData as *const T) }
+    }
+
+    pub fn cast_mut<T>(&mut self) -> &mut T {
+        unsafe { &mut *(self.data.as_mut_ptr() as *mut PageData as *mut T) }
+    }
+
+    /// Get Mutable reference to the data
+    ///
+    /// Returns: the actual data contained within this page
+    ///
+    /// # Safety
+    /// This is unsafe as it will not set `is_dirty` to true, prefer using `UnderlyingPage::get_data_mut`
+    pub unsafe fn get_data_mut_unchecked(&mut self) -> &mut PageData {
         &mut self.data
     }
 
@@ -83,11 +107,6 @@ impl UnderlyingPage {
     pub fn is_dirty(&self) -> bool {
         self.is_dirty
     }
-
-    // pub fn get_read_write_latch(&self) -> &ReaderWriterLatch<()> {
-    //     &self.rwlatch
-    // }
-
 
     /** @return the page LSN. */
     pub fn get_lsn(&self) -> LSN {

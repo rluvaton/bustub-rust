@@ -1,9 +1,11 @@
+use std::mem;
 use crate::page::underlying_page::UnderlyingPage;
 use common::config::{PageData, PageId, BUSTUB_PAGE_SIZE, INVALID_PAGE_ID};
 use common::ReaderWriterLatch;
 use std::ops::{Deref, DerefMut};
 use std::sync::Arc;
 use log::warn;
+use parking_lot::{RwLockReadGuard, RwLockUpgradableReadGuard, RwLockWriteGuard};
 use tracy_client::span;
 // static_assert(sizeof(page_id_t) == 4);
 // static_assert(sizeof(lsn_t) == 4);
@@ -14,6 +16,9 @@ const PAGE_LOCK_WAITING_COLOR: u32 = 0xCC0000;
 
 // While holding the page lock - green-ish (darker than page lock)
 const PAGE_LOCK_HOLDING_COLOR: u32 = 0x006A4E;
+
+pub type PageReadGuard<'a> = RwLockReadGuard<'a, UnderlyingPage>;
+pub type PageWriteGuard<'a> = RwLockWriteGuard<'a, UnderlyingPage>;
 
 /**
  * Page is the basic unit of storage within the database system. Page provides a wrapper for actual data pages being
@@ -70,21 +75,32 @@ impl Page {
         self.with_write(
             #[inline(always)]
             |u| {
-            let mut p = u.get_pin_count();
+                let mut p = u.get_pin_count();
 
-            p += 1;
-            let ref_count = Arc::strong_count(&self.inner);
+                p += 1;
+                let ref_count = Arc::strong_count(&self.inner);
 
-            if p > ref_count {
-                warn!("Got more pins than references to the page, this is probably a mistake");
+                if p > ref_count {
+                    warn!("Got more pins than references to the page, this is probably a mistake");
 
-                // Cant be more than there are references to the page
-                p = ref_count;
-            }
+                    // Cant be more than there are references to the page
+                    p = ref_count;
+                }
 
-            u.set_pin_count(p);
+                u.set_pin_count(p);
 
-            p
+                p
+            })
+    }
+
+    /// Pin page without checking the pin if the number of pins are possible
+    /// (more than the number of references)
+    ///
+    /// # Safety
+    /// Just blindly increase pin count
+    pub unsafe fn pin_unchecked(&self) {
+        self.with_write(|u| {
+            u.increment_pin_count_unchecked()
         })
     }
 
@@ -99,19 +115,19 @@ impl Page {
         self.with_write(
             #[inline(always)]
             |u| {
-            let mut p = u.get_pin_count();
+                let mut p = u.get_pin_count();
 
-            if p == 0 {
-                warn!("Trying to unpin page which has no pins this is a mistake");
-                return 0;
-            }
+                if p == 0 {
+                    warn!("Trying to unpin page which has no pins this is a mistake");
+                    return 0;
+                }
 
-            p -= 1;
+                p -= 1;
 
-            u.set_pin_count(p);
+                u.set_pin_count(p);
 
-            p
-        })
+                p
+            })
     }
 
     pub fn is_pinned(&self) -> bool {
@@ -147,7 +163,7 @@ impl Page {
 
         // Red color while waiting
         acquiring_page_latch.emit_color(PAGE_LOCK_WAITING_COLOR);
-        let  inner_guard = self.inner.read();
+        let inner_guard = self.inner.read();
 
         drop(acquiring_page_latch);
 
@@ -157,6 +173,10 @@ impl Page {
         holding_page_latch.emit_color(PAGE_LOCK_HOLDING_COLOR);
 
         with_read_lock(inner_guard.deref())
+    }
+
+    pub fn read(&self) -> PageReadGuard {
+        self.inner.read()
     }
 
     /// Run function with write lock and get the underlying page
@@ -179,7 +199,6 @@ impl Page {
     /// ```
     #[inline(always)]
     pub fn with_write<F: FnOnce(&mut UnderlyingPage) -> R, R>(&self, with_write_lock: F) -> R {
-
         let acquiring_page_latch = span!("Acquiring write page latch");
 
         // Red color while waiting
@@ -195,6 +214,33 @@ impl Page {
 
         with_write_lock(inner_guard.deref_mut())
     }
+
+    pub fn write(&self) -> PageWriteGuard {
+        self.inner.write()
+    }
+
+    pub unsafe fn read_without_guard(&self) -> *const UnderlyingPage {
+        let g = self.inner.read();
+        mem::forget(g);
+
+        self.inner.data_ptr()
+    }
+
+    pub unsafe fn unlock_read_without_guard(&self) {
+        self.inner.force_unlock_read();
+    }
+
+    pub unsafe fn write_without_guard(&self) -> *mut UnderlyingPage {
+        let g = self.inner.write();
+        mem::forget(g);
+
+        self.inner.data_ptr()
+    }
+
+    pub unsafe fn unlock_write_without_guard(&self) {
+        self.inner.force_unlock_write();
+    }
+
 }
 
 impl Clone for Page {
@@ -830,5 +876,55 @@ mod tests {
         });
 
         assert_eq!(res, 5);
+    }
+
+    #[test]
+    fn calling_read_multiple_times_and_unlock_should_not_release_all_locks() {
+        unsafe {
+            let mut page = Page::new(1);
+
+            assert_eq!(page.inner.is_locked(), false);
+            page.read_without_guard();
+            assert_eq!(page.inner.is_locked(), true);
+            page.read_without_guard();
+            page.read_without_guard();
+
+            page.unlock_read_without_guard();
+            assert_eq!(page.inner.is_locked(), true);
+            page.unlock_read_without_guard();
+            assert_eq!(page.inner.is_locked(), true);
+            page.unlock_read_without_guard();
+            assert_eq!(page.inner.is_locked(), false);
+        }
+    }
+
+    #[test]
+    fn calling_read_multiple_times_and_unlock_once_should_not_allow_writable_locks() {
+        unsafe {
+            let mut page = Page::new(1);
+
+            assert_eq!(page.inner.is_locked(), false);
+            page.read_without_guard();
+            assert_eq!(page.inner.is_locked(), true);
+            page.read_without_guard();
+            page.read_without_guard();
+
+            page.unlock_read_without_guard();
+            assert_eq!(page.inner.is_locked(), true);
+
+            let could_lock = page.inner.try_write_for(Duration::from_millis(30));
+
+            assert_eq!(could_lock.is_none(), true);
+
+            page.unlock_read_without_guard();
+            assert_eq!(page.inner.is_locked(), true);
+            page.unlock_read_without_guard();
+            assert_eq!(page.inner.is_locked(), false);
+
+
+            let could_lock = page.inner.try_write_for(Duration::from_millis(30));
+
+            assert_eq!(could_lock.is_some(), true);
+        }
     }
 }
