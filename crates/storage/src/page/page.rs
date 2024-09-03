@@ -5,10 +5,8 @@ use common::ReaderWriterLatch;
 use std::ops::{Deref, DerefMut};
 use std::sync::Arc;
 use log::warn;
-use parking_lot::{RwLockReadGuard, RwLockUpgradableReadGuard, RwLockWriteGuard};
+use parking_lot::{RwLockReadGuard, RwLockWriteGuard};
 use tracy_client::span;
-// static_assert(sizeof(page_id_t) == 4);
-// static_assert(sizeof(lsn_t) == 4);
 
 
 // While waiting - red-ish (darker than page lock)
