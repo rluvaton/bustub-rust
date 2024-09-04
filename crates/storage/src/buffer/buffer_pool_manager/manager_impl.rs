@@ -1,16 +1,16 @@
-use crate::buffer_pool_manager::manager::{BufferPoolManager, InnerBufferPoolManager};
-use crate::buffer_pool_manager::{PinPageGuard, BufferPoolManagerStats, PinReadPageGuard, PinWritePageGuard};
-use crate::lru_k_replacer::{AccessType, LRUKReplacer};
+use crate::buffer::buffer_pool_manager::manager::{BufferPoolManager, InnerBufferPoolManager};
+use crate::buffer::buffer_pool_manager::{PinPageGuard, BufferPoolManagerStats, PinReadPageGuard, PinWritePageGuard};
+use crate::buffer::lru_k_replacer::{AccessType, LRUKReplacer};
 use common::config::{AtomicPageId, FrameId, PageId, INVALID_PAGE_ID, LRUK_REPLACER_K};
 use common::{Promise, UnsafeSingleRefData, UnsafeSingleRefMutData};
 use log::warn;
 use parking_lot::Mutex;
-use recovery::LogManager;
+use crate::recovery::LogManager;
 use std::cell::{UnsafeCell};
 use std::collections::{HashMap, LinkedList};
 use std::sync::atomic::{Ordering};
 use std::sync::Arc;
-use storage::storage::{DiskManager, DiskScheduler, Page, ReadDiskRequest, UnderlyingPage, WriteDiskRequest};
+use crate::storage::{DiskManager, DiskScheduler, Page, ReadDiskRequest, UnderlyingPage, WriteDiskRequest};
 use tracy_client::{non_continuous_frame, secondary_frame_mark, span};
 
 // While waiting - red-ish (brighter than page lock)

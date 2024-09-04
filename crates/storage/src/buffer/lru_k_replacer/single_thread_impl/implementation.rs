@@ -1,13 +1,13 @@
 use std::cell::UnsafeCell;
-use crate::lru_k_replacer::access_type::AccessType;
-use crate::lru_k_replacer::counter::AtomicU64Counter;
-use crate::lru_k_replacer::lru_k_node::LRUKNode;
+use crate::buffer::lru_k_replacer::access_type::AccessType;
+use crate::buffer::lru_k_replacer::counter::AtomicU64Counter;
+use crate::buffer::lru_k_replacer::lru_k_node::LRUKNode;
 use common::config::FrameId;
 use std::collections::{HashMap};
 use std::sync::Arc;
 use mut_binary_heap::{BinaryHeap};
 use tracy_client::span;
-use crate::lru_k_replacer::LRUKReplacerImpl;
+use crate::buffer::lru_k_replacer::LRUKReplacerImpl;
 
 impl LRUKReplacerImpl {
     /// a new `LRUKReplacerImpl`

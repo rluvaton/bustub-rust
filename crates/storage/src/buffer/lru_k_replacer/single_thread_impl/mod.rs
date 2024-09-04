@@ -1,7 +1,7 @@
 pub mod implementation;
 
-use crate::lru_k_replacer::counter::AtomicU64Counter;
-use crate::lru_k_replacer::lru_k_node::LRUKNode;
+use crate::buffer::lru_k_replacer::counter::AtomicU64Counter;
+use crate::buffer::lru_k_replacer::lru_k_node::LRUKNode;
 use common::config::FrameId;
 use mut_binary_heap::{BinaryHeap, FnComparator};
 use std::cell::UnsafeCell;

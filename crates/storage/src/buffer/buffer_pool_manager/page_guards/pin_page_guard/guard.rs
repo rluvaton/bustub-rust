@@ -1,10 +1,10 @@
-use crate::buffer_pool_manager::{PinReadPageGuard, PinWritePageGuard};
-use crate::{AccessType, BufferPoolManager};
+use crate::buffer::buffer_pool_manager::{PinReadPageGuard, PinWritePageGuard};
+use crate::buffer::{AccessType, BufferPoolManager};
 use common::config::PageId;
 use parking_lot::lock_api::RawRwLock;
 use std::ops::Deref;
 use std::sync::Arc;
-use storage::storage::Page;
+use crate::storage::Page;
 
 #[clippy::has_significant_drop]
 #[must_use = "if unused the PinPageGuard will immediately unpin"]

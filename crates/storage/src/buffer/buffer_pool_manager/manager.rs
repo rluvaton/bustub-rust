@@ -1,12 +1,12 @@
-use crate::lru_k_replacer::LRUKReplacer;
+use crate::buffer::lru_k_replacer::LRUKReplacer;
 use common::config::{AtomicPageId, FrameId, PageId};
 use parking_lot::Mutex;
-use recovery::LogManager;
+use crate::recovery::LogManager;
 use std::cell::UnsafeCell;
 use std::collections::{HashMap, LinkedList};
 use std::sync::Arc;
-use storage::storage::{DiskScheduler, Page};
-use crate::buffer_pool_manager::manager_stats::BufferPoolManagerStats;
+use crate::storage::{DiskScheduler, Page};
+use crate::buffer::buffer_pool_manager::manager_stats::BufferPoolManagerStats;
 
 /**
  * BufferPoolManager reads disk pages to and from its internal buffer pool.

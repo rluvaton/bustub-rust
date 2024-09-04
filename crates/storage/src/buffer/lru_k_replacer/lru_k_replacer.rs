@@ -1,5 +1,5 @@
-use crate::lru_k_replacer::access_type::AccessType;
-use crate::lru_k_replacer::LRUKReplacerImpl;
+use crate::buffer::lru_k_replacer::access_type::AccessType;
+use crate::buffer::lru_k_replacer::LRUKReplacerImpl;
 use common::config::FrameId;
 use parking_lot::Mutex;
 use std::ops::DerefMut;

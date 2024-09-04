@@ -2,7 +2,7 @@ mod manager_impl;
 
 use common::config::{AtomicLSN, LOG_BUFFER_SIZE};
 use parking_lot::{Condvar, Mutex};
-use storage::storage::DiskManager;
+use crate::storage::DiskManager;
 
 pub type LogBuffer = [u8; LOG_BUFFER_SIZE];
 pub type FlushBuffer = [u8; LOG_BUFFER_SIZE];

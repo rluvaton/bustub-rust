@@ -1,9 +1,0 @@
-[package]
-name = "recovery"
-version = "0.1.0"
-edition = "2021"
-
-[dependencies]
-common = {path = "../common"}
-storage = {path = "../storage"}
-parking_lot = "0.12.3"

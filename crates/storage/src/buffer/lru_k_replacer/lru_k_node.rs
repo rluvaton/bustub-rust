@@ -2,7 +2,7 @@ use std::cmp::Ordering;
 use std::collections::LinkedList;
 use chrono::Utc;
 use common::config::FrameId;
-use crate::lru_k_replacer::counter::{AtomicU64Counter};
+use crate::buffer::lru_k_replacer::counter::{AtomicU64Counter};
 
 
 pub(crate) type HistoryRecord = (

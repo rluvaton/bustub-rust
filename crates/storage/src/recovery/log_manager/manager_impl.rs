@@ -1,9 +1,9 @@
 use std::sync::atomic::Ordering;
 use parking_lot::Mutex;
 use common::config::{AtomicLSN, INVALID_LSN, LOG_BUFFER_SIZE, LSN};
-use storage::storage::DiskManager;
-use crate::log_manager::{LogBuffer, LogManager};
-use crate::log_record::LogRecord;
+use crate::storage::DiskManager;
+use crate::recovery::log_manager::{LogBuffer, LogManager};
+use crate::recovery::log_record::LogRecord;
 
 impl LogManager {
 

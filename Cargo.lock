@@ -103,31 +103,10 @@ checksum = "b048fb63fd8b5923fc5aa7b340d8e156aec7ec02f0c78fa8a6ddc2613f6f71de"
 name = "bpm_bench"
 version = "0.1.0"
 dependencies = [
- "buffer",
  "clap",
  "common",
  "parking_lot",
  "rand 0.8.5",
- "storage",
- "tempdir",
- "tracy-client",
- "zipf",
-]
-
-[[package]]
-name = "buffer"
-version = "0.1.0"
-dependencies = [
- "chrono",
- "common",
- "derive_builder",
- "log",
- "mut-binary-heap",
- "num-format",
- "parking_lot",
- "rand 0.8.5",
- "recovery",
- "stats",
  "storage",
  "tempdir",
  "tracy-client",
@@ -629,15 +608,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "recovery"
-version = "0.1.0"
-dependencies = [
- "common",
- "parking_lot",
- "storage",
-]
-
-[[package]]
 name = "redox_syscall"
 version = "0.5.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -741,11 +711,18 @@ name = "storage"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "chrono",
  "common",
+ "derive_builder",
  "log",
+ "mut-binary-heap",
+ "num-format",
  "parking_lot",
+ "rand 0.8.5",
+ "stats",
  "tempdir",
  "tracy-client",
+ "zipf",
 ]
 
 [[package]]
