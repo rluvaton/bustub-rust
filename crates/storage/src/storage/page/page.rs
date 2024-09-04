@@ -899,7 +899,7 @@ mod tests {
     #[test]
     fn calling_read_multiple_times_and_unlock_once_should_not_allow_writable_locks() {
         unsafe {
-            let mut page = Page::new(1);
+            let page = Page::new(1);
 
             assert_eq!(page.inner.is_locked(), false);
             page.read_without_guard();
