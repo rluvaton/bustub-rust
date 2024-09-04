@@ -1,15 +1,12 @@
 #[cfg(test)]
 mod tests {
     use std::collections::HashMap;
-    use crate::disk::disk_manager::DiskManagerUnlimitedMemory;
-    use crate::disk::disk_scheduler::disk_request::{ReadDiskRequest, WriteDiskRequest};
-    use crate::disk::disk_scheduler::disk_scheduler::DiskScheduler;
     use common::config::{PageId, BUSTUB_PAGE_SIZE};
     use common::{Future, Promise, UnsafeSingleRefData, UnsafeSingleRefMutData};
     use std::sync::{Arc};
     use std::time::Duration;
     use parking_lot::Mutex;
-    use crate::DiskManager;
+    use crate::storage::*;
 
     #[test]
     fn schedule_write_read() {

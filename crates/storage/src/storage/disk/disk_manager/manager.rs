@@ -1,7 +1,7 @@
 use anyhow::{anyhow, Result};
 
-use crate::disk::disk_manager::disk_manager_trait::DiskManager;
-use crate::disk::disk_manager::utils::get_file_size;
+use crate::storage::disk::disk_manager::disk_manager_trait::DiskManager;
+use crate::storage::disk::disk_manager::utils::get_file_size;
 use common::config::{PageId, BUSTUB_PAGE_SIZE};
 use common::Future;
 use parking_lot::Mutex;

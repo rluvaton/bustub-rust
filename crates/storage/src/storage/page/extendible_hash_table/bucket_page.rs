@@ -1,5 +1,5 @@
 use std::cmp::Ordering;
-use crate::page::b_plus_tree::MappingType;
+use crate::storage::page::b_plus_tree::MappingType;
 use common::config::{PageId, BUSTUB_PAGE_SIZE};
 use std::fmt::{Debug, Display, Formatter};
 use std::marker::PhantomData;
@@ -62,7 +62,7 @@ pub const fn hash_table_bucket_array_size<Key, Value>() -> usize {
 /// # Examples
 /// ```rust
 /// use std::cmp::Ordering;
-/// use storage::{ExtendibleHashTableBucketPage, hash_table_bucket_array_size, ExtendibleHashTableBucketKeyComparatorFn};
+/// use storage::storage::{ExtendibleHashTableBucketPage, hash_table_bucket_array_size, ExtendibleHashTableBucketKeyComparatorFn};
 ///
 /// struct AssertionTest {}
 ///

@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use crate::disk::disk_manager::{DefaultDiskManager, DiskManager, DiskManagerUnlimitedMemory};
+    use crate::storage::disk::disk_manager::{DefaultDiskManager, DiskManager, DiskManagerUnlimitedMemory};
     use common::config::BUSTUB_PAGE_SIZE;
     use std::path::PathBuf;
     use tempdir::TempDir;

@@ -10,7 +10,7 @@ use std::cell::{UnsafeCell};
 use std::collections::{HashMap, LinkedList};
 use std::sync::atomic::{Ordering};
 use std::sync::Arc;
-use storage::{DiskManager, DiskScheduler, Page, ReadDiskRequest, UnderlyingPage, WriteDiskRequest};
+use storage::storage::{DiskManager, DiskScheduler, Page, ReadDiskRequest, UnderlyingPage, WriteDiskRequest};
 use tracy_client::{non_continuous_frame, secondary_frame_mark, span};
 
 // While waiting - red-ish (brighter than page lock)

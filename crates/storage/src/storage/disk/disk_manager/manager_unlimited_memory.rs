@@ -1,5 +1,5 @@
 use std::cell::UnsafeCell;
-use crate::disk::disk_manager::disk_manager_trait::DiskManager;
+use crate::storage::disk::disk_manager::disk_manager_trait::DiskManager;
 use common::config::{PageId, BUSTUB_PAGE_SIZE};
 use std::sync::{Arc};
 use parking_lot::{Mutex, MutexGuard};

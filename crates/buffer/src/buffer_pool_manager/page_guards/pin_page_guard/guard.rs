@@ -4,7 +4,7 @@ use common::config::PageId;
 use parking_lot::lock_api::RawRwLock;
 use std::ops::Deref;
 use std::sync::Arc;
-use storage::Page;
+use storage::storage::Page;
 
 #[clippy::has_significant_drop]
 #[must_use = "if unused the PinPageGuard will immediately unpin"]

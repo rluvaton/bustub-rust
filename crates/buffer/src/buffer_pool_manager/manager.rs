@@ -5,7 +5,7 @@ use recovery::LogManager;
 use std::cell::UnsafeCell;
 use std::collections::{HashMap, LinkedList};
 use std::sync::Arc;
-use storage::{DiskScheduler, Page};
+use storage::storage::{DiskScheduler, Page};
 use crate::buffer_pool_manager::manager_stats::BufferPoolManagerStats;
 
 /**

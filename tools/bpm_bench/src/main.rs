@@ -13,7 +13,7 @@ use std::sync::Arc;
 use std::thread;
 use std::thread::JoinHandle;
 #[allow(unused)]
-use storage::{DefaultDiskManager, DiskManagerUnlimitedMemory};
+use storage::storage::{DefaultDiskManager, DiskManagerUnlimitedMemory};
 use tempdir::TempDir;
 use tracy_client::*;
 

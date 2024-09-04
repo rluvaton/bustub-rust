@@ -1,6 +1,6 @@
-use crate::disk::disk_manager::DiskManager;
-use crate::disk::disk_scheduler::disk_request::DiskRequestType;
-use crate::disk::disk_scheduler::disk_scheduler::{DiskScheduler, DiskSchedulerWorker, DiskSchedulerWorkerMessage};
+use crate::storage::disk::disk_manager::DiskManager;
+use crate::storage::disk::disk_scheduler::disk_request::DiskRequestType;
+use crate::storage::disk::disk_scheduler::disk_scheduler::{DiskScheduler, DiskSchedulerWorker, DiskSchedulerWorkerMessage};
 use common::{Channel, Promise};
 use parking_lot::Mutex;
 use std::sync::Arc;
