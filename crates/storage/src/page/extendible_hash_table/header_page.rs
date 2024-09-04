@@ -27,10 +27,10 @@ const _: () = assert!(size_of::<HeaderPage>() <= BUSTUB_PAGE_SIZE);
 ///
 /// It stores the logical child pointers to the directory pages (as page ids).
 /// You can think about it as a static first-level directory page. The header page has the following fields:
+#[repr(packed)]
 pub struct HeaderPage {
     /// An array of directory page ids
     directory_page_ids: [PageId; HASH_TABLE_HEADER_ARRAY_SIZE],
-
 
     /// The maximum depth the header page could handle
     max_depth: u32,

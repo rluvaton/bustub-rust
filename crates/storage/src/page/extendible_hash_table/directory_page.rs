@@ -3,7 +3,6 @@ use std::fmt::{Debug, Formatter};
 use common::config::{PageId, BUSTUB_PAGE_SIZE, INVALID_PAGE_ID};
 use std::mem::size_of;
 
-
 const _HASH_TABLE_DIRECTORY_PAGE_METADATA_SIZE: usize = size_of::<u32>() * 2;
 
 /// `HASH_TABLE_DIRECTORY_ARRAY_SIZE` is the number of page_ids that can fit in the directory page of an extendible hash index.
@@ -21,10 +20,12 @@ const _: () = assert!(size_of::<PageId>() == 4);
 const _: () = assert!(size_of::<DirectoryPage>() == _HASH_TABLE_DIRECTORY_PAGE_METADATA_SIZE + HASH_TABLE_DIRECTORY_ARRAY_SIZE + size_of::<PageId>() * HASH_TABLE_DIRECTORY_ARRAY_SIZE);
 const _: () = assert!(size_of::<DirectoryPage>() <= BUSTUB_PAGE_SIZE);
 
+
 ///
 /// Directory pages sit at the second level of our disk-based extendible hash table.
 /// Each of them stores the logical child pointers to the bucket pages (as page ids), as well as metadata for handling bucket mapping and dynamic directory growing and shrinking.
 ///
+#[repr(packed)]
 pub struct DirectoryPage {
     /// The maximum depth the header page could handle
     max_depth: u32,
@@ -286,12 +287,15 @@ impl DirectoryPage {
 
 impl Debug for DirectoryPage {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        f.write_str(format!("======== DIRECTORY (global_depth: {}) ========\n", self.global_depth).as_str())?;
+        let global_depth = self.global_depth;
+        f.write_str(format!("======== DIRECTORY (global_depth: {}) ========\n", global_depth).as_str())?;
         f.write_str("| bucket_idx | page_id | local_depth |\n")?;
 
-        let max_id = (0x1 << self.global_depth) as u32;
+        let max_id = (0x1 << global_depth) as u32;
         for idx in 0..(max_id as usize) {
-            f.write_str(format!("|    {}    |    {}    |    {}    |\n", idx, self.bucket_page_ids[idx], self.local_depths[idx]).as_str())?;
+            let page_id = self.bucket_page_ids[idx];
+            let local_depth = self.local_depths[idx];
+            f.write_str(format!("|    {}    |    {}    |    {}    |\n", idx, page_id, local_depth).as_str())?;
         }
 
         f.write_str("================ END DIRECTORY ================")

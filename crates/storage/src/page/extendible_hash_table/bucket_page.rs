@@ -99,10 +99,11 @@ pub const fn hash_table_bucket_array_size<Key, Value>() -> usize {
 /// let _ = B::ARRAY_SIZE_OK;
 /// ```
 ///
+#[repr(packed)]
 pub struct BucketPage<const ARRAY_SIZE: usize, Key, Value, KeyComparator>
 where
     Key: Sized + Display,
-    Value: Sized + Display,
+    Value: Sized + Display + PartialEq,
     KeyComparator: KeyComparatorFn<Key>,
 {
     /// The number of key-value pairs the bucket is holding
@@ -111,7 +112,7 @@ where
     /// The maximum number of key-value pairs the bucket can handle
     max_size: u32,
 
-    /// An array of bucket page local depths
+    /// The array that holds the key-value pairs
     array: [MappingType<Key, Value>; ARRAY_SIZE],
 
     // This will not affect the struct size in memory
@@ -123,7 +124,7 @@ where
 impl<const ARRAY_SIZE: usize, Key, Value, KeyComparator> BucketPage<ARRAY_SIZE, Key, Value, KeyComparator>
 where
     Key: Sized + Display,
-    Value: Sized + Display,
+    Value: Sized + Display + PartialEq,
     KeyComparator: KeyComparatorFn<Key>,
 {
     /// Assert that the array size generic is ok
@@ -147,7 +148,9 @@ where
         let _ = Self::ARRAY_SIZE_OK;
         let max_size = max_size.unwrap_or(hash_table_bucket_array_size::<Key, Value>() as u32);
 
-        unimplemented!();
+        self.size = 0;
+        self.max_size = max_size;
+        // self.array = [None; ARRAY_SIZE];
     }
 
     /**
@@ -158,7 +161,17 @@ where
      * @param cmp the comparator
      * @return true if the key and value are present, false if not found.
      */
+    // TODO - use the comparor
     pub fn lookup(&self, key: &Key, value: &Value, cmp: &KeyComparator) -> bool {
+        for i in 0..self.size as usize {
+            let current_pair = &self.array[i];
+
+            // TODO - should do binary search? the values are not ordered
+            if KeyComparator::cmp(key, &current_pair.0) == Ordering::Equal && *value == current_pair.1 {
+                return true;
+            }
+        }
+
         false
     }
 
@@ -171,6 +184,19 @@ where
      * @return true if inserted, false if bucket is full or the same key is already present
      */
     pub fn insert(&mut self, key: &Key, value: &Value, cmp: &KeyComparator) -> bool {
+        if self.is_full() {
+            return false;
+        }
+
+        for i in 0..self.size as usize {
+            let current_pair = &self.array[i];
+
+            // TODO - should do binary search? the values are not ordered
+            if KeyComparator::cmp(key, &current_pair.0) == Ordering::Equal && *value == current_pair.1 {
+                return true;
+            }
+        }
+
         false
     }
 
@@ -180,11 +206,36 @@ where
      * @return true if removed, false if not found
      */
     pub fn remove(&mut self, key: &Key, cmp: &KeyComparator) -> bool {
+        if self.is_empty() {
+            return false;
+        }
+
+        // TODO - can do binary search?
+        let bucket_index = self.get_bucket_idx_by_key(key, cmp);
+        if let Some(bucket_index) = bucket_index {
+            self.remove_at(bucket_index as u32);
+
+            return true;
+        }
+
         false
     }
 
     pub fn remove_at(&mut self, bucket_idx: u32) {
-        unimplemented!();
+        if bucket_idx >= self.size {
+            return;
+        }
+
+        // If not the last item replace it with the last item and decrease size
+        if bucket_idx != self.size - 1 {
+            self.array.swap(bucket_idx as usize, self.size as usize - 1);
+        }
+
+        self.size -= 1;
+
+        // TODO - MARK DELETED?
+        // TODO - CAN CHANGE LOCATION? - SWAP THE ABOUT TO DELETE WITH THE LAST AND DECREASE SIZE
+        // unimplemented!();
     }
 
     /**
@@ -194,7 +245,7 @@ where
      * @return key at index bucket_idx of the bucket
      */
     pub fn key_at(&self, bucket_idx: u32) -> Key {
-        unimplemented!()
+        &self.entry_at(bucket_idx).0
     }
 
     /**
@@ -204,8 +255,7 @@ where
      * @return value at index bucket_idx of the bucket
      */
     pub fn value_at(&self, bucket_idx: u32) -> Value {
-        unimplemented!()
-
+        &self.entry_at(bucket_idx).1
     }
 
     /**
@@ -215,39 +265,42 @@ where
      * @return entry at index bucket_idx of the bucket
      */
     pub fn entry_at(&self, bucket_idx: u32) -> &MappingType<Key, Value> {
-        let res = &self.array[bucket_idx as usize];
-
-        unimplemented!()
+        &self.array[bucket_idx as usize]
     }
 
     /**
      * @return number of entries in the bucket
      */
     pub fn size(&self) -> u32 {
-        0
+        self.size
     }
 
     /**
      * @return whether the bucket is full
      */
     pub fn is_full(&self) -> bool {
-        false
+        self.size == self.max_size
     }
 
     /**
      * @return whether the bucket is empty
      */
     pub fn is_empty(&self) -> bool {
-        false
+        self.size == 0
     }
 
     /// Prints the bucket's occupancy information
     pub fn print_bucket(&self) {
         println!("{:?}", self)
     }
+
+    fn get_bucket_idx_by_key(&self, key: &Key, cmp: &KeyComparator) -> Option<usize> {
+        self.array[..self.size() as usize].iter().position(|item| cmp(key, &item.0) == Ordering::Equal)
+    }
+
 }
 
-impl<const ARRAY_SIZE: usize, Key: Sized + Display, Value: Sized + Display, KeyComparator: KeyComparatorFn<Key>> Debug for BucketPage<ARRAY_SIZE, Key, Value, KeyComparator> {
+impl<const ARRAY_SIZE: usize, Key: Sized + Display, Value: Sized + Display + PartialEq, KeyComparator: KeyComparatorFn<Key>> Debug for BucketPage<ARRAY_SIZE, Key, Value, KeyComparator> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.write_str(format!("======== BUCKET (size_: {} | max_size_: {}) ========\n", self.size, self.max_size).as_str())?;
         f.write_str("| i | k | v |\n")?;
