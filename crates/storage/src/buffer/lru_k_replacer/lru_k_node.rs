@@ -1,11 +1,12 @@
 use std::cmp::Ordering;
 use std::collections::LinkedList;
 use chrono::Utc;
+
 use common::config::FrameId;
-use crate::buffer::lru_k_replacer::counter::{AtomicU64Counter};
 
+use super::counter::AtomicU64Counter;
 
-pub(crate) type HistoryRecord = (
+type HistoryRecord = (
     // Global counter
     u64,
 
@@ -23,7 +24,7 @@ const IMAGINARY_NOW: i64 = i64::MAX / 2;
 // In order to avoid
 
 #[derive(Clone, Debug)]
-pub struct LRUKNode {
+pub(in crate::buffer) struct LRUKNode {
 
     // Remove #[allow(dead_code)] if you start using them. Feel free to change the member variables as you want.
 
@@ -34,22 +35,22 @@ pub struct LRUKNode {
     /// adding new items will set at the end index and increment that index
     /// when reached the end of the array going to the start and moving the first item to be start index + 1
     #[allow(dead_code)]
-    pub(crate) history: LinkedList<HistoryRecord>,
+    history: LinkedList<HistoryRecord>,
 
     #[allow(dead_code)]
-    pub(crate) k: usize,
+    k: usize,
 
     #[allow(dead_code)]
-    pub(crate) frame_id: FrameId,
+    frame_id: FrameId,
 
     #[allow(dead_code)]
-    pub(crate) is_evictable: bool,
+    is_evictable: bool,
 
-    pub(crate) interval: i64,
+    interval: i64,
 }
 
 impl LRUKNode {
-    pub(crate) fn new(k: usize, frame_id: FrameId, counter: &AtomicU64Counter) -> Self {
+    pub(super) fn new(k: usize, frame_id: FrameId, counter: &AtomicU64Counter) -> Self {
         assert!(k > 0, "K > 0");
 
         let mut history = LinkedList::new();
@@ -68,11 +69,10 @@ impl LRUKNode {
         }
     }
 
-    pub(crate) fn marked_accessed(&mut self, counter: &AtomicU64Counter) {
+    pub(super) fn marked_accessed(&mut self, counter: &AtomicU64Counter) {
 
         // LRU-K evicts the page whose K-th most recent access is furthest in the past.
         // So we only need to calculate
-
 
         let new_val = Self::get_new_access_record_now(counter);
 
@@ -87,7 +87,7 @@ impl LRUKNode {
     }
 
     #[inline]
-    pub(crate) fn get_interval(&self) -> i64 {
+    fn get_interval(&self) -> i64 {
         if self.history.len() < self.k {
             return INF_INTERVAL -
 
@@ -101,7 +101,7 @@ impl LRUKNode {
         self.interval
     }
 
-    pub(crate) fn get_current_message_id(&self) -> u64 {
+    fn get_current_message_id(&self) -> u64 {
         self.history.back().expect("History can never be empty").0
     }
 
@@ -115,10 +115,26 @@ impl LRUKNode {
         )
     }
 
-    pub(crate) fn get_current_time() -> i64 {
+    fn get_current_time() -> i64 {
         Utc::now().timestamp_micros()
     }
-    pub(crate) fn cmp(&self, other: &Self) -> Ordering {
+
+    pub(super) fn cmp(&self, other: &Self) -> Ordering {
         self.get_interval().cmp(&other.get_interval())
+    }
+
+    #[inline]
+    pub(super) fn get_frame_id(&self) -> FrameId {
+        self.frame_id
+    }
+
+    #[inline]
+    pub(super) fn is_evictable(&self) -> bool {
+        self.is_evictable
+    }
+
+    #[inline]
+    pub(super) fn set_evictable(&mut self, evictable: bool) {
+        self.is_evictable = evictable;
     }
 }

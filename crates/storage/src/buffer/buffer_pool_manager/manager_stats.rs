@@ -1,14 +1,15 @@
 use std::fmt::{Display, Formatter};
-use stats::RunningTimeStats;
 use num_format::{Locale, ToFormattedString};
+
+use stats::RunningTimeStats;
 use common::Indentation;
 
 const INDENTATION_STEP: usize = 2;
 
 #[derive(Clone)]
 pub struct BufferPoolManagerStats {
-    pub(crate) holding_root_latch: RunningTimeStats,
-    pub(crate) waiting_for_root_latch: RunningTimeStats,
+    pub(in crate::buffer) holding_root_latch: RunningTimeStats,
+    pub(in crate::buffer) waiting_for_root_latch: RunningTimeStats,
 }
 
 impl BufferPoolManagerStats {

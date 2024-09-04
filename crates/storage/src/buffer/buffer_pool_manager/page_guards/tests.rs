@@ -1,7 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use crate::buffer::buffer_pool_manager::PinPageGuard;
-    use crate::buffer::BufferPoolManager;
+    use crate::buffer::{PinPageGuard, BufferPoolManager};
     use parking_lot::Mutex;
     use std::sync::Arc;
     use crate::storage::{DiskManager, DiskManagerUnlimitedMemory};

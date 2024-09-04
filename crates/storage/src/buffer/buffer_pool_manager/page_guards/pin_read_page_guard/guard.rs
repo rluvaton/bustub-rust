@@ -1,9 +1,10 @@
-use crate::buffer::buffer_pool_manager::PinPageGuard;
-use common::config::{PageData, PageId};
-use std::ops::Deref;
 use std::sync::Arc;
+use std::ops::Deref;
+
+use common::config::{PageData, PageId};
+
+use crate::buffer::{BufferPoolManager, PinPageGuard};
 use crate::storage::{Page, UnderlyingPage};
-use crate::buffer::BufferPoolManager;
 
 #[clippy::has_significant_drop]
 #[must_use = "if unused the PinReadPageGuard will immediately unpin and unlock"]

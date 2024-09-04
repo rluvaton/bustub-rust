@@ -1,7 +1,7 @@
 use std::time::{SystemTime, UNIX_EPOCH};
 
 #[derive(Debug, Clone)]
-pub(crate) enum DurationType {
+pub(in super::super) enum DurationType {
     TimeAsMilliseconds(u64),
 
     #[allow(unused)]
@@ -15,7 +15,7 @@ impl Default for DurationType {
 }
 
 impl DurationType {
-    pub(crate) fn create_runner(&self) -> Box<dyn DurationTypeRunner> {
+    pub(in super::super) fn create_runner(&self) -> Box<dyn DurationTypeRunner> {
         match self {
             DurationType::TimeAsMilliseconds(ms) => Box::new(TimeAsMillisecondsDurationTypeRunner::new(*ms)),
             DurationType::Iteration(iteration) => Box::new(IterationDurationTypeRunner::new(*iteration))
@@ -23,17 +23,17 @@ impl DurationType {
     }
 }
 
-pub(crate) trait DurationTypeRunner {
+pub(in super::super) trait DurationTypeRunner {
     fn should_finish(&mut self) -> bool;
 }
 
-pub(crate) struct TimeAsMillisecondsDurationTypeRunner {
+pub(in super::super) struct TimeAsMillisecondsDurationTypeRunner {
     start_time: u64,
     duration_ms: u64,
 }
 
 impl TimeAsMillisecondsDurationTypeRunner {
-    pub(crate) fn new(duration_ms: u64) -> Self {
+    pub(in super::super) fn new(duration_ms: u64) -> Self {
         Self {
             duration_ms,
             start_time: Self::clock_ms(),
@@ -56,13 +56,13 @@ impl DurationTypeRunner for TimeAsMillisecondsDurationTypeRunner {
     }
 }
 
-pub(crate) struct IterationDurationTypeRunner {
+pub(in super::super) struct IterationDurationTypeRunner {
     iteration_count: usize,
     current_iteration: usize
 }
 
 impl IterationDurationTypeRunner {
-    pub(crate) fn new(iteration_count: usize) -> Self {
+    pub(in super::super) fn new(iteration_count: usize) -> Self {
         Self {
             iteration_count,
             current_iteration: 0,

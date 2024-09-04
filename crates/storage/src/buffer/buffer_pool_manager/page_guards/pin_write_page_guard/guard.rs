@@ -1,7 +1,9 @@
-use crate::buffer::{BufferPoolManager, PinPageGuard};
-use common::config::{PageData, PageId};
 use std::ops::{Deref, DerefMut};
 use std::sync::Arc;
+
+use common::config::{PageData, PageId};
+
+use crate::buffer::{BufferPoolManager, PinPageGuard};
 use crate::storage::{Page, UnderlyingPage};
 
 #[clippy::has_significant_drop]

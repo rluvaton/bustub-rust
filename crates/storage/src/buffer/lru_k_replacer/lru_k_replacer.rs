@@ -1,9 +1,11 @@
-use crate::buffer::lru_k_replacer::access_type::AccessType;
-use crate::buffer::lru_k_replacer::LRUKReplacerImpl;
-use common::config::FrameId;
 use parking_lot::Mutex;
 use std::ops::DerefMut;
 use std::sync::Arc;
+
+use common::config::FrameId;
+
+use crate::buffer::AccessType;
+use super::LRUKReplacerImpl;
 
 // Cloning does not actually clone the underlying data but just increment the ref count
 #[derive(Debug, Clone)]

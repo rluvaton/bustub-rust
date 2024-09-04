@@ -1,6 +1,7 @@
-use crate::buffer::buffer_pool_manager::manager::{BufferPoolManager, InnerBufferPoolManager};
-use crate::buffer::buffer_pool_manager::{PinPageGuard, BufferPoolManagerStats, PinReadPageGuard, PinWritePageGuard};
-use crate::buffer::lru_k_replacer::{AccessType, LRUKReplacer};
+use super::manager::{BufferPoolManager, InnerBufferPoolManager};
+use crate::buffer::{PinPageGuard, BufferPoolManagerStats, PinReadPageGuard, PinWritePageGuard};
+use crate::buffer::{AccessType, LRUKReplacer};
+use crate::storage::{DiskManager, DiskScheduler, Page, ReadDiskRequest, UnderlyingPage, WriteDiskRequest};
 use common::config::{AtomicPageId, FrameId, PageId, INVALID_PAGE_ID, LRUK_REPLACER_K};
 use common::{Promise, UnsafeSingleRefData, UnsafeSingleRefMutData};
 use log::warn;
@@ -10,7 +11,6 @@ use std::cell::{UnsafeCell};
 use std::collections::{HashMap, LinkedList};
 use std::sync::atomic::{Ordering};
 use std::sync::Arc;
-use crate::storage::{DiskManager, DiskScheduler, Page, ReadDiskRequest, UnderlyingPage, WriteDiskRequest};
 use tracy_client::{non_continuous_frame, secondary_frame_mark, span};
 
 // While waiting - red-ish (brighter than page lock)
@@ -57,8 +57,7 @@ impl BufferPoolManager {
 
             }),
 
-            stats: BufferPoolManagerStats::default()
-
+            stats: BufferPoolManagerStats::default(),
         }
     }
 
@@ -156,7 +155,6 @@ impl BufferPoolManager {
                         // Until we finish flushing we don't want to allow fetching the old page id,
                         // and it will not as the disk scheduler is behind a Mutex
                         drop(root_latch_guard);
-
 
 
                         // 3. Flush the old page content if it's dirty
@@ -369,22 +367,22 @@ impl BufferPoolManager {
             page.with_write(
                 #[inline(always)]
                 |mut underlying| {
-                // 1. Acquire the scheduler lock
-                let mut scheduler = (*inner).disk_scheduler.lock();
+                    // 1. Acquire the scheduler lock
+                    let mut scheduler = (*inner).disk_scheduler.lock();
 
-                drop(holding_root_latch_span);
-                drop(f);
-                drop(holding_root_latch);
-                // #############################################################################
-                //                              Root Lock Release
-                // #############################################################################
-                // 2. Once we hold the lock for the page and the disk scheduler we can release the root lock
-                // Until we finish flushing we don't want to allow fetching the old page id,
-                // and it will not as the disk scheduler is behind a Mutex
-                drop(root_latch_guard);
+                    drop(holding_root_latch_span);
+                    drop(f);
+                    drop(holding_root_latch);
+                    // #############################################################################
+                    //                              Root Lock Release
+                    // #############################################################################
+                    // 2. Once we hold the lock for the page and the disk scheduler we can release the root lock
+                    // Until we finish flushing we don't want to allow fetching the old page id,
+                    // and it will not as the disk scheduler is behind a Mutex
+                    drop(root_latch_guard);
 
-                Self::fetch_specific_page_unchecked(&mut *scheduler, &mut underlying);
-            });
+                    Self::fetch_specific_page_unchecked(&mut *scheduler, &mut underlying);
+                });
 
             Some(page)
         }
@@ -612,22 +610,22 @@ impl BufferPoolManager {
             page.with_write(
                 #[inline(always)]
                 |u| {
-                // 1. Acquire the scheduler lock
-                let mut scheduler = (*inner).disk_scheduler.lock();
+                    // 1. Acquire the scheduler lock
+                    let mut scheduler = (*inner).disk_scheduler.lock();
 
-                drop(holding_root_latch_span);
-                drop(f);
-                drop(holding_root_latch);
-                // #############################################################################
-                //                              Root Lock Release
-                // #############################################################################
-                // 2. Once we hold the lock for the page and the disk scheduler we can release the root lock
-                // Until we finish flushing we don't want to allow fetching the old page id,
-                // and it will not as the disk scheduler is behind a Mutex
-                drop(root_latch_guard);
+                    drop(holding_root_latch_span);
+                    drop(f);
+                    drop(holding_root_latch);
+                    // #############################################################################
+                    //                              Root Lock Release
+                    // #############################################################################
+                    // 2. Once we hold the lock for the page and the disk scheduler we can release the root lock
+                    // Until we finish flushing we don't want to allow fetching the old page id,
+                    // and it will not as the disk scheduler is behind a Mutex
+                    drop(root_latch_guard);
 
-                Self::flush_specific_page_unchecked(&mut scheduler, u)
-            });
+                    Self::flush_specific_page_unchecked(&mut scheduler, u)
+                });
 
             true
         }

@@ -5,7 +5,6 @@ mod counter;
 mod lru_k_replacer;
 mod single_thread_impl;
 
-
 // For single thread
 pub use single_thread_impl::{LRUKReplacerImpl};
 

@@ -5,11 +5,11 @@ use rand::SeedableRng;
 use zipf::ZipfDistribution;
 use common::config::PageId;
 
-pub(crate) trait GetThreadPageIdGetter {
+pub(in super::super) trait GetThreadPageIdGetter {
     fn get(&mut self) -> PageId;
 }
 
-pub(crate) struct RandomPageIdGetter {
+pub(in super::super) struct RandomPageIdGetter {
     rng: ThreadRng,
     dist: ZipfDistribution,
 }
@@ -32,7 +32,7 @@ impl GetThreadPageIdGetter for RandomPageIdGetter {
     }
 }
 
-pub(crate) struct SeedableRandomPageIdGetter {
+pub(in super::super) struct SeedableRandomPageIdGetter {
     rng: StdRng,
     dist: ZipfDistribution,
 }
@@ -56,7 +56,7 @@ impl GetThreadPageIdGetter for SeedableRandomPageIdGetter {
 }
 
 
-pub(crate) struct SequentialPageIdGetter {
+pub(in super::super) struct SequentialPageIdGetter {
     current_page_id: PageId,
     min_page_id: PageId,
     max_page_id: PageId,
@@ -88,7 +88,7 @@ impl GetThreadPageIdGetter for SequentialPageIdGetter {
 
 
 
-pub(crate) struct ReversedSequentialPageIdGetter {
+pub(in super::super) struct ReversedSequentialPageIdGetter {
     current_page_id: PageId,
     min_page_id: PageId,
     max_page_id: PageId,
@@ -119,7 +119,7 @@ impl GetThreadPageIdGetter for ReversedSequentialPageIdGetter {
 }
 
 #[derive(Debug, Clone)]
-pub enum GetThreadPageId {
+pub(in super::super) enum GetThreadPageId {
     #[allow(unused)]
     Random,
     #[allow(unused)]
@@ -137,7 +137,7 @@ impl Default for GetThreadPageId {
 }
 
 impl GetThreadPageId {
-    pub(crate) fn create_getter(&self, min_page_id: PageId, max_page_id: PageId) -> Box<dyn GetThreadPageIdGetter> {
+    pub(in super::super) fn create_getter(&self, min_page_id: PageId, max_page_id: PageId) -> Box<dyn GetThreadPageIdGetter> {
         match self {
             GetThreadPageId::Random => Box::new(RandomPageIdGetter::new(min_page_id, max_page_id)),
             GetThreadPageId::SeedableRandom(seed) => Box::new(SeedableRandomPageIdGetter::new(min_page_id, max_page_id, *seed)),
