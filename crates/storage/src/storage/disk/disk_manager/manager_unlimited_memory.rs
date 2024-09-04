@@ -15,12 +15,12 @@ fn create_page() -> Page {
     [0u8; BUSTUB_PAGE_SIZE]
 }
 
-pub(crate) struct LatencyProcessor {
+struct LatencyProcessor {
     recent_access: [PageId; 4],
     access_ptr: u64,
 }
 
-pub(crate) struct DiskManagerUnlimitedMemoryData {
+struct DiskManagerUnlimitedMemoryData {
     // Thread id change with the data itself
     thread_id: Option<ThreadId>,
 
@@ -47,7 +47,7 @@ pub struct DiskManagerUnlimitedMemory {
 pub struct DiskWrapper {
 
     // Access the data using the lock for thread safety
-    pub(crate) data: UnsafeCell<DiskManagerUnlimitedMemoryData>,
+    data: UnsafeCell<DiskManagerUnlimitedMemoryData>,
 }
 
 unsafe impl Sync for DiskWrapper {}
