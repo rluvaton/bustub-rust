@@ -108,14 +108,15 @@ impl HeaderPage {
 
 impl Debug for HeaderPage {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        f.write_str(format!("======== HEADER (max_depth: {}) ========\n", self.max_depth).as_str())?;
-        f.write_str("| directory_idx | page_id |\n")?;
-
-        let max_id = (1 << self.max_depth) as u32;
-        for idx in 0..(max_id as usize) {
-            f.write_str(format!("|    {}    |    {}    |\n", idx, self.directory_page_ids[idx]).as_str())?;
-        }
-
-        f.write_str("======== END HEADER ========")
+        unimplemented!();
+        // f.write_str(format!("======== HEADER (max_depth: {}) ========\n", self.max_depth).as_str())?;
+        // f.write_str("| directory_idx | page_id |\n")?;
+        //
+        // let max_id = (1 << self.max_depth) as u32;
+        // for idx in 0..(max_id as usize) {
+        //     f.write_str(format!("|    {}    |    {}    |\n", idx, self.directory_page_ids[idx]).as_str())?;
+        // }
+        //
+        // f.write_str("======== END HEADER ========")
     }
 }
