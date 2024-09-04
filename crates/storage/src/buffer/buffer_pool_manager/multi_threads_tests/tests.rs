@@ -1,17 +1,17 @@
 extern crate derive_builder;
 
-use crate::{AccessType, BufferPoolManager};
+use crate::buffer::{AccessType, BufferPoolManager};
 use common::config::{PageData, PageId};
 use parking_lot::{Mutex, RwLock};
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::thread;
 use std::thread::JoinHandle;
-use storage::{DefaultDiskManager, DiskManager, DiskManagerUnlimitedMemory};
+use crate::storage::{DefaultDiskManager, DiskManager, DiskManagerUnlimitedMemory};
 use tempdir::TempDir;
 
-use crate::buffer_pool_manager::multi_threads_tests::helpers::get_tmp_dir;
-use crate::buffer_pool_manager::multi_threads_tests::options::{DiskManagerImplementationOptions, Options};
+use crate::buffer::buffer_pool_manager::multi_threads_tests::helpers::get_tmp_dir;
+use crate::buffer::buffer_pool_manager::multi_threads_tests::options::{DiskManagerImplementationOptions, Options};
 
 // This is the structure of the page
 #[allow(unused)]
@@ -245,7 +245,7 @@ fn create_bpm(options: &Options, m: Arc<Mutex<(impl DiskManager + 'static)>>) ->
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::buffer_pool_manager::multi_threads_tests::options::{DurationType, OptionsBuilder, UnlimitedMemoryDiskManagerOptions};
+    use crate::buffer::buffer_pool_manager::multi_threads_tests::options::{DurationType, OptionsBuilder, UnlimitedMemoryDiskManagerOptions};
 
 
     // ########################

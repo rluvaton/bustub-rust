@@ -282,7 +282,7 @@ impl Drop for Page {
 
 #[cfg(test)]
 mod tests {
-    use crate::page::page::Page;
+    use crate::storage::page::page::Page;
     use parking_lot::Mutex;
     use std::sync::Arc;
     use std::time::Duration;

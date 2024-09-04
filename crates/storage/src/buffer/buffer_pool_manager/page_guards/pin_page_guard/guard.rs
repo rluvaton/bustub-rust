@@ -148,11 +148,11 @@ impl Drop for PinPageGuard {
 
 #[cfg(test)]
 mod tests {
-    use crate::buffer_pool_manager::PinPageGuard;
-    use crate::BufferPoolManager;
+    use crate::buffer::buffer_pool_manager::PinPageGuard;
+    use crate::buffer::BufferPoolManager;
     use parking_lot::Mutex;
     use std::sync::Arc;
-    use storage::DiskManagerUnlimitedMemory;
+    use crate::storage::DiskManagerUnlimitedMemory;
 
     #[test]
     fn creating_pin_page_guard_should_not_increase_pin_count() {

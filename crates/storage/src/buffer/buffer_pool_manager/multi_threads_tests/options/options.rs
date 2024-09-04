@@ -1,6 +1,6 @@
-use crate::buffer_pool_manager::multi_threads_tests::options::disk_manager_options::DiskManagerImplementationOptions;
-use crate::buffer_pool_manager::multi_threads_tests::options::duration_type::DurationType;
-use crate::buffer_pool_manager::multi_threads_tests::options::get_thread_page_id_getter::GetThreadPageId;
+use crate::buffer::buffer_pool_manager::multi_threads_tests::options::disk_manager_options::DiskManagerImplementationOptions;
+use crate::buffer::buffer_pool_manager::multi_threads_tests::options::duration_type::DurationType;
+use crate::buffer::buffer_pool_manager::multi_threads_tests::options::get_thread_page_id_getter::GetThreadPageId;
 
 
 #[derive(Debug, Clone, derive_builder::Builder)]

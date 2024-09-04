@@ -1,12 +1,12 @@
 #[cfg(test)]
 mod tests {
-    use crate::buffer_pool_manager::manager::BufferPoolManager;
-    use crate::lru_k_replacer::AccessType;
+    use crate::buffer::buffer_pool_manager::manager::BufferPoolManager;
+    use crate::buffer::lru_k_replacer::AccessType;
     use common::config::BUSTUB_PAGE_SIZE;
     use parking_lot::Mutex;
     use rand::Rng;
     use std::sync::Arc;
-    use storage::{AlignToPageData, DefaultDiskManager};
+    use crate::storage::{AlignToPageData, DefaultDiskManager};
 
     use tempdir::TempDir;
 

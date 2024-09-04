@@ -1,10 +1,10 @@
 #[cfg(test)]
 mod tests {
-    use crate::buffer_pool_manager::PinPageGuard;
-    use crate::BufferPoolManager;
+    use crate::buffer::buffer_pool_manager::PinPageGuard;
+    use crate::buffer::BufferPoolManager;
     use parking_lot::Mutex;
     use std::sync::Arc;
-    use storage::{DiskManager, DiskManagerUnlimitedMemory};
+    use crate::storage::{DiskManager, DiskManagerUnlimitedMemory};
 
     #[test]
     fn sample() {
