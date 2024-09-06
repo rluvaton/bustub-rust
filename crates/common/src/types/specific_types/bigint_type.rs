@@ -5,21 +5,21 @@ use crate::types::{TypeId, TypeIdTrait, Value, BUSTUB_INT64_NULL, BUSTUB_VALUE_N
 
 #[derive(Copy, Debug)]
 pub struct BigIntType {
-    value: u64,
+    value: i64,
     len: u32,
 }
 
 impl BigIntType {
-    pub fn new(value: u64) -> Self {
+    pub fn new(value: i64) -> Self {
         BigIntType {
             value,
-            len: if value == BUSTUB_INT64_NULL as u64 { BUSTUB_VALUE_NULL } else { 0 },
+            len: if value == BUSTUB_INT64_NULL { BUSTUB_VALUE_NULL } else { 0 },
         }
     }
 }
 
 impl Deref for BigIntType {
-    type Target = u64;
+    type Target = i64;
 
     fn deref(&self) -> &Self::Target {
         &self.value
@@ -39,8 +39,8 @@ impl Display for BigIntType {
 }
 
 
-impl From<u64> for BigIntType {
-    fn from(value: u64) -> Self {
+impl From<i64> for BigIntType {
+    fn from(value: i64) -> Self {
         BigIntType::new(value)
     }
 }
@@ -69,8 +69,8 @@ impl PartialEq<Value> for BigIntType {
     }
 }
 
-impl PartialEq<u64> for BigIntType {
-    fn eq(&self, other: &u64) -> bool {
+impl PartialEq<i64> for BigIntType {
+    fn eq(&self, other: &i64) -> bool {
         self.value == *other
     }
 }
@@ -87,8 +87,8 @@ impl PartialOrd<Value> for BigIntType {
     }
 }
 
-impl PartialOrd<u64> for BigIntType {
-    fn partial_cmp(&self, other: &u64) -> Option<Ordering> {
+impl PartialOrd<i64> for BigIntType {
+    fn partial_cmp(&self, other: &i64) -> Option<Ordering> {
         self.value.partial_cmp(other)
     }
 }
@@ -213,52 +213,92 @@ mod test {
 
     #[test]
     fn basic_arithmetics_for_zero() {
-        let numbers_0_to_100: [BigIntType; 101] = std::array::from_fn(|i| (i as u64).into());
 
-        // Validate all the numbers are correct
-        for i in 0..=100u64 {
-            assert_eq!(numbers_0_to_100[i as usize], i);
+        let numbers_i64: [i64; 201] = std::array::from_fn(|i| -100 + i as i64);
+        let numbers: [BigIntType; 201] = std::array::from_fn(|i| (-100 + i as i64).into());
+
+        // Make sure we created correctly
+        for i in 0..201 {
+            assert_eq!(numbers[i].value, numbers_i64[i]);
         }
 
-        // 0
 
-        for index in 0..numbers_0_to_100.len() {
-            let value = index as u64;
+        let zero = BigIntType::new(0);
+
+
+        for number in numbers {
+            let value = number.value;
 
             // 0 + i;
-            assert_eq!(numbers_0_to_100[0] + numbers_0_to_100[index], numbers_0_to_100[index]);
-            assert_eq!(numbers_0_to_100[0] + numbers_0_to_100[index], value);
+            assert_eq!(zero + number, number);
+            assert_eq!(zero + number, value);
 
             // i + 0
-            assert_eq!(numbers_0_to_100[index] + numbers_0_to_100[0], numbers_0_to_100[index]);
-            assert_eq!(numbers_0_to_100[index] + numbers_0_to_100[0], value);
+            assert_eq!(number + zero, number);
+            assert_eq!(number + zero, value);
 
             // 0 * i
-            assert_eq!(numbers_0_to_100[0] * numbers_0_to_100[index], numbers_0_to_100[0]);
-            assert_eq!(numbers_0_to_100[0] * numbers_0_to_100[index], 0);
+            assert_eq!(zero * number, zero);
+            assert_eq!(zero * number, 0);
 
             // i * 0
-            assert_eq!(numbers_0_to_100[index] * numbers_0_to_100[0], numbers_0_to_100[0]);
-            assert_eq!(numbers_0_to_100[index] * numbers_0_to_100[0], 0);
+            assert_eq!(number * zero, zero);
+            assert_eq!(number * zero, 0);
         }
     }
 
     #[test]
     fn basic_arithmetics() {
-        let numbers_1_to_100: [BigIntType; 100] = std::array::from_fn(|i| (i as u64 + 1).into());
+        let numbers_1_to_100: [BigIntType; 100] = std::array::from_fn(|i| (i as i64 + 1).into());
 
         // Validate all the numbers are correct
-        for i in 0..100u64 {
+        for i in 0..100i64 {
             assert_eq!(numbers_1_to_100[i as usize], i + 1);
         }
 
         for a_index in 0..numbers_1_to_100.len() {
             let a = numbers_1_to_100[a_index];
-            let a_value = (a_index as u64) + 1;
+            let a_value = (a_index as i64) + 1;
 
             for b_index in 0..numbers_1_to_100.len() {
                 let b = numbers_1_to_100[b_index];
-                let b_value = b_index as u64 + 1;
+                let b_value = b_index as i64 + 1;
+
+                // a + b;
+                assert_eq!((a + b).value, a_value + b_value);
+                assert_eq!(a + b, BigIntType::new(a_value + b_value));
+
+                // a * b;
+                assert_eq!((a * b).value, a_value * b_value);
+                assert_eq!(a * b, BigIntType::new(a_value * b_value));
+
+                // a / b;
+                assert_eq!((a / b).value, a_value / b_value);
+                assert_eq!(a / b, BigIntType::new(a_value / b_value));
+
+                // a % b
+                assert_eq!((a % b).value, a_value % b_value);
+                assert_eq!(a % b, BigIntType::new(a_value % b_value));
+            }
+        }
+    }
+
+    #[test]
+    fn basic_arithmetics_negative() {
+        let numbers_minus100_to_1: [BigIntType; 100] = std::array::from_fn(|i| (-100 + i as i64).into());
+
+        // Validate all the numbers are correct
+        for i in 0..100i64 {
+            assert_eq!(numbers_minus100_to_1[i as usize], -100 + i);
+        }
+
+        for a_index in 0..numbers_minus100_to_1.len() {
+            let a = numbers_minus100_to_1[a_index];
+            let a_value = -100 + (a_index as i64);
+
+            for b_index in 0..numbers_minus100_to_1.len() {
+                let b = numbers_minus100_to_1[b_index];
+                let b_value = -100 + b_index as i64;
 
                 // a + b;
                 assert_eq!((a + b).value, a_value + b_value);
@@ -281,61 +321,53 @@ mod test {
 
     #[test]
     fn basic_cmp() {
-        let numbers_0_to_100_u64: [u64; 101] = std::array::from_fn(|i| i as u64);
-        let numbers_0_to_100: [BigIntType; 101] = std::array::from_fn(|i| (i as u64).into());
+        let numbers_i64: [i64; 201] = std::array::from_fn(|i| -100 + i as i64);
+        let numbers: [BigIntType; 201] = std::array::from_fn(|i| (-100 + i as i64).into());
 
         // Make sure we created correctly
-        for i in 0..=100 {
-            assert_eq!(numbers_0_to_100[i].value, numbers_0_to_100_u64[i]);
+        for i in 0..201 {
+            assert_eq!(numbers[i].value, numbers_i64[i]);
         }
 
-        for i in 0..=100 {
+        for i in 0..201 {
             // =
-            assert_eq!(numbers_0_to_100[i], BigIntType::new(numbers_0_to_100_u64[i]));
+            assert_eq!(numbers[i], BigIntType::new(numbers_i64[i]));
         }
 
-        for n in numbers_0_to_100 {
+        for n in numbers {
             // !=
             assert_ne!(n, BigIntType::new(200));
         }
 
-        for n in numbers_0_to_100 {
+        for n in numbers {
             // <
             assert!(n < BigIntType::new(n.value + 1), "{} < {}", n.value, n.value + 1);
 
-            assert_eq!(n < BigIntType::new(n.value), false, "{} should not be less than {}", n.value, n.value );
-            if n.value > 0 {
-                assert_eq!(n < BigIntType::new(n.value - 1), false, "{} should not be less than {}", n.value, n.value - 1);
-            }
+            assert_eq!(n < BigIntType::new(n.value), false, "{} should not be less than {}", n.value, n.value);
+            assert_eq!(n < BigIntType::new(n.value - 1), false, "{} should not be less than {}", n.value, n.value - 1);
         }
 
-        for n in numbers_0_to_100 {
+        for n in numbers {
             // <=
             assert!(n <= BigIntType::new(n.value), "{} <= {}", n.value, n.value);
             assert!(n <= BigIntType::new(n.value + 1), "{} <= {}", n.value, n.value + 1);
 
-            if n.value > 0 {
-                assert_eq!(n <= BigIntType::new(n.value - 1), false, "{} should not be less than or equal to {}", n.value, n.value - 1);
-            }
+            assert_eq!(n <= BigIntType::new(n.value - 1), false, "{} should not be less than or equal to {}", n.value, n.value - 1);
         }
 
-        for n in numbers_0_to_100 {
+        for n in numbers {
             // >
-            if n.value > 0 {
-                assert!(n > BigIntType::new(n.value - 1), "{} > {}", n.value, n.value - 1);
-            }
+            assert!(n > BigIntType::new(n.value - 1), "{} > {}", n.value, n.value - 1);
 
             assert_eq!(n > BigIntType::new(n.value), false, "{} should not be greater than {}", n.value, n.value);
             assert_eq!(n > BigIntType::new(n.value + 1), false, "{} should not be greater than {}", n.value, n.value + 1);
         }
 
-        for n in numbers_0_to_100 {
+        for n in numbers {
             // >=
             assert!(n >= BigIntType::new(n.value), "{} >= {}", n.value, n.value);
 
-            if n.value > 0 {
-                assert!(n >= BigIntType::new(n.value - 1), "{} >= {}", n.value, n.value - 1);
-            }
+            assert!(n >= BigIntType::new(n.value - 1), "{} >= {}", n.value, n.value - 1);
 
             assert_eq!(n >= BigIntType::new(n.value + 1), false, "{} should not be greater than or equal to {}", n.value, n.value + 1);
         }

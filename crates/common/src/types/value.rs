@@ -1,15 +1,21 @@
 // TODO - should probably be trait
 
-use crate::types::{TypeId, TypeIdTrait};
+use crate::types::TypeId;
 
 
 // TODO - implement from src/include/type/value.h
 pub struct Value {
-    // The data type
-    // type_id: SpecificType
+    /// The data type
+    type_id: TypeId
 }
 
 impl Value {
+
+    #[inline]
+    fn get_type_id(&self) -> TypeId {
+        self.type_id
+    }
+
     // // TODO - this is deserialize_from
     // pub fn deserialize_from_ptr(ptr: *const u8, value_type: TypeId) -> Self {
     //     todo!()
