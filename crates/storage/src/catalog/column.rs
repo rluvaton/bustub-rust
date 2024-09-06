@@ -1,5 +1,5 @@
 use std::fmt::{Debug, Display, Formatter};
-use common::types::TypeId;
+use common::types::DBTypeId;
 
 // TODO - implement src/include/catalog/column.h
 #[derive(Clone)]
@@ -8,7 +8,7 @@ pub struct Column {
     column_name: String,
 
     /// Column value's type.
-    column_type: TypeId,
+    column_type: DBTypeId,
 
     /// For a non-inlined column, this is the size of a pointer. Otherwise, the size of the fixed length column.
     fixed_length: u32,
@@ -29,8 +29,8 @@ impl Column {
     /// * `type_id`: type of the column
     ///
     /// returns: Column
-    pub fn new_fixed_size(column_name: String, type_id: TypeId) -> Self {
-        assert_ne!(type_id, TypeId::VARCHAR, "Wrong function for VARCHAR type.");
+    pub fn new_fixed_size(column_name: String, type_id: DBTypeId) -> Self {
+        assert_ne!(type_id, DBTypeId::VARCHAR, "Wrong function for VARCHAR type.");
 
         Self {
             column_name,
@@ -49,8 +49,8 @@ impl Column {
     /// * `type_id`: type of the column
     ///
     /// returns: Column
-    pub fn new_variable_size(column_name: String, type_id: TypeId, length: u32) -> Self {
-        assert_eq!(type_id, TypeId::VARCHAR, "Wrong function for non-VARCHAR type.");
+    pub fn new_variable_size(column_name: String, type_id: DBTypeId, length: u32) -> Self {
+        assert_eq!(type_id, DBTypeId::VARCHAR, "Wrong function for non-VARCHAR type.");
 
         Self {
             column_name,
@@ -105,13 +105,13 @@ impl Column {
     }
 
     /// get column type
-    pub fn get_type(&self) -> TypeId {
+    pub fn get_type(&self) -> DBTypeId {
         self.column_type
     }
 
     /// true if column is inlined, false otherwise
     pub fn is_inlined(&self) -> bool {
-        !matches!(self.column_type, TypeId::VARCHAR)
+        !matches!(self.column_type, DBTypeId::VARCHAR)
     }
 }
 

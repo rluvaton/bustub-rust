@@ -1,6 +1,6 @@
 use crate::catalog::Schema;
 use crate::storage::{Comparator, Tuple};
-use common::types::{TypeId, Value};
+use common::types::{DBTypeId, Value};
 use std::fmt::{Debug, Display, Formatter};
 use common::PageKey;
 
@@ -36,7 +36,7 @@ impl<const KEY_SIZE: usize> GenericKey<KEY_SIZE> {
     pub(crate) fn to_value(&self, schema: &Schema, column_idx: u32) -> Value {
         let data_slice: &[u8];
         let col = schema.get_column(column_idx);
-        let column_type: TypeId = col.get_type();
+        let column_type: DBTypeId = col.get_type();
         let is_inlined = col.is_inlined();
 
         if is_inlined {
