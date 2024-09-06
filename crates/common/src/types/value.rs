@@ -30,13 +30,9 @@ impl Value {
     }
 
     pub fn try_cast_as(&self, db_type_id: DBTypeId) -> anyhow::Result<Value> {
-
-
-        let new = match self.value {
-            DBTypeIdImpl::BIGINT(current) => {
-                current.try_cast_as(db_type_id)?
-            }
-        };
+        let new = run_on_impl!(&self.value, current, {
+           current.try_cast_as(db_type_id)?
+        });
 
         Ok(Value::new(new))
     }
