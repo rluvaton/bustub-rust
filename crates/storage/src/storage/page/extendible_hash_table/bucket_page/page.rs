@@ -4,27 +4,26 @@ use common::config::{PageId, BUSTUB_PAGE_SIZE};
 use std::fmt::{Debug, Display, Formatter};
 use std::marker::PhantomData;
 use std::mem::size_of;
-
-pub trait KeyComparatorFn<Key: Sized>: Fn(&Key, &Key) -> Ordering {}
-
+use common::{PageKey, PageValue, RID};
+use crate::storage::{Comparator, GenericComparator, GenericKey};
 
 // Test assertion helper type
-const _ASSERTION_TEST_TYPE: usize = hash_table_bucket_array_size::<u8, u8>();
+const _ASSERTION_TEST_TYPE: usize = hash_table_bucket_array_size::<GenericKey<8>, RID>();
 
 //noinspection RsAssertEqual
 const _: () = {
     // Assert that the comparator phantom data does not affecting size
     assert!(
-        size_of::<BucketPage<_ASSERTION_TEST_TYPE, u8, u8>>() ==
+        size_of::<BucketPage<_ASSERTION_TEST_TYPE, GenericKey<8>, RID, GenericComparator<8>>>() ==
             0 +
-            // size
+                // size
                 size_of::<u32>() +
 
                 // max size
                 size_of::<u32>() +
 
                 // array
-                size_of::<MappingType<u8, u8>>() * _ASSERTION_TEST_TYPE
+                size_of::<MappingType<GenericKey<8>, RID>>() * _ASSERTION_TEST_TYPE
     );
 };
 
@@ -53,11 +52,12 @@ pub const fn hash_table_bucket_array_size<Key, Value>() -> usize {
 /// # Examples
 /// ```rust
 /// use std::cmp::Ordering;
-/// use storage::storage::{ExtendibleHashTableBucketPage, hash_table_bucket_array_size};
+/// use common::RID;
+/// use storage::storage::{ExtendibleHashTableBucketPage, hash_table_bucket_array_size, GenericComparator, GenericKey};
 ///
 /// const a: usize = hash_table_bucket_array_size::<u8, u8>();
 ///
-/// type B = ExtendibleHashTableBucketPage::<a, u8, u8>;
+/// type B = ExtendibleHashTableBucketPage::<a, GenericKey<8>, RID, GenericComparator<8>>;
 ///
 /// let _ = B::ARRAY_SIZE_OK;
 /// ```
@@ -65,21 +65,23 @@ pub const fn hash_table_bucket_array_size<Key, Value>() -> usize {
 /// When the bucket page size is not the hash_table_bucket_array_size size
 /// ```compile_fail
 /// use std::cmp::Ordering;
-/// use storage::storage::{ExtendibleHashTableBucketPage, hash_table_bucket_array_size};
+/// use common::RID;
+/// use storage::storage::{ExtendibleHashTableBucketPage, hash_table_bucket_array_size, GenericComparator, GenericKey};
 ///
 /// const a: usize = hash_table_bucket_array_size::<u8, u8>() - 1;
 ///
-/// type B = ExtendibleHashTableBucketPage::<a, u8, u8>;
+/// type B = ExtendibleHashTableBucketPage::<a, GenericKey<8>, RID, GenericComparator<8>>;
 ///
 /// let _ = B::ARRAY_SIZE_OK;
 /// ```
 ///
 #[repr(C)]
 // TODO - replace the repr(C)
-pub struct BucketPage<const ARRAY_SIZE: usize, Key, Value>
+pub struct BucketPage<const ARRAY_SIZE: usize, Key, Value, KeyComparator>
 where
-    Key: Sized + Display,
-    Value: Sized + Display + PartialEq,
+    Key: PageKey,
+    Value: PageValue,
+    KeyComparator: Comparator<Key>
 {
     /// The number of key-value pairs the bucket is holding
     size: u32,
@@ -89,14 +91,17 @@ where
 
     /// The array that holds the key-value pairs
     array: [MappingType<Key, Value>; ARRAY_SIZE],
+
+    _key_comparator: PhantomData<KeyComparator>
 }
 
 
 // TODO - maybe instead of comparator use the Partial Eq function
-impl<const ARRAY_SIZE: usize, Key, Value> BucketPage<ARRAY_SIZE, Key, Value>
+impl<const ARRAY_SIZE: usize, Key, Value, KeyComparator> BucketPage<ARRAY_SIZE, Key, Value, KeyComparator>
 where
-    Key: Sized + Display,
-    Value: Sized + Display + PartialEq,
+    Key: PageKey,
+    Value: PageValue,
+    KeyComparator: Comparator<Key>
 {
     /// Assert that the array size generic is ok
     /// this will not show pretty stack trace and will not be evaluated unless called explicitly,
@@ -133,13 +138,13 @@ where
      * @return true if the key and value are present, false if not found.
      */
     // TODO - use the comparor
-    pub fn lookup<KeyComparator: KeyComparatorFn<Key>>(&self, key: &Key, value: &Value, cmp: &KeyComparator) -> bool {
+    pub fn lookup(&self, key: &Key, value: &Value, comparator: &KeyComparator) -> bool {
         // unimplemented!();
         for i in 0..self.size as usize {
             let current_pair = &self.array[i];
 
             // TODO - should do binary search? the values are not ordered
-            if cmp(key, &current_pair.0) == Ordering::Equal && *value == current_pair.1 {
+            if comparator.cmp(key, &current_pair.0) == Ordering::Equal && *value == current_pair.1 {
                 return true;
             }
         }
@@ -155,7 +160,7 @@ where
      * @param cmp the comparator to use
      * @return true if inserted, false if bucket is full or the same key is already present
      */
-    pub fn insert<KeyComparator: KeyComparatorFn<Key>>(&mut self, key: &Key, value: &Value, cmp: &KeyComparator) -> bool {
+    pub fn insert(&mut self, key: &Key, value: &Value, comparator: &KeyComparator) -> bool {
         if self.is_full() {
             return false;
         }
@@ -164,12 +169,17 @@ where
             let current_pair = &self.array[i];
 
             // TODO - should do binary search? the values are not ordered
-            if cmp(key, &current_pair.0) == Ordering::Equal && *value == current_pair.1 {
-                return true;
+            if comparator.cmp(key, &current_pair.0) == Ordering::Equal && *value == current_pair.1 {
+                return false;
             }
         }
 
-        false
+        let entry: MappingType<Key, Value> = (key.clone(), value.clone());
+
+        self.array[self.size as usize] = entry;
+        self.size += 1;
+
+        true
     }
 
     /**
@@ -177,13 +187,13 @@ where
      *
      * @return true if removed, false if not found
      */
-    pub fn remove<KeyComparator: KeyComparatorFn<Key>>(&mut self, key: &Key, cmp: &KeyComparator) -> bool {
+    pub fn remove(&mut self, key: &Key, comparator: &KeyComparator) -> bool {
         if self.is_empty() {
             return false;
         }
 
         // TODO - can do binary search?
-        let bucket_index = self.get_bucket_idx_by_key(key, cmp);
+        let bucket_index = self.get_bucket_idx_by_key(key, comparator);
         if let Some(bucket_index) = bucket_index {
             self.remove_at(bucket_index as u32);
 
@@ -268,14 +278,13 @@ where
         println!("{:?}", self)
     }
 
-    fn get_bucket_idx_by_key<KeyComparator: KeyComparatorFn<Key>>(&self, key: &Key, cmp: &KeyComparator) -> Option<usize> {
-        self.array[..self.size() as usize].iter().position(|item| cmp(key, &item.0) == Ordering::Equal)
-
+    fn get_bucket_idx_by_key(&self, key: &Key, comparator: &KeyComparator) -> Option<usize> {
+        self.array[..self.size() as usize].iter().position(|item| comparator.cmp(key, &item.0) == Ordering::Equal)
     }
 
 }
 
-impl<const ARRAY_SIZE: usize, Key: Sized + Display, Value: Sized + Display + PartialEq> Debug for BucketPage<ARRAY_SIZE, Key, Value> {
+impl<const ARRAY_SIZE: usize, Key: PageKey, Value: PageValue, KeyComparator: Comparator<Key>> Debug for BucketPage<ARRAY_SIZE, Key, Value, KeyComparator> {
 
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.write_str(format!("======== BUCKET (size_: {} | max_size_: {}) ========\n", self.size, self.max_size).as_str())?;
@@ -291,20 +300,19 @@ impl<const ARRAY_SIZE: usize, Key: Sized + Display, Value: Sized + Display + Par
 
 #[cfg(test)]
 mod tests {
+    use std::array;
     use super::*;
 
     #[test]
     fn assert_size() {
-        const a: usize = hash_table_bucket_array_size::<u8, u8>();
+        const SIZE: usize = hash_table_bucket_array_size::<GenericKey<8>, RID>();
 
-        let b = BucketPage::<a, u8, u8> {
+        BucketPage::<SIZE, GenericKey<8>, RID, GenericComparator<8>> {
             size: 0,
             max_size: 0,
-            array: [(0, 0); a],
+            array: array::from_fn(|_| (GenericKey::default(), RID::default())),
+            _key_comparator: PhantomData
         };
-
-        // let () = BucketPage::<a, u8, u8>::OK;
-
     }
 }
 
