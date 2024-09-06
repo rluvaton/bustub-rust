@@ -95,6 +95,48 @@ impl DBTypeId {
     pub fn deserialize_from(&self, storage: &[u8]) -> Value {
         unimplemented!()
     }
+
+    pub fn check_comparable(&self, other_type_id: &Self) -> bool {
+        match self {
+            DBTypeId::BOOLEAN => {
+                match other_type_id {
+                    DBTypeId::BOOLEAN | DBTypeId::VARCHAR => true,
+                    _ => false
+                }
+            },
+
+            DBTypeId::TINYINT |
+            DBTypeId::SMALLINT |
+            DBTypeId::INTEGER |
+            DBTypeId::BIGINT |
+            DBTypeId::DECIMAL => {
+                match other_type_id {
+                    DBTypeId::TINYINT |
+                    DBTypeId::SMALLINT |
+                    DBTypeId::INTEGER |
+                    DBTypeId::BIGINT |
+                    DBTypeId::DECIMAL |
+                    DBTypeId::VARCHAR => true,
+                    _ => false
+                }
+            }
+
+            // Anything can be cast to a string!
+            DBTypeId::VARCHAR => true,
+            DBTypeId::TIMESTAMP => false,
+            _ => false
+        }
+    }
+
+    pub fn is_integer(&self) -> bool {
+        match self {
+            DBTypeId::TINYINT |
+            DBTypeId::SMALLINT |
+            DBTypeId::INTEGER |
+            DBTypeId::BIGINT => true,
+            _ => false
+        }
+    }
 }
 
 impl Debug for DBTypeId {

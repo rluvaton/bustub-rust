@@ -40,6 +40,8 @@ cmp::PartialOrd<Value> + // used to derive min, max, and all compare functions
     fn get_max_value() -> Self;
 
     fn is_zero(&self) -> bool;
+
+    fn is_null(&self) -> bool;
 }
 
 
@@ -57,6 +59,12 @@ Into<DBTypeIdImpl>
 
     // Return a stringified version of this value
     fn to_string(&self) -> String;
+
+    fn try_cast_as(&self, db_type_id: DBTypeId) -> anyhow::Result<DBTypeIdImpl>;
+
+    unsafe fn cast_as_unchecked(&self, db_type_id: DBTypeId) -> DBTypeIdImpl {
+        self.try_cast_as(db_type_id).expect("cannot cast as the requested_type")
+    }
 }
 
 pub trait FormatDBTypeTrait: Display + Debug {

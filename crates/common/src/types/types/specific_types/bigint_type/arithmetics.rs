@@ -1,6 +1,6 @@
 use std::ops::{Add, Div, Mul, Rem, Sub};
 use anyhow::anyhow;
-use crate::types::{ArithmeticsDBTypeTrait, BigIntType, DBTypeId, Value, BUSTUB_I64_NULL};
+use crate::types::{ArithmeticsDBTypeTrait, BigIntType, ComparisonDBTypeTrait, DBTypeId, DBTypeIdImpl, FormatDBTypeTrait, Value, BUSTUB_I64_NULL};
 impl Add for BigIntType {
     type Output = BigIntType;
 
@@ -13,7 +13,14 @@ impl Add<Value> for BigIntType {
     type Output = Value;
 
     fn add(self, rhs: Value) -> Self::Output {
-        todo!()
+        let other_type_id = rhs.get_db_type_id();
+        assert!(Self::TYPE.check_comparable(&other_type_id));
+
+        Value::new(
+            match rhs.get_value() {
+                DBTypeIdImpl::BIGINT(rhs) => (self + *rhs).into()
+            }
+        )
     }
 }
 
@@ -29,7 +36,14 @@ impl Sub<Value> for BigIntType {
     type Output = Value;
 
     fn sub(self, rhs: Value) -> Self::Output {
-        todo!()
+        let other_type_id = rhs.get_db_type_id();
+        assert!(Self::TYPE.check_comparable(&other_type_id));
+
+        Value::new(
+            match rhs.get_value() {
+                DBTypeIdImpl::BIGINT(rhs) => (self - *rhs).into()
+            }
+        )
     }
 }
 
@@ -45,7 +59,14 @@ impl Mul<Value> for BigIntType {
     type Output = Value;
 
     fn mul(self, rhs: Value) -> Self::Output {
-        todo!()
+        let other_type_id = rhs.get_db_type_id();
+        assert!(Self::TYPE.check_comparable(&other_type_id));
+
+        Value::new(
+            match rhs.get_value() {
+                DBTypeIdImpl::BIGINT(rhs) => (self * *rhs).into()
+            }
+        )
     }
 }
 
@@ -61,7 +82,18 @@ impl Div<Value> for BigIntType {
     type Output = Value;
 
     fn div(self, rhs: Value) -> Self::Output {
-        todo!()
+        let other_type_id = rhs.get_db_type_id();
+        assert!(Self::TYPE.check_comparable(&other_type_id));
+
+        if self.is_zero() && rhs.is_zero() {
+            panic!("Division by zero on right-hand side");
+        }
+
+        Value::new(
+            match rhs.get_value() {
+                DBTypeIdImpl::BIGINT(rhs) => (self / *rhs).into()
+            }
+        )
     }
 }
 
@@ -77,7 +109,14 @@ impl Rem<Value> for BigIntType {
     type Output = Value;
 
     fn rem(self, rhs: Value) -> Self::Output {
-        todo!()
+        let other_type_id = rhs.get_db_type_id();
+        assert!(Self::TYPE.check_comparable(&other_type_id));
+
+        Value::new(
+            match rhs.get_value() {
+                DBTypeIdImpl::BIGINT(rhs) => (self % *rhs).into()
+            }
+        )
     }
 }
 
