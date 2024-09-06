@@ -1,7 +1,9 @@
+use std::any::Any;
 use std::cmp::Ordering;
 use std::fmt::{Debug, Display, Formatter};
 use std::ops::{Add, Deref, Div, Mul, Rem, Sub};
-use crate::types::{TypeId, TypeIdTrait, Value, BUSTUB_INT64_NULL, BUSTUB_VALUE_NULL};
+use anyhow::anyhow;
+use crate::types::{DBTypeId, DBTypeIdImpl, TypeIdTrait, Value, BUSTUB_I64_MAX, BUSTUB_I64_MIN, BUSTUB_I64_NULL, BUSTUB_VALUE_NULL};
 
 #[derive(Copy, Debug)]
 pub struct BigIntType {
@@ -13,7 +15,7 @@ impl BigIntType {
     pub fn new(value: i64) -> Self {
         BigIntType {
             value,
-            len: if value == BUSTUB_INT64_NULL { BUSTUB_VALUE_NULL } else { 0 },
+            len: if value == BUSTUB_I64_NULL { BUSTUB_VALUE_NULL } else { 0 },
         }
     }
 }
@@ -38,7 +40,6 @@ impl Display for BigIntType {
     }
 }
 
-
 impl From<i64> for BigIntType {
     fn from(value: i64) -> Self {
         BigIntType::new(value)
@@ -47,15 +48,11 @@ impl From<i64> for BigIntType {
 
 impl From<&[u8]> for BigIntType {
     fn from(value: &[u8]) -> Self {
-        todo!()
+        // TODO - should we have type that indicate whether it's big int or other type?
+        BigIntType::deserialize_from(value)
     }
 }
 
-impl<'a> Into<&'a [u8]> for BigIntType {
-    fn into(self) -> &'a [u8] {
-        todo!()
-    }
-}
 
 impl PartialEq for BigIntType {
     fn eq(&self, other: &Self) -> bool {
@@ -102,7 +99,7 @@ impl Add for BigIntType {
 }
 
 impl Add<Value> for BigIntType {
-    type Output = ();
+    type Output = Value;
 
     fn add(self, rhs: Value) -> Self::Output {
         todo!()
@@ -118,7 +115,7 @@ impl Sub for BigIntType {
 }
 
 impl Sub<Value> for BigIntType {
-    type Output = ();
+    type Output = Value;
 
     fn sub(self, rhs: Value) -> Self::Output {
         todo!()
@@ -134,7 +131,7 @@ impl Mul for BigIntType {
 }
 
 impl Mul<Value> for BigIntType {
-    type Output = ();
+    type Output = Value;
 
     fn mul(self, rhs: Value) -> Self::Output {
         todo!()
@@ -150,7 +147,7 @@ impl Div for BigIntType {
 }
 
 impl Div<Value> for BigIntType {
-    type Output = ();
+    type Output = Value;
 
     fn div(self, rhs: Value) -> Self::Output {
         todo!()
@@ -166,54 +163,89 @@ impl Rem for BigIntType {
 }
 
 impl Rem<Value> for BigIntType {
-    type Output = ();
+    type Output = Value;
 
     fn rem(self, rhs: Value) -> Self::Output {
         todo!()
     }
 }
 
-impl TypeIdTrait<'_> for BigIntType {
-    fn get_type_id() -> TypeId {
-        TypeId::BIGINT
+impl Into<DBTypeIdImpl> for BigIntType {
+    fn into(self) -> DBTypeIdImpl {
+        DBTypeIdImpl::BIGINT(self)
+    }
+}
+
+impl TypeIdTrait for BigIntType {
+    const SIZE: u64 = size_of::<i64>() as u64;
+    const NAME: &'static str = "BIGINT";
+
+    fn get_type_id() -> DBTypeId {
+        DBTypeId::BIGINT
     }
 
-    fn operate_null(&self, rhs: &Self) -> Self {
-        todo!()
+
+    fn operate_null(&self, rhs: &Value) -> anyhow::Result<Value> {
+        match rhs.get_db_type_id() {
+            DBTypeId::TINYINT | DBTypeId::SMALLINT | DBTypeId::INTEGER | DBTypeId::BIGINT => {
+                Ok(Value::new(Self::new(BUSTUB_I64_NULL).into()))
+            }
+            DBTypeId::DECIMAL => {
+                // Ok(Value::new(DecimalType::new(BUSTUB_INT64_NULL)))
+                todo!()
+            }
+            _ => Err(anyhow!("Type error"))
+        }
     }
 
     fn is_zero(&self) -> bool {
-        todo!()
+        self.value == 0
     }
 
     fn is_inlined(&self) -> bool {
-        todo!()
+        true
     }
 
     fn get_data(&self) -> &[u8] {
-        todo!()
+        unimplemented!()
     }
 
     fn get_length(&self) -> u32 {
-        todo!()
+        unimplemented!()
     }
 
     fn get_data_from_slice(storage: &[u8]) -> &[u8] {
-        todo!()
+        unimplemented!()
     }
 
     fn to_string(&self) -> String {
-        todo!()
+        // TODO - what about null
+        self.value.to_string()
+    }
+
+    fn serialize_to(&self, storage: &mut [u8]) {
+        storage[0..Self::SIZE as usize].copy_from_slice(self.value.to_ne_bytes().as_slice())
+    }
+
+    fn deserialize_from(storage: &[u8]) -> Self {
+        BigIntType::new(i64::from_ne_bytes(storage[..Self::SIZE as usize].try_into().unwrap()))
+    }
+
+    fn get_min_value() -> Self {
+        Self::new(BUSTUB_I64_MIN)
+    }
+
+    fn get_max_value() -> Self {
+        Self::new(BUSTUB_I64_MAX)
     }
 }
 
 #[cfg(test)]
 mod test {
-    use crate::types::BigIntType;
+    use crate::types::{BigIntType, TypeIdTrait};
 
     #[test]
     fn basic_arithmetics_for_zero() {
-
         let numbers_i64: [i64; 201] = std::array::from_fn(|i| -100 + i as i64);
         let numbers: [BigIntType; 201] = std::array::from_fn(|i| (-100 + i as i64).into());
 
@@ -370,6 +402,46 @@ mod test {
             assert!(n >= BigIntType::new(n.value - 1), "{} >= {}", n.value, n.value - 1);
 
             assert_eq!(n >= BigIntType::new(n.value + 1), false, "{} should not be greater than or equal to {}", n.value, n.value + 1);
+        }
+    }
+
+    #[test]
+    fn basic_serialize_deserialize() {
+        let numbers_i64: [i64; 201] = std::array::from_fn(|i| -100 + i as i64);
+        let numbers: [BigIntType; 201] = std::array::from_fn(|i| (-100 + i as i64).into());
+
+        // Make sure we created correctly
+        for i in 0..201 {
+            assert_eq!(numbers[i].value, numbers_i64[i]);
+        }
+
+        for i in 0..numbers.len() {
+            let number = numbers[i];
+            let number_i64 = numbers_i64[i];
+
+            let mut actual = [0u8; size_of::<i64>()];
+            let expected = number_i64.to_ne_bytes();
+
+            {
+                numbers[i].serialize_to(&mut actual);
+                assert_eq!(actual, expected, "serialize(BigIntType::new({})) == serialize({})", number_i64, number_i64);
+            }
+
+            {
+                let deserialized = BigIntType::from(actual.as_slice());
+
+                assert_eq!(deserialized, number, "BigIntType::from(serialize(BigIntType::new({})) == BigIntType::new({})", number_i64, number_i64);
+                assert_eq!(deserialized, number_i64);
+            }
+
+            {
+                let mut actual = [0u8; size_of::<i64>() * 2];
+                actual[..size_of::<i64>()].copy_from_slice(expected.as_slice());
+                let deserialized_from_larger = BigIntType::from(actual.as_slice());
+
+                assert_eq!(deserialized_from_larger, number);
+                assert_eq!(deserialized_from_larger, number_i64);
+            }
         }
     }
 }

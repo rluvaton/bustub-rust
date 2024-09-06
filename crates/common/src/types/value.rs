@@ -1,19 +1,28 @@
 // TODO - should probably be trait
 
-use crate::types::TypeId;
+use std::any::Any;
+use crate::types::{DBTypeId, DBTypeIdImpl};
 
 
 // TODO - implement from src/include/type/value.h
 pub struct Value {
     /// The data type
-    type_id: TypeId
+    // type_id: TypeId,
+    value: DBTypeIdImpl
 }
+
 
 impl Value {
 
+    pub fn new(value: DBTypeIdImpl) -> Self {
+        Value {
+            value
+        }
+    }
+
     #[inline]
-    fn get_type_id(&self) -> TypeId {
-        self.type_id
+    pub(crate) fn get_db_type_id(&self) -> DBTypeId {
+        self.value.db_type_id()
     }
 
     // // TODO - this is deserialize_from

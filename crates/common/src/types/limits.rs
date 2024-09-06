@@ -22,10 +22,10 @@ pub const BUSTUB_DATE_MAX: u64 = i32::MAX as u64;
 pub const BUSTUB_BOOLEAN_MAX: u8 = 1;
 
 pub const BUSTUB_VALUE_NULL: u32 = u32::MAX;
-pub const BUSTUB_INT8_NULL:  i8 = i8::MIN;
-pub const BUSTUB_INT16_NULL: i16 = i16::MIN;
-pub const BUSTUB_INT32_NULL: i32 = i32::MIN;
-pub const BUSTUB_INT64_NULL: i64 = i64::MIN;
+pub const BUSTUB_I8_NULL:  i8 = i8::MIN;
+pub const BUSTUB_I16_NULL: i16 = i16::MIN;
+pub const BUSTUB_I32_NULL: i32 = i32::MIN;
+pub const BUSTUB_I64_NULL: i64 = i64::MIN;
 pub const BUSTUB_DATE_NULL: u64 = 0;
 pub const BUSTUB_TIMESTAMP_NULL: u64 = u64::MAX;
 pub const BUSTUB_DECIMAL_NULL: f64 = DBL_LOWEST;
