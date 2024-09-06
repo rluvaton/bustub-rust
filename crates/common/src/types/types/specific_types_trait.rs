@@ -74,6 +74,7 @@ pub trait FormatDBTypeTrait: Display + Debug {
 }
 
 pub trait StorageDBTypeTrait: Sized + Clone {
+
     /// Get the size of this data type in bytes
     const SIZE: u64;
 
@@ -91,5 +92,8 @@ pub trait StorageDBTypeTrait: Sized + Clone {
     fn get_data_from_slice(storage: &[u8]) -> &[u8];
 }
 
+pub trait UnderlyingDBTypeTrait {
+    type UnderlyingType;
+}
 
-pub trait DBTypeIdTrait: FormatDBTypeTrait + ConversionDBTypeTrait + ComparisonDBTypeTrait + ArithmeticsDBTypeTrait + StorageDBTypeTrait {}
+pub trait DBTypeIdTrait: FormatDBTypeTrait + ConversionDBTypeTrait + ComparisonDBTypeTrait + ArithmeticsDBTypeTrait + StorageDBTypeTrait + UnderlyingDBTypeTrait{}

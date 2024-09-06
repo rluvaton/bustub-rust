@@ -83,3 +83,11 @@ impl Value {
     // }
 }
 
+
+impl Default for Value {
+    fn default() -> Self {
+        // TODO - should use invalid type
+        todo!()
+    }
+}
+

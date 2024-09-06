@@ -1,11 +1,11 @@
 use crate::types::types::specific_types::bigint_type::base::BigIntType;
-use crate::types::types::specific_types_trait::ConversionDBTypeTrait;
+use crate::types::types::specific_types_trait::{ConversionDBTypeTrait, UnderlyingDBTypeTrait};
 use crate::types::{DBTypeId, DBTypeIdImpl, StorageDBTypeTrait};
 use anyhow::anyhow;
 use crate::config::PageData;
 
-impl From<i64> for BigIntType {
-    fn from(value: i64) -> Self {
+impl From<<BigIntType as UnderlyingDBTypeTrait>::UnderlyingType> for BigIntType {
+    fn from(value: <Self as UnderlyingDBTypeTrait>::UnderlyingType) -> Self {
         BigIntType::new(value)
     }
 }
