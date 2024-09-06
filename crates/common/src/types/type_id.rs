@@ -1,4 +1,6 @@
 use std::fmt::{Debug, Display, Formatter};
+use std::{cmp, ops};
+use std::ops::Deref;
 use crate::types::Value;
 
 // Every possible SQL type ID
@@ -13,6 +15,77 @@ pub enum TypeId {
     DECIMAL = 6,
     VARCHAR = 7,
     TIMESTAMP = 8,
+}
+
+pub trait TypeIdTrait<'a>:
+
+    Sized +
+    Clone +
+    Deref +
+
+    Display +
+    Debug +
+
+    // Deserialize a value of the given type from the given storage space.
+    From<&'a [u8]> +
+
+    // Serialize this value into the given storage space.
+    Into<&'a [u8]> +
+
+    // TODO - add cast as
+    // TryInto<dyn TypeIdTrait> +
+
+    // Comparison functions
+    // Not using Eq as float number do not implement that
+    cmp::PartialEq + // == and !=
+    cmp::PartialEq<Value> + // == and !=
+    cmp::PartialOrd + // used to derive min, max, and all compare functions
+    cmp::PartialOrd<Value> + // used to derive min, max, and all compare functions
+
+
+    // Other mathematical functions
+    ops::Add + // '+'
+    ops::Add<Value> + // '+'
+    ops::Sub + // '-'
+    ops::Sub<Value> + // '-'
+    ops::Mul + // '*'
+    ops::Mul<Value> + // '*'
+    ops::Div + // '/'
+    ops::Div<Value> + // '/'
+    ops::Rem + // '%'
+    ops::Rem<Value> // '%'
+
+{
+    fn get_type_id() -> TypeId;
+
+    // TODO - should take ref?
+    fn sqrt(self) -> Self {
+        // self * self
+        todo!()
+    }
+
+    // TODO - should return different value?
+    fn operate_null(&self, rhs: &Self) -> Self;
+
+    fn is_zero(&self) -> bool;
+
+    // Is the data inlined into this classes storage space, or must it be accessed
+    // through an indirection/pointer?
+    fn is_inlined(&self) -> bool;
+
+    /// Access the raw variable length data
+    fn get_data(&self) -> &[u8];
+
+    // Get the length of the variable length data
+    fn get_length(&self) -> u32;
+
+    /// Access the raw varlen data stored from the tuple storage
+    fn get_data_from_slice(storage: &[u8]) -> &[u8];
+
+    // Return a stringified version of this value
+    fn to_string(&self) -> String;
+
+    // TODO - add more?
 }
 
 impl TypeId {
@@ -87,6 +160,11 @@ impl TypeId {
             TypeId::VARCHAR => "VARCHAR",
             TypeId::TIMESTAMP => "TIMESTAMP",
         }
+    }
+
+    // Deserialize a value of the given type from the given storage space.
+    pub fn deserialize_from(&self, storage: &[u8]) -> Value {
+        unimplemented!()
     }
 }
 
