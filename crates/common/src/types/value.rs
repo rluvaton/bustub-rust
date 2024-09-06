@@ -1,6 +1,7 @@
 // TODO - should probably be trait
 
 use std::any::Any;
+use crate::run_on_impl;
 use crate::types::{BigIntType, ComparisonDBTypeTrait, ConversionDBTypeTrait, DBTypeId, DBTypeIdImpl, DBTypeIdTrait};
 
 
@@ -30,6 +31,7 @@ impl Value {
 
     pub fn try_cast_as(&self, db_type_id: DBTypeId) -> anyhow::Result<Value> {
 
+
         let new = match self.value {
             DBTypeIdImpl::BIGINT(current) => {
                 current.try_cast_as(db_type_id)?
@@ -44,11 +46,9 @@ impl Value {
     }
 
     pub fn is_zero(&self) -> bool {
-        match self.value {
-            DBTypeIdImpl::BIGINT(current) => {
-                current.is_zero()
-            }
-        }
+        run_on_impl!(&self.value, v, {
+            v.is_zero()
+        })
     }
 
     // // TODO - this is deserialize_from
