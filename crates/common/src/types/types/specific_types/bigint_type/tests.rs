@@ -195,7 +195,7 @@ mod tests {
             }
 
             {
-                let mut actual = [0u8; size_of::<i64>() * 2];
+                let mut actual = [0u8; size_of::<BigIntUnderlyingType>() * 2];
                 actual[..size_of::<BigIntUnderlyingType>()].copy_from_slice(expected.as_slice());
                 let deserialized_from_larger = BigIntType::from(actual.as_slice());
 

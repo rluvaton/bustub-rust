@@ -19,7 +19,7 @@ macro_rules! run_on_impl {
     ($enum_val:expr, $name:ident, $func:expr) => {
         match $enum_val {
             DBTypeIdImpl::BIGINT($name) => $func,
-            DBTypeIdImpl::SMALLINT($name) => $func,
+            // DBTypeIdImpl::SMALLINT($name) => $func,
             // Add match arms for other variants as necessary
         }
     };
@@ -31,7 +31,7 @@ pub enum DBTypeIdImpl {
     // INVALID = 0,
     // BOOLEAN = 1,
     // TINYINT = 2,
-    SMALLINT(SmallIntType),
+    // SMALLINT(SmallIntType),
     // INTEGER = 4,
     BIGINT(BigIntType),
     // DECIMAL = 6,

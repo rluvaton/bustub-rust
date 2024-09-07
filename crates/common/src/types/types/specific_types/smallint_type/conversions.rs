@@ -1,27 +1,34 @@
-use crate::types::{BigIntType, ConversionDBTypeTrait, DBTypeId, DBTypeIdImpl, StorageDBTypeTrait};
+use crate::types::{SmallIntType, ConversionDBTypeTrait, DBTypeId, DBTypeIdImpl, StorageDBTypeTrait, Value};
 use anyhow::anyhow;
-use super::BigIntUnderlyingType;
+use super::SmallIntUnderlyingType;
 
-impl From<BigIntUnderlyingType> for BigIntType {
-    fn from(value: BigIntUnderlyingType) -> Self {
-        BigIntType::new(value)
+impl From<SmallIntUnderlyingType> for SmallIntType {
+    fn from(value: SmallIntUnderlyingType) -> Self {
+        SmallIntType::new(value)
     }
 }
 
-impl From<&[u8]> for BigIntType {
+impl From<&[u8]> for SmallIntType {
     fn from(value: &[u8]) -> Self {
         // TODO - should we have type that indicate whether it's big int or other type?
-        BigIntType::deserialize_from(value)
+        SmallIntType::deserialize_from(value)
     }
 }
 
-impl Into<DBTypeIdImpl> for BigIntType {
+impl Into<DBTypeIdImpl> for SmallIntType {
     fn into(self) -> DBTypeIdImpl {
-        DBTypeIdImpl::BIGINT(self)
+        todo!()
+        // DBTypeIdImpl::SMALLINT(self)
     }
 }
 
-impl ConversionDBTypeTrait for BigIntType {
+impl Into<Value> for SmallIntType {
+    fn into(self) -> Value {
+        Value::new(self.into())
+    }
+}
+
+impl ConversionDBTypeTrait for SmallIntType {
 
     fn to_string(&self) -> String {
         // TODO - what about null
@@ -33,7 +40,7 @@ impl ConversionDBTypeTrait for BigIntType {
     }
 
     fn deserialize_from(storage: &[u8]) -> Self {
-        BigIntType::new(BigIntUnderlyingType::from_ne_bytes(storage[..Self::SIZE as usize].try_into().unwrap()))
+        SmallIntType::new(SmallIntUnderlyingType::from_ne_bytes(storage[..Self::SIZE as usize].try_into().unwrap()))
     }
 
     fn try_cast_as(&self, db_type_id: DBTypeId) -> anyhow::Result<DBTypeIdImpl> {
@@ -47,13 +54,13 @@ impl ConversionDBTypeTrait for BigIntType {
                 todo!()
             }
             DBTypeId::SMALLINT => {
-                todo!()
+                Ok(self.clone().into())
             }
             DBTypeId::INTEGER => {
                 todo!()
             }
             DBTypeId::BIGINT => {
-                Ok(self.clone().into())
+                todo!()
             }
             DBTypeId::DECIMAL => {
                 todo!()
@@ -64,7 +71,7 @@ impl ConversionDBTypeTrait for BigIntType {
             DBTypeId::TIMESTAMP => {
                 todo!()
             }
-            _ => Err(anyhow!(format!("bigint is not coercable to {}", db_type_id.get_name())))
+            _ => Err(anyhow!(format!("smallint is not coercable to {}", db_type_id.get_name())))
         }
     }
 }

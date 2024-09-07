@@ -1,6 +1,5 @@
 use std::fmt::{Display, Formatter};
-use crate::types::{BigIntType, DBTypeId};
-use crate::types::types::specific_types_trait::FormatDBTypeTrait;
+use crate::types::{BigIntType, DBTypeId, FormatDBTypeTrait};
 
 
 impl Display for BigIntType {

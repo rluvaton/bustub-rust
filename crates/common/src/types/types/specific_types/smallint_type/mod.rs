@@ -6,4 +6,5 @@ mod conversions;
 mod format;
 mod storage;
 
-pub use base::{BigIntType, BigIntUnderlyingType};
+pub use base::SmallIntType;
+use base::SmallIntUnderlyingType;

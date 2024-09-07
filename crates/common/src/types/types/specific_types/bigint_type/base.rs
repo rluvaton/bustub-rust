@@ -1,11 +1,11 @@
 use std::ops::Deref;
 use crate::types::{BUSTUB_I64_NULL, BUSTUB_VALUE_NULL};
 
-pub(super) type BigIntUnderlyingType = i64;
+pub type BigIntUnderlyingType = i64;
 
 #[derive(Copy, Debug)]
 pub struct BigIntType {
-    pub(in super::super) value: BigIntUnderlyingType,
+    pub(in crate) value: BigIntUnderlyingType,
     pub(super) len: u32,
 }
 
