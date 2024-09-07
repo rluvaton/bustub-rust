@@ -1,5 +1,5 @@
-use std::ops::Deref;
 use crate::types::{BUSTUB_I64_NULL, BUSTUB_VALUE_NULL};
+use std::ops::Deref;
 
 pub type BigIntUnderlyingType = i64;
 
@@ -23,5 +23,11 @@ impl Deref for BigIntType {
 
     fn deref(&self) -> &Self::Target {
         &self.value
+    }
+}
+
+impl Default for BigIntType {
+    fn default() -> Self {
+        BigIntType::new(BUSTUB_I64_NULL)
     }
 }

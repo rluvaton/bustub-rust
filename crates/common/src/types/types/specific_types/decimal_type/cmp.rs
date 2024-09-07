@@ -1,39 +1,38 @@
-use crate::types::{BigIntType, ComparisonDBTypeTrait, DBTypeIdImpl, DecimalType, DecimalUnderlyingType, FormatDBTypeTrait, IntType, SmallIntType, TinyIntType, Value, BUSTUB_I64_MAX, BUSTUB_I64_MIN, BUSTUB_I64_NULL};
+use crate::types::{BigIntType, BigIntUnderlyingType, ComparisonDBTypeTrait, DBTypeIdImpl, DecimalType, DecimalUnderlyingType, FormatDBTypeTrait, IntType, IntUnderlyingType, SmallIntType, TinyIntType, Value, BUSTUB_DECIMAL_MAX, BUSTUB_DECIMAL_MIN, BUSTUB_DECIMAL_NULL, BUSTUB_I16_MAX, BUSTUB_I16_MIN, BUSTUB_I16_NULL, BUSTUB_I32_MAX, BUSTUB_I32_MIN, BUSTUB_I32_NULL};
 use std::cmp::Ordering;
 use crate::run_on_numeric_impl;
-use super::BigIntUnderlyingType;
 
-impl PartialEq for BigIntType {
+impl PartialEq for DecimalType {
     fn eq(&self, other: &Self) -> bool {
         self.value == other.value
     }
 }
 
-impl PartialEq<DecimalType> for BigIntType {
-    fn eq(&self, other: &DecimalType) -> bool {
-        self.value as DecimalUnderlyingType == other.value
+impl PartialEq<BigIntType> for DecimalType {
+    fn eq(&self, other: &BigIntType) -> bool {
+        self.value == other.value as DecimalUnderlyingType
     }
 }
 
-impl PartialEq<IntType> for BigIntType {
+impl PartialEq<IntType> for DecimalType {
     fn eq(&self, other: &IntType) -> bool {
-        self.value == other.value as BigIntUnderlyingType
+        self.value == other.value as DecimalUnderlyingType
     }
 }
 
-impl PartialEq<SmallIntType> for BigIntType {
+impl PartialEq<SmallIntType> for DecimalType {
     fn eq(&self, other: &SmallIntType) -> bool {
-        self.value == other.value as BigIntUnderlyingType
+        self.value == other.value as DecimalUnderlyingType
     }
 }
 
-impl PartialEq<TinyIntType> for BigIntType {
+impl PartialEq<TinyIntType> for DecimalType {
     fn eq(&self, other: &TinyIntType) -> bool {
-        self.value == other.value as BigIntUnderlyingType
+        self.value == other.value as DecimalUnderlyingType
     }
 }
 
-impl PartialEq<Value> for BigIntType {
+impl PartialEq<Value> for DecimalType {
     fn eq(&self, other: &Value) -> bool {
         let other_type_id = other.get_db_type_id();
         assert!(Self::TYPE.check_comparable(&other_type_id));
@@ -41,7 +40,7 @@ impl PartialEq<Value> for BigIntType {
         run_on_numeric_impl!(
             other.get_value(),
             rhs, self.eq(rhs),
-                _ => unreachable!()
+            _ => unreachable!()
         )
         //
         // match other_type_id {
@@ -71,43 +70,43 @@ impl PartialEq<Value> for BigIntType {
     }
 }
 
-impl PartialEq<BigIntUnderlyingType> for BigIntType {
-    fn eq(&self, other: &BigIntUnderlyingType) -> bool {
+impl PartialEq<DecimalUnderlyingType> for DecimalType {
+    fn eq(&self, other: &DecimalUnderlyingType) -> bool {
         self.value == *other
     }
 }
 
-impl PartialOrd for BigIntType {
+impl PartialOrd for DecimalType {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         self.value.partial_cmp(&other.value)
     }
 }
 
-impl PartialOrd<IntType> for BigIntType {
+impl PartialOrd<BigIntType> for DecimalType {
+    fn partial_cmp(&self, other: &BigIntType) -> Option<Ordering> {
+        self.value.partial_cmp(&(other.value as DecimalUnderlyingType))
+    }
+}
+
+impl PartialOrd<IntType> for DecimalType {
     fn partial_cmp(&self, other: &IntType) -> Option<Ordering> {
-        self.value.partial_cmp(&(other.value as BigIntUnderlyingType))
+        self.value.partial_cmp(&(other.value as DecimalUnderlyingType))
     }
 }
 
-impl PartialOrd<DecimalType> for BigIntType {
-    fn partial_cmp(&self, other: &DecimalType) -> Option<Ordering> {
-        (self.value as DecimalUnderlyingType).partial_cmp(&other.value)
-    }
-}
-
-impl PartialOrd<SmallIntType> for BigIntType {
+impl PartialOrd<SmallIntType> for DecimalType {
     fn partial_cmp(&self, other: &SmallIntType) -> Option<Ordering> {
-        self.value.partial_cmp(&(other.value as BigIntUnderlyingType))
+        self.value.partial_cmp(&(other.value as DecimalUnderlyingType))
     }
 }
 
-impl PartialOrd<TinyIntType> for BigIntType {
+impl PartialOrd<TinyIntType> for DecimalType {
     fn partial_cmp(&self, other: &TinyIntType) -> Option<Ordering> {
-        self.value.partial_cmp(&(other.value as BigIntUnderlyingType))
+        self.value.partial_cmp(&(other.value as DecimalUnderlyingType))
     }
 }
 
-impl PartialOrd<Value> for BigIntType {
+impl PartialOrd<Value> for DecimalType {
     fn partial_cmp(&self, other: &Value) -> Option<Ordering> {
         let other_type_id = other.get_db_type_id();
         assert!(Self::TYPE.check_comparable(&other_type_id));
@@ -115,8 +114,10 @@ impl PartialOrd<Value> for BigIntType {
         run_on_numeric_impl!(
             other.get_value(),
             rhs, self.partial_cmp(rhs),
+
             _ => unreachable!()
         )
+
         //
         // match other_type_id {
         //     DBTypeId::TINYINT => {
@@ -145,27 +146,27 @@ impl PartialOrd<Value> for BigIntType {
     }
 }
 
-impl PartialOrd<BigIntUnderlyingType> for BigIntType {
-    fn partial_cmp(&self, other: &BigIntUnderlyingType) -> Option<Ordering> {
+impl PartialOrd<DecimalUnderlyingType> for DecimalType {
+    fn partial_cmp(&self, other: &DecimalUnderlyingType) -> Option<Ordering> {
         self.value.partial_cmp(other)
     }
 }
 
-impl ComparisonDBTypeTrait for BigIntType {
+impl ComparisonDBTypeTrait for DecimalType {
     fn is_zero(&self) -> bool {
-        self.value == 0
+        self.value == 0f64
     }
 
     fn get_min_value() -> Self {
-        Self::new(BUSTUB_I64_MIN)
+        Self::new(BUSTUB_DECIMAL_MIN)
     }
 
     fn get_max_value() -> Self {
-        Self::new(BUSTUB_I64_MAX)
+        Self::new(BUSTUB_DECIMAL_MAX)
     }
 
     // TODO - this is not the same as the value
     fn is_null(&self) -> bool {
-        self.value == BUSTUB_I64_NULL
+        self.value == BUSTUB_DECIMAL_NULL
     }
 }

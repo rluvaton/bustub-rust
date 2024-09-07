@@ -1,4 +1,4 @@
-use crate::types::{BUSTUB_I16_NULL, BUSTUB_VALUE_NULL};
+use crate::types::{TinyIntType, BUSTUB_I16_NULL, BUSTUB_I8_NULL, BUSTUB_VALUE_NULL};
 use std::ops::Deref;
 
 pub type SmallIntUnderlyingType = i16;
@@ -23,5 +23,11 @@ impl Deref for SmallIntType {
 
     fn deref(&self) -> &Self::Target {
         &self.value
+    }
+}
+
+impl Default for SmallIntType {
+    fn default() -> Self {
+        SmallIntType::new(BUSTUB_I16_NULL)
     }
 }

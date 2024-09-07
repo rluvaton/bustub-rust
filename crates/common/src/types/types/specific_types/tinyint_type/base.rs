@@ -25,3 +25,9 @@ impl Deref for TinyIntType {
         &self.value
     }
 }
+
+impl Default for TinyIntType {
+    fn default() -> Self {
+        TinyIntType::new(BUSTUB_I8_NULL)
+    }
+}

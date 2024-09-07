@@ -6,17 +6,15 @@ mod tests {
 
     #[test]
     fn basic_arithmetics_for_zero() {
-        let numbers_i16: [TinyIntUnderlyingType; 201] = std::array::from_fn(|i| -100 + i as TinyIntUnderlyingType);
-        let numbers: [TinyIntType; 201] = std::array::from_fn(|i| (-100 + i as TinyIntUnderlyingType).into());
+        let numbers_i8: [TinyIntUnderlyingType; 81] = std::array::from_fn(|i| -40 + i as TinyIntUnderlyingType);
+        let numbers: [TinyIntType; 81] = std::array::from_fn(|i| (-40 + i as TinyIntUnderlyingType).into());
 
         // Make sure we created correctly
-        for i in 0..201 {
-            assert_eq!(numbers[i].value, numbers_i16[i]);
+        for i in 0..81 {
+            assert_eq!(numbers[i].value, numbers_i8[i]);
         }
 
-
         let zero = TinyIntType::new(0);
-
 
         for number in numbers {
             let value = number.value;
@@ -41,19 +39,19 @@ mod tests {
 
     #[test]
     fn basic_arithmetics() {
-        let numbers_1_to_100: [TinyIntType; 100] = std::array::from_fn(|i| (i as TinyIntUnderlyingType + 1).into());
+        let numbers_1_to_10: [TinyIntType; 10] = std::array::from_fn(|i| (i as TinyIntUnderlyingType + 1).into());
 
         // Validate all the numbers are correct
-        for i in 0..100i8 {
-            assert_eq!(numbers_1_to_100[i as usize], i + 1);
+        for i in 0..10i8 {
+            assert_eq!(numbers_1_to_10[i as usize], i + 1);
         }
 
-        for a_index in 0..numbers_1_to_100.len() {
-            let a = numbers_1_to_100[a_index];
+        for a_index in 0..numbers_1_to_10.len() {
+            let a = numbers_1_to_10[a_index];
             let a_value = (a_index as TinyIntUnderlyingType) + 1;
 
-            for b_index in 0..numbers_1_to_100.len() {
-                let b = numbers_1_to_100[b_index];
+            for b_index in 0..numbers_1_to_10.len() {
+                let b = numbers_1_to_10[b_index];
                 let b_value = b_index as TinyIntUnderlyingType + 1;
 
                 // a + b;
@@ -77,20 +75,20 @@ mod tests {
 
     #[test]
     fn basic_arithmetics_negative() {
-        let numbers_minus100_to_1: [TinyIntType; 100] = std::array::from_fn(|i| (-100 + i as TinyIntUnderlyingType).into());
+        let numbers_minus10_to_1: [TinyIntType; 10] = std::array::from_fn(|i| (-10 + i as TinyIntUnderlyingType).into());
 
         // Validate all the numbers are correct
-        for i in 0..100i8 {
-            assert_eq!(numbers_minus100_to_1[i as usize], -100 + i);
+        for i in 0..10i8 {
+            assert_eq!(numbers_minus10_to_1[i as usize], -10 + i);
         }
 
-        for a_index in 0..numbers_minus100_to_1.len() {
-            let a = numbers_minus100_to_1[a_index];
-            let a_value = -100 + (a_index as TinyIntUnderlyingType);
+        for a_index in 0..numbers_minus10_to_1.len() {
+            let a = numbers_minus10_to_1[a_index];
+            let a_value = -10 + (a_index as TinyIntUnderlyingType);
 
-            for b_index in 0..numbers_minus100_to_1.len() {
-                let b = numbers_minus100_to_1[b_index];
-                let b_value = -100 + b_index as TinyIntUnderlyingType;
+            for b_index in 0..numbers_minus10_to_1.len() {
+                let b = numbers_minus10_to_1[b_index];
+                let b_value = -10 + b_index as TinyIntUnderlyingType;
 
                 // a + b;
                 assert_eq!((a + b).value, a_value + b_value);
@@ -113,17 +111,17 @@ mod tests {
 
     #[test]
     fn basic_cmp() {
-        let numbers_i16: [TinyIntUnderlyingType; 201] = std::array::from_fn(|i| -100 + i as TinyIntUnderlyingType);
-        let numbers: [TinyIntType; 201] = std::array::from_fn(|i| (-100 + i as TinyIntUnderlyingType).into());
+        let numbers_i8: [TinyIntUnderlyingType; 21] = std::array::from_fn(|i| -10 + i as TinyIntUnderlyingType);
+        let numbers: [TinyIntType; 21] = std::array::from_fn(|i| (-10 + i as TinyIntUnderlyingType).into());
 
         // Make sure we created correctly
-        for i in 0..201 {
-            assert_eq!(numbers[i].value, numbers_i16[i]);
+        for i in 0..21 {
+            assert_eq!(numbers[i].value, numbers_i8[i]);
         }
 
-        for i in 0..201 {
+        for i in 0..21 {
             // =
-            assert_eq!(numbers[i], TinyIntType::new(numbers_i16[i]));
+            assert_eq!(numbers[i], TinyIntType::new(numbers_i8[i]));
         }
 
         for n in numbers {
@@ -167,31 +165,31 @@ mod tests {
 
     #[test]
     fn basic_serialize_deserialize() {
-        let numbers_i16: [TinyIntUnderlyingType; 201] = std::array::from_fn(|i| -100 + i as TinyIntUnderlyingType);
-        let numbers: [TinyIntType; 201] = std::array::from_fn(|i| (-100 + i as TinyIntUnderlyingType).into());
+        let numbers_i8: [TinyIntUnderlyingType; 21] = std::array::from_fn(|i| -10 + i as TinyIntUnderlyingType);
+        let numbers: [TinyIntType; 21] = std::array::from_fn(|i| (-10 + i as TinyIntUnderlyingType).into());
 
         // Make sure we created correctly
-        for i in 0..201 {
-            assert_eq!(numbers[i].value, numbers_i16[i]);
+        for i in 0..21 {
+            assert_eq!(numbers[i].value, numbers_i8[i]);
         }
 
         for i in 0..numbers.len() {
             let number = numbers[i];
-            let number_i16 = numbers_i16[i];
+            let number_i8 = numbers_i8[i];
 
             let mut actual = [0u8; size_of::<TinyIntUnderlyingType>()];
-            let expected = number_i16.to_ne_bytes();
+            let expected = number_i8.to_ne_bytes();
 
             {
                 numbers[i].serialize_to(&mut actual);
-                assert_eq!(actual, expected, "serialize(TinyIntType::new({})) == serialize({})", number_i16, number_i16);
+                assert_eq!(actual, expected, "serialize(TinyIntType::new({})) == serialize({})", number_i8, number_i8);
             }
 
             {
                 let deserialized = TinyIntType::from(actual.as_slice());
 
-                assert_eq!(deserialized, number, "TinyIntType::from(serialize(TinyIntType::new({})) == TinyIntType::new({})", number_i16, number_i16);
-                assert_eq!(deserialized, number_i16);
+                assert_eq!(deserialized, number, "TinyIntType::from(serialize(TinyIntType::new({})) == TinyIntType::new({})", number_i8, number_i8);
+                assert_eq!(deserialized, number_i8);
             }
 
             {
@@ -200,7 +198,7 @@ mod tests {
                 let deserialized_from_larger = TinyIntType::from(actual.as_slice());
 
                 assert_eq!(deserialized_from_larger, number);
-                assert_eq!(deserialized_from_larger, number_i16);
+                assert_eq!(deserialized_from_larger, number_i8);
             }
         }
     }

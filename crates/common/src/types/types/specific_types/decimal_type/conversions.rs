@@ -1,33 +1,33 @@
-use crate::types::{TinyIntType, ConversionDBTypeTrait, DBTypeId, DBTypeIdImpl, StorageDBTypeTrait, Value};
+use crate::types::{IntType, ConversionDBTypeTrait, DBTypeId, DBTypeIdImpl, StorageDBTypeTrait, Value, DecimalType};
 use anyhow::anyhow;
-use super::TinyIntUnderlyingType;
+use super::DecimalUnderlyingType;
 
-impl From<TinyIntUnderlyingType> for TinyIntType {
-    fn from(value: TinyIntUnderlyingType) -> Self {
-        TinyIntType::new(value)
+impl From<DecimalUnderlyingType> for DecimalType {
+    fn from(value: DecimalUnderlyingType) -> Self {
+        DecimalType::new(value)
     }
 }
 
-impl From<&[u8]> for TinyIntType {
+impl From<&[u8]> for DecimalType {
     fn from(value: &[u8]) -> Self {
         // TODO - should we have type that indicate whether it's big int or other type?
-        TinyIntType::deserialize_from(value)
+        DecimalType::deserialize_from(value)
     }
 }
 
-impl Into<DBTypeIdImpl> for TinyIntType {
+impl Into<DBTypeIdImpl> for DecimalType {
     fn into(self) -> DBTypeIdImpl {
-        DBTypeIdImpl::TINYINT(self)
+        DBTypeIdImpl::DECIMAL(self)
     }
 }
 
-impl Into<Value> for TinyIntType {
+impl Into<Value> for DecimalType {
     fn into(self) -> Value {
         Value::new(self.into())
     }
 }
 
-impl ConversionDBTypeTrait for TinyIntType {
+impl ConversionDBTypeTrait for DecimalType {
 
     fn to_string(&self) -> String {
         // TODO - what about null
@@ -39,7 +39,7 @@ impl ConversionDBTypeTrait for TinyIntType {
     }
 
     fn deserialize_from(storage: &[u8]) -> Self {
-        TinyIntType::new(TinyIntUnderlyingType::from_ne_bytes(storage[..Self::SIZE as usize].try_into().unwrap()))
+        DecimalType::new(DecimalUnderlyingType::from_ne_bytes(storage[..Self::SIZE as usize].try_into().unwrap()))
     }
 
     fn try_cast_as(&self, db_type_id: DBTypeId) -> anyhow::Result<DBTypeIdImpl> {
@@ -62,7 +62,7 @@ impl ConversionDBTypeTrait for TinyIntType {
                 Ok(self.clone().into())
             }
             DBTypeId::DECIMAL => {
-                todo!()
+                Ok(self.clone().into())
             }
             DBTypeId::VARCHAR => {
                 todo!()
@@ -70,7 +70,7 @@ impl ConversionDBTypeTrait for TinyIntType {
             DBTypeId::TIMESTAMP => {
                 todo!()
             }
-            _ => Err(anyhow!(format!("tinyint is not coercable to {}", db_type_id.get_name())))
+            _ => Err(anyhow!(format!("decimal is not coercable to {}", db_type_id.get_name())))
         }
     }
 }

@@ -25,3 +25,9 @@ impl Deref for IntType {
         &self.value
     }
 }
+
+impl Default for IntType {
+    fn default() -> Self {
+        IntType::new(BUSTUB_I32_NULL)
+    }
+}

@@ -70,7 +70,7 @@ impl ConversionDBTypeTrait for IntType {
             DBTypeId::TIMESTAMP => {
                 todo!()
             }
-            _ => Err(anyhow!(format!("smallint is not coercable to {}", db_type_id.get_name())))
+            _ => Err(anyhow!(format!("int is not coercable to {}", db_type_id.get_name())))
         }
     }
 }

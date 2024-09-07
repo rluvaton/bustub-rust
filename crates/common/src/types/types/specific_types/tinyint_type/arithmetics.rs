@@ -1,13 +1,21 @@
 use std::ops::{Add, Div, Mul, Rem, Sub};
 use anyhow::anyhow;
 use crate::run_on_numeric_impl;
-use crate::types::{ArithmeticsDBTypeTrait, TinyIntType, ComparisonDBTypeTrait, DBTypeId, DBTypeIdImpl, FormatDBTypeTrait, Value, BUSTUB_I32_NULL, BigIntType, BigIntUnderlyingType, BUSTUB_I16_NULL, IntType, IntUnderlyingType, BUSTUB_I8_NULL, SmallIntType, SmallIntUnderlyingType};
+use crate::types::{ArithmeticsDBTypeTrait, TinyIntType, ComparisonDBTypeTrait, DBTypeId, DBTypeIdImpl, FormatDBTypeTrait, Value, BUSTUB_I32_NULL, BigIntType, BigIntUnderlyingType, BUSTUB_I16_NULL, IntType, IntUnderlyingType, BUSTUB_I8_NULL, SmallIntType, SmallIntUnderlyingType, DecimalType, DecimalUnderlyingType};
 
 impl Add for TinyIntType {
     type Output = TinyIntType;
 
     fn add(self, rhs: Self) -> Self::Output {
         TinyIntType::new(self.value + rhs.value)
+    }
+}
+
+impl Add<DecimalType> for TinyIntType {
+    type Output = DecimalType;
+
+    fn add(self, rhs: DecimalType) -> Self::Output {
+        DecimalType::new(self.value as DecimalUnderlyingType + rhs.value)
     }
 }
 
@@ -68,6 +76,14 @@ impl Sub<BigIntType> for TinyIntType {
     }
 }
 
+impl Sub<DecimalType> for TinyIntType {
+    type Output = DecimalType;
+
+    fn sub(self, rhs: DecimalType) -> Self::Output {
+        DecimalType::new(self.value as DecimalUnderlyingType - rhs.value)
+    }
+}
+
 impl Sub<IntType> for TinyIntType {
     type Output = IntType;
 
@@ -106,6 +122,14 @@ impl Mul for TinyIntType {
 
     fn mul(self, rhs: Self) -> Self::Output {
         TinyIntType::new(self.value * rhs.value)
+    }
+}
+
+impl Mul<DecimalType> for TinyIntType {
+    type Output = DecimalType;
+
+    fn mul(self, rhs: DecimalType) -> Self::Output {
+        DecimalType::new(self.value as DecimalUnderlyingType * rhs.value)
     }
 }
 
@@ -156,6 +180,14 @@ impl Div for TinyIntType {
 
     fn div(self, rhs: Self) -> Self::Output {
         TinyIntType::new(self.value / rhs.value)
+    }
+}
+
+impl Div<DecimalType> for TinyIntType {
+    type Output = DecimalType;
+
+    fn div(self, rhs: DecimalType) -> Self::Output {
+        DecimalType::new(self.value as DecimalUnderlyingType / rhs.value)
     }
 }
 
@@ -212,6 +244,14 @@ impl Rem for TinyIntType {
     }
 }
 
+impl Rem<DecimalType> for TinyIntType {
+    type Output = DecimalType;
+
+    fn rem(self, rhs: DecimalType) -> Self::Output {
+        DecimalType::new(self.value as DecimalUnderlyingType % rhs.value)
+    }
+}
+
 impl Rem<BigIntType> for TinyIntType {
     type Output = BigIntType;
 
@@ -256,13 +296,11 @@ impl Rem<Value> for TinyIntType {
 impl ArithmeticsDBTypeTrait for TinyIntType {
     fn operate_null(&self, rhs: &Value) -> anyhow::Result<Value> {
         match rhs.get_db_type_id() {
-            DBTypeId::TINYINT | DBTypeId::SMALLINT | DBTypeId::INT | DBTypeId::BIGINT => {
-                Ok(Value::new(Self::new(BUSTUB_I8_NULL).into()))
-            }
-            DBTypeId::DECIMAL => {
-                // Ok(Value::new(DecimalType::new(BUSTUB_INT64_NULL)))
-                todo!()
-            }
+            DBTypeId::TINYINT => Ok(Value::new(TinyIntType::default().into())),
+            DBTypeId::SMALLINT => Ok(Value::new(SmallIntType::default().into())),
+            DBTypeId::INT => Ok(Value::new(IntType::default().into())),
+            DBTypeId::BIGINT => Ok(Value::new(BigIntType::default().into())),
+            DBTypeId::DECIMAL => Ok(Value::new(DecimalType::default().into())),
             _ => Err(anyhow!("Type error"))
         }
     }
