@@ -1,5 +1,5 @@
 use std::fmt::{Debug, Display, Formatter};
-use crate::types::{BigIntType, BooleanType, DBTypeIdImpl, DecimalType, FormatDBTypeTrait, IntType, SmallIntType, StorageDBTypeTrait, TinyIntType, Value};
+use crate::types::{BigIntType, BooleanType, DBTypeIdImpl, DecimalType, FormatDBTypeTrait, IntType, SmallIntType, StorageDBTypeTrait, TimestampType, TinyIntType, Value};
 
 // Every possible SQL type ID
 #[derive(Copy, Clone, PartialEq)]
@@ -27,7 +27,7 @@ impl DBTypeId {
             DBTypeId::INT => IntType::SIZE,
             DBTypeId::BIGINT => BigIntType::SIZE,
             DBTypeId::DECIMAL => DecimalType::SIZE,
-            DBTypeId::TIMESTAMP => 8,
+            DBTypeId::TIMESTAMP => TimestampType::SIZE,
 
             // TODO - confirm this
             DBTypeId::VARCHAR => 12,
@@ -86,7 +86,7 @@ impl DBTypeId {
             DBTypeId::BIGINT => BigIntType::NAME,
             DBTypeId::DECIMAL => DecimalType::NAME,
             DBTypeId::VARCHAR => "VARCHAR",
-            DBTypeId::TIMESTAMP => "TIMESTAMP",
+            DBTypeId::TIMESTAMP => TimestampType::NAME,
         }
     }
 

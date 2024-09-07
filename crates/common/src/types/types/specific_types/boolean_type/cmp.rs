@@ -1,7 +1,6 @@
-use crate::types::{TinyIntType, ComparisonDBTypeTrait, DBTypeIdImpl, FormatDBTypeTrait, Value, BUSTUB_I64_MAX, BUSTUB_I64_MIN, BUSTUB_I64_NULL, BUSTUB_I32_MIN, BUSTUB_I32_MAX, BUSTUB_I32_NULL, BUSTUB_I16_NULL, BUSTUB_I16_MIN, BUSTUB_I16_MAX, BigIntType, BigIntUnderlyingType, IntType, IntUnderlyingType, TinyIntUnderlyingType, BUSTUB_I8_NULL, BUSTUB_I8_MIN, BUSTUB_I8_MAX, SmallIntType, SmallIntUnderlyingType, DecimalType, DecimalUnderlyingType, BooleanUnderlyingType};
-use std::cmp::Ordering;
-use crate::run_on_numeric_impl;
 use crate::types::types::specific_types::boolean_type::BooleanType;
+use crate::types::{BooleanUnderlyingType, ComparisonDBTypeTrait, DBTypeIdImpl, FormatDBTypeTrait, Value};
+use std::cmp::Ordering;
 
 impl PartialEq for BooleanType {
     fn eq(&self, other: &Self) -> bool {

@@ -1,4 +1,4 @@
-use crate::types::{BigIntType, BooleanType, DBTypeId, DecimalType, IntType, SmallIntType, TinyIntType};
+use crate::types::{BigIntType, BooleanType, DBTypeId, DecimalType, IntType, SmallIntType, TimestampType, TinyIntType};
 use std::fmt::{Debug, Display};
 
 /// Macro to run the provided expression on the enum variant
@@ -24,6 +24,7 @@ macro_rules! run_on_impl {
             DBTypeIdImpl::TINYINT($name) => $func,
             DBTypeIdImpl::DECIMAL($name) => $func,
             DBTypeIdImpl::BOOLEAN($name) => $func,
+            DBTypeIdImpl::TIMESTAMP($name) => $func,
             // Add match arms for other variants as necessary
         }
     };
@@ -70,7 +71,7 @@ pub enum DBTypeIdImpl {
     BIGINT(BigIntType),
     DECIMAL(DecimalType),
     // VARCHAR = 7,
-    // TIMESTAMP = 8,
+    TIMESTAMP(TimestampType),
 }
 
 impl DBTypeIdImpl {
@@ -82,6 +83,7 @@ impl DBTypeIdImpl {
             DBTypeIdImpl::SMALLINT(_) => DBTypeId::SMALLINT,
             DBTypeIdImpl::TINYINT(_) => DBTypeId::TINYINT,
             DBTypeIdImpl::DECIMAL(_) => DBTypeId::DECIMAL,
+            DBTypeIdImpl::TIMESTAMP(_) => DBTypeId::TIMESTAMP,
         }
     }
 }
