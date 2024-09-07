@@ -44,13 +44,13 @@ impl ConversionDBTypeTrait for BigIntType {
                 todo!()
             }
             DBTypeId::TINYINT => {
-                todo!()
+                Ok(self.clone().into())
             }
             DBTypeId::SMALLINT => {
-                todo!()
+                Ok(self.clone().into())
             }
             DBTypeId::INT => {
-                todo!()
+                Ok(self.clone().into())
             }
             DBTypeId::BIGINT => {
                 Ok(self.clone().into())

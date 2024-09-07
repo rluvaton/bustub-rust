@@ -1,4 +1,4 @@
-use crate::types::{SmallIntType, ComparisonDBTypeTrait, DBTypeIdImpl, FormatDBTypeTrait, Value, BUSTUB_I64_MAX, BUSTUB_I64_MIN, BUSTUB_I64_NULL, BUSTUB_I32_MIN, BUSTUB_I32_MAX, BUSTUB_I32_NULL, BUSTUB_I16_NULL, BUSTUB_I16_MIN, BUSTUB_I16_MAX, BigIntType, BigIntUnderlyingType, IntType, IntUnderlyingType};
+use crate::types::{SmallIntType, ComparisonDBTypeTrait, DBTypeIdImpl, FormatDBTypeTrait, Value, BUSTUB_I64_MAX, BUSTUB_I64_MIN, BUSTUB_I64_NULL, BUSTUB_I32_MIN, BUSTUB_I32_MAX, BUSTUB_I32_NULL, BUSTUB_I16_NULL, BUSTUB_I16_MIN, BUSTUB_I16_MAX, BigIntType, BigIntUnderlyingType, IntType, IntUnderlyingType, TinyIntType};
 use std::cmp::Ordering;
 use crate::run_on_numeric_impl;
 use super::SmallIntUnderlyingType;
@@ -18,6 +18,12 @@ impl PartialEq<BigIntType> for SmallIntType {
 impl PartialEq<IntType> for SmallIntType {
     fn eq(&self, other: &IntType) -> bool {
         self.value as IntUnderlyingType == other.value
+    }
+}
+
+impl PartialEq<TinyIntType> for SmallIntType {
+    fn eq(&self, other: &TinyIntType) -> bool {
+        self.value == other.value as SmallIntUnderlyingType
     }
 }
 
@@ -81,6 +87,12 @@ impl PartialOrd<BigIntType> for SmallIntType {
 impl PartialOrd<IntType> for SmallIntType {
     fn partial_cmp(&self, other: &IntType) -> Option<Ordering> {
         (self.value as IntUnderlyingType).partial_cmp(&other.value)
+    }
+}
+
+impl PartialOrd<TinyIntType> for SmallIntType {
+    fn partial_cmp(&self, other: &TinyIntType) -> Option<Ordering> {
+        self.value.partial_cmp(&(other.value as SmallIntUnderlyingType))
     }
 }
 

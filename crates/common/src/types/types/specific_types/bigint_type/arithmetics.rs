@@ -1,7 +1,7 @@
 use std::ops::{Add, Div, Mul, Rem, Sub};
 use anyhow::anyhow;
 use crate::run_on_numeric_impl;
-use crate::types::{ArithmeticsDBTypeTrait, BigIntType, ComparisonDBTypeTrait, DBTypeId, DBTypeIdImpl, FormatDBTypeTrait, IntType, SmallIntType, Value, BUSTUB_I64_NULL};
+use crate::types::{ArithmeticsDBTypeTrait, BigIntType, ComparisonDBTypeTrait, DBTypeId, DBTypeIdImpl, FormatDBTypeTrait, IntType, SmallIntType, TinyIntType, Value, BUSTUB_I64_NULL};
 use super::{BigIntUnderlyingType};
 
 impl Add for BigIntType {
@@ -24,6 +24,14 @@ impl Add<SmallIntType> for BigIntType {
     type Output = BigIntType;
 
     fn add(self, rhs: SmallIntType) -> Self::Output {
+        BigIntType::new(self.value + rhs.value as BigIntUnderlyingType)
+    }
+}
+
+impl Add<TinyIntType> for BigIntType {
+    type Output = BigIntType;
+
+    fn add(self, rhs: TinyIntType) -> Self::Output {
         BigIntType::new(self.value + rhs.value as BigIntUnderlyingType)
     }
 }
@@ -70,6 +78,14 @@ impl Sub<SmallIntType> for BigIntType {
     }
 }
 
+impl Sub<TinyIntType> for BigIntType {
+    type Output = BigIntType;
+
+    fn sub(self, rhs: TinyIntType) -> Self::Output {
+        BigIntType::new(self.value - rhs.value as BigIntUnderlyingType)
+    }
+}
+
 impl Sub<Value> for BigIntType {
     type Output = Value;
 
@@ -107,6 +123,14 @@ impl Mul<SmallIntType> for BigIntType {
     type Output = BigIntType;
 
     fn mul(self, rhs: SmallIntType) -> Self::Output {
+        BigIntType::new(self.value * rhs.value as BigIntUnderlyingType)
+    }
+}
+
+impl Mul<TinyIntType> for BigIntType {
+    type Output = BigIntType;
+
+    fn mul(self, rhs: TinyIntType) -> Self::Output {
         BigIntType::new(self.value * rhs.value as BigIntUnderlyingType)
     }
 }
@@ -152,6 +176,14 @@ impl Div<SmallIntType> for BigIntType {
     }
 }
 
+impl Div<TinyIntType> for BigIntType {
+    type Output = BigIntType;
+
+    fn div(self, rhs: TinyIntType) -> Self::Output {
+        BigIntType::new(self.value / rhs.value as BigIntUnderlyingType)
+    }
+}
+
 impl Div<Value> for BigIntType {
     type Output = Value;
 
@@ -193,6 +225,14 @@ impl Rem<SmallIntType> for BigIntType {
     type Output = BigIntType;
 
     fn rem(self, rhs: SmallIntType) -> Self::Output {
+        BigIntType::new(self.value % rhs.value as BigIntUnderlyingType)
+    }
+}
+
+impl Rem<TinyIntType> for BigIntType {
+    type Output = BigIntType;
+
+    fn rem(self, rhs: TinyIntType) -> Self::Output {
         BigIntType::new(self.value % rhs.value as BigIntUnderlyingType)
     }
 }

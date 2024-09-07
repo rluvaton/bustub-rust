@@ -1,7 +1,7 @@
 use std::ops::{Add, Div, Mul, Rem, Sub};
 use anyhow::anyhow;
 use crate::run_on_numeric_impl;
-use crate::types::{ArithmeticsDBTypeTrait, SmallIntType, ComparisonDBTypeTrait, DBTypeId, DBTypeIdImpl, FormatDBTypeTrait, Value, BUSTUB_I32_NULL, BigIntType, BigIntUnderlyingType, BUSTUB_I16_NULL, IntType, IntUnderlyingType};
+use crate::types::{ArithmeticsDBTypeTrait, SmallIntType, ComparisonDBTypeTrait, DBTypeId, DBTypeIdImpl, FormatDBTypeTrait, Value, BUSTUB_I32_NULL, BigIntType, BigIntUnderlyingType, BUSTUB_I16_NULL, IntType, IntUnderlyingType, TinyIntType, SmallIntUnderlyingType};
 
 impl Add for SmallIntType {
     type Output = SmallIntType;
@@ -24,6 +24,14 @@ impl Add<IntType> for SmallIntType {
 
     fn add(self, rhs: IntType) -> Self::Output {
         IntType::new(self.value as IntUnderlyingType + rhs.value)
+    }
+}
+
+impl Add<TinyIntType> for SmallIntType {
+    type Output = SmallIntType;
+
+    fn add(self, rhs: TinyIntType) -> Self::Output {
+        SmallIntType::new(self.value + rhs.value as SmallIntUnderlyingType)
     }
 }
 
@@ -68,6 +76,14 @@ impl Sub<IntType> for SmallIntType {
     }
 }
 
+impl Sub<TinyIntType> for SmallIntType {
+    type Output = SmallIntType;
+
+    fn sub(self, rhs: TinyIntType) -> Self::Output {
+        SmallIntType::new(self.value - rhs.value as SmallIntUnderlyingType)
+    }
+}
+
 impl Sub<Value> for SmallIntType {
     type Output = Value;
 
@@ -106,6 +122,14 @@ impl Mul<IntType> for SmallIntType {
 
     fn mul(self, rhs: IntType) -> Self::Output {
         IntType::new(self.value as IntUnderlyingType * rhs.value)
+    }
+}
+
+impl Mul<TinyIntType> for SmallIntType {
+    type Output = SmallIntType;
+
+    fn mul(self, rhs: TinyIntType) -> Self::Output {
+        SmallIntType::new(self.value * rhs.value as SmallIntUnderlyingType)
     }
 }
 
@@ -151,6 +175,14 @@ impl Div<IntType> for SmallIntType {
     }
 }
 
+impl Div<TinyIntType> for SmallIntType {
+    type Output = SmallIntType;
+
+    fn div(self, rhs: TinyIntType) -> Self::Output {
+        SmallIntType::new(self.value / rhs.value as SmallIntUnderlyingType)
+    }
+}
+
 impl Div<Value> for SmallIntType {
     type Output = Value;
 
@@ -193,6 +225,14 @@ impl Rem<IntType> for SmallIntType {
 
     fn rem(self, rhs: IntType) -> Self::Output {
         IntType::new(self.value as IntUnderlyingType % rhs.value)
+    }
+}
+
+impl Rem<TinyIntType> for SmallIntType {
+    type Output = SmallIntType;
+
+    fn rem(self, rhs: TinyIntType) -> Self::Output {
+        SmallIntType::new(self.value / rhs.value as SmallIntUnderlyingType)
     }
 }
 

@@ -50,16 +50,16 @@ impl ConversionDBTypeTrait for IntType {
                 todo!()
             }
             DBTypeId::TINYINT => {
-                todo!()
+                Ok(self.clone().into())
             }
             DBTypeId::SMALLINT => {
-                todo!()
+                Ok(self.clone().into())
             }
             DBTypeId::INT => {
                 Ok(self.clone().into())
             }
             DBTypeId::BIGINT => {
-                todo!()
+                Ok(self.clone().into())
             }
             DBTypeId::DECIMAL => {
                 todo!()
