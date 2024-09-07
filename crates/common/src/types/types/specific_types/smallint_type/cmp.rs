@@ -21,9 +21,8 @@ impl PartialEq<Value> for SmallIntType {
         assert!(Self::TYPE.check_comparable(&other_type_id));
 
         match other.get_value() {
-            DBTypeIdImpl::BIGINT(rhs) => {
-                self.eq(rhs)
-            }
+            DBTypeIdImpl::BIGINT(rhs) => self.eq(rhs),
+            DBTypeIdImpl::SMALLINT(rhs) => self.value.eq(&rhs.value)
         }
         //
         // match other_type_id {
@@ -77,9 +76,8 @@ impl PartialOrd<Value> for SmallIntType {
         assert!(Self::TYPE.check_comparable(&other_type_id));
 
         match other.get_value() {
-            DBTypeIdImpl::BIGINT(rhs) => {
-                self.partial_cmp(rhs)
-            }
+            DBTypeIdImpl::BIGINT(rhs) => self.partial_cmp(rhs),
+            DBTypeIdImpl::SMALLINT(rhs) => self.value.partial_cmp(&rhs.value),
         }
         //
         // match other_type_id {

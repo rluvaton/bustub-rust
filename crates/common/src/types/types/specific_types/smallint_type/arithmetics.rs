@@ -35,7 +35,8 @@ impl Add<Value> for SmallIntType {
 
         Value::new(
             match rhs.get_value() {
-                DBTypeIdImpl::BIGINT(rhs) => (self + *rhs).into()
+                DBTypeIdImpl::BIGINT(rhs) => (self + *rhs).into(),
+                DBTypeIdImpl::SMALLINT(rhs) => (self + *rhs).into(),
             }
         )
     }
@@ -66,7 +67,8 @@ impl Sub<Value> for SmallIntType {
 
         Value::new(
             match rhs.get_value() {
-                DBTypeIdImpl::BIGINT(rhs) => (self - *rhs).into()
+                DBTypeIdImpl::BIGINT(rhs) => (self - *rhs).into(),
+                DBTypeIdImpl::SMALLINT(rhs) => (self - *rhs).into(),
             }
         )
     }
@@ -97,7 +99,8 @@ impl Mul<Value> for SmallIntType {
 
         Value::new(
             match rhs.get_value() {
-                DBTypeIdImpl::BIGINT(rhs) => (self * *rhs).into()
+                DBTypeIdImpl::BIGINT(rhs) => (self * *rhs).into(),
+                DBTypeIdImpl::SMALLINT(rhs) => (self * *rhs).into(),
             }
         )
     }
@@ -132,7 +135,8 @@ impl Div<Value> for SmallIntType {
 
         Value::new(
             match rhs.get_value() {
-                DBTypeIdImpl::BIGINT(rhs) => (self / *rhs).into()
+                DBTypeIdImpl::BIGINT(rhs) => (self / *rhs).into(),
+                DBTypeIdImpl::SMALLINT(rhs) => (self / *rhs).into(),
             }
         )
     }
@@ -163,7 +167,8 @@ impl Rem<Value> for SmallIntType {
 
         Value::new(
             match rhs.get_value() {
-                DBTypeIdImpl::BIGINT(rhs) => (self % *rhs).into()
+                DBTypeIdImpl::BIGINT(rhs) => (self % *rhs).into(),
+                DBTypeIdImpl::SMALLINT(rhs) => (self % *rhs).into(),
             }
         )
     }

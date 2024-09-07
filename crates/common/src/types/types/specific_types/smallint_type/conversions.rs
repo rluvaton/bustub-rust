@@ -17,8 +17,7 @@ impl From<&[u8]> for SmallIntType {
 
 impl Into<DBTypeIdImpl> for SmallIntType {
     fn into(self) -> DBTypeIdImpl {
-        todo!()
-        // DBTypeIdImpl::SMALLINT(self)
+        DBTypeIdImpl::SMALLINT(self)
     }
 }
 
