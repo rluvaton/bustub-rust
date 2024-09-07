@@ -157,11 +157,11 @@ impl ComparisonDBTypeTrait for TinyIntType {
     }
 
     fn get_min_value() -> Self {
-        Self::new(BUSTUB_I8_MIN)
+        Self::new(Self::MIN)
     }
 
     fn get_max_value() -> Self {
-        Self::new(BUSTUB_I8_MAX)
+        Self::new(Self::MAX)
     }
 
     // TODO - this is not the same as the value

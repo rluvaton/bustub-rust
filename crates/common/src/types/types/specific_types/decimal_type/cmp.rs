@@ -154,15 +154,15 @@ impl PartialOrd<DecimalUnderlyingType> for DecimalType {
 
 impl ComparisonDBTypeTrait for DecimalType {
     fn is_zero(&self) -> bool {
-        self.value == 0f64
+        self.value == 0.0
     }
 
     fn get_min_value() -> Self {
-        Self::new(BUSTUB_DECIMAL_MIN)
+        Self::new(Self::MIN)
     }
 
     fn get_max_value() -> Self {
-        Self::new(BUSTUB_DECIMAL_MAX)
+        Self::new(Self::MAX)
     }
 
     // TODO - this is not the same as the value

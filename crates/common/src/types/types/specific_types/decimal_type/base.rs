@@ -1,4 +1,4 @@
-use crate::types::{BUSTUB_DECIMAL_NULL, BUSTUB_VALUE_NULL};
+use crate::types::{BUSTUB_DECIMAL_MAX, BUSTUB_DECIMAL_MIN, BUSTUB_DECIMAL_NULL, BUSTUB_VALUE_NULL};
 use std::ops::Deref;
 
 pub type DecimalUnderlyingType = f64;
@@ -10,6 +10,9 @@ pub struct DecimalType {
 }
 
 impl DecimalType {
+    pub const MIN: DecimalUnderlyingType = BUSTUB_DECIMAL_MIN;
+    pub const MAX: DecimalUnderlyingType = BUSTUB_DECIMAL_MAX;
+
     pub fn new(value: DecimalUnderlyingType) -> Self {
         DecimalType {
             value,

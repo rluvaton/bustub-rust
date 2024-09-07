@@ -1,4 +1,4 @@
-use crate::types::{BUSTUB_I8_NULL, BUSTUB_VALUE_NULL};
+use crate::types::{BUSTUB_I8_MAX, BUSTUB_I8_MIN, BUSTUB_I8_NULL, BUSTUB_VALUE_NULL};
 use std::ops::Deref;
 
 pub type TinyIntUnderlyingType = i8;
@@ -10,6 +10,9 @@ pub struct TinyIntType {
 }
 
 impl TinyIntType {
+    pub const MIN: TinyIntUnderlyingType = BUSTUB_I8_MIN;
+    pub const MAX: TinyIntUnderlyingType = BUSTUB_I8_MAX;
+
     pub fn new(value: TinyIntUnderlyingType) -> Self {
         TinyIntType {
             value,
