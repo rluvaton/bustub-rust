@@ -1,5 +1,6 @@
-use crate::types::{BigIntType, ConversionDBTypeTrait, DBTypeId, DBTypeIdImpl, StorageDBTypeTrait};
+use crate::types::{BigIntType, ComparisonDBTypeTrait, ConversionDBTypeTrait, DBTypeId, DBTypeIdImpl, DecimalType, DecimalUnderlyingType, IntType, IntUnderlyingType, SmallIntType, SmallIntUnderlyingType, StorageDBTypeTrait, TinyIntType, TinyIntUnderlyingType};
 use anyhow::anyhow;
+use crate::assert_in_range;
 use super::BigIntUnderlyingType;
 
 impl From<BigIntUnderlyingType> for BigIntType {
@@ -44,19 +45,38 @@ impl ConversionDBTypeTrait for BigIntType {
                 todo!()
             }
             DBTypeId::TINYINT => {
-                Ok(self.clone().into())
+                if self.is_null() {
+                    return Ok(TinyIntType::default().into());
+                }
+
+                assert_in_range!(TinyIntType, self.value, BigIntUnderlyingType);
+                Ok(TinyIntType::new(self.value as TinyIntUnderlyingType).into())
             }
             DBTypeId::SMALLINT => {
-                Ok(self.clone().into())
+                if self.is_null() {
+                    return Ok(SmallIntType::default().into());
+                }
+
+                assert_in_range!(SmallIntType, self.value, BigIntUnderlyingType);
+                Ok(SmallIntType::new(self.value as SmallIntUnderlyingType).into())
             }
             DBTypeId::INT => {
-                Ok(self.clone().into())
+                if self.is_null() {
+                    return Ok(IntType::default().into());
+                }
+
+                assert_in_range!(IntType, self.value, BigIntUnderlyingType);
+                Ok(IntType::new(self.value as IntUnderlyingType).into())
             }
             DBTypeId::BIGINT => {
                 Ok(self.clone().into())
             }
             DBTypeId::DECIMAL => {
-                todo!()
+                if self.is_null() {
+                    return Ok(DecimalType::default().into());
+                }
+
+                Ok(DecimalType::new(self.value as DecimalUnderlyingType).into())
             }
             DBTypeId::VARCHAR => {
                 todo!()

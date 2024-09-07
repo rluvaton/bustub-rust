@@ -1,5 +1,6 @@
-use crate::types::{IntType, ConversionDBTypeTrait, DBTypeId, DBTypeIdImpl, StorageDBTypeTrait, Value};
+use crate::types::{IntType, ConversionDBTypeTrait, DBTypeId, DBTypeIdImpl, StorageDBTypeTrait, Value, ComparisonDBTypeTrait, SmallIntType, SmallIntUnderlyingType, BigIntType, BigIntUnderlyingType, DecimalType, DecimalUnderlyingType, TinyIntType, TinyIntUnderlyingType};
 use anyhow::anyhow;
+use crate::assert_in_range;
 use super::IntUnderlyingType;
 
 impl From<IntUnderlyingType> for IntType {
@@ -50,19 +51,37 @@ impl ConversionDBTypeTrait for IntType {
                 todo!()
             }
             DBTypeId::TINYINT => {
-                Ok(self.clone().into())
+                if self.is_null() {
+                    return Ok(TinyIntType::default().into());
+                }
+
+                assert_in_range!(TinyIntType, self.value, IntUnderlyingType);
+                Ok(TinyIntType::new(self.value as TinyIntUnderlyingType).into())
             }
             DBTypeId::SMALLINT => {
-                Ok(self.clone().into())
+                if self.is_null() {
+                    return Ok(SmallIntType::default().into());
+                }
+
+                assert_in_range!(SmallIntType, self.value, IntUnderlyingType);
+                Ok(SmallIntType::new(self.value as SmallIntUnderlyingType).into())
             }
             DBTypeId::INT => {
                 Ok(self.clone().into())
             }
             DBTypeId::BIGINT => {
-                Ok(self.clone().into())
+                if self.is_null() {
+                    return Ok(BigIntType::default().into());
+                }
+
+                Ok(BigIntType::new(self.value as BigIntUnderlyingType).into())
             }
             DBTypeId::DECIMAL => {
-                todo!()
+                if self.is_null() {
+                    return Ok(DecimalType::default().into());
+                }
+
+                Ok(DecimalType::new(self.value as DecimalUnderlyingType).into())
             }
             DBTypeId::VARCHAR => {
                 todo!()

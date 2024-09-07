@@ -1,5 +1,6 @@
-use crate::types::{IntType, ConversionDBTypeTrait, DBTypeId, DBTypeIdImpl, StorageDBTypeTrait, Value, DecimalType};
+use crate::types::{IntType, ConversionDBTypeTrait, DBTypeId, DBTypeIdImpl, StorageDBTypeTrait, Value, DecimalType, ComparisonDBTypeTrait, TinyIntType, TinyIntUnderlyingType, SmallIntType, SmallIntUnderlyingType, BigIntType, BigIntUnderlyingType, IntUnderlyingType};
 use anyhow::anyhow;
+use crate::assert_in_range;
 use super::DecimalUnderlyingType;
 
 impl From<DecimalUnderlyingType> for DecimalType {
@@ -50,16 +51,36 @@ impl ConversionDBTypeTrait for DecimalType {
                 todo!()
             }
             DBTypeId::TINYINT => {
-                Ok(self.clone().into())
+                if self.is_null() {
+                    return Ok(TinyIntType::default().into());
+                }
+
+                assert_in_range!(TinyIntType, self.value, DecimalUnderlyingType);
+                Ok(TinyIntType::new(self.value as TinyIntUnderlyingType).into())
             }
             DBTypeId::SMALLINT => {
-                Ok(self.clone().into())
+                if self.is_null() {
+                    return Ok(SmallIntType::default().into());
+                }
+
+                assert_in_range!(SmallIntType, self.value, DecimalUnderlyingType);
+                Ok(SmallIntType::new(self.value as SmallIntUnderlyingType).into())
             }
             DBTypeId::INT => {
-                Ok(self.clone().into())
+                if self.is_null() {
+                    return Ok(IntType::default().into());
+                }
+
+                assert_in_range!(IntType, self.value, DecimalUnderlyingType);
+                Ok(IntType::new(self.value as IntUnderlyingType).into())
             }
             DBTypeId::BIGINT => {
-                Ok(self.clone().into())
+                if self.is_null() {
+                    return Ok(BigIntType::default().into());
+                }
+
+                assert_in_range!(BigIntType, self.value, DecimalUnderlyingType);
+                Ok(BigIntType::new(self.value as BigIntUnderlyingType).into())
             }
             DBTypeId::DECIMAL => {
                 Ok(self.clone().into())

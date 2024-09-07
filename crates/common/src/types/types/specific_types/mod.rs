@@ -3,6 +3,7 @@ mod smallint_type;
 mod int_type;
 mod tinyint_type;
 mod decimal_type;
+mod helpers;
 
 pub use bigint_type::{BigIntType, BigIntUnderlyingType};
 pub use int_type::{IntType, IntUnderlyingType};

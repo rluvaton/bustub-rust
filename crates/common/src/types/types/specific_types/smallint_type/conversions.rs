@@ -1,5 +1,6 @@
-use crate::types::{SmallIntType, ConversionDBTypeTrait, DBTypeId, DBTypeIdImpl, StorageDBTypeTrait, Value};
+use crate::types::{SmallIntType, ConversionDBTypeTrait, DBTypeId, DBTypeIdImpl, StorageDBTypeTrait, Value, ComparisonDBTypeTrait, TinyIntType, TinyIntUnderlyingType, IntType, IntUnderlyingType, BigIntType, BigIntUnderlyingType, DecimalType, DecimalUnderlyingType};
 use anyhow::anyhow;
+use crate::assert_in_range;
 use super::SmallIntUnderlyingType;
 
 impl From<SmallIntUnderlyingType> for SmallIntType {
@@ -50,19 +51,36 @@ impl ConversionDBTypeTrait for SmallIntType {
                 todo!()
             }
             DBTypeId::TINYINT => {
-                Ok(self.clone().into())
+                if self.is_null() {
+                    return Ok(TinyIntType::default().into());
+                }
+
+                assert_in_range!(TinyIntType, self.value, SmallIntUnderlyingType);
+                Ok(TinyIntType::new(self.value as TinyIntUnderlyingType).into())
             }
             DBTypeId::SMALLINT => {
                 Ok(self.clone().into())
             }
             DBTypeId::INT => {
-                Ok(self.clone().into())
+                if self.is_null() {
+                    return Ok(IntType::default().into());
+                }
+
+                Ok(IntType::new(self.value as IntUnderlyingType).into())
             }
             DBTypeId::BIGINT => {
-                Ok(self.clone().into())
+                if self.is_null() {
+                    return Ok(BigIntType::default().into());
+                }
+
+                Ok(BigIntType::new(self.value as BigIntUnderlyingType).into())
             }
             DBTypeId::DECIMAL => {
-                todo!()
+                if self.is_null() {
+                    return Ok(DecimalType::default().into());
+                }
+
+                Ok(DecimalType::new(self.value as DecimalUnderlyingType).into())
             }
             DBTypeId::VARCHAR => {
                 todo!()
