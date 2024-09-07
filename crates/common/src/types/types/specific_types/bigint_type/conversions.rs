@@ -49,7 +49,7 @@ impl ConversionDBTypeTrait for BigIntType {
             DBTypeId::SMALLINT => {
                 todo!()
             }
-            DBTypeId::INTEGER => {
+            DBTypeId::INT => {
                 todo!()
             }
             DBTypeId::BIGINT => {

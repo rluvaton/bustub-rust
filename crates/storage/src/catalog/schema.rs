@@ -192,7 +192,7 @@ impl Schema {
             } else if column_type == "smallint" {
                 type_id = DBTypeId::SMALLINT;
             } else if column_type == "int" || column_type == "integer" {
-                type_id = DBTypeId::INTEGER;
+                type_id = DBTypeId::INT;
             } else if column_type == "bigint" {
                 type_id = DBTypeId::BIGINT;
             } else if column_type == "double" || column_type == "float" {

@@ -1,6 +1,7 @@
 use std::ops::{Add, Div, Mul, Rem, Sub};
 use anyhow::anyhow;
-use crate::types::{ArithmeticsDBTypeTrait, BigIntType, ComparisonDBTypeTrait, DBTypeId, DBTypeIdImpl, FormatDBTypeTrait, SmallIntType, Value, BUSTUB_I64_NULL};
+use crate::run_on_numeric_impl;
+use crate::types::{ArithmeticsDBTypeTrait, BigIntType, ComparisonDBTypeTrait, DBTypeId, DBTypeIdImpl, FormatDBTypeTrait, IntType, SmallIntType, Value, BUSTUB_I64_NULL};
 use super::{BigIntUnderlyingType};
 
 impl Add for BigIntType {
@@ -8,6 +9,14 @@ impl Add for BigIntType {
 
     fn add(self, rhs: Self) -> Self::Output {
         BigIntType::new(self.value + rhs.value)
+    }
+}
+
+impl Add<IntType> for BigIntType {
+    type Output = BigIntType;
+
+    fn add(self, rhs: IntType) -> Self::Output {
+        BigIntType::new(self.value + rhs.value as BigIntUnderlyingType)
     }
 }
 
@@ -27,10 +36,12 @@ impl Add<Value> for BigIntType {
         assert!(Self::TYPE.check_comparable(&other_type_id));
 
         Value::new(
-            match rhs.get_value() {
-                DBTypeIdImpl::BIGINT(rhs) => (self + *rhs).into(),
-                DBTypeIdImpl::SMALLINT(rhs) =>  (self + *rhs).into(),
-            }
+            run_on_numeric_impl!(
+                rhs.get_value(),
+                rhs, (self + *rhs).into(),
+                    _ => unreachable!()
+
+            )
         )
     }
 }
@@ -40,6 +51,14 @@ impl Sub for BigIntType {
 
     fn sub(self, rhs: Self) -> Self::Output {
         BigIntType::new(self.value - rhs.value)
+    }
+}
+
+impl Sub<IntType> for BigIntType {
+    type Output = BigIntType;
+
+    fn sub(self, rhs: IntType) -> Self::Output {
+        BigIntType::new(self.value - rhs.value as BigIntUnderlyingType)
     }
 }
 
@@ -59,10 +78,11 @@ impl Sub<Value> for BigIntType {
         assert!(Self::TYPE.check_comparable(&other_type_id));
 
         Value::new(
-            match rhs.get_value() {
-                DBTypeIdImpl::BIGINT(rhs) => (self - *rhs).into(),
-                DBTypeIdImpl::SMALLINT(rhs) => (self - *rhs).into(),
-            }
+            run_on_numeric_impl!(
+                rhs.get_value(),
+                rhs, (self - *rhs).into(),
+                _ => unreachable!()
+            )
         )
     }
 }
@@ -72,6 +92,14 @@ impl Mul for BigIntType {
 
     fn mul(self, rhs: Self) -> Self::Output {
         BigIntType::new(self.value * rhs.value)
+    }
+}
+
+impl Mul<IntType> for BigIntType {
+    type Output = BigIntType;
+
+    fn mul(self, rhs: IntType) -> Self::Output {
+        BigIntType::new(self.value * rhs.value as BigIntUnderlyingType)
     }
 }
 
@@ -91,10 +119,11 @@ impl Mul<Value> for BigIntType {
         assert!(Self::TYPE.check_comparable(&other_type_id));
 
         Value::new(
-            match rhs.get_value() {
-                DBTypeIdImpl::BIGINT(rhs) => (self * *rhs).into(),
-                DBTypeIdImpl::SMALLINT(rhs) => (self * *rhs).into(),
-            }
+            run_on_numeric_impl!(
+                rhs.get_value(),
+                rhs, (self * *rhs).into(),
+                    _ => unreachable!()
+            )
         )
     }
 }
@@ -104,6 +133,14 @@ impl Div for BigIntType {
 
     fn div(self, rhs: Self) -> Self::Output {
         BigIntType::new(self.value / rhs.value)
+    }
+}
+
+impl Div<IntType> for BigIntType {
+    type Output = BigIntType;
+
+    fn div(self, rhs: IntType) -> Self::Output {
+        BigIntType::new(self.value / rhs.value as BigIntUnderlyingType)
     }
 }
 
@@ -127,10 +164,11 @@ impl Div<Value> for BigIntType {
         }
 
         Value::new(
-            match rhs.get_value() {
-                DBTypeIdImpl::BIGINT(rhs) => (self / *rhs).into(),
-                DBTypeIdImpl::SMALLINT(rhs) => (self / *rhs).into(),
-            }
+            run_on_numeric_impl!(
+                rhs.get_value(),
+                rhs, (self / *rhs).into(),
+                    _ => unreachable!()
+            )
         )
     }
 }
@@ -140,6 +178,14 @@ impl Rem for BigIntType {
 
     fn rem(self, rhs: Self) -> Self::Output {
         BigIntType::new(self.value % rhs.value)
+    }
+}
+
+impl Rem<IntType> for BigIntType {
+    type Output = BigIntType;
+
+    fn rem(self, rhs: IntType) -> Self::Output {
+        BigIntType::new(self.value % rhs.value as BigIntUnderlyingType)
     }
 }
 
@@ -159,10 +205,11 @@ impl Rem<Value> for BigIntType {
         assert!(Self::TYPE.check_comparable(&other_type_id));
 
         Value::new(
-            match rhs.get_value() {
-                DBTypeIdImpl::BIGINT(rhs) => (self % *rhs).into(),
-                DBTypeIdImpl::SMALLINT(rhs) => (self % *rhs).into(),
-            }
+            run_on_numeric_impl!(
+                rhs.get_value(),
+                rhs, (self % *rhs).into(),
+                    _ => unreachable!()
+            )
         )
     }
 }
@@ -170,7 +217,7 @@ impl Rem<Value> for BigIntType {
 impl ArithmeticsDBTypeTrait for BigIntType {
     fn operate_null(&self, rhs: &Value) -> anyhow::Result<Value> {
         match rhs.get_db_type_id() {
-            DBTypeId::TINYINT | DBTypeId::SMALLINT | DBTypeId::INTEGER | DBTypeId::BIGINT => {
+            DBTypeId::TINYINT | DBTypeId::SMALLINT | DBTypeId::INT | DBTypeId::BIGINT => {
                 Ok(Value::new(Self::new(BUSTUB_I64_NULL).into()))
             }
             DBTypeId::DECIMAL => {

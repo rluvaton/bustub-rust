@@ -1,27 +1,26 @@
-use crate::types::{SmallIntType, ComparisonDBTypeTrait, DBTypeIdImpl, FormatDBTypeTrait, Value, BUSTUB_I64_MAX, BUSTUB_I64_MIN, BUSTUB_I64_NULL, BUSTUB_I32_MIN, BUSTUB_I32_MAX, BUSTUB_I32_NULL, BUSTUB_I16_NULL, BUSTUB_I16_MIN, BUSTUB_I16_MAX, BigIntType, BigIntUnderlyingType, IntType, IntUnderlyingType};
+use crate::types::{BigIntType, BigIntUnderlyingType, ComparisonDBTypeTrait, DBTypeIdImpl, FormatDBTypeTrait, IntType, IntUnderlyingType, SmallIntType, Value, BUSTUB_I16_MAX, BUSTUB_I16_MIN, BUSTUB_I16_NULL, BUSTUB_I32_MAX, BUSTUB_I32_MIN, BUSTUB_I32_NULL};
 use std::cmp::Ordering;
 use crate::run_on_numeric_impl;
-use super::SmallIntUnderlyingType;
 
-impl PartialEq for SmallIntType {
+impl PartialEq for IntType {
     fn eq(&self, other: &Self) -> bool {
         self.value == other.value
     }
 }
 
-impl PartialEq<BigIntType> for SmallIntType {
+impl PartialEq<BigIntType> for IntType {
     fn eq(&self, other: &BigIntType) -> bool {
         self.value as BigIntUnderlyingType == other.value
     }
 }
 
-impl PartialEq<IntType> for SmallIntType {
-    fn eq(&self, other: &IntType) -> bool {
-        self.value as IntUnderlyingType == other.value
+impl PartialEq<SmallIntType> for IntType {
+    fn eq(&self, other: &SmallIntType) -> bool {
+        self.value == other.value as IntUnderlyingType
     }
 }
 
-impl PartialEq<Value> for SmallIntType {
+impl PartialEq<Value> for IntType {
     fn eq(&self, other: &Value) -> bool {
         let other_type_id = other.get_db_type_id();
         assert!(Self::TYPE.check_comparable(&other_type_id));
@@ -31,7 +30,6 @@ impl PartialEq<Value> for SmallIntType {
             rhs, self.eq(rhs),
             _ => unreachable!()
         )
-
         //
         // match other_type_id {
         //     DBTypeId::TINYINT => {
@@ -60,31 +58,31 @@ impl PartialEq<Value> for SmallIntType {
     }
 }
 
-impl PartialEq<SmallIntUnderlyingType> for SmallIntType {
-    fn eq(&self, other: &SmallIntUnderlyingType) -> bool {
+impl PartialEq<IntUnderlyingType> for IntType {
+    fn eq(&self, other: &IntUnderlyingType) -> bool {
         self.value == *other
     }
 }
 
-impl PartialOrd for SmallIntType {
+impl PartialOrd for IntType {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         self.value.partial_cmp(&other.value)
     }
 }
 
-impl PartialOrd<BigIntType> for SmallIntType {
+impl PartialOrd<BigIntType> for IntType {
     fn partial_cmp(&self, other: &BigIntType) -> Option<Ordering> {
         (self.value as BigIntUnderlyingType).partial_cmp(&other.value)
     }
 }
 
-impl PartialOrd<IntType> for SmallIntType {
-    fn partial_cmp(&self, other: &IntType) -> Option<Ordering> {
-        (self.value as IntUnderlyingType).partial_cmp(&other.value)
+impl PartialOrd<SmallIntType> for IntType {
+    fn partial_cmp(&self, other: &SmallIntType) -> Option<Ordering> {
+        self.value.partial_cmp(&(other.value as IntUnderlyingType))
     }
 }
 
-impl PartialOrd<Value> for SmallIntType {
+impl PartialOrd<Value> for IntType {
     fn partial_cmp(&self, other: &Value) -> Option<Ordering> {
         let other_type_id = other.get_db_type_id();
         assert!(Self::TYPE.check_comparable(&other_type_id));
@@ -94,6 +92,7 @@ impl PartialOrd<Value> for SmallIntType {
             rhs, self.partial_cmp(rhs),
             _ => unreachable!()
         )
+
         //
         // match other_type_id {
         //     DBTypeId::TINYINT => {
@@ -122,27 +121,27 @@ impl PartialOrd<Value> for SmallIntType {
     }
 }
 
-impl PartialOrd<SmallIntUnderlyingType> for SmallIntType {
-    fn partial_cmp(&self, other: &SmallIntUnderlyingType) -> Option<Ordering> {
+impl PartialOrd<IntUnderlyingType> for IntType {
+    fn partial_cmp(&self, other: &IntUnderlyingType) -> Option<Ordering> {
         self.value.partial_cmp(other)
     }
 }
 
-impl ComparisonDBTypeTrait for SmallIntType {
+impl ComparisonDBTypeTrait for IntType {
     fn is_zero(&self) -> bool {
         self.value == 0
     }
 
     fn get_min_value() -> Self {
-        Self::new(BUSTUB_I16_MIN)
+        Self::new(BUSTUB_I32_MIN)
     }
 
     fn get_max_value() -> Self {
-        Self::new(BUSTUB_I16_MAX)
+        Self::new(BUSTUB_I32_MAX)
     }
 
     // TODO - this is not the same as the value
     fn is_null(&self) -> bool {
-        self.value == BUSTUB_I16_NULL
+        self.value == BUSTUB_I32_NULL
     }
 }

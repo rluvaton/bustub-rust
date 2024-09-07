@@ -1,17 +1,17 @@
 use std::ops::{Add, Div, Mul, Rem, Sub};
 use anyhow::anyhow;
 use crate::run_on_numeric_impl;
-use crate::types::{ArithmeticsDBTypeTrait, SmallIntType, ComparisonDBTypeTrait, DBTypeId, DBTypeIdImpl, FormatDBTypeTrait, Value, BUSTUB_I32_NULL, BigIntType, BigIntUnderlyingType, BUSTUB_I16_NULL, IntType, IntUnderlyingType};
+use crate::types::{ArithmeticsDBTypeTrait, IntType, ComparisonDBTypeTrait, DBTypeId, DBTypeIdImpl, FormatDBTypeTrait, Value, BUSTUB_I32_NULL, BigIntType, BigIntUnderlyingType, BUSTUB_I16_NULL, SmallIntType, SmallIntUnderlyingType, IntUnderlyingType};
 
-impl Add for SmallIntType {
-    type Output = SmallIntType;
+impl Add for IntType {
+    type Output = IntType;
 
     fn add(self, rhs: Self) -> Self::Output {
-        SmallIntType::new(self.value + rhs.value)
+        IntType::new(self.value + rhs.value)
     }
 }
 
-impl Add<BigIntType> for SmallIntType {
+impl Add<BigIntType> for IntType {
     type Output = BigIntType;
 
     fn add(self, rhs: BigIntType) -> Self::Output {
@@ -19,15 +19,15 @@ impl Add<BigIntType> for SmallIntType {
     }
 }
 
-impl Add<IntType> for SmallIntType {
+impl Add<SmallIntType> for IntType {
     type Output = IntType;
 
-    fn add(self, rhs: IntType) -> Self::Output {
-        IntType::new(self.value as IntUnderlyingType + rhs.value)
+    fn add(self, rhs: SmallIntType) -> Self::Output {
+        IntType::new(self.value + rhs.value as IntUnderlyingType)
     }
 }
 
-impl Add<Value> for SmallIntType {
+impl Add<Value> for IntType {
     type Output = Value;
 
     fn add(self, rhs: Value) -> Self::Output {
@@ -44,15 +44,15 @@ impl Add<Value> for SmallIntType {
     }
 }
 
-impl Sub for SmallIntType {
-    type Output = SmallIntType;
+impl Sub for IntType {
+    type Output = IntType;
 
     fn sub(self, rhs: Self) -> Self::Output {
-        SmallIntType::new(self.value - rhs.value)
+        IntType::new(self.value - rhs.value)
     }
 }
 
-impl Sub<BigIntType> for SmallIntType {
+impl Sub<BigIntType> for IntType {
     type Output = BigIntType;
 
     fn sub(self, rhs: BigIntType) -> Self::Output {
@@ -60,15 +60,15 @@ impl Sub<BigIntType> for SmallIntType {
     }
 }
 
-impl Sub<IntType> for SmallIntType {
+impl Sub<SmallIntType> for IntType {
     type Output = IntType;
 
-    fn sub(self, rhs: IntType) -> Self::Output {
-        IntType::new(self.value as IntUnderlyingType - rhs.value)
+    fn sub(self, rhs: SmallIntType) -> Self::Output {
+        IntType::new(self.value - rhs.value as IntUnderlyingType)
     }
 }
 
-impl Sub<Value> for SmallIntType {
+impl Sub<Value> for IntType {
     type Output = Value;
 
     fn sub(self, rhs: Value) -> Self::Output {
@@ -85,15 +85,15 @@ impl Sub<Value> for SmallIntType {
     }
 }
 
-impl Mul for SmallIntType {
-    type Output = SmallIntType;
+impl Mul for IntType {
+    type Output = IntType;
 
     fn mul(self, rhs: Self) -> Self::Output {
-        SmallIntType::new(self.value * rhs.value)
+        IntType::new(self.value * rhs.value)
     }
 }
 
-impl Mul<BigIntType> for SmallIntType {
+impl Mul<BigIntType> for IntType {
     type Output = BigIntType;
 
     fn mul(self, rhs: BigIntType) -> Self::Output {
@@ -101,41 +101,40 @@ impl Mul<BigIntType> for SmallIntType {
     }
 }
 
-impl Mul<IntType> for SmallIntType {
+impl Mul<SmallIntType> for IntType {
     type Output = IntType;
 
-    fn mul(self, rhs: IntType) -> Self::Output {
-        IntType::new(self.value as IntUnderlyingType * rhs.value)
+    fn mul(self, rhs: SmallIntType) -> Self::Output {
+        IntType::new(self.value * rhs.value as IntUnderlyingType)
     }
 }
 
-impl Mul<Value> for SmallIntType {
+impl Mul<Value> for IntType {
     type Output = Value;
 
     fn mul(self, rhs: Value) -> Self::Output {
         let other_type_id = rhs.get_db_type_id();
         assert!(Self::TYPE.check_comparable(&other_type_id));
 
-
         Value::new(
             run_on_numeric_impl!(
                 rhs.get_value(),
-                rhs, (self * (*rhs)).into(),
+                rhs, (self * *rhs).into(),
                 _ => unreachable!()
             )
         )
     }
 }
 
-impl Div for SmallIntType {
-    type Output = SmallIntType;
+impl Div for IntType {
+    type Output = IntType;
 
     fn div(self, rhs: Self) -> Self::Output {
-        SmallIntType::new(self.value / rhs.value)
+        IntType::new(self.value / rhs.value)
     }
 }
 
-impl Div<BigIntType> for SmallIntType {
+impl Div<BigIntType> for IntType {
     type Output = BigIntType;
 
     fn div(self, rhs: BigIntType) -> Self::Output {
@@ -143,15 +142,15 @@ impl Div<BigIntType> for SmallIntType {
     }
 }
 
-impl Div<IntType> for SmallIntType {
+impl Div<SmallIntType> for IntType {
     type Output = IntType;
 
-    fn div(self, rhs: IntType) -> Self::Output {
-        IntType::new(self.value as IntUnderlyingType / rhs.value)
+    fn div(self, rhs: SmallIntType) -> Self::Output {
+        IntType::new(self.value / rhs.value as IntUnderlyingType)
     }
 }
 
-impl Div<Value> for SmallIntType {
+impl Div<Value> for IntType {
     type Output = Value;
 
     fn div(self, rhs: Value) -> Self::Output {
@@ -172,15 +171,15 @@ impl Div<Value> for SmallIntType {
     }
 }
 
-impl Rem for SmallIntType {
-    type Output = SmallIntType;
+impl Rem for IntType {
+    type Output = IntType;
 
     fn rem(self, rhs: Self) -> Self::Output {
-        SmallIntType::new(self.value % rhs.value)
+        IntType::new(self.value % rhs.value)
     }
 }
 
-impl Rem<BigIntType> for SmallIntType {
+impl Rem<BigIntType> for IntType {
     type Output = BigIntType;
 
     fn rem(self, rhs: BigIntType) -> Self::Output {
@@ -188,15 +187,15 @@ impl Rem<BigIntType> for SmallIntType {
     }
 }
 
-impl Rem<IntType> for SmallIntType {
+impl Rem<SmallIntType> for IntType {
     type Output = IntType;
 
-    fn rem(self, rhs: IntType) -> Self::Output {
-        IntType::new(self.value as IntUnderlyingType % rhs.value)
+    fn rem(self, rhs: SmallIntType) -> Self::Output {
+        IntType::new(self.value % rhs.value as IntUnderlyingType)
     }
 }
 
-impl Rem<Value> for SmallIntType {
+impl Rem<Value> for IntType {
     type Output = Value;
 
     fn rem(self, rhs: Value) -> Self::Output {
@@ -213,11 +212,11 @@ impl Rem<Value> for SmallIntType {
     }
 }
 
-impl ArithmeticsDBTypeTrait for SmallIntType {
+impl ArithmeticsDBTypeTrait for IntType {
     fn operate_null(&self, rhs: &Value) -> anyhow::Result<Value> {
         match rhs.get_db_type_id() {
             DBTypeId::TINYINT | DBTypeId::SMALLINT | DBTypeId::INT | DBTypeId::BIGINT => {
-                Ok(Value::new(Self::new(BUSTUB_I16_NULL).into()))
+                Ok(Value::new(Self::new(BUSTUB_I32_NULL).into()))
             }
             DBTypeId::DECIMAL => {
                 // Ok(Value::new(DecimalType::new(BUSTUB_INT64_NULL)))

@@ -1,7 +1,7 @@
-use crate::types::{BUSTUB_I16_NULL, BUSTUB_I32_NULL, BUSTUB_VALUE_NULL};
+use crate::types::{BUSTUB_I16_NULL, BUSTUB_VALUE_NULL};
 use std::ops::Deref;
 
-pub(super) type SmallIntUnderlyingType = i16;
+pub type SmallIntUnderlyingType = i16;
 
 #[derive(Copy, Debug)]
 pub struct SmallIntType {

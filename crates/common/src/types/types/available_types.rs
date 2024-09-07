@@ -1,5 +1,5 @@
 use std::fmt::{Debug, Display, Formatter};
-use crate::types::{BigIntType, DBTypeIdImpl, FormatDBTypeTrait, SmallIntType, StorageDBTypeTrait, Value};
+use crate::types::{BigIntType, DBTypeIdImpl, FormatDBTypeTrait, IntType, SmallIntType, StorageDBTypeTrait, Value};
 
 // Every possible SQL type ID
 #[derive(Copy, Clone, PartialEq)]
@@ -8,7 +8,7 @@ pub enum DBTypeId {
     BOOLEAN = 1,
     TINYINT = 2,
     SMALLINT = 3,
-    INTEGER = 4,
+    INT = 4,
     BIGINT = 5,
     DECIMAL = 6,
     VARCHAR = 7,
@@ -24,7 +24,7 @@ impl DBTypeId {
             DBTypeId::BOOLEAN => 1,
             DBTypeId::TINYINT => 1,
             DBTypeId::SMALLINT => SmallIntType::SIZE,
-            DBTypeId::INTEGER => 4,
+            DBTypeId::INT => IntType::SIZE,
             DBTypeId::BIGINT => BigIntType::SIZE,
             DBTypeId::DECIMAL => 8,
             DBTypeId::TIMESTAMP => 8,
@@ -40,13 +40,13 @@ impl DBTypeId {
             DBTypeId::BOOLEAN => true,
             DBTypeId::TINYINT |
             DBTypeId::SMALLINT |
-            DBTypeId::INTEGER |
+            DBTypeId::INT |
             DBTypeId::BIGINT |
             DBTypeId::DECIMAL => {
                 match from {
                     DBTypeId::TINYINT |
                     DBTypeId::SMALLINT |
-                    DBTypeId::INTEGER |
+                    DBTypeId::INT |
                     DBTypeId::BIGINT |
                     DBTypeId::DECIMAL |
                     DBTypeId::VARCHAR => true,
@@ -63,7 +63,7 @@ impl DBTypeId {
                     DBTypeId::BOOLEAN |
                     DBTypeId::TINYINT |
                     DBTypeId::SMALLINT |
-                    DBTypeId::INTEGER |
+                    DBTypeId::INT |
                     DBTypeId::BIGINT |
                     DBTypeId::DECIMAL |
                     DBTypeId::TIMESTAMP |
@@ -82,7 +82,7 @@ impl DBTypeId {
             DBTypeId::BOOLEAN => "BOOLEAN",
             DBTypeId::TINYINT => "TINYINT",
             DBTypeId::SMALLINT => SmallIntType::NAME,
-            DBTypeId::INTEGER => "INTEGER",
+            DBTypeId::INT => IntType::NAME,
             DBTypeId::BIGINT => BigIntType::NAME,
             DBTypeId::DECIMAL => "DECIMAL",
             DBTypeId::VARCHAR => "VARCHAR",
@@ -106,13 +106,13 @@ impl DBTypeId {
 
             DBTypeId::TINYINT |
             DBTypeId::SMALLINT |
-            DBTypeId::INTEGER |
+            DBTypeId::INT |
             DBTypeId::BIGINT |
             DBTypeId::DECIMAL => {
                 match other_type_id {
                     DBTypeId::TINYINT |
                     DBTypeId::SMALLINT |
-                    DBTypeId::INTEGER |
+                    DBTypeId::INT |
                     DBTypeId::BIGINT |
                     DBTypeId::DECIMAL |
                     DBTypeId::VARCHAR => true,
@@ -131,7 +131,7 @@ impl DBTypeId {
         match self {
             DBTypeId::TINYINT |
             DBTypeId::SMALLINT |
-            DBTypeId::INTEGER |
+            DBTypeId::INT |
             DBTypeId::BIGINT => true,
             _ => false
         }

@@ -1,8 +1,7 @@
 // TODO - should probably be trait
 
-use std::any::Any;
 use crate::run_on_impl;
-use crate::types::{BigIntType, ComparisonDBTypeTrait, ConversionDBTypeTrait, DBTypeId, DBTypeIdImpl, DBTypeIdTrait};
+use crate::types::{ComparisonDBTypeTrait, ConversionDBTypeTrait, DBTypeId, DBTypeIdImpl};
 
 
 // TODO - implement from src/include/type/value.h

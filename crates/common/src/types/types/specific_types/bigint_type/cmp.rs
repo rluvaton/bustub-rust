@@ -1,6 +1,6 @@
-use crate::types::{BigIntType, ComparisonDBTypeTrait, DBTypeIdImpl, FormatDBTypeTrait, SmallIntType, Value, BUSTUB_I64_MAX, BUSTUB_I64_MIN, BUSTUB_I64_NULL};
+use crate::types::{BigIntType, ComparisonDBTypeTrait, DBTypeIdImpl, FormatDBTypeTrait, IntType, SmallIntType, Value, BUSTUB_I64_MAX, BUSTUB_I64_MIN, BUSTUB_I64_NULL};
 use std::cmp::Ordering;
-
+use crate::run_on_numeric_impl;
 use super::BigIntUnderlyingType;
 
 impl PartialEq for BigIntType {
@@ -14,10 +14,11 @@ impl PartialEq<Value> for BigIntType {
         let other_type_id = other.get_db_type_id();
         assert!(Self::TYPE.check_comparable(&other_type_id));
 
-        match other.get_value() {
-            DBTypeIdImpl::BIGINT(rhs) => self.value.eq(&rhs.value),
-            DBTypeIdImpl::SMALLINT(rhs) => self.eq(rhs),
-        }
+        run_on_numeric_impl!(
+            other.get_value(),
+            rhs, self.eq(rhs),
+                _ => unreachable!()
+        )
         //
         // match other_type_id {
         //     DBTypeId::TINYINT => {
@@ -46,6 +47,12 @@ impl PartialEq<Value> for BigIntType {
     }
 }
 
+impl PartialEq<IntType> for BigIntType {
+    fn eq(&self, other: &IntType) -> bool {
+        self.value == other.value as BigIntUnderlyingType
+    }
+}
+
 impl PartialEq<SmallIntType> for BigIntType {
     fn eq(&self, other: &SmallIntType) -> bool {
         self.value == other.value as BigIntUnderlyingType
@@ -64,6 +71,12 @@ impl PartialOrd for BigIntType {
     }
 }
 
+impl PartialOrd<IntType> for BigIntType {
+    fn partial_cmp(&self, other: &IntType) -> Option<Ordering> {
+        self.value.partial_cmp(&(other.value as BigIntUnderlyingType))
+    }
+}
+
 impl PartialOrd<SmallIntType> for BigIntType {
     fn partial_cmp(&self, other: &SmallIntType) -> Option<Ordering> {
         self.value.partial_cmp(&(other.value as BigIntUnderlyingType))
@@ -75,10 +88,11 @@ impl PartialOrd<Value> for BigIntType {
         let other_type_id = other.get_db_type_id();
         assert!(Self::TYPE.check_comparable(&other_type_id));
 
-        match other.get_value() {
-            DBTypeIdImpl::BIGINT(rhs) => self.value.partial_cmp(&rhs.value),
-            DBTypeIdImpl::SMALLINT(rhs) => self.partial_cmp(rhs),
-        }
+        run_on_numeric_impl!(
+            other.get_value(),
+            rhs, self.partial_cmp(rhs),
+            _ => unreachable!()
+        )
         //
         // match other_type_id {
         //     DBTypeId::TINYINT => {

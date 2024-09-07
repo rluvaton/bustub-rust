@@ -1,33 +1,33 @@
-use crate::types::{SmallIntType, ConversionDBTypeTrait, DBTypeId, DBTypeIdImpl, StorageDBTypeTrait, Value};
+use crate::types::{IntType, ConversionDBTypeTrait, DBTypeId, DBTypeIdImpl, StorageDBTypeTrait, Value};
 use anyhow::anyhow;
-use super::SmallIntUnderlyingType;
+use super::IntUnderlyingType;
 
-impl From<SmallIntUnderlyingType> for SmallIntType {
-    fn from(value: SmallIntUnderlyingType) -> Self {
-        SmallIntType::new(value)
+impl From<IntUnderlyingType> for IntType {
+    fn from(value: IntUnderlyingType) -> Self {
+        IntType::new(value)
     }
 }
 
-impl From<&[u8]> for SmallIntType {
+impl From<&[u8]> for IntType {
     fn from(value: &[u8]) -> Self {
         // TODO - should we have type that indicate whether it's big int or other type?
-        SmallIntType::deserialize_from(value)
+        IntType::deserialize_from(value)
     }
 }
 
-impl Into<DBTypeIdImpl> for SmallIntType {
+impl Into<DBTypeIdImpl> for IntType {
     fn into(self) -> DBTypeIdImpl {
-        DBTypeIdImpl::SMALLINT(self)
+        DBTypeIdImpl::INT(self)
     }
 }
 
-impl Into<Value> for SmallIntType {
+impl Into<Value> for IntType {
     fn into(self) -> Value {
         Value::new(self.into())
     }
 }
 
-impl ConversionDBTypeTrait for SmallIntType {
+impl ConversionDBTypeTrait for IntType {
 
     fn to_string(&self) -> String {
         // TODO - what about null
@@ -39,7 +39,7 @@ impl ConversionDBTypeTrait for SmallIntType {
     }
 
     fn deserialize_from(storage: &[u8]) -> Self {
-        SmallIntType::new(SmallIntUnderlyingType::from_ne_bytes(storage[..Self::SIZE as usize].try_into().unwrap()))
+        IntType::new(IntUnderlyingType::from_ne_bytes(storage[..Self::SIZE as usize].try_into().unwrap()))
     }
 
     fn try_cast_as(&self, db_type_id: DBTypeId) -> anyhow::Result<DBTypeIdImpl> {
@@ -53,10 +53,10 @@ impl ConversionDBTypeTrait for SmallIntType {
                 todo!()
             }
             DBTypeId::SMALLINT => {
-                Ok(self.clone().into())
+                todo!()
             }
             DBTypeId::INT => {
-                todo!()
+                Ok(self.clone().into())
             }
             DBTypeId::BIGINT => {
                 todo!()

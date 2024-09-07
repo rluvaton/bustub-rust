@@ -1,4 +1,4 @@
-use crate::types::{BigIntType, DBTypeId, SmallIntType};
+use crate::types::{BigIntType, DBTypeId, IntType, SmallIntType};
 use std::fmt::{Debug, Display};
 
 /// Macro to run the provided expression on the enum variant
@@ -20,7 +20,35 @@ macro_rules! run_on_impl {
         match $enum_val {
             DBTypeIdImpl::BIGINT($name) => $func,
             DBTypeIdImpl::SMALLINT($name) => $func,
+            DBTypeIdImpl::INT($name) => $func,
             // Add match arms for other variants as necessary
+        }
+    };
+}
+
+/// Macro to run the provided expression on the enum variant
+/// # Example
+///
+/// ```
+///    use common::run_on_numeric_impl;
+/// use common::types::{BigIntType, DBTypeIdImpl};
+/// let e = DBTypeIdImpl::BIGINT(BigIntType::new(1));
+///
+///     // Apply the macro to run trait_function on the enum's variant
+///     run_on_numeric_impl!(e, v, {
+///         v.cmp(&3);
+///     },
+///     _ => unreachable!());
+/// ```
+#[macro_export]
+macro_rules! run_on_numeric_impl {
+    ($enum_val:expr, $name:ident, $func:expr, $($rest_of_patterns:pat => $value:expr),+) => {
+        match $enum_val {
+            DBTypeIdImpl::BIGINT($name) => $func,
+            DBTypeIdImpl::SMALLINT($name) => $func,
+            DBTypeIdImpl::INT($name) => $func,
+            // Add match arms for other variants as necessary
+            $($rest_of_patterns => $value),+,
         }
     };
 }
@@ -32,7 +60,7 @@ pub enum DBTypeIdImpl {
     // BOOLEAN = 1,
     // TINYINT = 2,
     SMALLINT(SmallIntType),
-    // INTEGER = 4,
+    INT(IntType),
     BIGINT(BigIntType),
     // DECIMAL = 6,
     // VARCHAR = 7,
@@ -43,7 +71,8 @@ impl DBTypeIdImpl {
     pub fn db_type_id(&self) -> DBTypeId {
         match self {
             DBTypeIdImpl::BIGINT(_) => DBTypeId::BIGINT,
-            DBTypeIdImpl::SMALLINT(_) => DBTypeId::SMALLINT
+            DBTypeIdImpl::INT(_) => DBTypeId::INT,
+            DBTypeIdImpl::SMALLINT(_) => DBTypeId::SMALLINT,
         }
     }
 }
