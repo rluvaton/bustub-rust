@@ -1,6 +1,8 @@
 use std::ops::{Add, Div, Mul, Rem, Sub};
 use anyhow::anyhow;
 use crate::types::{ArithmeticsDBTypeTrait, BigIntType, ComparisonDBTypeTrait, DBTypeId, DBTypeIdImpl, FormatDBTypeTrait, Value, BUSTUB_I64_NULL};
+use super::{BigIntUnderlyingType};
+
 impl Add for BigIntType {
     type Output = BigIntType;
 

@@ -7,3 +7,4 @@ mod format;
 mod storage;
 
 pub use base::BigIntType;
+pub(super) use base::BigIntUnderlyingType;

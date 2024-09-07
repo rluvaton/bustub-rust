@@ -1,5 +1,5 @@
-use crate::types::BigIntType;
-use crate::types::types::specific_types_trait::{StorageDBTypeTrait, UnderlyingDBTypeTrait};
+use crate::types::{BigIntType, StorageDBTypeTrait};
+use super::BigIntUnderlyingType;
 
 
 impl Clone for BigIntType {
@@ -9,7 +9,7 @@ impl Clone for BigIntType {
 }
 
 impl StorageDBTypeTrait for BigIntType {
-    const SIZE: u64 = size_of::<<BigIntType as UnderlyingDBTypeTrait>::UnderlyingType>() as u64;
+    const SIZE: u64 = size_of::<BigIntUnderlyingType>() as u64;
 
     fn is_inlined(&self) -> bool {
         true

@@ -4,7 +4,7 @@ use crate::types::{DBTypeId, DBTypeIdImpl, StorageDBTypeTrait};
 use anyhow::anyhow;
 use crate::config::PageData;
 
-impl From<<BigIntType as UnderlyingDBTypeTrait>::UnderlyingType> for BigIntType {
+impl From<BigIntUnderlyingType> for BigIntType {
     fn from(value: <Self as UnderlyingDBTypeTrait>::UnderlyingType) -> Self {
         BigIntType::new(value)
     }

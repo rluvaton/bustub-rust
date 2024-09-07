@@ -1,5 +1,5 @@
 mod bigint_type;
-// mod smallint;
+mod smallint_type;
 
 pub use bigint_type::BigIntType;
-// pub use smallint::SmallIntType;
+pub use smallint_type::SmallIntType;

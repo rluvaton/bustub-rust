@@ -2,11 +2,12 @@
 #[cfg(test)]
 mod tests {
     use crate::types::{BigIntType, ConversionDBTypeTrait, DBTypeIdTrait};
+    use super::super::BigIntUnderlyingType;
 
     #[test]
     fn basic_arithmetics_for_zero() {
-        let numbers_i64: [i64; 201] = std::array::from_fn(|i| -100 + i as i64);
-        let numbers: [BigIntType; 201] = std::array::from_fn(|i| (-100 + i as i64).into());
+        let numbers_i64: [BigIntUnderlyingType; 201] = std::array::from_fn(|i| -100 + i as BigIntUnderlyingType);
+        let numbers: [BigIntType; 201] = std::array::from_fn(|i| (-100 + i as BigIntUnderlyingType).into());
 
         // Make sure we created correctly
         for i in 0..201 {
@@ -40,7 +41,7 @@ mod tests {
 
     #[test]
     fn basic_arithmetics() {
-        let numbers_1_to_100: [BigIntType; 100] = std::array::from_fn(|i| (i as i64 + 1).into());
+        let numbers_1_to_100: [BigIntType; 100] = std::array::from_fn(|i| (i as BigIntUnderlyingType + 1).into());
 
         // Validate all the numbers are correct
         for i in 0..100i64 {
@@ -49,11 +50,11 @@ mod tests {
 
         for a_index in 0..numbers_1_to_100.len() {
             let a = numbers_1_to_100[a_index];
-            let a_value = (a_index as i64) + 1;
+            let a_value = (a_index as BigIntUnderlyingType) + 1;
 
             for b_index in 0..numbers_1_to_100.len() {
                 let b = numbers_1_to_100[b_index];
-                let b_value = b_index as i64 + 1;
+                let b_value = b_index as BigIntUnderlyingType + 1;
 
                 // a + b;
                 assert_eq!((a + b).value, a_value + b_value);
@@ -76,7 +77,7 @@ mod tests {
 
     #[test]
     fn basic_arithmetics_negative() {
-        let numbers_minus100_to_1: [BigIntType; 100] = std::array::from_fn(|i| (-100 + i as i64).into());
+        let numbers_minus100_to_1: [BigIntType; 100] = std::array::from_fn(|i| (-100 + i as BigIntUnderlyingType).into());
 
         // Validate all the numbers are correct
         for i in 0..100i64 {
@@ -85,11 +86,11 @@ mod tests {
 
         for a_index in 0..numbers_minus100_to_1.len() {
             let a = numbers_minus100_to_1[a_index];
-            let a_value = -100 + (a_index as i64);
+            let a_value = -100 + (a_index as BigIntUnderlyingType);
 
             for b_index in 0..numbers_minus100_to_1.len() {
                 let b = numbers_minus100_to_1[b_index];
-                let b_value = -100 + b_index as i64;
+                let b_value = -100 + b_index as BigIntUnderlyingType;
 
                 // a + b;
                 assert_eq!((a + b).value, a_value + b_value);
@@ -112,8 +113,8 @@ mod tests {
 
     #[test]
     fn basic_cmp() {
-        let numbers_i64: [i64; 201] = std::array::from_fn(|i| -100 + i as i64);
-        let numbers: [BigIntType; 201] = std::array::from_fn(|i| (-100 + i as i64).into());
+        let numbers_i64: [BigIntUnderlyingType; 201] = std::array::from_fn(|i| -100 + i as BigIntUnderlyingType);
+        let numbers: [BigIntType; 201] = std::array::from_fn(|i| (-100 + i as BigIntUnderlyingType).into());
 
         // Make sure we created correctly
         for i in 0..201 {
@@ -166,8 +167,8 @@ mod tests {
 
     #[test]
     fn basic_serialize_deserialize() {
-        let numbers_i64: [i64; 201] = std::array::from_fn(|i| -100 + i as i64);
-        let numbers: [BigIntType; 201] = std::array::from_fn(|i| (-100 + i as i64).into());
+        let numbers_i64: [BigIntUnderlyingType; 201] = std::array::from_fn(|i| -100 + i as BigIntUnderlyingType);
+        let numbers: [BigIntType; 201] = std::array::from_fn(|i| (-100 + i as BigIntUnderlyingType).into());
 
         // Make sure we created correctly
         for i in 0..201 {
@@ -178,7 +179,7 @@ mod tests {
             let number = numbers[i];
             let number_i64 = numbers_i64[i];
 
-            let mut actual = [0u8; size_of::<i64>()];
+            let mut actual = [0u8; size_of::<BigIntUnderlyingType>()];
             let expected = number_i64.to_ne_bytes();
 
             {
@@ -195,7 +196,7 @@ mod tests {
 
             {
                 let mut actual = [0u8; size_of::<i64>() * 2];
-                actual[..size_of::<i64>()].copy_from_slice(expected.as_slice());
+                actual[..size_of::<BigIntUnderlyingType>()].copy_from_slice(expected.as_slice());
                 let deserialized_from_larger = BigIntType::from(actual.as_slice());
 
                 assert_eq!(deserialized_from_larger, number);

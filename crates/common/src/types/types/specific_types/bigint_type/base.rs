@@ -1,15 +1,16 @@
 use std::ops::Deref;
 use crate::types::{BUSTUB_I64_NULL, BUSTUB_VALUE_NULL};
-use crate::types::types::specific_types_trait::UnderlyingDBTypeTrait;
+
+pub(super) type BigIntUnderlyingType = i64;
 
 #[derive(Copy, Debug)]
 pub struct BigIntType {
-    pub(super) value: <Self as UnderlyingDBTypeTrait>::UnderlyingType,
+    pub(in super::super) value: BigIntUnderlyingType,
     pub(super) len: u32,
 }
 
 impl BigIntType {
-    pub fn new(value: <Self as UnderlyingDBTypeTrait>::UnderlyingType) -> Self {
+    pub fn new(value: BigIntUnderlyingType) -> Self {
         BigIntType {
             value,
             len: if value == BUSTUB_I64_NULL { BUSTUB_VALUE_NULL } else { 0 },
@@ -18,13 +19,9 @@ impl BigIntType {
 }
 
 impl Deref for BigIntType {
-    type Target = <Self as UnderlyingDBTypeTrait>::UnderlyingType;
+    type Target = BigIntUnderlyingType;
 
     fn deref(&self) -> &Self::Target {
         &self.value
     }
-}
-
-impl UnderlyingDBTypeTrait for BigIntType {
-    type UnderlyingType = i64;
 }
