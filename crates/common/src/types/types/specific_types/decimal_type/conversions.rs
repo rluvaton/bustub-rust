@@ -9,6 +9,12 @@ impl From<DecimalUnderlyingType> for DecimalType {
     }
 }
 
+impl From<&DecimalUnderlyingType> for DecimalType {
+    fn from(value: &DecimalUnderlyingType) -> Self {
+        DecimalType::new(*value)
+    }
+}
+
 impl From<&[u8]> for DecimalType {
     fn from(value: &[u8]) -> Self {
         // TODO - should we have type that indicate whether it's big int or other type?

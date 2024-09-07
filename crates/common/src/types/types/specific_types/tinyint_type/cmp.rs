@@ -151,6 +151,14 @@ impl PartialOrd<TinyIntUnderlyingType> for TinyIntType {
     }
 }
 
+impl Eq for TinyIntType {}
+
+impl Ord for TinyIntType {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.value.cmp(&other.value)
+    }
+}
+
 impl ComparisonDBTypeTrait for TinyIntType {
     fn is_zero(&self) -> bool {
         self.value == 0

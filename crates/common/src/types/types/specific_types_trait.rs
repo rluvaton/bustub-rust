@@ -3,17 +3,17 @@ use std::fmt::{Debug, Display};
 use crate::types::{DBTypeId, DBTypeIdImpl, Value};
 
 pub trait ArithmeticsDBTypeTrait:
-    Sized +
-    ops::Add<Self> + // '+'
-    ops::Add<Value, Output=Value> + // '+'
-    ops::Sub<Self> + // '-'
-    ops::Sub<Value, Output=Value> + // '-'
-    ops::Mul<Self> + // '*'
-    ops::Mul<Value, Output=Value> + // '*'
-    ops::Div<Self> + // '/'
-    ops::Div<Value, Output=Value> + // '/'
-    ops::Rem<Self> + // '%'
-    ops::Rem<Value, Output=Value> // '%'
+Sized +
+ops::Add<Self> + // '+'
+ops::Add<Value, Output=Value> + // '+'
+ops::Sub<Self> + // '-'
+ops::Sub<Value, Output=Value> + // '-'
+ops::Mul<Self> + // '*'
+ops::Mul<Value, Output=Value> + // '*'
+ops::Div<Self> + // '/'
+ops::Div<Value, Output=Value> + // '/'
+ops::Rem<Self> + // '%'
+ops::Rem<Value, Output=Value> // '%'
 {
     // TODO - should take ref?
     fn sqrt(self) -> Self {
@@ -34,6 +34,7 @@ pub trait ComparisonDBTypeTrait:
 cmp::PartialEq<Value> + // == and !=
 // cmp::PartialOrd<Self> + // used to derive min, max, and all compare functions
 cmp::PartialOrd<Value> + // used to derive min, max, and all compare functions
+Ord
 {
     fn get_min_value() -> Self;
 
@@ -74,7 +75,6 @@ pub trait FormatDBTypeTrait: Display + Debug {
 }
 
 pub trait StorageDBTypeTrait: Sized + Clone {
-
     /// Get the size of this data type in bytes
     const SIZE: u64;
 

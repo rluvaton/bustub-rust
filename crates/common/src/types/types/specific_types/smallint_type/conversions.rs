@@ -9,6 +9,12 @@ impl From<SmallIntUnderlyingType> for SmallIntType {
     }
 }
 
+impl From<&SmallIntUnderlyingType> for SmallIntType {
+    fn from(value: &SmallIntUnderlyingType) -> Self {
+        SmallIntType::new(*value)
+    }
+}
+
 impl From<&[u8]> for SmallIntType {
     fn from(value: &[u8]) -> Self {
         // TODO - should we have type that indicate whether it's big int or other type?

@@ -1,9 +1,15 @@
-use crate::types::{BooleanType, BooleanUnderlyingType, ConversionDBTypeTrait, DBTypeId, DBTypeIdImpl, StorageDBTypeTrait, Value};
+use crate::types::{BigIntType, BigIntUnderlyingType, BooleanType, BooleanUnderlyingType, ConversionDBTypeTrait, DBTypeId, DBTypeIdImpl, StorageDBTypeTrait, Value};
 use anyhow::anyhow;
 
 impl From<BooleanUnderlyingType> for BooleanType {
     fn from(value: BooleanUnderlyingType) -> Self {
         BooleanType::new(value)
+    }
+}
+
+impl From<&BooleanUnderlyingType> for BooleanType {
+    fn from(value: &BooleanUnderlyingType) -> Self {
+        BooleanType::new(*value)
     }
 }
 
@@ -13,8 +19,24 @@ impl From<bool> for BooleanType {
     }
 }
 
+impl From<&bool> for BooleanType {
+    fn from(value: &bool) -> Self {
+        BooleanType::new(if *value { Self::TRUE} else {Self::FALSE})
+    }
+}
+
 impl From<Option<bool>> for BooleanType {
     fn from(value: Option<bool>) -> Self {
+        if let Some(value) = value {
+            return value.into()
+        }
+
+        BooleanType::new(Self::NULL)
+    }
+}
+
+impl From<&Option<bool>> for BooleanType {
+    fn from(value: &Option<bool>) -> Self {
         if let Some(value) = value {
             return value.into()
         }

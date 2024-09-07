@@ -176,10 +176,10 @@ mod tests {
         }
 
         {
-            let numbers_i16_sorted = numbers_i16.clone();
+            let mut numbers_i16_sorted = numbers_i16.clone();
             numbers_i16_sorted.sort();
 
-            let numbers_sorted = numbers.clone();
+            let mut numbers_sorted = numbers.clone();
             numbers_sorted.sort();
 
             let numbers_i16_parsed: [SmallIntType; 201] = numbers_i16_sorted.map(|item| item.into());
@@ -187,19 +187,19 @@ mod tests {
         }
 
         {
-            let max_number = numbers_i16.iter().max().expect("Must have max item");
+            let max_number: SmallIntType = numbers_i16.iter().max().expect("Must have max item").into();
 
             let max_db_type = numbers.iter().max().expect("Must have max item");
 
-            assert_eq!(max_db_type, max_number.into());
+            assert_eq!(max_db_type, &max_number);
         }
 
         {
-            let min_number = numbers_i16.iter().min().expect("Must have min item");
+            let min_number: SmallIntType = numbers_i16.iter().min().expect("Must have min item").into();
 
             let min_db_type = numbers.iter().min().expect("Must have min item");
 
-            assert_eq!(min_db_type, min_number.into());
+            assert_eq!(min_db_type, &min_number);
         }
     }
 

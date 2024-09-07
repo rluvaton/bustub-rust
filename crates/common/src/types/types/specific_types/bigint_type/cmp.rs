@@ -155,6 +155,14 @@ impl PartialOrd<BigIntUnderlyingType> for BigIntType {
     }
 }
 
+impl Eq for BigIntType {}
+
+impl Ord for BigIntType {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.value.cmp(&other.value)
+    }
+}
+
 impl ComparisonDBTypeTrait for BigIntType {
     fn is_zero(&self) -> bool {
         self.value == 0

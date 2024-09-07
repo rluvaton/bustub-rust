@@ -68,6 +68,14 @@ impl PartialOrd<Value> for BooleanType {
     }
 }
 
+impl Eq for BooleanType {}
+
+impl Ord for BooleanType {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.value.cmp(&other.value)
+    }
+}
+
 impl ComparisonDBTypeTrait for BooleanType {
     fn is_zero(&self) -> bool {
         panic!("is_zero is not available for boolean")

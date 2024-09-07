@@ -67,7 +67,7 @@ mod tests {
         assert_eq!(v_null >= v_true, false, "true should be greater than or equal to null");
 
         // False
-        assert_eq!(v_false >= v_false, false, "false >= false");
+        assert_eq!(v_false >= v_false, true, "false >= false");
         assert_eq!(v_false >= v_null, true, "false >= null");
 
         assert_eq!(v_null >= v_false, false, "false should be greater than or equal to null");
@@ -112,9 +112,7 @@ mod tests {
         // Null
         assert_eq!(v_null <= v_true, true, "null <= true");
         assert_eq!(v_null <= v_false, true, "null <= false");
-
-        assert_eq!(v_null <= v_null, false, "null <= null");
-
+        assert_eq!(v_null <= v_null, true, "null <= null");
     }
 
 
@@ -129,10 +127,10 @@ mod tests {
         }
 
         {
-            let numbers_i8_sorted = numbers.clone();
+            let mut numbers_i8_sorted = numbers.clone();
             numbers_i8_sorted.sort();
 
-            let db_type_sorted = db_type.clone();
+            let mut db_type_sorted = db_type.clone();
             db_type_sorted.sort();
 
             let numbers_i8_parsed: [BooleanType; 3] = numbers_i8_sorted.map(|item| item.into());
@@ -140,19 +138,19 @@ mod tests {
         }
 
         {
-            let max_number = numbers.iter().max().expect("Must have max item");
+            let max_number: BooleanType = numbers.iter().max().expect("Must have max item").into();
 
             let max_db_type = db_type.iter().max().expect("Must have max item");
 
-            assert_eq!(max_db_type, max_number.into());
+            assert_eq!(max_db_type, &max_number);
         }
 
         {
-            let min_number = numbers.iter().min().expect("Must have min item");
+            let min_number: BooleanType = numbers.iter().min().expect("Must have min item").into();
 
             let min_db_type = db_type.iter().min().expect("Must have min item");
 
-            assert_eq!(min_db_type, min_number.into());
+            assert_eq!(min_db_type, &min_number);
         }
     }
 

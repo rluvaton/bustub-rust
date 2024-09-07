@@ -178,10 +178,10 @@ mod tests {
         }
 
         {
-            let numbers_f64_sorted = numbers_f64.clone();
-            numbers_f64_sorted.sort();
+            let mut numbers_f64_sorted = numbers_f64.clone();
+            numbers_f64_sorted.sort_by(|a, b| a.partial_cmp(b).unwrap());
 
-            let numbers_sorted = numbers.clone();
+            let mut numbers_sorted = numbers.clone();
             numbers_sorted.sort();
 
             let numbers_f64_parsed: [DecimalType; 201] = numbers_f64_sorted.map(|item| item.into());
@@ -189,19 +189,19 @@ mod tests {
         }
 
         {
-            let max_number = numbers_f64.iter().max().expect("Must have max item");
+            let max_number: DecimalType = numbers_f64.iter().max_by(|a, b| a.partial_cmp(b).unwrap()).expect("Must have max item").into();
 
             let max_db_type = numbers.iter().max().expect("Must have max item");
 
-            assert_eq!(max_db_type, max_number.into());
+            assert_eq!(max_db_type, &max_number);
         }
 
         {
-            let min_number = numbers_f64.iter().min().expect("Must have min item");
+            let min_number: DecimalType = numbers_f64.iter().min_by(|a, b| a.partial_cmp(b).unwrap()).expect("Must have min item").into();
 
             let min_db_type = numbers.iter().min().expect("Must have min item");
 
-            assert_eq!(min_db_type, min_number.into());
+            assert_eq!(min_db_type, &min_number);
         }
     }
 

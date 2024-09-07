@@ -151,6 +151,14 @@ impl PartialOrd<IntUnderlyingType> for IntType {
     }
 }
 
+impl Eq for IntType {}
+
+impl Ord for IntType {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.value.cmp(&other.value)
+    }
+}
+
 impl ComparisonDBTypeTrait for IntType {
     fn is_zero(&self) -> bool {
         self.value == 0

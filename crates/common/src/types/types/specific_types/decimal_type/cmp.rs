@@ -1,4 +1,4 @@
-use crate::types::{BigIntType, BigIntUnderlyingType, ComparisonDBTypeTrait, DBTypeIdImpl, DecimalType, DecimalUnderlyingType, FormatDBTypeTrait, IntType, IntUnderlyingType, SmallIntType, TinyIntType, Value, BUSTUB_DECIMAL_MAX, BUSTUB_DECIMAL_MIN, BUSTUB_DECIMAL_NULL, BUSTUB_I16_MAX, BUSTUB_I16_MIN, BUSTUB_I16_NULL, BUSTUB_I32_MAX, BUSTUB_I32_MIN, BUSTUB_I32_NULL};
+use crate::types::{BigIntType, BigIntUnderlyingType, BooleanType, ComparisonDBTypeTrait, DBTypeIdImpl, DecimalType, DecimalUnderlyingType, FormatDBTypeTrait, IntType, IntUnderlyingType, SmallIntType, TinyIntType, Value, BUSTUB_DECIMAL_MAX, BUSTUB_DECIMAL_MIN, BUSTUB_DECIMAL_NULL, BUSTUB_I16_MAX, BUSTUB_I16_MIN, BUSTUB_I16_NULL, BUSTUB_I32_MAX, BUSTUB_I32_MIN, BUSTUB_I32_NULL};
 use std::cmp::Ordering;
 use crate::run_on_numeric_impl;
 
@@ -149,6 +149,20 @@ impl PartialOrd<Value> for DecimalType {
 impl PartialOrd<DecimalUnderlyingType> for DecimalType {
     fn partial_cmp(&self, other: &DecimalUnderlyingType) -> Option<Ordering> {
         self.value.partial_cmp(other)
+    }
+}
+
+impl Eq for DecimalType {}
+
+impl Ord for DecimalType {
+    fn cmp(&self, other: &Self) -> Ordering {
+        if self.value < other.value {
+            Ordering::Less
+        } else if self.value == other.value {
+            Ordering::Equal
+        } else {
+            Ordering::Greater
+        }
     }
 }
 

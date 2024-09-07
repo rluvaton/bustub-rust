@@ -5,14 +5,14 @@ use std::fmt::{Debug, Display};
 /// # Example
 ///
 /// ```
-///    use common::run_on_impl;
-/// use common::types::{BigIntType, DBTypeIdImpl};
-/// let e = DBTypeIdImpl::BIGINT(BigIntType::new(1));
+///  use common::run_on_impl;
+///  use common::types::*;
+///  let e = DBTypeIdImpl::BIGINT(BigIntType::new(1));
 ///
-///     // Apply the macro to run trait_function on the enum's variant
-///     run_on_impl!(e, v, {
-///         v.cmp(&3);
-///     });
+///  // Apply the macro to run trait_function on the enum's variant
+///  let _ = run_on_impl!(e, v, {
+///     v.is_null()
+///  });
 /// ```
 #[macro_export]
 macro_rules! run_on_impl {
@@ -33,15 +33,16 @@ macro_rules! run_on_impl {
 /// # Example
 ///
 /// ```
-///    use common::run_on_numeric_impl;
-/// use common::types::{BigIntType, DBTypeIdImpl};
-/// let e = DBTypeIdImpl::BIGINT(BigIntType::new(1));
+///  use common::run_on_numeric_impl;
+///  use common::types::*;
+///  let e = DBTypeIdImpl::BIGINT(BigIntType::new(1));
 ///
-///     // Apply the macro to run trait_function on the enum's variant
-///     run_on_numeric_impl!(e, v, {
-///         v.cmp(&3);
+///  // Apply the macro to run trait_function on the enum's variant
+///  let res = run_on_numeric_impl!(e, v, {
+///         v.is_null()
 ///     },
-///     _ => unreachable!());
+///     _ => unreachable!()
+///  );
 /// ```
 #[macro_export]
 macro_rules! run_on_numeric_impl {

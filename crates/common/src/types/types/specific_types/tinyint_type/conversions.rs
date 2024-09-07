@@ -1,11 +1,16 @@
-use crate::types::{TinyIntType, ConversionDBTypeTrait, DBTypeId, DBTypeIdImpl, StorageDBTypeTrait, Value, ComparisonDBTypeTrait, IntType, IntUnderlyingType, BigIntType, BigIntUnderlyingType, DecimalType, DecimalUnderlyingType, SmallIntType, SmallIntUnderlyingType};
-use anyhow::anyhow;
-use crate::assert_in_range;
 use super::TinyIntUnderlyingType;
+use crate::types::{BigIntType, BigIntUnderlyingType, ComparisonDBTypeTrait, ConversionDBTypeTrait, DBTypeId, DBTypeIdImpl, DecimalType, DecimalUnderlyingType, IntType, IntUnderlyingType, SmallIntType, SmallIntUnderlyingType, StorageDBTypeTrait, TinyIntType, Value};
+use anyhow::anyhow;
 
 impl From<TinyIntUnderlyingType> for TinyIntType {
     fn from(value: TinyIntUnderlyingType) -> Self {
         TinyIntType::new(value)
+    }
+}
+
+impl From<&TinyIntUnderlyingType> for TinyIntType {
+    fn from(value: &TinyIntUnderlyingType) -> Self {
+        TinyIntType::new(*value)
     }
 }
 
