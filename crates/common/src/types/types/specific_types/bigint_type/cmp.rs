@@ -38,10 +38,14 @@ impl PartialEq<Value> for BigIntType {
         let other_type_id = other.get_db_type_id();
         assert!(Self::TYPE.check_comparable(&other_type_id));
 
+        if self.is_null() && other.is_null() {
+            return true;
+        }
+
         run_on_numeric_impl!(
             other.get_value(),
             rhs, self.eq(rhs),
-                _ => unreachable!()
+            _ => unreachable!()
         )
         //
         // match other_type_id {
@@ -166,6 +170,6 @@ impl ComparisonDBTypeTrait for BigIntType {
 
     // TODO - this is not the same as the value
     fn is_null(&self) -> bool {
-        self.value == BUSTUB_I64_NULL
+        self.value == Self::NULL
     }
 }

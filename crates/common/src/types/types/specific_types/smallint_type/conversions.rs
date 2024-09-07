@@ -31,7 +31,10 @@ impl Into<Value> for SmallIntType {
 impl ConversionDBTypeTrait for SmallIntType {
 
     fn to_string(&self) -> String {
-        // TODO - what about null
+        if self.is_null() {
+            return "smallint_null".to_string();
+        }
+
         self.value.to_string()
     }
 

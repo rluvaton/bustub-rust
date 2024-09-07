@@ -31,7 +31,10 @@ impl Into<Value> for IntType {
 impl ConversionDBTypeTrait for IntType {
 
     fn to_string(&self) -> String {
-        // TODO - what about null
+        if self.is_null() {
+            return "int_null".to_string();
+        }
+
         self.value.to_string()
     }
 

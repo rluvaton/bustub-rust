@@ -1,7 +1,7 @@
 
 #[cfg(test)]
 mod tests {
-    use crate::types::{SmallIntType, ConversionDBTypeTrait, DBTypeIdTrait};
+    use crate::types::{SmallIntType, ConversionDBTypeTrait, DBTypeIdTrait, IntUnderlyingType, IntType};
     use super::super::SmallIntUnderlyingType;
 
     #[test]
@@ -162,6 +162,44 @@ mod tests {
             assert!(n >= SmallIntType::new(n.value - 1), "{} >= {}", n.value, n.value - 1);
 
             assert_eq!(n >= SmallIntType::new(n.value + 1), false, "{} should not be greater than or equal to {}", n.value, n.value + 1);
+        }
+    }
+
+    #[test]
+    fn basic_ordering_operations() {
+        let numbers_i16: [SmallIntUnderlyingType; 201] = std::array::from_fn(|i| -100 + i as SmallIntUnderlyingType);
+        let numbers: [SmallIntType; 201] = std::array::from_fn(|i| (-100 + i as SmallIntUnderlyingType).into());
+
+        // Make sure we created correctly
+        for i in 0..201 {
+            assert_eq!(numbers[i].value, numbers_i16[i]);
+        }
+
+        {
+            let numbers_i16_sorted = numbers_i16.clone();
+            numbers_i16_sorted.sort();
+
+            let numbers_sorted = numbers.clone();
+            numbers_sorted.sort();
+
+            let numbers_i16_parsed: [SmallIntType; 201] = numbers_i16_sorted.map(|item| item.into());
+            assert_eq!(numbers_i16_parsed, numbers_sorted);
+        }
+
+        {
+            let max_number = numbers_i16.iter().max().expect("Must have max item");
+
+            let max_db_type = numbers.iter().max().expect("Must have max item");
+
+            assert_eq!(max_db_type, max_number.into());
+        }
+
+        {
+            let min_number = numbers_i16.iter().min().expect("Must have min item");
+
+            let min_db_type = numbers.iter().min().expect("Must have min item");
+
+            assert_eq!(min_db_type, min_number.into());
         }
     }
 

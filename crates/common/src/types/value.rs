@@ -46,6 +46,12 @@ impl Value {
         })
     }
 
+    pub fn is_null(&self) -> bool {
+        run_on_impl!(&self.value, v, {
+            v.is_null()
+        })
+    }
+
     // // TODO - this is deserialize_from
     // pub fn deserialize_from_ptr(ptr: *const u8, value_type: TypeId) -> Self {
     //     todo!()

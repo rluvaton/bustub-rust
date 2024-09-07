@@ -10,13 +10,14 @@ pub struct IntType {
 }
 
 impl IntType {
+    pub const NULL: IntUnderlyingType = BUSTUB_I32_NULL;
     pub const MIN: IntUnderlyingType = BUSTUB_I32_MIN;
     pub const MAX: IntUnderlyingType = BUSTUB_I32_MAX;
 
     pub fn new(value: IntUnderlyingType) -> Self {
         IntType {
             value,
-            len: if value == BUSTUB_I32_NULL { BUSTUB_VALUE_NULL } else { 0 },
+            len: if value == Self::NULL { BUSTUB_VALUE_NULL } else { 0 },
         }
     }
 }
@@ -31,6 +32,6 @@ impl Deref for IntType {
 
 impl Default for IntType {
     fn default() -> Self {
-        IntType::new(BUSTUB_I32_NULL)
+        Self::new(Self::NULL)
     }
 }

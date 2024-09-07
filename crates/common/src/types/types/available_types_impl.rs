@@ -1,4 +1,4 @@
-use crate::types::{BigIntType, DBTypeId, DecimalType, IntType, SmallIntType, TinyIntType};
+use crate::types::{BigIntType, BooleanType, DBTypeId, DecimalType, IntType, SmallIntType, TinyIntType};
 use std::fmt::{Debug, Display};
 
 /// Macro to run the provided expression on the enum variant
@@ -23,6 +23,7 @@ macro_rules! run_on_impl {
             DBTypeIdImpl::SMALLINT($name) => $func,
             DBTypeIdImpl::TINYINT($name) => $func,
             DBTypeIdImpl::DECIMAL($name) => $func,
+            DBTypeIdImpl::BOOLEAN($name) => $func,
             // Add match arms for other variants as necessary
         }
     };
@@ -61,7 +62,7 @@ macro_rules! run_on_numeric_impl {
 #[derive(Clone)]
 pub enum DBTypeIdImpl {
     // INVALID = 0,
-    // BOOLEAN = 1,
+    BOOLEAN(BooleanType),
     TINYINT(TinyIntType),
     SMALLINT(SmallIntType),
     INT(IntType),
@@ -74,6 +75,7 @@ pub enum DBTypeIdImpl {
 impl DBTypeIdImpl {
     pub fn db_type_id(&self) -> DBTypeId {
         match self {
+            DBTypeIdImpl::BOOLEAN(_) => DBTypeId::BOOLEAN,
             DBTypeIdImpl::BIGINT(_) => DBTypeId::BIGINT,
             DBTypeIdImpl::INT(_) => DBTypeId::INT,
             DBTypeIdImpl::SMALLINT(_) => DBTypeId::SMALLINT,

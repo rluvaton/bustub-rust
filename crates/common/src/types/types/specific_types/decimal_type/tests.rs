@@ -2,7 +2,6 @@
 mod tests {
     use crate::types::{ConversionDBTypeTrait, DecimalType, DecimalUnderlyingType};
 
-
     #[test]
     fn basic_arithmetics_for_zero() {
         /// Divided in the tests by 17 as it's prime and it would create floating number
@@ -164,6 +163,45 @@ mod tests {
             assert!(n >= DecimalType::new(n.value - 1.0), "{} >= {}", n.value, n.value - 1.0);
 
             assert_eq!(n >= DecimalType::new(n.value + 1.0), false, "{} should not be greater than or equal to {}", n.value, n.value + 1.0);
+        }
+    }
+
+    #[test]
+    fn basic_ordering_operations() {
+        /// Divided in the tests by 17 as it's prime and it would create floating number
+        let numbers_f64: [DecimalUnderlyingType; 201] = std::array::from_fn(|i| (-100.0 + i as DecimalUnderlyingType) / 17.0);
+        let numbers: [DecimalType; 201] = std::array::from_fn(|i| ((-100.0 + i as DecimalUnderlyingType) / 17.0).into());
+
+        // Make sure we created correctly
+        for i in 0..201 {
+            assert_eq!(numbers[i].value, numbers_f64[i]);
+        }
+
+        {
+            let numbers_f64_sorted = numbers_f64.clone();
+            numbers_f64_sorted.sort();
+
+            let numbers_sorted = numbers.clone();
+            numbers_sorted.sort();
+
+            let numbers_f64_parsed: [DecimalType; 201] = numbers_f64_sorted.map(|item| item.into());
+            assert_eq!(numbers_f64_parsed, numbers_sorted);
+        }
+
+        {
+            let max_number = numbers_f64.iter().max().expect("Must have max item");
+
+            let max_db_type = numbers.iter().max().expect("Must have max item");
+
+            assert_eq!(max_db_type, max_number.into());
+        }
+
+        {
+            let min_number = numbers_f64.iter().min().expect("Must have min item");
+
+            let min_db_type = numbers.iter().min().expect("Must have min item");
+
+            assert_eq!(min_db_type, min_number.into());
         }
     }
 

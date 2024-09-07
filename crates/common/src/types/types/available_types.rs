@@ -1,5 +1,5 @@
 use std::fmt::{Debug, Display, Formatter};
-use crate::types::{BigIntType, DBTypeIdImpl, DecimalType, FormatDBTypeTrait, IntType, SmallIntType, StorageDBTypeTrait, TinyIntType, Value};
+use crate::types::{BigIntType, BooleanType, DBTypeIdImpl, DecimalType, FormatDBTypeTrait, IntType, SmallIntType, StorageDBTypeTrait, TinyIntType, Value};
 
 // Every possible SQL type ID
 #[derive(Copy, Clone, PartialEq)]
@@ -21,7 +21,7 @@ impl DBTypeId {
         // TODO - change this to the type
         match self {
             DBTypeId::INVALID => unreachable!("Cannot get size of invalid type"),
-            DBTypeId::BOOLEAN => 1,
+            DBTypeId::BOOLEAN => BooleanType::SIZE,
             DBTypeId::TINYINT => TinyIntType::SIZE,
             DBTypeId::SMALLINT => SmallIntType::SIZE,
             DBTypeId::INT => IntType::SIZE,
@@ -79,7 +79,7 @@ impl DBTypeId {
     pub fn get_name(&self) -> &'static str {
         match self {
             DBTypeId::INVALID => "INVALID",
-            DBTypeId::BOOLEAN => "BOOLEAN",
+            DBTypeId::BOOLEAN => BooleanType::NAME,
             DBTypeId::TINYINT => TinyIntType::NAME,
             DBTypeId::SMALLINT => SmallIntType::NAME,
             DBTypeId::INT => IntType::NAME,

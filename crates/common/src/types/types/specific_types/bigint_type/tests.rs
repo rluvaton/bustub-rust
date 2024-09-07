@@ -166,6 +166,44 @@ mod tests {
     }
 
     #[test]
+    fn basic_ordering_operations() {
+        let numbers_i64: [BigIntUnderlyingType; 201] = std::array::from_fn(|i| -100 + i as BigIntUnderlyingType);
+        let numbers: [BigIntType; 201] = std::array::from_fn(|i| (-100 + i as BigIntUnderlyingType).into());
+
+        // Make sure we created correctly
+        for i in 0..201 {
+            assert_eq!(numbers[i].value, numbers_i64[i]);
+        }
+
+        {
+            let numbers_i64_sorted = numbers_i64.clone();
+            numbers_i64_sorted.sort();
+
+            let numbers_sorted = numbers.clone();
+            numbers_sorted.sort();
+
+            let numbers_i64_parsed: [BigIntType; 201] = numbers_i64_sorted.map(|item| item.into());
+            assert_eq!(numbers_i64_parsed, numbers_sorted);
+        }
+
+        {
+            let max_number = numbers_i64.iter().max().expect("Must have max item");
+
+            let max_db_type = numbers.iter().max().expect("Must have max item");
+
+            assert_eq!(max_db_type, max_number.into());
+        }
+
+        {
+            let min_number = numbers_i64.iter().min().expect("Must have min item");
+
+            let min_db_type = numbers.iter().min().expect("Must have min item");
+
+            assert_eq!(min_db_type, min_number.into());
+        }
+    }
+
+    #[test]
     fn basic_serialize_deserialize() {
         let numbers_i64: [BigIntUnderlyingType; 201] = std::array::from_fn(|i| -100 + i as BigIntUnderlyingType);
         let numbers: [BigIntType; 201] = std::array::from_fn(|i| (-100 + i as BigIntUnderlyingType).into());

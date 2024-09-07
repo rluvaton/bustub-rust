@@ -10,13 +10,14 @@ pub struct TinyIntType {
 }
 
 impl TinyIntType {
+    pub const NULL: TinyIntUnderlyingType = BUSTUB_I8_NULL;
     pub const MIN: TinyIntUnderlyingType = BUSTUB_I8_MIN;
     pub const MAX: TinyIntUnderlyingType = BUSTUB_I8_MAX;
 
     pub fn new(value: TinyIntUnderlyingType) -> Self {
         TinyIntType {
             value,
-            len: if value == BUSTUB_I8_NULL { BUSTUB_VALUE_NULL } else { 0 },
+            len: if value == Self::NULL { BUSTUB_VALUE_NULL } else { 0 },
         }
     }
 }
@@ -31,6 +32,6 @@ impl Deref for TinyIntType {
 
 impl Default for TinyIntType {
     fn default() -> Self {
-        TinyIntType::new(BUSTUB_I8_NULL)
+        Self::new(Self::NULL)
     }
 }

@@ -10,13 +10,14 @@ pub struct SmallIntType {
 }
 
 impl SmallIntType {
+    pub const NULL: SmallIntUnderlyingType = BUSTUB_I16_NULL;
     pub const MIN: SmallIntUnderlyingType = BUSTUB_I16_MIN;
     pub const MAX: SmallIntUnderlyingType = BUSTUB_I16_MAX;
 
     pub fn new(value: SmallIntUnderlyingType) -> Self {
         SmallIntType {
             value,
-            len: if value == BUSTUB_I16_NULL { BUSTUB_VALUE_NULL } else { 0 },
+            len: if value == Self::NULL { BUSTUB_VALUE_NULL } else { 0 },
         }
     }
 }
@@ -31,6 +32,6 @@ impl Deref for SmallIntType {
 
 impl Default for SmallIntType {
     fn default() -> Self {
-        SmallIntType::new(BUSTUB_I16_NULL)
+        Self::new(Self::NULL)
     }
 }

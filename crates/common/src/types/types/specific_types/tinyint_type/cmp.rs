@@ -166,6 +166,6 @@ impl ComparisonDBTypeTrait for TinyIntType {
 
     // TODO - this is not the same as the value
     fn is_null(&self) -> bool {
-        self.value == BUSTUB_I8_NULL
+        self.value == Self::NULL
     }
 }

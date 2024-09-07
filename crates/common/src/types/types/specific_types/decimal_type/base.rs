@@ -10,13 +10,14 @@ pub struct DecimalType {
 }
 
 impl DecimalType {
+    pub const NULL: DecimalUnderlyingType = BUSTUB_DECIMAL_NULL;
     pub const MIN: DecimalUnderlyingType = BUSTUB_DECIMAL_MIN;
     pub const MAX: DecimalUnderlyingType = BUSTUB_DECIMAL_MAX;
 
     pub fn new(value: DecimalUnderlyingType) -> Self {
         DecimalType {
             value,
-            len: if value == BUSTUB_DECIMAL_NULL { BUSTUB_VALUE_NULL } else { 0 },
+            len: if value == Self::NULL { BUSTUB_VALUE_NULL } else { 0 },
         }
     }
 }
@@ -31,6 +32,6 @@ impl Deref for DecimalType {
 
 impl Default for DecimalType {
     fn default() -> Self {
-        DecimalType::new(BUSTUB_DECIMAL_NULL)
+        DecimalType::new(Self::NULL)
     }
 }

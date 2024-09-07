@@ -1,7 +1,7 @@
 
 #[cfg(test)]
 mod tests {
-    use crate::types::{IntType, IntUnderlyingType, ConversionDBTypeTrait, DBTypeIdTrait};
+    use crate::types::{IntType, IntUnderlyingType, ConversionDBTypeTrait};
 
     #[test]
     fn basic_arithmetics_for_zero() {
@@ -161,6 +161,44 @@ mod tests {
             assert!(n >= IntType::new(n.value - 1), "{} >= {}", n.value, n.value - 1);
 
             assert_eq!(n >= IntType::new(n.value + 1), false, "{} should not be greater than or equal to {}", n.value, n.value + 1);
+        }
+    }
+
+    #[test]
+    fn basic_ordering_operations() {
+        let numbers_i32: [IntUnderlyingType; 201] = std::array::from_fn(|i| -100 + i as IntUnderlyingType);
+        let numbers: [IntType; 201] = std::array::from_fn(|i| (-100 + i as IntUnderlyingType).into());
+
+        // Make sure we created correctly
+        for i in 0..201 {
+            assert_eq!(numbers[i].value, numbers_i32[i]);
+        }
+
+        {
+            let numbers_i32_sorted = numbers_i32.clone();
+            numbers_i32_sorted.sort();
+
+            let numbers_sorted = numbers.clone();
+            numbers_sorted.sort();
+
+            let numbers_i32_parsed: [IntType; 201] = numbers_i32_sorted.map(|item| item.into());
+            assert_eq!(numbers_i32_parsed, numbers_sorted);
+        }
+
+        {
+            let max_number = numbers_i32.iter().max().expect("Must have max item");
+
+            let max_db_type = numbers.iter().max().expect("Must have max item");
+
+            assert_eq!(max_db_type, max_number.into());
+        }
+
+        {
+            let min_number = numbers_i32.iter().min().expect("Must have min item");
+
+            let min_db_type = numbers.iter().min().expect("Must have min item");
+
+            assert_eq!(min_db_type, min_number.into());
         }
     }
 

@@ -167,6 +167,6 @@ impl ComparisonDBTypeTrait for DecimalType {
 
     // TODO - this is not the same as the value
     fn is_null(&self) -> bool {
-        self.value == BUSTUB_DECIMAL_NULL
+        self.value == Self::NULL
     }
 }
