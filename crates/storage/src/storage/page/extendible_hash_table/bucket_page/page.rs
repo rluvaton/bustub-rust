@@ -136,15 +136,13 @@ where
     /// * `key`: key to lookup
     /// * `comparator`: the comparator
     ///
-    /// returns: Option<&(Key, Value)> None if the key was missing, Some if not
+    /// returns: Option<& Value> None if the key was missing, Some with reference to the found value if not
     ///
-    /// We are not returning the value and instead return the entire tuple to avoid cloning, if you want only the value use `.map(|item| item.1)`
-    ///
-    pub fn lookup(&self, key: &Key, comparator: &KeyComparator) -> Option<&MappingType<Key, Value>> {
+    pub fn lookup(&self, key: &Key, comparator: &KeyComparator) -> Option<&Value> {
         self.array[0..self.size as usize]
             .iter()
             .find(|(item_key, _)| comparator.cmp(key, &item_key) == Ordering::Equal)
-            // .map(|item| item.1)
+            .map(|(_key, value)| value)
     }
 
     /**

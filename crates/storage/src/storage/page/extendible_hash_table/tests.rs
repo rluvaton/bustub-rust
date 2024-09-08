@@ -41,7 +41,7 @@ mod tests {
             // check for the inserted pairs
             for i in 0..10 {
                 index_key.set_from_integer(i);
-                let rid_value = bucket_page.lookup(&index_key, &comparator).cloned().map(|item| item.1);
+                let rid_value = bucket_page.lookup(&index_key, &comparator).cloned();
                 assert_eq!(rid_value, Some(RID::new(i as PageId, i as u32)), "Should find key {} and", i)
             }
 
