@@ -3,12 +3,12 @@ use std::hash::{Hash, Hasher};
 use crate::config::{PageId, INVALID_PAGE_ID};
 use crate::page_traits::PageValue;
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct RID {
-    // Default is Invalid
+    /// Default is Invalid
     page_id: PageId,
 
-    // logical offset from 0, 1...
+    /// logical offset from 0, 1...
     slot_num: u32,
 }
 
@@ -43,6 +43,10 @@ impl RID {
     pub fn set(&mut self, page_id: PageId, slot_num: u32) {
         self.page_id = page_id;
         self.slot_num = slot_num;
+    }
+
+    pub fn is_invalid(&self) -> bool {
+        self.page_id == INVALID_PAGE_ID
     }
 }
 

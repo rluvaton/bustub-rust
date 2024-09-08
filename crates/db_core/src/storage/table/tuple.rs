@@ -6,6 +6,7 @@
 /// ---------------------------------------------------------------------
 ///
 /// TODO - implement src/include/storage/table/tuple.h
+#[derive(Clone)]
 pub struct Tuple {
     data: Vec<u8>
 }

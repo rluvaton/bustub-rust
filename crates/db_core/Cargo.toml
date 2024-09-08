@@ -12,6 +12,8 @@ data_types = {path = "../data_types"}
 
 anyhow = "1.0.86"
 prettytable = "0.10.0"
+atomic = "0.6.0"
+bytemuck = "1.18.0"
 
 # TODO - remove unused features
 chrono = "0.4.38"

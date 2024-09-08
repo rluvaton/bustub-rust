@@ -64,11 +64,11 @@ impl Schema {
     }
 
 
-    pub fn copy_schema(&self, attrs: Vec<usize>) -> Self {
+    pub fn copy_schema(&self, attrs: Vec<u32>) -> Self {
         let mut columns: Vec<Column> = Vec::with_capacity(attrs.len());
 
         for i in attrs {
-            columns.push(self.columns[i].clone())
+            columns.push(self.columns[i as usize].clone())
         }
 
         Schema::new(columns)
