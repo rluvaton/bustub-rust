@@ -1,7 +1,11 @@
+use std::hash::Hash;
 use std::collections::HashMap;
 use std::fmt::{Debug, Formatter};
 use common::config::{PageId, BUSTUB_PAGE_SIZE, INVALID_PAGE_ID};
 use std::mem::size_of;
+use prettytable::{row, Table};
+use binary_utils::GetNBits;
+use generics::GetOr;
 
 const _HASH_TABLE_DIRECTORY_PAGE_METADATA_SIZE: usize = size_of::<u32>() * 2;
 
@@ -25,7 +29,7 @@ const _: () = assert!(size_of::<DirectoryPage>() <= BUSTUB_PAGE_SIZE);
 /// Directory pages sit at the second level of our disk-based extendible hash table.
 /// Each of them stores the logical child pointers to the bucket pages (as page ids), as well as metadata for handling bucket mapping and dynamic directory growing and shrinking.
 ///
-#[repr(packed)]
+#[repr(C)]
 pub struct DirectoryPage {
     /// The maximum depth the header page could handle
     max_depth: u32,
@@ -55,9 +59,10 @@ impl DirectoryPage {
     /// returns: ()
     ///
     pub fn init(&mut self, max_depth: Option<u32>) {
-        let max_depth = max_depth.unwrap_or(HASH_TABLE_DIRECTORY_MAX_DEPTH);
-
-        unimplemented!()
+        self.max_depth = max_depth.unwrap_or(HASH_TABLE_DIRECTORY_MAX_DEPTH);
+        self.local_depths.fill(0);
+        self.global_depth = 0;
+        self.bucket_page_ids.fill(INVALID_PAGE_ID);
     }
 
 
@@ -70,7 +75,7 @@ impl DirectoryPage {
     /// returns: u32 bucket index current key is hashed to
     ///
     pub fn hash_to_bucket_index(&self, hash: u32) -> u32 {
-        0
+        hash.get_n_msb_bits(self.global_depth as u8)
     }
 
     /// Lookup a bucket page using a directory index
@@ -82,7 +87,7 @@ impl DirectoryPage {
     /// returns: PageId bucket page_id corresponding to bucket_idx
     ///
     pub fn get_bucket_page_id(&self, bucket_idx: u32) -> PageId {
-        INVALID_PAGE_ID
+        self.bucket_page_ids[bucket_idx as usize]
     }
 
 
@@ -95,7 +100,7 @@ impl DirectoryPage {
     ///
     ///
     pub fn set_bucket_page_id(&mut self, bucket_idx: u32, bucket_page_id: PageId) {
-        unimplemented!()
+        self.bucket_page_ids[bucket_idx as usize] = bucket_page_id
     }
 
     /// Gets the split image of an index
@@ -147,43 +152,44 @@ impl DirectoryPage {
     /// returns: u32 the global depth of the directory
     ///
     pub fn get_global_depth(&self) -> u32 {
-        0
+        self.global_depth
     }
 
     pub fn get_max_depth(&self) -> u32 {
-        unimplemented!()
+        self.max_depth
     }
 
 
     /// Increment the global depth of the directory
     pub fn incr_global_depth(&mut self) {
-        unimplemented!()
+        self.global_depth += 1;
     }
 
     /// Decrement the global depth of the directory
     pub fn decr_global_depth(&mut self) {
-        unimplemented!()
+        self.global_depth -= 1;
     }
 
     ///
     /// returns: bool true if the directory can be shrunk
     ///
     pub fn can_shrink(&self) -> bool {
-        false
+        self.local_depths.iter().all(|&d| (d as u32) < self.global_depth)
     }
 
     ///
     /// returns: u32 the current directory size
     ///
     pub fn size(&self) -> u32 {
-        0
+        self.bucket_page_ids.iter().fold(0, |count, page_id| if page_id == &INVALID_PAGE_ID { count } else { count + 1 })
     }
 
     ///
     /// returns: u32 the max directory size
     ///
     pub fn max_size(&self) -> u32 {
-        unimplemented!()
+        // TODO - is this the right value?
+        self.max_depth
     }
 
     /// Gets the local depth of the bucket at bucket_idx
@@ -195,7 +201,7 @@ impl DirectoryPage {
     /// returns: u32 the local depth of the bucket at bucket_idx
     ///
     pub fn get_local_depth(&self, bucket_idx: u32) -> u32 {
-        0
+        self.local_depths[bucket_idx as usize] as u32
     }
 
 
@@ -207,7 +213,7 @@ impl DirectoryPage {
     /// * `local_depth`: new local depth
     ///
     pub fn set_local_depth(&mut self, bucket_idx: u32, local_depth: u8) {
-        unimplemented!()
+        self.local_depths[bucket_idx as usize] = local_depth;
     }
 
     /// Increment the local depth of the bucket at bucket_idx
@@ -248,19 +254,13 @@ impl DirectoryPage {
             // Verify: (1) All LD <= GD.
             assert!(curr_ld <= self.global_depth, "there exists a local depth greater than the global depth");
 
-            {
-                if let Some(count) = page_id_to_count.get(&curr_page_id) {
-                    page_id_to_count.insert(curr_page_id, count + 1);
-                } else {
-                    page_id_to_count.insert(curr_page_id, 1);
-                }
-            }
+            page_id_to_count.insert(curr_page_id, page_id_to_count.get_or(&curr_page_id, &0) + 1);
 
-            if page_id_to_count[&curr_page_id] > 0 && curr_ld != page_id_to_ld[&curr_page_id] {
-                let old_ld = page_id_to_ld[&curr_page_id];
+            if page_id_to_count[&curr_page_id] > 0 && curr_ld != *page_id_to_ld.get_or(&curr_page_id, &0) {
+                let old_ld = *page_id_to_ld.get_or(&curr_page_id, &0);
                 println!("Verify Integrity: curr_local_depth: {}, old_local_depth {}, for page_id: {}", curr_ld, old_ld, curr_page_id);
                 self.print_directory();
-                assert_eq!(curr_ld, page_id_to_ld[&curr_page_id], "local depth is not the same at each index with same bucket page id");
+                assert_eq!(curr_ld, *page_id_to_ld.get_or(&curr_page_id, &0), "local depth is not the same at each index with same bucket page id");
             } else {
                 page_id_to_ld.insert(curr_page_id, curr_ld);
             }
@@ -268,7 +268,7 @@ impl DirectoryPage {
 
         // Verify: (2) Each bucket has precisely 2^(GD - LD) pointers pointing to it.
         for (curr_page_id, curr_count) in page_id_to_count {
-            let curr_ld = page_id_to_ld[&curr_page_id];
+            let curr_ld = *page_id_to_ld.get_or(&curr_page_id, &0);
             let required_count: u32 = 0x1 << (self.global_depth - curr_ld);
 
             if curr_count != required_count {
@@ -287,16 +287,21 @@ impl DirectoryPage {
 
 impl Debug for DirectoryPage {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        let global_depth = self.global_depth;
-        f.write_str(format!("======== DIRECTORY (global_depth: {}) ========\n", global_depth).as_str())?;
-        f.write_str("| bucket_idx | page_id | local_depth |\n")?;
+        f.write_str(format!("======== DIRECTORY (global_depth: {}) ========\n", self.global_depth).as_str())?;
 
-        let max_id = (0x1 << global_depth) as u32;
+        let mut table = Table::new();
+
+        table.add_row(row!["bucket_idx", "page_id", "local_depth"]);
+
+        let max_id = (0x1 << self.global_depth) as u32;
         for idx in 0..(max_id as usize) {
             let page_id = self.bucket_page_ids[idx];
             let local_depth = self.local_depths[idx];
-            f.write_str(format!("|    {}    |    {}    |    {}    |\n", idx, page_id, local_depth).as_str())?;
+
+            table.add_row(row![idx, page_id, local_depth]);
         }
+
+        f.write_str(table.to_string().as_str())?;
 
         f.write_str("================ END DIRECTORY ================")
     }

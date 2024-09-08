@@ -5,10 +5,13 @@ edition = "2021"
 
 [dependencies]
 common = {path = "../common"}
+binary_utils = {path = "../binary_utils"}
+generics = {path = "../generics"}
 stats = {path = "../stats"}
 data_types = {path = "../data_types"}
 
 anyhow = "1.0.86"
+prettytable = "0.10.0"
 
 # TODO - remove unused features
 chrono = "0.4.38"

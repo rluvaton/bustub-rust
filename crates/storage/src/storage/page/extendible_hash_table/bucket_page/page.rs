@@ -4,6 +4,7 @@ use common::config::{PageId, BUSTUB_PAGE_SIZE};
 use std::fmt::{Debug, Display, Formatter};
 use std::marker::PhantomData;
 use std::mem::size_of;
+use prettytable::{row, Table};
 use common::{PageKey, PageValue, RID};
 use crate::storage::{Comparator, GenericComparator, GenericKey};
 
@@ -280,13 +281,17 @@ where
 impl<const ARRAY_SIZE: usize, Key: PageKey, Value: PageValue, KeyComparator: Comparator<Key>> Debug for BucketPage<ARRAY_SIZE, Key, Value, KeyComparator> {
 
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        f.write_str(format!("======== BUCKET (size_: {} | max_size_: {}) ========\n", self.size, self.max_size).as_str())?;
-        f.write_str("| i | k | v |\n")?;
+        f.write_str(format!("======== BUCKET (size: {} | max_size: {}) ========\n", self.size, self.max_size).as_str())?;
+
+        let mut table = Table::new();
+
+        table.add_row(row!["index", "key", "value"]);
 
         for idx in 0..self.size {
-            f.write_str(format!("| {} | {} | {} |\n", idx, self.key_at(idx), self.value_at(idx)).as_str())?;
+            table.add_row(row![idx, self.key_at(idx), self.value_at(idx)]);
         }
 
+        f.write_str(table.to_string().as_str())?;
         f.write_str("================ END BUCKET ================\n")
     }
 }

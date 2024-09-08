@@ -1,6 +1,5 @@
 #[cfg(test)]
 mod tests {
-    use std::mem;
     use crate::buffer::BufferPoolManager;
     use crate::catalog::Schema;
     use crate::storage::{hash_table_bucket_array_size, DiskManagerUnlimitedMemory, ExtendibleHashTableBucketPage, ExtendibleHashTableDirectoryPage, ExtendibleHashTableHeaderPage, GenericComparator, GenericKey};
@@ -155,7 +154,7 @@ mod tests {
             ///
             /// ======== DIRECTORY (global_depth: 0) ========
             /// | bucket_idx | page_id | local_depth |
-            /// |    0    |    2    |    0    |
+            /// |    0       |    2    |    0        |
             /// ================ END DIRECTORY ================
             ///
 
@@ -171,8 +170,8 @@ mod tests {
 
             /// ======== DIRECTORY (global_depth: 1) ========
             /// | bucket_idx | page_id | local_depth |
-            /// |    0    |    2    |    1    |
-            /// |    1    |    3    |    1    |
+            /// |    0       |    2    |      1      |
+            /// |    1       |    3    |      1      |
             /// ================ END DIRECTORY ================
 
 
@@ -191,10 +190,10 @@ mod tests {
 
             /// ======== DIRECTORY (global_depth: 2) ========
             /// | bucket_idx | page_id | local_depth |
-            /// |    0    |    2    |    2    |
-            /// |    1    |    3    |    1    |
-            /// |    2    |    4    |    2    |
-            /// |    3    |    3    |    1    |
+            /// |    0       |    2    |      2      |
+            /// |    1       |    3    |      1      |
+            /// |    2       |    4    |      2      |
+            /// |    3       |    3    |      1      |
             /// ================ END DIRECTORY ================
 
             directory_page.verify_integrity();
@@ -215,14 +214,14 @@ mod tests {
 
             /// ======== DIRECTORY (global_depth: 3) ========
             /// | bucket_idx | page_id | local_depth |
-            /// |    0    |    2    |    3    |
-            /// |    1    |    3    |    1    |
-            /// |    2    |    4    |    2    |
-            /// |    3    |    3    |    1    |
-            /// |    4    |    5    |    3    |
-            /// |    5    |    3    |    1    |
-            /// |    6    |    4    |    2    |
-            /// |    7    |    3    |    1    |
+            /// |     0      |    2    |      3      |
+            /// |     1      |    3    |      1      |
+            /// |     2      |    4    |      2      |
+            /// |     3      |    3    |      1      |
+            /// |     4      |    5    |      3      |
+            /// |     5      |    3    |      1      |
+            /// |     6      |    4    |      2      |
+            /// |     7      |    3    |      1      |
             /// ================ END DIRECTORY ================
 
 
@@ -253,14 +252,14 @@ mod tests {
 
             /// ======== DIRECTORY (global_depth: 3) ========
             /// | bucket_idx | page_id | local_depth |
-            /// |    0    |    5    |    2    |
-            /// |    1    |    3    |    1    |
-            /// |    2    |    4    |    2    |
-            /// |    3    |    3    |    1    |
-            /// |    4    |    5    |    2    |
-            /// |    5    |    3    |    1    |
-            /// |    6    |    4    |    2    |
-            /// |    7    |    3    |    1    |
+            /// |      0     |    5    |      2      |
+            /// |      1     |    3    |      1      |
+            /// |      2     |    4    |      2      |
+            /// |      3     |    3    |      1      |
+            /// |      4     |    5    |      2      |
+            /// |      5     |    3    |      1      |
+            /// |      6     |    4    |      2      |
+            /// |      7     |    3    |      1      |
             /// ================ END DIRECTORY ================
 
             assert_eq!(directory_page.can_shrink(), true);
@@ -268,10 +267,10 @@ mod tests {
 
             /// ======== DIRECTORY (global_depth: 2) ========
             /// | bucket_idx | page_id | local_depth |
-            /// |    0    |    5    |    2    |
-            /// |    1    |    3    |    1    |
-            /// |    2    |    4    |    2    |
-            /// |    3    |    3    |    1    |
+            /// |     0      |    5    |      2      |
+            /// |     1      |    3    |      1      |
+            /// |     2      |    4    |      2      |
+            /// |     3      |    3    |      1      |
             /// ================ END DIRECTORY ================
 
             directory_page.verify_integrity();

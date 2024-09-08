@@ -1,7 +1,8 @@
 use std::fmt::{Debug, Formatter};
-use common::config::{PageId, BUSTUB_PAGE_SIZE};
+use common::config::{PageId, BUSTUB_PAGE_SIZE, INVALID_PAGE_ID};
 use std::mem::size_of;
-
+use prettytable::{row, Table};
+use binary_utils::GetNBits;
 
 const _HASH_TABLE_HEADER_PAGE_METADATA_SIZE: usize = size_of::<u32>();
 const HASH_TABLE_HEADER_MAX_DEPTH: u32 = 9;
@@ -27,7 +28,7 @@ const _: () = assert!(size_of::<HeaderPage>() <= BUSTUB_PAGE_SIZE);
 ///
 /// It stores the logical child pointers to the directory pages (as page ids).
 /// You can think about it as a static first-level directory page. The header page has the following fields:
-#[repr(packed)]
+#[repr(C)]
 pub struct HeaderPage {
     /// An array of directory page ids
     directory_page_ids: [PageId; HASH_TABLE_HEADER_ARRAY_SIZE],
@@ -51,9 +52,8 @@ impl HeaderPage {
     /// returns: ()
     ///
     pub fn init(&mut self, max_depth: Option<u32>) {
-        let max_depth = max_depth.unwrap_or(HASH_TABLE_HEADER_MAX_DEPTH);
-
-        unimplemented!()
+        self.max_depth = max_depth.unwrap_or(HASH_TABLE_HEADER_MAX_DEPTH);
+        self.directory_page_ids.fill(INVALID_PAGE_ID);
     }
 
 
@@ -66,7 +66,7 @@ impl HeaderPage {
     /// returns: u32 directory index the key is hashed to
     ///
     pub fn hash_to_directory_index(&self, hash: u32) -> u32 {
-        0
+        hash.get_n_msb_bits(self.max_depth as u8)
     }
 
     /// Get the directory page id at an index
@@ -108,15 +108,19 @@ impl HeaderPage {
 
 impl Debug for HeaderPage {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        unimplemented!();
-        // f.write_str(format!("======== HEADER (max_depth: {}) ========\n", self.max_depth).as_str())?;
-        // f.write_str("| directory_idx | page_id |\n")?;
-        //
-        // let max_id = (1 << self.max_depth) as u32;
-        // for idx in 0..(max_id as usize) {
-        //     f.write_str(format!("|    {}    |    {}    |\n", idx, self.directory_page_ids[idx]).as_str())?;
-        // }
-        //
-        // f.write_str("======== END HEADER ========")
+        f.write_str(format!("======== HEADER (max_depth: {}) ========\n", self.max_depth).as_str())?;
+
+        let mut table = Table::new();
+
+        table.add_row(row!["directory_idx", "page_id"]);
+
+        let max_id = (1 << self.max_depth) as u32;
+        for idx in 0..(max_id as usize) {
+            table.add_row(row![idx, self.directory_page_ids[idx]]);
+        }
+
+        f.write_str(table.to_string().as_str())?;
+
+        f.write_str("======== END HEADER ========")
     }
 }
