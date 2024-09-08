@@ -246,7 +246,7 @@ impl DirectoryPage {
     /// * `bucket_idx`: bucket index to increment
     ///
     pub fn incr_local_depth(&mut self, bucket_idx: u32) {
-        self.local_depths[bucket_idx] += 1;
+        self.local_depths[bucket_idx as usize] += 1;
     }
 
     /// Decrement the local depth of the bucket at bucket_idx
@@ -256,7 +256,7 @@ impl DirectoryPage {
     /// * `bucket_idx`: bucket index to decrement
     ///
     pub fn decr_local_depth(&mut self, bucket_idx: u32) {
-        self.local_depths[bucket_idx] -= 1;
+        self.local_depths[bucket_idx as usize] -= 1;
     }
 
     /// Verify the following invariants:

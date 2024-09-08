@@ -198,7 +198,6 @@ where
     }
 
     pub fn remove_at(&mut self, bucket_idx: u32) {
-
         if bucket_idx >= self.size {
             return;
         }
@@ -209,10 +208,6 @@ where
         }
 
         self.size -= 1;
-
-        // TODO - MARK DELETED?
-        // TODO - CAN CHANGE LOCATION? - SWAP THE ABOUT TO DELETE WITH THE LAST AND DECREASE SIZE
-        // unimplemented!();
     }
 
     /**

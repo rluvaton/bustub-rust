@@ -77,8 +77,8 @@ impl HeaderPage {
     ///
     /// returns: u32 directory page_id at index
     ///
-    pub fn get_directory_page_id(&self, directory_idx: u32) -> u32 {
-        0
+    pub fn get_directory_page_id(&self, directory_idx: u32) -> PageId {
+        self.directory_page_ids[directory_idx as usize]
     }
 
 
@@ -92,12 +92,12 @@ impl HeaderPage {
     /// returns: ()
     ///
     pub fn set_directory_page_id(&mut self, directory_idx: u32, directory_page_id: PageId) {
-        unimplemented!()
+        self.directory_page_ids[directory_idx as usize] = directory_page_id;
     }
 
     /// Get the maximum number of directory page ids the header page could handle
     pub fn max_size(&self) -> u32 {
-        0
+        2u32.pow(self.max_depth)
     }
 
     /// Prints the header's occupancy information
