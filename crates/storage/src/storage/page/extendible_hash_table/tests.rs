@@ -207,6 +207,7 @@ mod tests {
             directory_page.set_local_depth(0, 3);
             directory_page.incr_global_depth();
             directory_page.set_bucket_page_id(4, bucket_page_id_4);
+            assert_eq!(directory_page.get_global_depth_mask(), 7);
 
 
             /// ======== DIRECTORY (global_depth: 3) ========

@@ -1,11 +1,11 @@
-use std::hash::Hash;
+use binary_utils::GetNBits;
+use common::config::{PageId, BUSTUB_PAGE_SIZE, INVALID_PAGE_ID};
+use generics::GetOr;
+use prettytable::{row, Table};
 use std::collections::HashMap;
 use std::fmt::{Debug, Formatter};
-use common::config::{PageId, BUSTUB_PAGE_SIZE, INVALID_PAGE_ID};
+use std::hash::Hash;
 use std::mem::size_of;
-use prettytable::{row, Table};
-use binary_utils::GetNBits;
-use generics::GetOr;
 
 const _HASH_TABLE_DIRECTORY_PAGE_METADATA_SIZE: usize = size_of::<u32>() * 2;
 
@@ -75,8 +75,6 @@ impl DirectoryPage {
     /// returns: u32 bucket index current key is hashed to
     ///
     pub fn hash_to_bucket_index(&self, hash: u32) -> u32 {
-        // hash.get_n_msb_bits(self.global_depth as u8)
-        // TODO - is this correct? also size is slow
         hash % self.size()
     }
 
@@ -114,7 +112,7 @@ impl DirectoryPage {
     /// returns: u32 the directory index of the split image
     ///
     pub fn get_split_image_index(&self, bucket_idx: u32) -> u32 {
-        0
+        unimplemented!()
     }
 
     /// returns a mask of global_depth 1's and the rest 0's.
@@ -131,7 +129,7 @@ impl DirectoryPage {
     /// returns: u32 mask of global_depth 1's and the rest 0's (with 1's from LSB upwards)
     ///
     pub fn get_global_depth_mask(&self) -> u32 {
-        unimplemented!()
+        0xFFFFFFFFu32.get_n_lsb_bits(self.global_depth as u8)
     }
 
     /// same as global depth mask, except it
@@ -144,7 +142,7 @@ impl DirectoryPage {
     /// returns: u32 mask of local 1's and the rest 0's (with 1's from LSB upwards)
     ///
     pub fn get_local_depth_mask(&self, bucket_idx: u32) -> u32 {
-        unimplemented!()
+        0xFFFFFFFFu32.get_n_lsb_bits(self.local_depths[bucket_idx as usize])
     }
 
     /// Get the global depth of the hash table directory
@@ -248,7 +246,7 @@ impl DirectoryPage {
     /// * `bucket_idx`: bucket index to increment
     ///
     pub fn incr_local_depth(&mut self, bucket_idx: u32) {
-        unimplemented!()
+        self.local_depths[bucket_idx] += 1;
     }
 
     /// Decrement the local depth of the bucket at bucket_idx
@@ -258,7 +256,7 @@ impl DirectoryPage {
     /// * `bucket_idx`: bucket index to decrement
     ///
     pub fn decr_local_depth(&mut self, bucket_idx: u32) {
-        unimplemented!()
+        self.local_depths[bucket_idx] -= 1;
     }
 
     /// Verify the following invariants:
@@ -329,5 +327,45 @@ impl Debug for DirectoryPage {
         f.write_str(table.to_string().as_str())?;
 
         f.write_str("================ END DIRECTORY ================")
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::buffer::BufferPoolManager;
+    use crate::storage::{DiskManagerUnlimitedMemory, ExtendibleHashTableDirectoryPage};
+    use parking_lot::Mutex;
+    use std::sync::Arc;
+
+    #[test]
+    fn global_and_local_depth_mash() {
+        let disk_mgr = Arc::new(Mutex::new(DiskManagerUnlimitedMemory::new()));
+        let bpm = Arc::new(BufferPoolManager::new(5, disk_mgr, None, None));
+
+
+        // Create directory
+        let directory_guard = bpm.new_page_guarded().expect("Should be able to create new page");
+        let mut directory_guard = directory_guard.upgrade_write();
+
+        let directory_page = directory_guard.cast_mut::<ExtendibleHashTableDirectoryPage>();
+        directory_page.init(Some(3));
+
+        assert_eq!(directory_page.global_depth, 0);
+        assert_eq!(directory_page.get_global_depth_mask(), 0);
+
+        for i in 0..directory_page.local_depths.len() {
+            assert_eq!(directory_page.local_depths[i], 0);
+            assert_eq!(directory_page.get_local_depth_mask(i as u32), 0);
+        }
+
+        // grow the directory, local depths should change!
+        directory_page.set_local_depth(0, 1);
+        directory_page.incr_global_depth();
+        directory_page.set_local_depth(1, 1);
+
+        assert_eq!(directory_page.global_depth, 1);
+        assert_eq!(directory_page.get_global_depth_mask(), 0x00000001u32);
+
+        // TODO - add more tests for the mask
     }
 }
