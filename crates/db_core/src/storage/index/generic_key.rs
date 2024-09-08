@@ -13,6 +13,7 @@ use common::PageKey;
  */
 // TODO - remove this derive
 #[derive(PartialEq, Clone)]
+#[derive(Hash)]
 pub struct GenericKey<const KEY_SIZE: usize> {
     // actual location of data, extends past the end.
     // TODO - how can it pass past the array

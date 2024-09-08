@@ -1,12 +1,11 @@
-use std::fmt::{Debug, Formatter};
-use std::sync::Arc;
-use mut_binary_heap::KeyComparator;
-use common::{PageKey, PageValue};
-use common::config::{PageId, HEADER_PAGE_ID, INVALID_PAGE_ID};
 use crate::buffer::BufferPoolManager;
 use crate::concurrency::Transaction;
 use crate::container::hash::HashFunction;
 use crate::storage::{hash_table_bucket_array_size, Comparator, ExtendibleHashTableBucketPage, ExtendibleHashTableDirectoryPage, ExtendibleHashTableHeaderPage, HASH_TABLE_DIRECTORY_MAX_DEPTH, HASH_TABLE_HEADER_MAX_DEPTH};
+use common::config::{PageId, HEADER_PAGE_ID, INVALID_PAGE_ID};
+use common::{PageKey, PageValue};
+use std::fmt::{Debug, Formatter};
+use std::sync::Arc;
 
 
 /// Implementation of extendible hash table that is backed by a buffer pool
@@ -50,7 +49,7 @@ where
     ///
     pub fn new(name: String, bpm: Arc<BufferPoolManager>, cmp: KeyComparator, header_max_depth: Option<u32>, directory_max_depth: Option<u32>, bucket_max_size: Option<u32>) -> Self {
         Self {
-            index_name,
+            index_name: name,
             bpm,
             cmp,
 
@@ -169,7 +168,7 @@ impl<Key: PageKey, Value: PageValue, KeyComparator: Comparator<Key>> Debug for H
 
         let header = header_guard.cast::<ExtendibleHashTableHeaderPage>();
 
-        write!(f, "{}", header)?;
+        write!(f, "{:?}", header)?;
 
         for idx in 0..header.max_size() {
             let directory_page_id = header.get_directory_page_id(idx);
@@ -184,7 +183,7 @@ impl<Key: PageKey, Value: PageValue, KeyComparator: Comparator<Key>> Debug for H
             let directory = directory_guard.cast::<ExtendibleHashTableDirectoryPage>();
             write!(f, "Directory {}, page_id: {}\n", idx, directory_page_id)?;
 
-            write!(f, "{}", directory)?;
+            write!(f, "{:?}", directory)?;
 
             for idx2 in 0..directory.size() {
                 let bucket_page_id = directory.get_bucket_page_id(idx2);
@@ -194,7 +193,7 @@ impl<Key: PageKey, Value: PageValue, KeyComparator: Comparator<Key>> Debug for H
                 let bucket = bucket_guard.cast::<ExtendibleHashTableBucketPage<1, Key, Value, KeyComparator>>();
 
                 write!(f, "Bucket {}, page id: {}\n", idx2, bucket_page_id)?;
-                write!(f, "{}", bucket)?;
+                write!(f, "{:?}", bucket)?;
             }
         }
 

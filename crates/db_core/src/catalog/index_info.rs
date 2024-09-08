@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use common::config::{IndexOID, TableOID};
-use crate::catalog::Schema;
-use crate::storage::TableHeap;
+use crate::catalog::{IndexType, Schema};
+use crate::storage::{Index, TableHeap};
 
 /// The IndexInfo class maintains metadata about a index.
 pub struct IndexInfo {
@@ -23,7 +23,7 @@ pub struct IndexInfo {
 
     /// The size of the index key, in bytes
     key_size: usize,
-    
+
     /// Is primary key index?
     is_primary_key: bool,
 
