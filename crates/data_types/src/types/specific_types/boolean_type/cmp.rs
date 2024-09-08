@@ -12,6 +12,10 @@ impl PartialEq<Value> for BooleanType {
         let other_type_id = other.get_db_type_id();
         assert!(Self::TYPE.check_comparable(&other_type_id));
 
+        if self.is_null() && other.is_null() {
+            return true;
+        }
+
         match other.get_value() {
             DBTypeIdImpl::BOOLEAN(rhs) => self.eq(rhs),
             // TODO - add var char
@@ -49,6 +53,11 @@ impl PartialEq<Option<bool>> for BooleanType {
 
 impl PartialOrd for BooleanType {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+
+        if self.is_null() && other.is_null() {
+            return Some(Ordering::Equal);
+        }
+
         self.value.partial_cmp(&other.value)
     }
 }
@@ -57,6 +66,10 @@ impl PartialOrd<Value> for BooleanType {
     fn partial_cmp(&self, other: &Value) -> Option<Ordering> {
         let other_type_id = other.get_db_type_id();
         assert!(Self::TYPE.check_comparable(&other_type_id));
+
+        if self.is_null() && other.is_null() {
+            return Some(Ordering::Equal);
+        }
 
         match other.get_value() {
             DBTypeIdImpl::BOOLEAN(rhs) => self.partial_cmp(rhs),
@@ -70,6 +83,10 @@ impl Eq for BooleanType {}
 
 impl Ord for BooleanType {
     fn cmp(&self, other: &Self) -> Ordering {
+        if self.is_null() && other.is_null() {
+            return Ordering::Equal;
+        }
+
         self.value.cmp(&other.value)
     }
 }
@@ -80,11 +97,11 @@ impl ComparisonDBTypeTrait for BooleanType {
     }
 
     fn get_min_value() -> Self {
-        panic!("get_min_value is not available for boolean")
+        Self::new(Self::FALSE)
     }
 
     fn get_max_value() -> Self {
-        panic!("get_max_value is not available for boolean")
+        Self::new(Self::TRUE)
     }
 
     // TODO - this is not the same as the value

@@ -12,6 +12,10 @@ impl PartialEq<Value> for TimestampType {
         let other_type_id = other.get_db_type_id();
         assert!(Self::TYPE.check_comparable(&other_type_id));
 
+        if self.is_null() && other.is_null() {
+            return true;
+        }
+
         match other.get_value() {
             DBTypeIdImpl::TIMESTAMP(rhs) => self.eq(rhs),
             // TODO - add var char
@@ -29,6 +33,10 @@ impl PartialEq<TimestampUnderlyingType> for TimestampType {
 
 impl PartialOrd for TimestampType {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        if self.is_null() && other.is_null() {
+            return Some(Ordering::Equal);
+        }
+
         self.value.partial_cmp(&other.value)
     }
 }
@@ -37,6 +45,11 @@ impl PartialOrd<Value> for TimestampType {
     fn partial_cmp(&self, other: &Value) -> Option<Ordering> {
         let other_type_id = other.get_db_type_id();
         assert!(Self::TYPE.check_comparable(&other_type_id));
+
+        if self.is_null() && other.is_null() {
+            return Some(Ordering::Equal);
+        }
+
 
         match other.get_value() {
             DBTypeIdImpl::TIMESTAMP(rhs) => self.partial_cmp(rhs),

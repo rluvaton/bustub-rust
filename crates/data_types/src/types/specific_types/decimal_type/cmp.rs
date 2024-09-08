@@ -3,30 +3,54 @@ use std::cmp::Ordering;
 
 impl PartialEq for DecimalType {
     fn eq(&self, other: &Self) -> bool {
+
+        if self.is_null() && other.is_null() {
+            return true;
+        }
+
         self.value == other.value
     }
 }
 
 impl PartialEq<BigIntType> for DecimalType {
     fn eq(&self, other: &BigIntType) -> bool {
+
+        if self.is_null() && other.is_null() {
+            return true;
+        }
+
         self.value == other.value as DecimalUnderlyingType
     }
 }
 
 impl PartialEq<IntType> for DecimalType {
     fn eq(&self, other: &IntType) -> bool {
+
+        if self.is_null() && other.is_null() {
+            return true;
+        }
+
         self.value == other.value as DecimalUnderlyingType
     }
 }
 
 impl PartialEq<SmallIntType> for DecimalType {
     fn eq(&self, other: &SmallIntType) -> bool {
+
+        if self.is_null() && other.is_null() {
+            return true;
+        }
+
         self.value == other.value as DecimalUnderlyingType
     }
 }
 
 impl PartialEq<TinyIntType> for DecimalType {
     fn eq(&self, other: &TinyIntType) -> bool {
+        if self.is_null() && other.is_null() {
+            return true;
+        }
+
         self.value == other.value as DecimalUnderlyingType
     }
 }
@@ -36,36 +60,17 @@ impl PartialEq<Value> for DecimalType {
         let other_type_id = other.get_db_type_id();
         assert!(Self::TYPE.check_comparable(&other_type_id));
 
+        if self.is_null() && other.is_null() {
+            return true;
+        }
+
+        // TODO - add varchar support
+
         run_on_numeric_impl!(
             other.get_value(),
             rhs, self.eq(rhs),
             _ => unreachable!()
         )
-        //
-        // match other_type_id {
-        //     DBTypeId::TINYINT => {
-        //         todo!()
-        //     }
-        //     DBTypeId::SMALLINT => {
-        //         todo!()
-        //     }
-        //     DBTypeId::INTEGER => {
-        //         todo!()
-        //     }
-        //     DBTypeId::BIGINT => unsafe {
-        //         self.value.eq(&other.get_as_bigint_unchecked().value)
-        //     },
-        //     DBTypeId::DECIMAL => {
-        //         todo!()
-        //     }
-        //     DBTypeId::VARCHAR => unsafe {
-        //         let r_value = other.try_cast_as(DBTypeId::BIGINT).expect("Should be able to change to bigint");
-        //
-        //         self.value.eq(&r_value.get_as_bigint_unchecked().value)
-        //     }
-        //     // TODO - panic?
-        //     _ => panic!("Type error")
-        // }
     }
 }
 
@@ -77,30 +82,50 @@ impl PartialEq<DecimalUnderlyingType> for DecimalType {
 
 impl PartialOrd for DecimalType {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        if self.is_null() && other.is_null() {
+            return Some(Ordering::Equal);
+        }
+
         self.value.partial_cmp(&other.value)
     }
 }
 
 impl PartialOrd<BigIntType> for DecimalType {
     fn partial_cmp(&self, other: &BigIntType) -> Option<Ordering> {
+        if self.is_null() && other.is_null() {
+            return Some(Ordering::Equal);
+        }
+
         self.value.partial_cmp(&(other.value as DecimalUnderlyingType))
     }
 }
 
 impl PartialOrd<IntType> for DecimalType {
     fn partial_cmp(&self, other: &IntType) -> Option<Ordering> {
+        if self.is_null() && other.is_null() {
+            return Some(Ordering::Equal);
+        }
+
         self.value.partial_cmp(&(other.value as DecimalUnderlyingType))
     }
 }
 
 impl PartialOrd<SmallIntType> for DecimalType {
     fn partial_cmp(&self, other: &SmallIntType) -> Option<Ordering> {
+        if self.is_null() && other.is_null() {
+            return Some(Ordering::Equal);
+        }
+
         self.value.partial_cmp(&(other.value as DecimalUnderlyingType))
     }
 }
 
 impl PartialOrd<TinyIntType> for DecimalType {
     fn partial_cmp(&self, other: &TinyIntType) -> Option<Ordering> {
+        if self.is_null() && other.is_null() {
+            return Some(Ordering::Equal);
+        }
+
         self.value.partial_cmp(&(other.value as DecimalUnderlyingType))
     }
 }
@@ -110,38 +135,18 @@ impl PartialOrd<Value> for DecimalType {
         let other_type_id = other.get_db_type_id();
         assert!(Self::TYPE.check_comparable(&other_type_id));
 
+        if self.is_null() && other.is_null() {
+            return Some(Ordering::Equal);
+        }
+
+
+        // TODO - support varchar
         run_on_numeric_impl!(
             other.get_value(),
             rhs, self.partial_cmp(rhs),
 
             _ => unreachable!()
         )
-
-        //
-        // match other_type_id {
-        //     DBTypeId::TINYINT => {
-        //         todo!()
-        //     }
-        //     DBTypeId::SMALLINT => {
-        //         todo!()
-        //     }
-        //     DBTypeId::INTEGER => {
-        //         todo!()
-        //     }
-        //     DBTypeId::BIGINT => unsafe {
-        //         self.value.partial_cmp(&other.get_as_bigint_unchecked().value)
-        //     },
-        //     DBTypeId::DECIMAL => {
-        //         todo!()
-        //     }
-        //     DBTypeId::VARCHAR => unsafe {
-        //         let r_value = other.try_cast_as(DBTypeId::BIGINT).ok()?;
-        //
-        //         self.value.partial_cmp(&r_value.get_as_bigint_unchecked().value)
-        //     }
-        //     // TODO - panic?
-        //     _ => None
-        // }
     }
 }
 
