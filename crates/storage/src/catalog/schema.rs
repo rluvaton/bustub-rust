@@ -1,9 +1,8 @@
-use std::fmt::{Debug, Display, Formatter};
-use std::ops::Deref;
-use anyhow::{anyhow, Result};
-use std::sync::Arc;
-use common::types::DBTypeId;
 use crate::catalog::Column;
+use anyhow::{anyhow, Result};
+use data_types::DBTypeId;
+use std::fmt::{Debug, Display, Formatter};
+use std::sync::Arc;
 
 
 // TODO - implement src/include/catalog/schema.h

@@ -1,6 +1,6 @@
 use crate::catalog::Schema;
 use crate::storage::{Comparator, Tuple};
-use common::types::{DBTypeId, Value};
+use data_types::{DBTypeId, Value};
 use std::fmt::{Debug, Display, Formatter};
 use common::PageKey;
 

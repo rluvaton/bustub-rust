@@ -1,6 +1,5 @@
 
 pub mod config;
-pub mod types;
 mod promise;
 mod channel;
 mod reader_writer_latch;

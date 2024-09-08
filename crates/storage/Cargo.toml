@@ -6,6 +6,7 @@ edition = "2021"
 [dependencies]
 common = {path = "../common"}
 stats = {path = "../stats"}
+data_types = {path = "../data_types"}
 
 anyhow = "1.0.86"
 

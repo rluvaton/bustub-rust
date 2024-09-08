@@ -1,5 +1,5 @@
 use std::fmt::{Debug, Display, Formatter};
-use common::types::DBTypeId;
+use data_types::DBTypeId;
 
 // TODO - implement src/include/catalog/column.h
 #[derive(Clone)]
