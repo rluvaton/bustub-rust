@@ -5,4 +5,4 @@ members = [
     "crates/primer",
     "crates/storage",
     "crates/stats"
-, "crates/data_types"]
+, "crates/data_types", "crates/binary_utils"]
