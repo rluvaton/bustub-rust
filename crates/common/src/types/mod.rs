@@ -1,7 +1,7 @@
-mod value;
 mod type_id;
 mod limits;
 mod types;
+mod value;
 
 pub use value::*;
 pub use type_id::*;

@@ -30,7 +30,7 @@ impl Into<DBTypeIdImpl> for BigIntType {
 
 impl ConversionDBTypeTrait for BigIntType {
 
-    fn to_string(&self) -> String {
+    fn as_string(&self) -> String {
         if self.is_null() {
             return "bigint_null".to_string();
         }

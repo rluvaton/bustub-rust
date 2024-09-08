@@ -36,7 +36,7 @@ impl Into<Value> for DecimalType {
 
 impl ConversionDBTypeTrait for DecimalType {
 
-    fn to_string(&self) -> String {
+    fn as_string(&self) -> String {
         if self.is_null() {
             return "decimal_null".to_string();
         }

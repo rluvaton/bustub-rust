@@ -35,7 +35,7 @@ impl Into<Value> for TinyIntType {
 
 impl ConversionDBTypeTrait for TinyIntType {
 
-    fn to_string(&self) -> String {
+    fn as_string(&self) -> String {
         if self.is_null() {
             return "tinyint_null".to_string();
         }

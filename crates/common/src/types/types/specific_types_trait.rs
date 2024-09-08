@@ -59,7 +59,7 @@ Into<DBTypeIdImpl>
     fn deserialize_from(storage: &[u8]) -> Self;
 
     // Return a stringified version of this value
-    fn to_string(&self) -> String;
+    fn as_string(&self) -> String;
 
     fn try_cast_as(&self, db_type_id: DBTypeId) -> anyhow::Result<DBTypeIdImpl>;
 

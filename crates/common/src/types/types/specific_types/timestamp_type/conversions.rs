@@ -35,7 +35,7 @@ impl Into<Value> for TimestampType {
 
 impl ConversionDBTypeTrait for TimestampType {
 
-    fn to_string(&self) -> String {
+    fn as_string(&self) -> String {
         if self.is_null() {
             return "timestamp_null".to_string()
         }
