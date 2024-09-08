@@ -75,7 +75,9 @@ impl DirectoryPage {
     /// returns: u32 bucket index current key is hashed to
     ///
     pub fn hash_to_bucket_index(&self, hash: u32) -> u32 {
-        hash.get_n_msb_bits(self.global_depth as u8)
+        // hash.get_n_msb_bits(self.global_depth as u8)
+        // TODO - is this correct? also size is slow
+        hash % self.size()
     }
 
     /// Lookup a bucket page using a directory index
@@ -159,10 +161,33 @@ impl DirectoryPage {
         self.max_depth
     }
 
-
     /// Increment the global depth of the directory
     pub fn incr_global_depth(&mut self) {
+        let size_before = self.size() as usize;
         self.global_depth += 1;
+        let size_after = self.size() as usize;
+
+        // When increasing global depth, we now have double the size we had before
+        // and because the new buckets don't point to anywhere, we must point them to the same bucket before the doubling
+        // Example:
+        // if we had hash value 0b10101 and local and global depth was 2 (so the size was 2 ^ (global depth) = 4)
+        // when we increase the number of buckets (global depth + 1) we now have 8 buckets (2 ^ (global depth) = 8)
+        // and hash value 0b10101 will lend on 0b101 instead of 0b01
+        // but that bucket has no page and no local depth
+        // so we need to point it to the old bucket (as local depth has not changed for that bucket)
+        // and set the local depth of that bucket to be the same as the one before
+
+        // Point to the same bucket page id
+        {
+            let (before, after) = self.bucket_page_ids[..size_after].split_at_mut(size_before);
+            after.clone_from_slice(&before);
+        }
+
+        // Have the same local depth as the pointed bucket page
+        {
+            let (before, after) = self.local_depths[..size_after].split_at_mut(size_before);
+            after.clone_from_slice(&before);
+        }
     }
 
     /// Decrement the global depth of the directory
@@ -181,7 +206,7 @@ impl DirectoryPage {
     /// returns: u32 the current directory size
     ///
     pub fn size(&self) -> u32 {
-        self.bucket_page_ids.iter().fold(0, |count, page_id| if page_id == &INVALID_PAGE_ID { count } else { count + 1 })
+        2u32.pow(self.global_depth)
     }
 
     ///
@@ -256,7 +281,7 @@ impl DirectoryPage {
 
             page_id_to_count.insert(curr_page_id, page_id_to_count.get_or(&curr_page_id, &0) + 1);
 
-            if page_id_to_count[&curr_page_id] > 0 && curr_ld != *page_id_to_ld.get_or(&curr_page_id, &0) {
+            if page_id_to_ld.contains_key(&curr_page_id) && curr_ld != page_id_to_ld[&curr_page_id] {
                 let old_ld = *page_id_to_ld.get_or(&curr_page_id, &0);
                 println!("Verify Integrity: curr_local_depth: {}, old_local_depth {}, for page_id: {}", curr_ld, old_ld, curr_page_id);
                 self.print_directory();

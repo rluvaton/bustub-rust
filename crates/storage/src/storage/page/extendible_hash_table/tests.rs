@@ -104,8 +104,6 @@ mod tests {
                 // Dropping header page guard
             }
 
-
-
             /************************ DIRECTORY PAGE TEST ************************/
 
             // Create directory
@@ -173,8 +171,7 @@ mod tests {
             /// |    0       |    2    |      1      |
             /// |    1       |    3    |      1      |
             /// ================ END DIRECTORY ================
-
-
+            ///
             directory_page.verify_integrity();
             assert_eq!(directory_page.size(), 2);
             assert_eq!(directory_page.get_bucket_page_id(0), bucket_page_id_1);
