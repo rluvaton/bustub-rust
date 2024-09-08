@@ -1,4 +1,4 @@
-use crate::{BUSTUB_I64_MAX, BUSTUB_I64_MIN, BUSTUB_I64_NULL, BUSTUB_VALUE_NULL};
+use crate::BUSTUB_VALUE_NULL;
 use std::ops::Deref;
 
 pub type BigIntUnderlyingType = i64;
@@ -10,9 +10,9 @@ pub struct BigIntType {
 }
 
 impl BigIntType {
-    pub const NULL: BigIntUnderlyingType = BUSTUB_I64_NULL;
-    pub const MIN: BigIntUnderlyingType = BUSTUB_I64_MIN;
-    pub const MAX: BigIntUnderlyingType = BUSTUB_I64_MAX;
+    pub const NULL: BigIntUnderlyingType = BigIntUnderlyingType::MIN;
+    pub const MIN: BigIntUnderlyingType = BigIntUnderlyingType::MIN + 1;
+    pub const MAX: BigIntUnderlyingType = BigIntUnderlyingType::MAX;
 
     pub fn new(value: BigIntUnderlyingType) -> Self {
         BigIntType {

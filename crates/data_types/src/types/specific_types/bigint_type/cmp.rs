@@ -1,4 +1,4 @@
-use crate::{run_on_numeric_impl, BigIntUnderlyingType, BigIntType, ComparisonDBTypeTrait, DBTypeIdImpl, DecimalType, DecimalUnderlyingType, FormatDBTypeTrait, IntType, SmallIntType, TinyIntType, Value, BUSTUB_I64_MAX, BUSTUB_I64_MIN, BUSTUB_I64_NULL};
+use crate::{run_on_numeric_impl, BigIntType, BigIntUnderlyingType, ComparisonDBTypeTrait, DBTypeIdImpl, DecimalType, DecimalUnderlyingType, FormatDBTypeTrait, IntType, SmallIntType, TinyIntType, Value};
 use std::cmp::Ordering;
 
 impl PartialEq for BigIntType {
@@ -45,31 +45,6 @@ impl PartialEq<Value> for BigIntType {
             rhs, self.eq(rhs),
             _ => unreachable!()
         )
-        //
-        // match other_type_id {
-        //     DBTypeId::TINYINT => {
-        //         todo!()
-        //     }
-        //     DBTypeId::SMALLINT => {
-        //         todo!()
-        //     }
-        //     DBTypeId::INTEGER => {
-        //         todo!()
-        //     }
-        //     DBTypeId::BIGINT => unsafe {
-        //         self.value.eq(&other.get_as_bigint_unchecked().value)
-        //     },
-        //     DBTypeId::DECIMAL => {
-        //         todo!()
-        //     }
-        //     DBTypeId::VARCHAR => unsafe {
-        //         let r_value = other.try_cast_as(DBTypeId::BIGINT).expect("Should be able to change to bigint");
-        //
-        //         self.value.eq(&r_value.get_as_bigint_unchecked().value)
-        //     }
-        //     // TODO - panic?
-        //     _ => panic!("Type error")
-        // }
     }
 }
 

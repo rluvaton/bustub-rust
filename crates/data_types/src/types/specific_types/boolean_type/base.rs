@@ -1,4 +1,4 @@
-use crate::{ComparisonDBTypeTrait, BUSTUB_BOOLEAN_NULL, BUSTUB_VALUE_NULL};
+use crate::{ComparisonDBTypeTrait, BUSTUB_VALUE_NULL};
 use std::ops::Deref;
 
 pub type BooleanUnderlyingType = i8;
@@ -10,7 +10,7 @@ pub struct BooleanType {
 }
 
 impl BooleanType {
-    pub const NULL: BooleanUnderlyingType = BUSTUB_BOOLEAN_NULL;
+    pub const NULL: BooleanUnderlyingType = i8::MIN;
     pub const FALSE: BooleanUnderlyingType = 0;
     pub const TRUE: BooleanUnderlyingType = 1;
 

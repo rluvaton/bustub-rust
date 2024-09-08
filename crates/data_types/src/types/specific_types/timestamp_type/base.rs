@@ -1,4 +1,4 @@
-use crate::{BUSTUB_TIMESTAMP_MAX, BUSTUB_TIMESTAMP_MIN, BUSTUB_TIMESTAMP_NULL, BUSTUB_VALUE_NULL};
+use crate::BUSTUB_VALUE_NULL;
 use std::ops::Deref;
 
 pub type TimestampUnderlyingType = u64;
@@ -10,9 +10,9 @@ pub struct TimestampType {
 }
 
 impl TimestampType {
-    pub const NULL: TimestampUnderlyingType = BUSTUB_TIMESTAMP_NULL;
-    pub const MIN: TimestampUnderlyingType = BUSTUB_TIMESTAMP_MIN;
-    pub const MAX: TimestampUnderlyingType = BUSTUB_TIMESTAMP_MAX;
+    pub const NULL: TimestampUnderlyingType = TimestampUnderlyingType::MAX;
+    pub const MIN: TimestampUnderlyingType = 0;
+    pub const MAX: TimestampUnderlyingType = 11231999986399999999;
 
     pub fn new(value: TimestampUnderlyingType) -> Self {
         TimestampType {
