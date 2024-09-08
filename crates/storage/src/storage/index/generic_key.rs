@@ -50,7 +50,7 @@ impl<const KEY_SIZE: usize> GenericKey<KEY_SIZE> {
             data_slice = &self.data[offset as usize..];
         }
 
-        Value::deserialize_from_slice(data_slice, column_type)
+        Value::deserialize_from_slice(column_type, data_slice)
     }
 
     /// NOTE: for test purpose only

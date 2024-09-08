@@ -1,6 +1,5 @@
 use crate::catalog::Schema;
 use crate::storage::{Comparator, GenericKey};
-use common::types::CmpBool;
 use std::cmp::Ordering;
 use std::fmt::{Debug, Display};
 use std::sync::Arc;
@@ -20,10 +19,11 @@ impl<const KEY_SIZE: usize> Comparator<GenericKey<KEY_SIZE>> for GenericComparat
             let lhs_value = lhs.to_value(&self.schema, i);
             let rhs_value = rhs.to_value(&self.schema, i);
 
-            if (matches!(lhs_value.compare_less_than(&rhs_value), CmpBool::TRUE)) {
+            if lhs_value < rhs_value {
                 return Ordering::Less;
             }
-            if (matches!(lhs_value.compare_greater_than(&rhs_value), CmpBool::TRUE)) {
+
+            if lhs_value > rhs_value {
                 return Ordering::Greater;
             }
         }

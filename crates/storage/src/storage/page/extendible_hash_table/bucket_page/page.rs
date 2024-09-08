@@ -129,27 +129,22 @@ where
         // self.array = [None; ARRAY_SIZE];
     }
 
-    /**
-     * Lookup a key
-     *
-     * @param key key to lookup
-     * @param[out] value value to set
-     * @param cmp the comparator
-     * @return true if the key and value are present, false if not found.
-     */
-    // TODO - use the comparor
-    pub fn lookup(&self, key: &Key, value: &Value, comparator: &KeyComparator) -> bool {
-        // unimplemented!();
-        for i in 0..self.size as usize {
-            let current_pair = &self.array[i];
-
-            // TODO - should do binary search? the values are not ordered
-            if comparator.cmp(key, &current_pair.0) == Ordering::Equal && *value == current_pair.1 {
-                return true;
-            }
-        }
-
-        false
+    /// Lookup a key
+    ///
+    /// # Arguments
+    ///
+    /// * `key`: key to lookup
+    /// * `comparator`: the comparator
+    ///
+    /// returns: Option<&(Key, Value)> None if the key was missing, Some if not
+    ///
+    /// We are not returning the value and instead return the entire tuple to avoid cloning, if you want only the value use `.map(|item| item.1)`
+    ///
+    pub fn lookup(&self, key: &Key, comparator: &KeyComparator) -> Option<&MappingType<Key, Value>> {
+        self.array[0..self.size as usize]
+            .iter()
+            .find(|(item_key, _)| comparator.cmp(key, &item_key) == Ordering::Equal)
+            // .map(|item| item.1)
     }
 
     /**

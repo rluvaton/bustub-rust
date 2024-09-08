@@ -30,7 +30,7 @@ mod tests {
             for i in 0..10 {
                 index_key.set_from_integer(i);
                 rid.set(i as PageId, i as u32);
-                assert!(bucket_page.insert(&index_key, &rid, &comparator), "should insert new key");
+                assert!(bucket_page.insert(&index_key, &rid, &comparator), "should insert new key {}", i);
             }
 
             index_key.set_from_integer(11);
@@ -41,8 +41,8 @@ mod tests {
             // check for the inserted pairs
             for i in 0..10 {
                 index_key.set_from_integer(i);
-                assert!(bucket_page.lookup(&index_key, &rid, &comparator));
-                assert_eq!(rid, RID::new(i as PageId, i as u32))
+                let rid_value = bucket_page.lookup(&index_key, &comparator).cloned().map(|item| item.1);
+                assert_eq!(rid_value, Some(RID::new(i as PageId, i as u32)), "Should find key {} and", i)
             }
 
             // remove a few pairs
