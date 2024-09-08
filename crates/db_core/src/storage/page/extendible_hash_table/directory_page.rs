@@ -14,7 +14,7 @@ const _HASH_TABLE_DIRECTORY_PAGE_METADATA_SIZE: usize = size_of::<u32>() * 2;
 /// storage of the other member variables.
 ///
 ///
-const HASH_TABLE_DIRECTORY_MAX_DEPTH: u32 = 9;
+pub const HASH_TABLE_DIRECTORY_MAX_DEPTH: u32 = 9;
 const HASH_TABLE_DIRECTORY_ARRAY_SIZE: usize = 1 << HASH_TABLE_DIRECTORY_MAX_DEPTH;
 
 

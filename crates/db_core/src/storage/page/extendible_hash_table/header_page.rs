@@ -5,7 +5,7 @@ use prettytable::{row, Table};
 use binary_utils::GetNBits;
 
 const _HASH_TABLE_HEADER_PAGE_METADATA_SIZE: usize = size_of::<u32>();
-const HASH_TABLE_HEADER_MAX_DEPTH: u32 = 9;
+pub const HASH_TABLE_HEADER_MAX_DEPTH: u32 = 9;
 const HASH_TABLE_HEADER_ARRAY_SIZE: usize = 1 << HASH_TABLE_HEADER_MAX_DEPTH;
 
 
