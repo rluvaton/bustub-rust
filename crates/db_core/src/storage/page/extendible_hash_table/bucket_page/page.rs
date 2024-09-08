@@ -54,7 +54,7 @@ pub const fn hash_table_bucket_array_size<Key, Value>() -> usize {
 /// ```rust
 /// use std::cmp::Ordering;
 /// use common::RID;
-/// use storage::storage::{ExtendibleHashTableBucketPage, hash_table_bucket_array_size, GenericComparator, GenericKey};
+/// use db_core::storage::{ExtendibleHashTableBucketPage, hash_table_bucket_array_size, GenericComparator, GenericKey};
 ///
 /// const a: usize = hash_table_bucket_array_size::<u8, u8>();
 ///
@@ -67,7 +67,7 @@ pub const fn hash_table_bucket_array_size<Key, Value>() -> usize {
 /// ```compile_fail
 /// use std::cmp::Ordering;
 /// use common::RID;
-/// use storage::storage::{ExtendibleHashTableBucketPage, hash_table_bucket_array_size, GenericComparator, GenericKey};
+/// use db_core::storage::{ExtendibleHashTableBucketPage, hash_table_bucket_array_size, GenericComparator, GenericKey};
 ///
 /// const a: usize = hash_table_bucket_array_size::<u8, u8>() - 1;
 ///

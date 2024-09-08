@@ -63,7 +63,7 @@ pub fn check_page_consistent(data: &PageData, page_idx: usize, seed: u64) {
 mod test {
     #[test]
     fn test_modify_page() {
-        let page = storage::storage::Page::default();
+        let page = db_core::storage::Page::default();
         let seed = 1;
         let page_id = 2;
 

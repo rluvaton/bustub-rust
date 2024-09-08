@@ -109,9 +109,9 @@ version = "0.1.0"
 dependencies = [
  "clap",
  "common",
+ "db_core",
  "parking_lot",
  "rand 0.8.5",
- "storage",
  "tempdir",
  "tracy-client",
  "zipf",
@@ -282,6 +282,29 @@ name = "data_types"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+]
+
+[[package]]
+name = "db_core"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "binary_utils",
+ "chrono",
+ "common",
+ "data_types",
+ "derive_builder",
+ "generics",
+ "log",
+ "mut-binary-heap",
+ "num-format",
+ "parking_lot",
+ "prettytable",
+ "rand 0.8.5",
+ "stats",
+ "tempdir",
+ "tracy-client",
+ "zipf",
 ]
 
 [[package]]
@@ -847,29 +870,6 @@ checksum = "3c5e1a9a646d36c3599cd173a41282daf47c44583ad367b8e6837255952e5c67"
 [[package]]
 name = "stats"
 version = "0.1.0"
-
-[[package]]
-name = "storage"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "binary_utils",
- "chrono",
- "common",
- "data_types",
- "derive_builder",
- "generics",
- "log",
- "mut-binary-heap",
- "num-format",
- "parking_lot",
- "prettytable",
- "rand 0.8.5",
- "stats",
- "tempdir",
- "tracy-client",
- "zipf",
-]
 
 [[package]]
 name = "strsim"

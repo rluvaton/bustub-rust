@@ -146,7 +146,7 @@ impl Page {
     ///
     /// # Examples
     /// ```
-    /// use storage::storage::Page;
+    /// use db_core::storage::Page;
     ///
     /// let page = Page::new(1);
     /// let page_id = page.with_read(|u| u.get_page_id());
@@ -187,7 +187,7 @@ impl Page {
     ///
     /// # Examples
     /// ```
-    /// use storage::storage::Page;
+    /// use db_core::storage::Page;
     ///
     /// let page = Page::new(1);
     ///

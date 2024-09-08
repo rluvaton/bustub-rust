@@ -36,8 +36,8 @@ impl PinPageGuard {
     /// ```
     /// use std::sync::Arc;
     /// use parking_lot::Mutex;
-    /// use storage::buffer::{BufferPoolManager, PinPageGuard};
-    /// use storage::storage::DiskManagerUnlimitedMemory;
+    /// use db_core::buffer::{BufferPoolManager, PinPageGuard};
+    /// use db_core::storage::DiskManagerUnlimitedMemory;
     /// let bpm = Arc::new(BufferPoolManager::new(
     ///     10,
     ///     Arc::new(Mutex::new(DiskManagerUnlimitedMemory::new())),
@@ -54,8 +54,8 @@ impl PinPageGuard {
     /// ```compile_fail
     /// use std::sync::Arc;
     /// use parking_lot::Mutex;
-    /// use storage::buffer::{BufferPoolManager, PinPageGuard};
-    /// use storage::storage::DiskManagerUnlimitedMemory;
+    /// use db_core::buffer::{BufferPoolManager, PinPageGuard};
+    /// use db_core::storage::DiskManagerUnlimitedMemory;
     /// let bpm = Arc::new(BufferPoolManager::new(
     ///     10,
     ///     Arc::new(Mutex::new(DiskManagerUnlimitedMemory::new())),

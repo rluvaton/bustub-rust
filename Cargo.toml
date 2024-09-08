@@ -3,6 +3,9 @@ members = [
     "tools/bpm_bench",
     "crates/common",
     "crates/primer",
-    "crates/storage",
-    "crates/stats"
-, "crates/data_types", "crates/binary_utils", "crates/generics"]
+    "crates/db_core",
+    "crates/stats",
+    "crates/data_types",
+    "crates/binary_utils",
+    "crates/generics"
+]

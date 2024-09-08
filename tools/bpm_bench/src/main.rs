@@ -1,7 +1,7 @@
 use crate::cli::Args;
 use crate::metrics::bpm_metrics::BpmMetrics;
 use crate::page_process::{check_page_consistent, check_page_consistent_no_seed, modify_page};
-use storage::buffer::{AccessType, BufferPoolManager};
+use db_core::buffer::{AccessType, BufferPoolManager};
 use clap::Parser;
 use common::config::PageId;
 use metrics::bpm_total_metrics::BpmTotalMetrics;
@@ -13,7 +13,7 @@ use std::sync::Arc;
 use std::thread;
 use std::thread::JoinHandle;
 #[allow(unused)]
-use storage::storage::{DefaultDiskManager, DiskManagerUnlimitedMemory};
+use db_core::storage::{DefaultDiskManager, DiskManagerUnlimitedMemory};
 use tempdir::TempDir;
 use tracy_client::*;
 
