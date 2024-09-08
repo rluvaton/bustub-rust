@@ -198,10 +198,10 @@ impl BufferPoolManager {
      * @param[out] page_id, the id of the new page
      * @return BasicPageGuard holding a new page
      */
-    pub fn new_page_guarded(self: Arc<Self>) -> Option<PinPageGuard> {
+    pub fn new_page_guarded(self: &Arc<Self>) -> Option<PinPageGuard> {
         let page = self.new_page()?;
 
-        Some(PinPageGuard::new(self, page))
+        Some(PinPageGuard::new(self.clone(), page))
     }
 
     /**
@@ -423,10 +423,10 @@ impl BufferPoolManager {
      * @param page_id, the id of the page to fetch
      * @return PageGuard holding the fetched page
      */
-    pub fn fetch_page_basic(self: Arc<Self>, page_id: PageId) -> Option<PinPageGuard> {
+    pub fn fetch_page_basic(self: &Arc<Self>, page_id: PageId) -> Option<PinPageGuard> {
         let page = self.fetch_page(page_id, AccessType::Unknown)?;
 
-        Some(PinPageGuard::new(self, page))
+        Some(PinPageGuard::new(self.clone(), page))
     }
 
     /**
@@ -442,7 +442,7 @@ impl BufferPoolManager {
      * @param page_id, the id of the page to fetch
      * @return PageGuard holding the fetched page
      */
-    pub fn fetch_page_read<'a>(self: Arc<Self>, page_id: PageId) -> Option<PinReadPageGuard<'a>> {
+    pub fn fetch_page_read<'a>(self: &Arc<Self>, page_id: PageId) -> Option<PinReadPageGuard<'a>> {
         let page = self.fetch_page_basic(page_id)?;
 
         Some(page.upgrade_read())
@@ -461,7 +461,7 @@ impl BufferPoolManager {
      * @param page_id, the id of the page to fetch
      * @return PageGuard holding the fetched page
      */
-    pub fn fetch_page_write<'a>(self: Arc<Self>, page_id: PageId) -> Option<PinWritePageGuard<'a>> {
+    pub fn fetch_page_write<'a>(self: &Arc<Self>, page_id: PageId) -> Option<PinWritePageGuard<'a>> {
         let page = self.fetch_page_basic(page_id)?;
 
         Some(page.upgrade_write())
