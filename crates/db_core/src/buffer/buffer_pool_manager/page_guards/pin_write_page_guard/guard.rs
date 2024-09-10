@@ -9,8 +9,8 @@ use crate::storage::{Page, UnderlyingPage};
 #[clippy::has_significant_drop]
 #[must_use = "if unused the PinWritePageGuard will immediately unpin and unlock"]
 pub struct PinWritePageGuard<'a> {
-    pub(crate) underlying_page: &'a mut UnderlyingPage,
-    pub(crate) guard: PinPageGuard,
+    pub(in crate::buffer) underlying_page: &'a mut UnderlyingPage,
+    pub(in crate::buffer) guard: PinPageGuard,
 }
 
 impl<'a> PinWritePageGuard<'a> {

@@ -10,7 +10,7 @@ use crate::storage::Page;
 #[clippy::has_significant_drop]
 #[must_use = "if unused the PinPageGuard will immediately unpin"]
 pub struct PinPageGuard {
-    pub(crate) page: Page,
+    pub(in crate::buffer) page: Page,
     bpm: Arc<BufferPoolManager>,
 }
 

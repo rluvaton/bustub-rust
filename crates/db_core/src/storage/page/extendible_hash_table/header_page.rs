@@ -67,6 +67,8 @@ impl HeaderPage {
     ///
     pub fn hash_to_directory_index(&self, hash: u32) -> u32 {
         hash.get_n_msb_bits(self.max_depth as u8)
+
+        // TODO - should not expose this and the `get_directory_page_id` and instead have a function that get a hash value and return the page id?
     }
 
     /// Get the directory page id at an index
@@ -77,7 +79,12 @@ impl HeaderPage {
     ///
     /// returns: u32 directory page_id at index
     ///
+    /// TODO - should return Option in case of invalid?
+    ///        Should add unsafe unchecked function?
     pub fn get_directory_page_id(&self, directory_idx: u32) -> PageId {
+        if directory_idx >= HASH_TABLE_HEADER_ARRAY_SIZE as u32 {
+            return INVALID_PAGE_ID
+        }
         self.directory_page_ids[directory_idx as usize]
     }
 
@@ -92,6 +99,8 @@ impl HeaderPage {
     /// returns: ()
     ///
     pub fn set_directory_page_id(&mut self, directory_idx: u32, directory_page_id: PageId) {
+        assert!(directory_idx >= HASH_TABLE_HEADER_ARRAY_SIZE as u32, "Directory index is larger than the size directory size: {}", HASH_TABLE_HEADER_ARRAY_SIZE);
+
         self.directory_page_ids[directory_idx as usize] = directory_page_id;
     }
 
