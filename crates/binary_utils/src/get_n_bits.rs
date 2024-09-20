@@ -100,134 +100,53 @@ pub trait GetNBits {
     unsafe fn get_n_lsb_bits_unchecked(&self, n: u8) -> Self;
 }
 
-impl GetNBits for u64 {
-    fn get_n_msb_bits(&self, n: u8) -> Self {
-        if n == 0 || n >= 64 {
-            return *self;
+macro_rules! get_n_bits_impl {
+    ($($t:ty)+) => ($(
+        impl GetNBits for $t {
+            fn get_n_msb_bits(&self, n: u8) -> Self {
+                assert!(0 < n && n <= <$t>::BITS as u8, "n ({}) 0 < n <= {}", n, <$t>::BITS);
+
+                unsafe { self.get_n_msb_bits_unchecked(n) }
+            }
+
+            #[inline]
+            unsafe fn get_n_msb_bits_unchecked(&self, n: u8) -> Self {
+                if n == <$t>::BITS as u8 {
+                    return *self
+                }
+                let mask = (1 << n) - 1;
+                (self >> (<$t>::BITS as u8 - n)) & mask
+            }
+
+            fn get_n_lsb_bits(&self, n: u8) -> Self {
+                assert!(0 < n && n <= <$t>::BITS as u8, "n ({}) 0 < n <= {}", n, <$t>::BITS);
+
+                unsafe { self.get_n_lsb_bits_unchecked(n) }
+            }
+
+            #[inline]
+            unsafe fn get_n_lsb_bits_unchecked(&self, n: u8) -> Self {
+                if n == <$t>::BITS as u8 {
+                    return *self
+                }
+                let mask = (1 << n) - 1;
+                self & mask
+            }
         }
-
-        unsafe { self.get_n_msb_bits_unchecked(n) }
-    }
-
-    #[inline]
-    unsafe fn get_n_msb_bits_unchecked(&self, n: u8) -> Self {
-        let mask = (1 << n) - 1;
-        (self >> (64 - n)) & mask
-    }
-
-    fn get_n_lsb_bits(&self, n: u8) -> Self {
-        if n == 0 || n >= 64 {
-            return *self;
-        }
-
-        unsafe { self.get_n_lsb_bits_unchecked(n) }
-    }
-
-    #[inline]
-    unsafe fn get_n_lsb_bits_unchecked(&self, n: u8) -> Self {
-        let mask = (1 << n) - 1;
-        self & mask
-    }
+    )+)
 }
 
-impl GetNBits for u32 {
-    fn get_n_msb_bits(&self, n: u8) -> Self {
-        if n == 0 || n >= 32 {
-            return *self;
-        }
+get_n_bits_impl! { u8 u16 u32 u64 }
 
-        unsafe { self.get_n_msb_bits_unchecked(n) }
-    }
-
-    #[inline]
-    unsafe fn get_n_msb_bits_unchecked(&self, n: u8) -> Self {
-        let mask = (1 << n) - 1;
-
-        (self >> (32 - n)) & mask
-    }
-
-    fn get_n_lsb_bits(&self, n: u8) -> Self {
-        if n == 0 || n >= 32 {
-            return *self;
-        }
-
-        unsafe { self.get_n_lsb_bits_unchecked(n) }
-    }
-
-    #[inline]
-    unsafe fn get_n_lsb_bits_unchecked(&self, n: u8) -> Self {
-        let mask = (1 << n) - 1;
-        self & mask
-    }
-}
-
-impl GetNBits for u16 {
-    fn get_n_msb_bits(&self, n: u8) -> Self {
-        if n == 0 || n >= 16 {
-            return *self;
-        }
-
-        unsafe { self.get_n_msb_bits_unchecked(n) }
-    }
-
-    unsafe fn get_n_msb_bits_unchecked(&self, n: u8) -> Self {
-        let mask = (1 << n) - 1;
-
-        (self >> (16 - n)) & mask
-    }
-
-    fn get_n_lsb_bits(&self, n: u8) -> Self {
-        if n == 0 || n >= 16 {
-            return *self;
-        }
-
-        unsafe { self.get_n_lsb_bits_unchecked(n) }
-    }
-
-    unsafe fn get_n_lsb_bits_unchecked(&self, n: u8) -> Self {
-        let mask = (1 << n) - 1;
-        self & mask
-    }
-}
-
-impl GetNBits for u8 {
-    fn get_n_msb_bits(&self, n: u8) -> Self {
-        if n == 0 || n >= 8 {
-            return *self;
-        }
-
-        unsafe { self.get_n_msb_bits_unchecked(n) }
-    }
-
-    unsafe fn get_n_msb_bits_unchecked(&self, n: u8) -> Self {
-        let mask = (1 << n) - 1;
-
-        (self >> (8 - n)) & mask
-    }
-
-    fn get_n_lsb_bits(&self, n: u8) -> Self {
-        if n == 0 || n >= 8 {
-            return *self;
-        }
-
-        unsafe { self.get_n_lsb_bits_unchecked(n) }
-    }
-
-    unsafe fn get_n_lsb_bits_unchecked(&self, n: u8) -> Self {
-        let mask = (1 << n) - 1;
-        self & mask
-    }
-}
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::GetNBits;
 
     #[test]
     fn get_n_msb_bits_u64() {
         let num: u64 = 0b1001111000001000100000010000100110100001111111110000000000000000;
 
-        assert_eq!(num.get_n_msb_bits(0), num);
         assert_eq!(num.get_n_msb_bits(1), 0b1);
         assert_eq!(num.get_n_msb_bits(2), 0b10);
         assert_eq!(num.get_n_msb_bits(3), 0b100);
@@ -292,14 +211,30 @@ mod tests {
         assert_eq!(num.get_n_msb_bits(62), 0b10011110000010001000000100001001101000011111111100000000000000);
         assert_eq!(num.get_n_msb_bits(63), 0b100111100000100010000001000010011010000111111111000000000000000);
         assert_eq!(num.get_n_msb_bits(64), num);
-        assert_eq!(num.get_n_msb_bits(65), num);
+    }
+
+    #[should_panic]
+    #[test]
+    fn get_n_msb_bits_u64_should_panic_out_of_range_64() {
+        1u8.get_n_msb_bits(64);
+    }
+
+    #[should_panic]
+    #[test]
+    fn get_n_msb_bits_u64_should_panic_out_of_range_65() {
+        1u8.get_n_msb_bits(65);
+    }
+
+    #[should_panic]
+    #[test]
+    fn get_n_msb_bits_u64_should_panic_out_of_range_0() {
+        1u8.get_n_msb_bits(0);
     }
 
     #[test]
     fn get_n_lsb_bits_u64() {
         let num: u64 = 0b1001111000001000100000010000100110100001111111110000000000000000;
 
-        assert_eq!(num.get_n_lsb_bits(0), num);
         assert_eq!(num.get_n_lsb_bits(1), 0b0);
         assert_eq!(num.get_n_lsb_bits(2), 0b00);
         assert_eq!(num.get_n_lsb_bits(3), 0b000);
@@ -364,14 +299,30 @@ mod tests {
         assert_eq!(num.get_n_lsb_bits(62), 0b01111000001000100000010000100110100001111111110000000000000000);
         assert_eq!(num.get_n_lsb_bits(63), 0b001111000001000100000010000100110100001111111110000000000000000);
         assert_eq!(num.get_n_lsb_bits(64), num);
-        assert_eq!(num.get_n_lsb_bits(65), num);
+    }
+
+    #[should_panic]
+    #[test]
+    fn get_n_lsb_bits_u64_should_panic_out_of_range_64() {
+        1u8.get_n_lsb_bits(64);
+    }
+
+    #[should_panic]
+    #[test]
+    fn get_n_lsb_bits_u64_should_panic_out_of_range_65() {
+        1u8.get_n_lsb_bits(65);
+    }
+
+    #[should_panic]
+    #[test]
+    fn get_n_lsb_bits_u64_should_panic_out_of_range_0() {
+        1u8.get_n_lsb_bits(0);
     }
 
     #[test]
     fn get_n_msb_bits_u32() {
         let num: u32 = 0b10011110000010001111111000000000;
 
-        assert_eq!(num.get_n_msb_bits(0), num);
         assert_eq!(num.get_n_msb_bits(1), 0b1);
         assert_eq!(num.get_n_msb_bits(2), 0b10);
         assert_eq!(num.get_n_msb_bits(3), 0b100);
@@ -404,14 +355,12 @@ mod tests {
         assert_eq!(num.get_n_msb_bits(30), 0b100111100000100011111110000000);
         assert_eq!(num.get_n_msb_bits(31), 0b1001111000001000111111100000000);
         assert_eq!(num.get_n_msb_bits(32), num);
-        assert_eq!(num.get_n_msb_bits(33), num);
     }
 
     #[test]
     fn get_n_lsb_bits_u32() {
         let num: u32 = 0b10011110000010001111111000000000;
 
-        assert_eq!(num.get_n_lsb_bits(0), num);
         assert_eq!(num.get_n_lsb_bits(1), 0b0);
         assert_eq!(num.get_n_lsb_bits(2), 0b00);
         assert_eq!(num.get_n_lsb_bits(3), 0b000);
@@ -444,14 +393,12 @@ mod tests {
         assert_eq!(num.get_n_lsb_bits(30), 0b011110000010001111111000000000);
         assert_eq!(num.get_n_lsb_bits(31), 0b0011110000010001111111000000000);
         assert_eq!(num.get_n_lsb_bits(32), num);
-        assert_eq!(num.get_n_lsb_bits(33), num);
     }
 
     #[test]
     fn get_n_msb_bits_u16() {
         let num: u16 = 0b1001111001110000;
 
-        assert_eq!(num.get_n_msb_bits(0), num);
         assert_eq!(num.get_n_msb_bits(1), 0b1);
         assert_eq!(num.get_n_msb_bits(2), 0b10);
         assert_eq!(num.get_n_msb_bits(3), 0b100);
@@ -468,14 +415,12 @@ mod tests {
         assert_eq!(num.get_n_msb_bits(14), 0b10011110011100);
         assert_eq!(num.get_n_msb_bits(15), 0b100111100111000);
         assert_eq!(num.get_n_msb_bits(16), num);
-        assert_eq!(num.get_n_msb_bits(17), num);
     }
 
     #[test]
     fn get_n_lsb_bits_u16() {
         let num: u16 = 0b1001111001110000;
 
-        assert_eq!(num.get_n_lsb_bits(0), num);
         assert_eq!(num.get_n_lsb_bits(1), 0b0);
         assert_eq!(num.get_n_lsb_bits(2), 0b00);
         assert_eq!(num.get_n_lsb_bits(3), 0b000);
@@ -492,14 +437,12 @@ mod tests {
         assert_eq!(num.get_n_lsb_bits(14), 0b01111001110000);
         assert_eq!(num.get_n_lsb_bits(15), 0b001111001110000);
         assert_eq!(num.get_n_lsb_bits(16), num);
-        assert_eq!(num.get_n_lsb_bits(17), num);
     }
 
     #[test]
     fn get_n_msb_bits_u8() {
         let num: u8 = 0b10010000;
 
-        assert_eq!(num.get_n_msb_bits(0), num);
         assert_eq!(num.get_n_msb_bits(1), 0b1);
         assert_eq!(num.get_n_msb_bits(2), 0b10);
         assert_eq!(num.get_n_msb_bits(3), 0b100);
@@ -508,7 +451,6 @@ mod tests {
         assert_eq!(num.get_n_msb_bits(6), 0b100100);
         assert_eq!(num.get_n_msb_bits(7), 0b1001000);
         assert_eq!(num.get_n_msb_bits(8), num);
-        assert_eq!(num.get_n_msb_bits(9), num);
     }
 
     #[test]
@@ -522,6 +464,6 @@ mod tests {
         assert_eq!(num.get_n_lsb_bits(5), 0b10000);
         assert_eq!(num.get_n_lsb_bits(6), 0b010000);
         assert_eq!(num.get_n_lsb_bits(7), 0b0010000);
-        assert_eq!(num.get_n_lsb_bits(8), 0b10010000);
+        assert_eq!(num.get_n_lsb_bits(8), num);
     }
 }
