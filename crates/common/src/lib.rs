@@ -7,6 +7,7 @@ mod string_helpers;
 mod unsafe_single_reference_data;
 mod rid;
 mod page_traits;
+mod on_panic_hooks;
 
 pub use promise::{Promise, Future};
 pub use channel::Channel;
@@ -15,3 +16,4 @@ pub use string_helpers::*;
 pub use unsafe_single_reference_data::*;
 pub use rid::RID;
 pub use page_traits::{PageValue, PageKey};
+pub use on_panic_hooks::*;
