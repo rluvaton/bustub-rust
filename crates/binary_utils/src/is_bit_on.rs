@@ -2,29 +2,17 @@ pub trait IsBitOn {
     fn is_bit_on(&self, n: usize) -> bool;
 }
 
-impl IsBitOn for u64 {
-    fn is_bit_on(&self, n: usize) -> bool {
-        (self >> (n - 1)) & 1 == 1
-    }
+macro_rules! is_bit_om_impl {
+    ($($t:ty)+) => ($(
+        impl IsBitOn for $t {
+            fn is_bit_on(&self, n: usize) -> bool {
+                (self >> (n - 1)) & 1 == 1
+            }
+        }
+    )+)
 }
 
-impl IsBitOn for u32 {
-    fn is_bit_on(&self, n: usize) -> bool {
-        (self >> (n - 1)) & 1 == 1
-    }
-}
-
-impl IsBitOn for u16 {
-    fn is_bit_on(&self, n: usize) -> bool {
-        (self >> (n - 1)) & 1 == 1
-    }
-}
-
-impl IsBitOn for u8 {
-    fn is_bit_on(&self, n: usize) -> bool {
-        (self >> (n - 1)) & 1 == 1
-    }
-}
+is_bit_om_impl! { u8 u16 u32 u64 }
 
 #[cfg(test)]
 mod tests {
