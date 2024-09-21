@@ -202,7 +202,6 @@ impl DiskManager for DiskManagerUnlimitedMemory {
             }
 
             if page_id >= (*data).pages.len() as i32 {
-                eprintln!("page {} not in range", page_id);
                 panic!("page {} not in range", page_id);
             }
 
@@ -213,7 +212,6 @@ impl DiskManager for DiskManagerUnlimitedMemory {
         }
 
         if page_lock.is_none() {
-            eprintln!("page {} not exists", page_id);
             panic!("page {} not exists", page_id);
         }
 

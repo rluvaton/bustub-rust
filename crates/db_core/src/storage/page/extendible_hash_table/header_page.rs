@@ -66,7 +66,20 @@ impl HeaderPage {
     /// returns: u32 directory index the key is hashed to
     ///
     pub fn hash_to_directory_index(&self, hash: u32) -> u32 {
-        hash.get_n_msb_bits(self.max_depth as u8)
+        // When max depth is 0 than all goes to the same directory
+        if self.max_depth == 0 {
+            return 0;
+        }
+
+        // You will want to use the most-significant bits for indexing into the header page's directory_page_ids array.
+        // This involves taking the hash of your key and perform bit operations with the depth of the header page.
+        // The header page depth will not change.
+
+        let index = hash.get_n_msb_bits(self.max_depth as u8);
+
+        assert!(index <= self.max_size(), "directory index {} must not be above header max size {}", index, self.max_size());
+
+        index
 
         // TODO - should not expose this and the `get_directory_page_id` and instead have a function that get a hash value and return the page id?
     }
@@ -99,7 +112,7 @@ impl HeaderPage {
     /// returns: ()
     ///
     pub fn set_directory_page_id(&mut self, directory_idx: u32, directory_page_id: PageId) {
-        assert!(directory_idx >= HASH_TABLE_HEADER_ARRAY_SIZE as u32, "Directory index is larger than the size directory size: {}", HASH_TABLE_HEADER_ARRAY_SIZE);
+        assert!(directory_idx < HASH_TABLE_HEADER_ARRAY_SIZE as u32, "Directory index ({}) is larger than the size directory size: {}", directory_idx, HASH_TABLE_HEADER_ARRAY_SIZE);
 
         self.directory_page_ids[directory_idx as usize] = directory_page_id;
     }
@@ -130,6 +143,6 @@ impl Debug for HeaderPage {
 
         f.write_str(table.to_string().as_str())?;
 
-        f.write_str("======== END HEADER ========")
+        f.write_str("======== END HEADER ========\n")
     }
 }

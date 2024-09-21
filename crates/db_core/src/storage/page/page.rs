@@ -4,7 +4,6 @@ use common::config::{PageData, PageId, BUSTUB_PAGE_SIZE, INVALID_PAGE_ID};
 use common::ReaderWriterLatch;
 use std::ops::{Deref, DerefMut};
 use std::sync::Arc;
-use log::warn;
 use parking_lot::{RwLockReadGuard, RwLockWriteGuard};
 use tracy_client::span;
 
@@ -79,7 +78,7 @@ impl Page {
                 let ref_count = Arc::strong_count(&self.inner);
 
                 if p > ref_count {
-                    warn!("Got more pins than references to the page, this is probably a mistake");
+                    eprintln!("Got more pins than references to the page, this is probably a mistake");
 
                     // Cant be more than there are references to the page
                     p = ref_count;
@@ -116,7 +115,7 @@ impl Page {
                 let mut p = u.get_pin_count();
 
                 if p == 0 {
-                    warn!("Trying to unpin page which has no pins this is a mistake");
+                    eprintln!("Trying to unpin page which has no pins this is a mistake");
                     return 0;
                 }
 

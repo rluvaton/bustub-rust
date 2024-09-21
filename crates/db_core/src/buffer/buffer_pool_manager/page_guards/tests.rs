@@ -3,6 +3,7 @@ mod tests {
     use crate::buffer::{PinPageGuard, BufferPoolManager};
     use parking_lot::Mutex;
     use std::sync::Arc;
+    use common::config::BUSTUB_PAGE_SIZE;
     use crate::storage::{DiskManager, DiskManagerUnlimitedMemory};
 
     #[test]
@@ -43,5 +44,38 @@ mod tests {
         }
 
         disk_manager.lock().shut_down();
+    }
+
+    #[test]
+    fn casting_and_dropping() {
+        // this should not compile
+        todo!()
+        // #[repr(C)]
+        // struct Hello {
+        //     key: u32,
+        //     rest: [u8; BUSTUB_PAGE_SIZE - 4],
+        // }
+        // let buffer_pool_size = 5;
+        // let k = 2;
+        //
+        // let disk_manager = Arc::new(Mutex::new(DiskManagerUnlimitedMemory::new()));
+        //
+        // let buffer_pool_manager = Arc::new(BufferPoolManager::new(
+        //     buffer_pool_size,
+        //     Arc::clone(&disk_manager),
+        //     Some(k),
+        //     None,
+        // ));
+        //
+        // let mut page0 = buffer_pool_manager.new_page_write_guarded().expect("should be able to create a page");
+        //
+        // let data = page0.cast_mut::<Hello>();
+        //
+        // data.key = 10;
+        // data.rest = [3; BUSTUB_PAGE_SIZE - 4];
+        //
+        // drop(page0);
+        //
+        // assert_eq!(data.key, 10);
     }
 }

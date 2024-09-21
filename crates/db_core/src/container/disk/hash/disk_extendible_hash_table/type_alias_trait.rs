@@ -1,4 +1,5 @@
 use common::{PageKey, PageValue};
+use crate::container::KeyHasher;
 use crate::storage::{Comparator, ExtendibleHashTableBucketPage, ExtendibleHashTableDirectoryPage, ExtendibleHashTableHeaderPage};
 use super::DiskExtendibleHashTable;
 
@@ -27,11 +28,12 @@ pub(super) trait TypeAliases {
     type BucketPage;
 }
 
-impl<const BUCKET_MAX_SIZE: usize, Key, Value, KeyComparator> TypeAliases for DiskExtendibleHashTable<BUCKET_MAX_SIZE, Key, Value, KeyComparator>
+impl<const BUCKET_MAX_SIZE: usize, Key, Value, KeyComparator, KeyHasherImpl> TypeAliases for DiskExtendibleHashTable<BUCKET_MAX_SIZE, Key, Value, KeyComparator, KeyHasherImpl>
 where
     Key: PageKey,
     Value: PageValue,
     KeyComparator: Comparator<Key>,
+    KeyHasherImpl: KeyHasher
 {
     type HeaderPage = ExtendibleHashTableHeaderPage;
     type DirectoryPage = ExtendibleHashTableDirectoryPage;

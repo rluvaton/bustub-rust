@@ -1,3 +1,3 @@
-mod hash_function;
+mod traits;
 
-pub use hash_function::hash_key;
+pub use traits::*;

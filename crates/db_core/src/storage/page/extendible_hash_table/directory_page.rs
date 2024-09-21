@@ -6,6 +6,7 @@ use std::collections::HashMap;
 use std::fmt::{Debug, Formatter};
 use std::hash::Hash;
 use std::mem::size_of;
+use crate::storage::ExtendibleHashTableBucketPage;
 
 const _HASH_TABLE_DIRECTORY_PAGE_METADATA_SIZE: usize = size_of::<u32>() * 2;
 
@@ -23,6 +24,22 @@ const _: () = assert!(size_of::<PageId>() == 4);
 //noinspection RsAssertEqual
 const _: () = assert!(size_of::<DirectoryPage>() == _HASH_TABLE_DIRECTORY_PAGE_METADATA_SIZE + HASH_TABLE_DIRECTORY_ARRAY_SIZE + size_of::<PageId>() * HASH_TABLE_DIRECTORY_ARRAY_SIZE);
 const _: () = assert!(size_of::<DirectoryPage>() <= BUSTUB_PAGE_SIZE);
+
+enum AdditionRequirement {
+    // Can just insert with no problems
+    None,
+
+    // Key already exists
+    AlreadyExists,
+
+    // Need local split of bucket
+    NeedLocalSplit,
+    // Need global split
+    NeedGlobalSplit,
+
+    // If global split is more than max depth
+    NeedGlobalSplitLargerThanSingleDirectory,
+}
 
 
 ///
@@ -75,7 +92,17 @@ impl DirectoryPage {
     /// returns: u32 bucket index current key is hashed to
     ///
     pub fn hash_to_bucket_index(&self, hash: u32) -> u32 {
-        hash % self.size()
+        // When global depth is 0 than all goes to the same bucket
+        if self.global_depth == 0 {
+            return 0;
+        }
+        // You will want to use the least-significant bits for indexing into the directory page's bucket_page_ids array.
+        // This involves taking the hash of your key and perform bit operations with the current depth of the directory page.
+        let index = hash.get_n_lsb_bits(self.global_depth as u8);
+
+        assert!(index <= self.max_size(), "bucket index {} must not be above directory max size {}", index, self.max_size());
+
+        index
     }
 
     /// Lookup a bucket page using a directory index
@@ -160,10 +187,19 @@ impl DirectoryPage {
     }
 
     /// Increment the global depth of the directory
-    pub fn incr_global_depth(&mut self) {
+    pub fn incr_global_depth(&mut self) -> bool {
+        // If reached the max depth
+        if self.global_depth + 1 == self.max_depth {
+            return false;
+        }
+
         let size_before = self.size() as usize;
         self.global_depth += 1;
         let size_after = self.size() as usize;
+
+
+        // TODO - when have multiple directory this is not correct
+
 
         // When increasing global depth, we now have double the size we had before
         // and because the new buckets don't point to anywhere, we must point them to the same bucket before the doubling
@@ -186,11 +222,20 @@ impl DirectoryPage {
             let (before, after) = self.local_depths[..size_after].split_at_mut(size_before);
             after.clone_from_slice(&before);
         }
+
+        true
     }
 
     /// Decrement the global depth of the directory
-    pub fn decr_global_depth(&mut self) {
+    pub fn decr_global_depth(&mut self) -> bool {
+        // If reached the max depth
+        if self.global_depth == 0 {
+            return false;
+        }
+
         self.global_depth -= 1;
+
+        true
     }
 
     ///
@@ -211,8 +256,7 @@ impl DirectoryPage {
     /// returns: u32 the max directory size
     ///
     pub fn max_size(&self) -> u32 {
-        // TODO - is this the right value?
-        self.max_depth
+        2u32.pow(self.max_depth)
     }
 
     /// Gets the local depth of the bucket at bucket_idx
@@ -236,6 +280,7 @@ impl DirectoryPage {
     /// * `local_depth`: new local depth
     ///
     pub fn set_local_depth(&mut self, bucket_idx: u32, local_depth: u8) {
+        // assert!((local_depth as u32 )<= self.global_depth, "Local depth cant be larger than global depth");
         self.local_depths[bucket_idx as usize] = local_depth;
     }
 
@@ -246,6 +291,8 @@ impl DirectoryPage {
     /// * `bucket_idx`: bucket index to increment
     ///
     pub fn incr_local_depth(&mut self, bucket_idx: u32) {
+        assert!((self.local_depths[bucket_idx as usize] as u32) < self.global_depth, "can't increment more than the global depth");
+
         self.local_depths[bucket_idx as usize] += 1;
     }
 
@@ -256,8 +303,14 @@ impl DirectoryPage {
     /// * `bucket_idx`: bucket index to decrement
     ///
     pub fn decr_local_depth(&mut self, bucket_idx: u32) {
+        assert!(self.local_depths[bucket_idx as usize] + 1 > 0, "local depth is already 0");
+
         self.local_depths[bucket_idx as usize] -= 1;
     }
+    //
+    // pub fn get_addition_status(&self, bucket_idx: u32) -> AdditionRequirement {
+    //
+    // }
 
     /// Verify the following invariants:
     /// (1) All LD <= GD.

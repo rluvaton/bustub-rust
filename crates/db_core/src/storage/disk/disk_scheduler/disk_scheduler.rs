@@ -1,10 +1,9 @@
 use std::sync::Arc;
 use std::thread::JoinHandle;
 use parking_lot::Mutex;
-use std::thread;
+use std::{panic, process, thread};
 
-use common::{Channel, Promise};
-
+use common::{abort_process_on_panic, Channel, Promise};
 use crate::storage::{DiskRequestType, DiskManager};
 
 /**
@@ -102,7 +101,10 @@ impl DiskSchedulerWorker {
      */
     fn new(disk_manager: Arc<Mutex<dyn DiskManager + Send + Sync>>, receiver: Arc<Channel<DiskSchedulerWorkerMessage>>) -> DiskSchedulerWorker {
         let thread = thread::spawn(move || {
+            abort_process_on_panic();
+
             loop {
+
                 let job = receiver.get();
 
                 let req: DiskRequestType;

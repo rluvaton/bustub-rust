@@ -4,6 +4,7 @@ use common::config::{PageId, BUSTUB_PAGE_SIZE};
 use std::fmt::{Debug, Display, Formatter};
 use std::marker::PhantomData;
 use std::mem::size_of;
+use std::slice::Iter;
 use prettytable::{row, Table};
 use common::{PageKey, PageValue, RID};
 use crate::storage::{Comparator, GenericComparator, GenericKey};
@@ -123,7 +124,8 @@ where
     pub fn init(&mut self, max_size: Option<u32>) {
         // Validate correct generic at compile time
         let _ = Self::ARRAY_SIZE_OK;
-        let max_size = max_size.unwrap_or(hash_table_bucket_array_size::<Key, Value>() as u32);
+        let max_size = max_size.unwrap_or(ARRAY_SIZE as u32);
+        assert!(max_size <= ARRAY_SIZE as u32, "Max size must be smaller than ARRAY_SIZE");
 
         self.size = 0;
         self.max_size = max_size;
@@ -159,13 +161,12 @@ where
             return false;
         }
 
-        for i in 0..self.size as usize {
-            let current_pair = &self.array[i];
+        let missing = self.array[0..self.size as usize]
+            .iter()
+            .all(|(item_key, _)| comparator.cmp(key, &item_key) != Ordering::Equal);
 
-            // TODO - should do binary search? the values are not ordered
-            if comparator.cmp(key, &current_pair.0) == Ordering::Equal && *value == current_pair.1 {
-                return false;
-            }
+        if !missing {
+            return false;
         }
 
         let entry: MappingType<Key, Value> = (key.clone(), value.clone());
@@ -238,7 +239,14 @@ where
      */
     pub fn entry_at(&self, bucket_idx: u32) -> &MappingType<Key, Value> {
         &self.array[bucket_idx as usize]
+    }
 
+    // Replace all entries with different one, this is useful for rehashing
+    pub fn replace_all_entries(&mut self, new_items: &[MappingType<Key, Value>]) {
+        assert!(self.array.len() >= new_items.len(), "can't insert more items than bucket can hold");
+        self.array[0..new_items.len()].copy_from_slice(new_items);
+
+        self.size = new_items.len() as u32;
     }
 
     /**
@@ -271,6 +279,9 @@ where
         self.array[..self.size() as usize].iter().position(|item| comparator.cmp(key, &item.0) == Ordering::Equal)
     }
 
+    pub fn iter(&self) -> Iter<'_, MappingType<Key, Value>> {
+        self.array[..self.size() as usize].iter()
+    }
 }
 
 impl<const ARRAY_SIZE: usize, Key: PageKey, Value: PageValue, KeyComparator: Comparator<Key>> Debug for BucketPage<ARRAY_SIZE, Key, Value, KeyComparator> {

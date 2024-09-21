@@ -89,11 +89,11 @@ mod tests {
                 let header_page = header_guard.cast_mut::<ExtendibleHashTableHeaderPage>();
                 header_page.init(Some(2));
 
-                /// Test hashes for header page
-                /// 00000000000000001000000000000000 - 32768
-                /// 01000000000000001000000000000000 - 1073774592
-                /// 10000000000000001000000000000000 - 2147516416
-                /// 11000000000000001000000000000000 - 3221258240
+                // Test hashes for header page
+                // 00000000000000001000000000000000 - 32768
+                // 01000000000000001000000000000000 - 1073774592
+                // 10000000000000001000000000000000 - 2147516416
+                // 11000000000000001000000000000000 - 3221258240
 
 
                 // ensure we are hashing into proper bucket based on upper 2 bits
@@ -149,12 +149,12 @@ mod tests {
             directory_page.set_bucket_page_id(0, bucket_page_id_1);
 
 
-            ///
-            /// ======== DIRECTORY (global_depth: 0) ========
-            /// | bucket_idx | page_id | local_depth |
-            /// |    0       |    2    |    0        |
-            /// ================ END DIRECTORY ================
-            ///
+            //
+            // ======== DIRECTORY (global_depth: 0) ========
+            // | bucket_idx | page_id | local_depth |
+            // |    0       |    2    |    0        |
+            // ================ END DIRECTORY ================
+            //
 
             directory_page.verify_integrity();
             assert_eq!(directory_page.size(), 1);
@@ -166,12 +166,12 @@ mod tests {
             directory_page.set_bucket_page_id(1, bucket_page_id_2);
             directory_page.set_local_depth(1, 1);
 
-            /// ======== DIRECTORY (global_depth: 1) ========
-            /// | bucket_idx | page_id | local_depth |
-            /// |    0       |    2    |      1      |
-            /// |    1       |    3    |      1      |
-            /// ================ END DIRECTORY ================
-            ///
+            // ======== DIRECTORY (global_depth: 1) ========
+            // | bucket_idx | page_id | local_depth |
+            // |    0       |    2    |      1      |
+            // |    1       |    3    |      1      |
+            // ================ END DIRECTORY ================
+            //
             directory_page.verify_integrity();
             assert_eq!(directory_page.size(), 2);
             assert_eq!(directory_page.get_bucket_page_id(0), bucket_page_id_1);
@@ -185,13 +185,13 @@ mod tests {
             directory_page.incr_global_depth();
             directory_page.set_bucket_page_id(2, bucket_page_id_3);
 
-            /// ======== DIRECTORY (global_depth: 2) ========
-            /// | bucket_idx | page_id | local_depth |
-            /// |    0       |    2    |      2      |
-            /// |    1       |    3    |      1      |
-            /// |    2       |    4    |      2      |
-            /// |    3       |    3    |      1      |
-            /// ================ END DIRECTORY ================
+            // ======== DIRECTORY (global_depth: 2) ========
+            // | bucket_idx | page_id | local_depth |
+            // |    0       |    2    |      2      |
+            // |    1       |    3    |      1      |
+            // |    2       |    4    |      2      |
+            // |    3       |    3    |      1      |
+            // ================ END DIRECTORY ================
 
             directory_page.verify_integrity();
             assert_eq!(directory_page.size(), 4);
@@ -210,17 +210,17 @@ mod tests {
             assert_eq!(directory_page.get_global_depth_mask(), 7);
 
 
-            /// ======== DIRECTORY (global_depth: 3) ========
-            /// | bucket_idx | page_id | local_depth |
-            /// |     0      |    2    |      3      |
-            /// |     1      |    3    |      1      |
-            /// |     2      |    4    |      2      |
-            /// |     3      |    3    |      1      |
-            /// |     4      |    5    |      3      |
-            /// |     5      |    3    |      1      |
-            /// |     6      |    4    |      2      |
-            /// |     7      |    3    |      1      |
-            /// ================ END DIRECTORY ================
+            // ======== DIRECTORY (global_depth: 3) ========
+            // | bucket_idx | page_id | local_depth |
+            // |     0      |    2    |      3      |
+            // |     1      |    3    |      1      |
+            // |     2      |    4    |      2      |
+            // |     3      |    3    |      1      |
+            // |     4      |    5    |      3      |
+            // |     5      |    3    |      1      |
+            // |     6      |    4    |      2      |
+            // |     7      |    3    |      1      |
+            // ================ END DIRECTORY ================
 
 
             directory_page.verify_integrity();
@@ -248,28 +248,28 @@ mod tests {
             directory_page.set_local_depth(4, 2);
             directory_page.set_bucket_page_id(0, bucket_page_id_4);
 
-            /// ======== DIRECTORY (global_depth: 3) ========
-            /// | bucket_idx | page_id | local_depth |
-            /// |      0     |    5    |      2      |
-            /// |      1     |    3    |      1      |
-            /// |      2     |    4    |      2      |
-            /// |      3     |    3    |      1      |
-            /// |      4     |    5    |      2      |
-            /// |      5     |    3    |      1      |
-            /// |      6     |    4    |      2      |
-            /// |      7     |    3    |      1      |
-            /// ================ END DIRECTORY ================
+            // ======== DIRECTORY (global_depth: 3) ========
+            // | bucket_idx | page_id | local_depth |
+            // |      0     |    5    |      2      |
+            // |      1     |    3    |      1      |
+            // |      2     |    4    |      2      |
+            // |      3     |    3    |      1      |
+            // |      4     |    5    |      2      |
+            // |      5     |    3    |      1      |
+            // |      6     |    4    |      2      |
+            // |      7     |    3    |      1      |
+            // ================ END DIRECTORY ================
 
             assert_eq!(directory_page.can_shrink(), true);
             directory_page.decr_global_depth();
 
-            /// ======== DIRECTORY (global_depth: 2) ========
-            /// | bucket_idx | page_id | local_depth |
-            /// |     0      |    5    |      2      |
-            /// |     1      |    3    |      1      |
-            /// |     2      |    4    |      2      |
-            /// |     3      |    3    |      1      |
-            /// ================ END DIRECTORY ================
+            // ======== DIRECTORY (global_depth: 2) ========
+            // | bucket_idx | page_id | local_depth |
+            // |     0      |    5    |      2      |
+            // |     1      |    3    |      1      |
+            // |     2      |    4    |      2      |
+            // |     3      |    3    |      1      |
+            // ================ END DIRECTORY ================
 
             directory_page.verify_integrity();
             assert_eq!(directory_page.size(), 4);

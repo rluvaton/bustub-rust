@@ -4,7 +4,6 @@ use crate::buffer::{AccessType, LRUKReplacer};
 use crate::storage::{DiskManager, DiskScheduler, Page, ReadDiskRequest, UnderlyingPage, WriteDiskRequest};
 use common::config::{AtomicPageId, FrameId, PageId, INVALID_PAGE_ID, LRUK_REPLACER_K};
 use common::{Promise, UnsafeSingleRefData, UnsafeSingleRefMutData};
-use log::warn;
 use parking_lot::Mutex;
 use crate::recovery::LogManager;
 use std::cell::{UnsafeCell};
@@ -19,7 +18,7 @@ const ROOT_LOCK_WAITING_COLOR: u32 = 0xEF0107;
 // While holding the root lock - green-ish (brighter than page lock)
 const ROOT_LOCK_HOLDING_COLOR: u32 = 0x32DE84;
 
-
+// TODO - should return result rather than Option in fetch, new and more
 impl BufferPoolManager {
     pub fn new(
         pool_size: usize,
@@ -202,6 +201,12 @@ impl BufferPoolManager {
         let page = self.new_page()?;
 
         Some(PinPageGuard::new(self.clone(), page))
+    }
+
+    pub fn new_page_write_guarded<'a>(self: &Arc<Self>) -> Option<PinWritePageGuard<'a>> {
+        let page = self.new_page_guarded()?;
+
+        Some(page.upgrade_write())
     }
 
     /**
@@ -524,7 +529,7 @@ impl BufferPoolManager {
             let page: Option<&mut Page> = (*inner).pages.get_mut(frame_id_ref as usize);
 
             if page.is_none() {
-                warn!("Could not find requested page to unpin, it shouldn't be possible");
+                eprintln!("Could not find requested page to unpin, it shouldn't be possible");
                 // TODO - log warning or something as this mean we have corruption
                 return false;
             }

@@ -1,7 +1,7 @@
-use std::sync::Arc;
-use common::config::{IndexOID, TableOID};
 use crate::catalog::{IndexType, Schema};
-use crate::storage::{Index, TableHeap};
+use crate::storage::Index;
+use common::config::IndexOID;
+use std::sync::Arc;
 
 /// The IndexInfo class maintains metadata about a index.
 pub struct IndexInfo {

@@ -65,11 +65,15 @@ impl UnderlyingPage {
         &mut self.data
     }
 
+    // TODO - make sure that once the guard is dropped, this is unusable
     pub fn cast<T>(&self) -> &T {
         unsafe { &*(self.data.as_ptr() as *const PageData as *const T) }
     }
 
     pub fn cast_mut<T>(&mut self) -> &mut T {
+        // Set as dirty if getting mutable data
+        self.is_dirty = true;
+
         unsafe { &mut *(self.data.as_mut_ptr() as *mut PageData as *mut T) }
     }
 

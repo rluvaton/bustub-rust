@@ -4,6 +4,7 @@ use std::cmp::Ordering;
 use std::fmt::{Debug, Display};
 use std::sync::Arc;
 
+#[derive(Clone)]
 pub struct GenericComparator<const KEY_SIZE: usize> {
     schema: Arc<Schema>,
 }
