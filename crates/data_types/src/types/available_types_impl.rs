@@ -1,5 +1,4 @@
 use crate::types::{BigIntType, BooleanType, DBTypeId, DecimalType, IntType, SmallIntType, TimestampType, TinyIntType};
-use std::fmt::{Debug, Display};
 
 /// Macro to run the provided expression on the enum variant
 /// # Example

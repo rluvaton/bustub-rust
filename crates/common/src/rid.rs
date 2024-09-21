@@ -3,7 +3,7 @@ use std::hash::{Hash, Hasher};
 use crate::config::{PageId, INVALID_PAGE_ID};
 use crate::page_traits::PageValue;
 
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Copy, Clone, PartialEq, Eq)]
 pub struct RID {
     /// Default is Invalid
     page_id: PageId,

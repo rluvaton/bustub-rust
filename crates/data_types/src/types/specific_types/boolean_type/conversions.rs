@@ -69,7 +69,7 @@ impl ConversionDBTypeTrait for BooleanType {
     fn as_string(&self) -> String {
         if self.value == Self::TRUE {
             "true".to_string()
-        } else if(self.value == Self::FALSE) {
+        } else if self.value == Self::FALSE {
             "false".to_string()
         } else {
             // Null

@@ -312,7 +312,6 @@ dependencies = [
  "data_types",
  "derive_builder",
  "generics",
- "log",
  "mut-binary-heap",
  "num-format",
  "parking_lot",

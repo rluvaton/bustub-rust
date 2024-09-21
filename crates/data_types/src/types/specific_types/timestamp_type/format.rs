@@ -1,5 +1,5 @@
+use crate::types::{DBTypeId, FormatDBTypeTrait, TimestampType};
 use std::fmt::{Display, Formatter};
-use crate::types::{BigIntType, DBTypeId, FormatDBTypeTrait, TimestampType};
 
 
 impl Display for TimestampType {

@@ -7,5 +7,4 @@ members = [
     "crates/stats",
     "crates/data_types",
     "crates/binary_utils",
-    "crates/generics"
-]
+    "crates/generics"]

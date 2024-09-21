@@ -1,5 +1,5 @@
+use crate::types::{BooleanType, DBTypeId, FormatDBTypeTrait};
 use std::fmt::{Display, Formatter};
-use crate::types::{TinyIntType, DBTypeId, FormatDBTypeTrait, BooleanType};
 
 
 impl Display for BooleanType {
