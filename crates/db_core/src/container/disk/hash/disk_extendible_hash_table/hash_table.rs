@@ -360,94 +360,48 @@ where
             panic!("Can't insert key");
         }
 
-        let bucket_page_id = bucket_page_guard.get_page_id();
-
         let mut directory_page = directory_page_guard.cast_mut::<<Self as TypeAliases>::DirectoryPage>();
         let mut bucket_page = bucket_page_guard.cast_mut::<<Self as TypeAliases>::BucketPage>();
 
         // 2. Make sure need to split
         assert!(bucket_page.is_full(), "page must be full before splitting");
 
-        // we can split bucket without needing to split directory
-        let cmp = self.cmp.clone();
-
         // 3. Create new bucket to be the new split bucket
         let new_bucket = self.init_new_bucket().context("Failed to initialize new bucket page when trying to split bucket")?;
         let new_bucket_page_id = new_bucket.get_page_id();
         let mut new_bucket_guard = new_bucket.upgrade_write();
 
-        if directory_page.get_local_depth(bucket_index) != directory_page.get_global_depth() {
-
-            self.split_local_bucket(bucket_index, &mut directory_page, &mut bucket_page, &mut new_bucket_guard, bucket_page_id)?;
-            // 4. Split bucket
-            // self.split_local_bucket_page(directory_page, bucket_page, &mut new_bucket_guard, bucket_index);
-        } else {
-
-            // 4. Expand directory
-            // TODO - check if need to have directory split
-            // TODO - after tests pass move split local later
-            self.insert_when_bucket_is_full_and_need_to_update_global_depth(key, value, &mut directory_page, &mut bucket_page, &mut new_bucket_guard, bucket_page_id)?;
+        // 4. Expand the directory if needed
+        if directory_page.get_local_depth(bucket_index) == directory_page.get_global_depth() {
+            assert_eq!(directory_page.incr_global_depth(), true, "should be able to increase directory global depth");
         }
 
-        let new_bucket_page = new_bucket_guard.cast_mut::<<Self as TypeAliases>::BucketPage>();
+        // 5. Split bucket
+        self.split_local_bucket(bucket_index, &mut directory_page, &mut bucket_page, &mut new_bucket_guard);
 
-        // 5. Find out which bucket to insert to
+        // 6. Find out which bucket to insert to after the split
+        let new_bucket_page = new_bucket_guard.cast_mut::<<Self as TypeAliases>::BucketPage>();
 
         let bucket_index_to_insert = directory_page.hash_to_bucket_index(key_hash);
         let bucket_to_insert_page_id = directory_page.get_bucket_page_id(bucket_index_to_insert);
-        let bucket_to_insert = if bucket_to_insert_page_id == new_bucket_page_id { new_bucket_page } else { bucket_page };
+        let bucket_to_insert = if bucket_to_insert_page_id == new_bucket_page_id { new_bucket_page} else { bucket_page };
 
         // 6. Check if still after the split we can't insert
         if bucket_to_insert.is_full() {
-
-            // 6.1. Try again with the expected bucket to insert
             let bucket_guard_to_insert = if bucket_to_insert_page_id == new_bucket_page_id { &mut new_bucket_guard } else { bucket_page_guard };
 
-            // The bucket index is always the one that about to overflow
+            // 6.1 Split again with the current bucket that is full (The bucket index is always the one that about to overflow)
             return self.try_split(directory_page_guard, bucket_guard_to_insert, directory_index, bucket_index_to_insert, key_hash, key, value, tries_left - 1);
         }
 
         // 7. Insert key
-        let inserted = bucket_to_insert.insert(key, value, &cmp);
+        let inserted = bucket_to_insert.insert(key, value, &self.cmp);
 
         if !inserted {
             Err(anyhow!("Failed to insert the key"))
         } else {
             Ok(())
         }
-    }
-
-    /// Split page when local depth is smaller than global depth in the directory
-    fn split_local_bucket_page(&mut self, directory_page: &mut <Self as TypeAliases>::DirectoryPage, bucket_page_to_split: &mut <Self as TypeAliases>::BucketPage, new_bucket_guard: &mut PinWritePageGuard, bucket_index: u32) {
-        // 1. Assert no need to increase directory global depth
-        let old_local_depth = directory_page.get_local_depth(bucket_index);
-        assert_ne!(old_local_depth, directory_page.get_global_depth());
-
-        // 2. create new bucket page
-        let new_bucket_page = new_bucket_guard.cast_mut::<<Self as TypeAliases>::BucketPage>();
-        let new_bucket_page_index: u32;
-
-        // 3. rehash all current bucket page content and find the correct bucket
-        let (new_bucket_items, current_bucket_items): (Vec<(Key, Value)>, Vec<(Key, Value)>) = bucket_page_to_split
-            .iter()
-            .partition(|(key, _)| self.hash(key).is_bit_on(old_local_depth as usize + 1));
-
-        // TODO - check if there is some items that moved to new bucket
-
-        new_bucket_page.replace_all_entries(new_bucket_items.as_slice());
-        bucket_page_to_split.replace_all_entries(current_bucket_items.as_slice());
-
-        // 4. increase local depth for old bucket
-        // TODO - is the / 2 correct?
-        assert_eq!(bucket_index % 2, 0, "new bucket index should be even in order to be the new bucket pointer");
-        // TODO - is this correct?
-        directory_page.incr_local_depth(bucket_index / 2);
-
-        // 5. register bucket page in directory
-        directory_page.set_bucket_page_id(bucket_index, new_bucket_guard.get_page_id());
-
-        // 6. set local depth for new bucket
-        directory_page.set_local_depth(bucket_index, old_local_depth as u8 + 1);
     }
 
     fn insert_to_new_directory(&self, header: &<Self as TypeAliases>::HeaderPage, directory_idx: u32, hash: u32, key: &Key, value: &Value) -> bool {
@@ -502,460 +456,34 @@ where
         Ok(bucket_page)
     }
 
-    fn insert_algo(&mut self, key: &Key, value: &Value) -> anyhow::Result<()> {
-        // 1. Find the bucket to insert
-        let key_hash = self.hash(&key);
-
-        let mut header = self.bpm.fetch_page_write(self.header_page_id).context("Hash Table header page must exists when trying to insert")?;
-
-        let header_page = header.cast_mut::<<Self as TypeAliases>::HeaderPage>();
-
-        let directory_index = header_page.hash_to_directory_index(key_hash);
-        let directory_page_id = header_page.get_directory_page_id(directory_index);
-
-        let mut directory = self.bpm.fetch_page_write(directory_page_id).context("Directory page should exists")?;
-
-        let directory_page = directory.cast_mut::<<Self as TypeAliases>::DirectoryPage>();
-
-        let bucket_index = directory_page.hash_to_bucket_index(key_hash);
-        let bucket_page_id = directory_page.get_bucket_page_id(bucket_index);
-
-        let mut bucket = self.bpm.fetch_page_write(bucket_page_id).context("Failed to fetch bucket page")?;
-        let bucket_page = bucket.cast_mut::<<Self as TypeAliases>::BucketPage>();
-
-        assert!(bucket_page.insert(key, value, &self.cmp), "Should insert");
-
-        Ok(())
-    }
-
-    /// this is the insert algorithm when the directory and bucket exists and have space
-    ///
-    /// # Assumptions
-    /// 1. Header exists
-    /// 2. Directory exists
-    /// 3. Bucket exists
-    /// 4. Bucket has enough space
-    ///
-    fn insert_when_have_bucket_with_space(&mut self, key: &Key, value: &Value) -> anyhow::Result<()> {
-        // 1. Hash the key
-        let key_hash = self.hash(&key);
-
-        // 2. Fetch the header with read guard (not write as we know we don't need to update it)
-        let header = self.bpm.fetch_page_read(self.header_page_id).context("Hash Table header page must exists when trying to insert")?;
-        let header_page = header.cast::<<Self as TypeAliases>::HeaderPage>();
-
-        // 3. Find the directory page id for the key
-        // TODO - handle missing directory
-        let directory_index = header_page.hash_to_directory_index(key_hash);
-        let directory_page_id = header_page.get_directory_page_id(directory_index);
-
-        assert_ne!(directory_page_id, INVALID_PAGE_ID, "Directory page id must exists");
-
-        // 4. Fetch the directory with read guard (not write as we know we don't need to update it)
-        let directory = self.bpm.fetch_page_read(directory_page_id).context("Directory page should exists")?;
-        let directory_page = directory.cast::<<Self as TypeAliases>::DirectoryPage>();
-
-        // 5. No longer need the header page as we know we won't be going to update it
-        drop(header);
-
-        // 6. Find the bucket page id for the key
-        // TODO - handle missing bucket
-        let bucket_index = directory_page.hash_to_bucket_index(key_hash);
-        let bucket_page_id = directory_page.get_bucket_page_id(bucket_index);
-
-        assert_ne!(bucket_page_id, INVALID_PAGE_ID, "Bucket page id must exists");
-
-        let mut bucket = self.bpm.fetch_page_write(bucket_page_id).context("Failed to fetch bucket page")?;
-        let bucket_page = bucket.cast_mut::<<Self as TypeAliases>::BucketPage>();
-
-        // TODO - handle full bucket
-        assert_eq!(bucket_page.is_full(), false, "Bucket page should have enough space");
-
-        // 7. Insert the entry to the bucket
-        assert!(bucket_page.insert(key, value, &self.cmp), "Should be able to insert new entry");
-
-        Ok(())
-    }
-
-    /// This is the insert algorithm when the directory for the key is missing
-    ///
-    /// # Assumptions
-    /// 1. Header exists
-    /// 2. Directory is missing
-    /// 3. Bucket is missing
-    ///
-    fn insert_when_have_first_directory(&mut self, key: &Key, value: &Value) -> anyhow::Result<()> {
-        // 1. Hash the key
-        let key_hash = self.hash(&key);
-
-        // 2. Fetch the header with write guard (not read as we know we need to register the new directory it)
-        let mut header = self.bpm.fetch_page_write(self.header_page_id).context("Hash Table header page must exists when trying to insert")?;
-        let header_page = header.cast_mut::<<Self as TypeAliases>::HeaderPage>();
-
-        // 3. Find the directory index
-        let directory_index = header_page.hash_to_directory_index(key_hash);
-        let directory_page_id = header_page.get_directory_page_id(directory_index);
-
-        // TODO - handle already existing directory
-        assert_eq!(directory_page_id, INVALID_PAGE_ID, "Directory should be missing");
-
-        // 4. Create new directory
-        let mut directory = self.bpm.new_page_write_guarded().context("Should be able to create directory page")?;
-        let directory_page_id = directory.get_page_id();
-
-        let directory_page = directory.cast_mut::<<Self as TypeAliases>::DirectoryPage>();
-
-
-        // 5. Register the new directory page in the header
-        header_page.set_directory_page_id(directory_index, directory_page_id);
-
-        // 6. Release the header page lock as we know that we won't need to use it anymore
-        //    as the directory page is empty
-        drop(header);
-
-        // 7. Find the bucket index
-        let bucket_index = directory_page.hash_to_bucket_index(key_hash);
-        let bucket_page_id = directory_page.get_bucket_page_id(bucket_index);
-
-        // TODO - handle already existing bucket
-        assert_eq!(bucket_page_id, INVALID_PAGE_ID, "Bucket should be missing");
-
-        // 8. Create new bucket
-        let mut bucket = self.bpm.new_page_write_guarded().context("Should be able to create bucket page")?;
-        let bucket_page_id = bucket.get_page_id();
-
-        let bucket_page = bucket.cast_mut::<<Self as TypeAliases>::BucketPage>();
-
-
-        // 9. Register the bucket page
-        directory_page.set_bucket_page_id(bucket_index, bucket_page_id);
-
-        // 10. Release the directory page lock as we know that we won't need to use it anymore
-        //     as the bucket page is empty
-        drop(directory);
-
-        // 11. Insert the entry to the bucket
-        assert!(bucket_page.insert(key, value, &self.cmp), "Should be able to insert new entry");
-
-        Ok(())
-    }
-
-    /// This is for when inserting
-    ///
-    /// # Assumptions
-    /// 1. Header exists
-    /// 2. Directory exists
-    /// 3. Bucket exists
-    /// 4. Bucket is full
-    /// 5. Bucket local depth is smaller than global depth
-    ///
-    fn insert_when_bucket_is_full_and_no_need_to_update_global_depth(&mut self, key: &Key, value: &Value) -> anyhow::Result<()> {
-        // 1. Hash the key
-        let cmp_f = &self.cmp.clone();
-        let key_hash = self.hash(&key);
-
-        // 2. Fetch the header with read guard
-        //    (not write as we know we don't need to update it as we know the directory global depth does not need to be updated)
-        let header = self.bpm.fetch_page_read(self.header_page_id).context("Hash Table header page must exists when trying to insert")?;
-        let header_page = header.cast::<<Self as TypeAliases>::HeaderPage>();
-
-        // 3. Find the directory page id for the key
-        // TODO - handle missing directory
-        let directory_index = header_page.hash_to_directory_index(key_hash);
-        let directory_page_id = header_page.get_directory_page_id(directory_index);
-
-        assert_ne!(directory_page_id, INVALID_PAGE_ID, "Directory page id must exists");
-
-        // 4. Fetch the directory with write guard (not ead as we know we need to register the split bucket)
-        let mut directory = self.bpm.fetch_page_write(directory_page_id).context("Directory page should exists")?;
-        let directory_page = directory.cast_mut::<<Self as TypeAliases>::DirectoryPage>();
-
-        // 5. No longer need the header page as we know we won't be going to update it
-        drop(header);
-
-        // 6. Find the bucket page id for the key
-        // TODO - handle missing bucket
-        let bucket_index = directory_page.hash_to_bucket_index(key_hash);
-        let bucket_page_id = directory_page.get_bucket_page_id(bucket_index);
-
-        let mut bucket = self.bpm.fetch_page_write(bucket_page_id).context("Failed to fetch bucket page")?;
-        let bucket_page = bucket.cast_mut::<<Self as TypeAliases>::BucketPage>();
-
-        assert_eq!(bucket_page.is_full(), true, "Bucket page should be full");
-        assert_ne!(directory_page.get_local_depth(bucket_index), directory_page.get_global_depth(), "Bucket local depth must be smaller than directory global depth");
-
-        // 7. Trigger split
-        // If `i` > `i_j`, then more than one entry in the bucket address table points to bucket `j`.
-        // Thus, the system can split bucket `j` without increasing the size of the bucket address table.
-        //
-        // Observe that all the entries that point to bucket `j` correspond to hash prefixes that have the same value on the leftmost `i_j` bits.
-        // The system allocates a new bucket (bucket `z`), and sets `i_j` and `i_z` to the value that results from adding 1 to the original `i_j` value.
-        //
-        // Next, the system needs to adjust the entries in the bucket address table that previously pointed to bucket `j`.
-        // (Note that with the new value for `i_j`, not all the entries correspond to hash prefixes that have the same value on the leftmost `i_j` bits.)
-        //
-        // The system leaves the first half of the entries as they were (pointing to bucket `j`),
-        // and sets all the remaining entries to point to the newly created bucket (bucket `z`).
-        //
-        // Next, as in the previous case, the system rehashes each record in bucket `j`, and allocates it either to bucket `j or to the newly created bucket `z`.
-        //
-        // The system then reattempts the insert.
-        // In the unlikely case that it again fails, it applies one of the two cases, `i = `l_j` or `i` > `l_j`, as appropriate.
-        //
-        // Note that, in both cases, the system needs to recompute the hash function on only the records in bucket `j`.
-
-        // not finished
-        todo!();
-
-
-        // -----------------
-        // TRIGGER SPLIT
-        // -----------------
-        let directory_global_depth = directory_page.get_global_depth();
-        let bucket_local_depth = directory_page.get_local_depth(bucket_index);
-
-        // If `i` > `i_j`, then more than one entry in the bucket address table points to bucket `j`.
-        assert!(directory_global_depth > bucket_local_depth, "Bucket local depth ({}) must be smaller than directory global depth ({})", bucket_local_depth, directory_global_depth);
-
-
-        // Thus, the system can split bucket `j` without increasing the size of the bucket address table.
-        //
-        // Observe that all the entries that point to bucket `j` correspond to hash prefixes that have the same value on the leftmost `i_j` bits.
-
-
-        // The system allocates a new bucket (bucket `z`),
-        let new_bucket = self.init_new_bucket().context("Should be able to create bucket page")?;
-        let new_bucket_page_id = new_bucket.get_page_id();
-
-        let mut new_bucket_guard = new_bucket.upgrade_write();
-        let new_bucket_page = new_bucket_guard.cast_mut::<<Self as TypeAliases>::BucketPage>();
-
-
-        // and sets `i_j` and `i_z` to the value that results from adding 1 to the original `i_j` value.
-        directory_page.set_local_depth(bucket_index, (bucket_local_depth + 1) as u8);
-
-
-        //
-        // Next, the system needs to adjust the entries in the bucket address table that previously pointed to bucket `j`.
-        // (Note that with the new value for `i_j`, not all the entries correspond to hash prefixes that have the same value on the leftmost `i_j` bits.)
-        //
-        // The system leaves the first half of the entries as they were (pointing to bucket `j`),
-        // and sets all the remaining entries to point to the newly created bucket (bucket `z`).
-        //
-        // Next, as in the previous case, the system rehashes each record in bucket `j`, and allocates it either to bucket `j or to the newly created bucket `z`.
-        //
-        // The system then reattempts the insert.
-        // In the unlikely case that it again fails, it applies one of the two cases, `i = `l_j` or `i` > `l_j`, as appropriate.
-        //
-        // Note that, in both cases, the system needs to recompute the hash function on only the records in bucket `j`.
-
-
-        // 5. Insert the entry to the bucket
-        // TODO - handle full bucket
-        assert!(bucket_page.insert(key, value, cmp_f), "Should insert");
-
-        Ok(())
-    }
-
-    /// This is for when inserting
-    ///
-    /// # Assumptions
-    /// 1. Header exists
-    /// 2. Directory exists
-    /// 3. Bucket exists
-    /// 4. Bucket is full
-    /// 5. Bucket local depth is equal to global depth
-    /// 6. Directory has enough space
-    /// 7. directory expansion is bounded to a single directory
-    ///
-    fn insert_when_bucket_is_full_and_need_to_update_global_depth_from_start(&mut self, key: &Key, value: &Value) -> anyhow::Result<()> {
-        let cmp_f = &self.cmp.clone();
-
-        // 1. Hash the key
-        let key_hash = self.hash(&key);
-
-        // 2. Fetch the header with read guard
-        //    (not write as we know we don't need to update it as we know the directory global depth does not need to be updated)
-        let header = self.bpm.fetch_page_read(self.header_page_id).context("Hash Table header page must exists when trying to insert")?;
-        let header_page = header.cast::<<Self as TypeAliases>::HeaderPage>();
-
-        // 3. Find the directory page id for the key
-        // TODO - handle missing directory
-        let directory_index = header_page.hash_to_directory_index(key_hash);
-        let directory_page_id = header_page.get_directory_page_id(directory_index);
-
-        assert_ne!(directory_page_id, INVALID_PAGE_ID, "Directory page id must exists");
-
-        // 4. Fetch the directory with write guard (not ead as we know we need to register the split bucket)
-        let mut directory = self.bpm.fetch_page_write(directory_page_id).context("Directory page should exists")?;
-        let directory_page = directory.cast_mut::<<Self as TypeAliases>::DirectoryPage>();
-
-        // 5. No longer need the header page as we know we won't be going to update it
-        drop(header);
-
-        // 6. Find the bucket page id for the key
-        // TODO - handle missing bucket
-        let bucket_index = directory_page.hash_to_bucket_index(key_hash);
-        let bucket_page_id = directory_page.get_bucket_page_id(bucket_index);
-
-        let mut bucket_to_split = self.bpm.fetch_page_write(bucket_page_id).context("Failed to fetch bucket page")?;
-        let bucket_page_to_split = bucket_to_split.cast_mut::<<Self as TypeAliases>::BucketPage>();
-
-        assert_eq!(bucket_page_to_split.is_full(), true, "Bucket page should be full");
-        assert_eq!(directory_page.get_local_depth(bucket_index), directory_page.get_global_depth(), "Bucket local depth must be equal to directory global depth");
-
-
-        // 7. Split
-        // If `i = i_j`, only one entry in the bucket address table points to bucket `j`.
-        // Therefore, the system needs to increase the size of the bucket address table so that it can include pointers to the two buckets that result from splitting bucket `j`.
-        //
-        // It does so by considering an additional bit of the hash value. It increments the value of `i` by 1, thus doubling the size of the bucket address table.
-        // It replaces each entry with two entries, both of which contain the same pointer as the original entry.
-        assert_eq!(directory_page.incr_global_depth(), true, "should be able to increase directory global depth");
-        let global_depth = directory_page.get_global_depth();
-
-        // Now two entries in the bucket address table point to bucket `j`.
-        //
-        // The system allocates a new bucket (bucket `z`)
-        let new_bucket = self.init_new_bucket().context("Should be able to create bucket page")?;
-        let new_bucket_page_id = new_bucket.get_page_id();
-
-        let mut new_bucket_guard = new_bucket.upgrade_write();
-        let new_bucket_page = new_bucket_guard.cast_mut::<<Self as TypeAliases>::BucketPage>();
-
-        // and sets the second entry to point to the new bucket.
-        let new_bucket_index = directory_page.hash_to_bucket_index(key_hash);
-        directory_page.set_bucket_page_id(new_bucket_index, new_bucket_page_id);
-
-        // It sets `i_j` and `i_z` to `i`.
-        directory_page.set_local_depth(bucket_index, global_depth as u8);
-        directory_page.set_local_depth(bucket_index, global_depth as u8);
-
-
-        // Next, it rehashes each record in bucket `j` and, depending on the first `i` bits (remember the system has added 1 to `i`), either keeps it in bucket `j` or allocates it to the newly created bucket.
-
-        // 3. rehash all current bucket page content and find the correct bucket
-        let (new_bucket_items, current_bucket_items): (Vec<(Key, Value)>, Vec<(Key, Value)>) = bucket_page_to_split
-            .iter()
-            .partition(|(key, _)| self.hash(key).is_bit_on(global_depth as usize + 1));
-
-        // TODO - check if there is some items that moved to new bucket
-
-        new_bucket_page.replace_all_entries(new_bucket_items.as_slice());
-        bucket_page_to_split.replace_all_entries(current_bucket_items.as_slice());
-
-
-        // 5. Insert the entry to the bucket
-        // TODO - handle full bucket again
-        assert!(bucket_page_to_split.insert(key, value, cmp_f), "Should insert");
-
-        Ok(())
-    }
-
-    /// This is for when inserting
-    ///
-    /// # Assumptions
-    /// 1. Header exists
-    /// 2. Directory exists
-    /// 3. Bucket exists
-    /// 4. Bucket is full
-    /// 5. Bucket local depth is equal to global depth
-    /// 6. Directory has enough space
-    /// 7. directory expansion is bounded to a single directory
-    ///
-    fn insert_when_bucket_is_full_and_need_to_update_global_depth(&mut self, key: &Key, value: &Value, directory_page: &mut <Self as TypeAliases>::DirectoryPage, bucket_page_to_split: &mut <Self as TypeAliases>::BucketPage, new_bucket_guard: &mut PinWritePageGuard, bucket_page_id: PageId) -> anyhow::Result<()> {
-        // 1. Hash the key
-        let key_hash = self.hash(&key);
-
-
-        // 6. Find the bucket page id for the key
-        let bucket_index = directory_page.hash_to_bucket_index(key_hash);
-
-        assert_eq!(bucket_page_to_split.is_full(), true, "Bucket page should be full");
-        assert_eq!(directory_page.get_local_depth(bucket_index), directory_page.get_global_depth(), "Bucket local depth must be equal to directory global depth");
-
-
-        // 7. Split
-        // If `i = i_j`, only one entry in the bucket address table points to bucket `j`.
-        // Therefore, the system needs to increase the size of the bucket address table so that it can include pointers to the two buckets that result from splitting bucket `j`.
-        //
-        // It does so by considering an additional bit of the hash value. It increments the value of `i` by 1, thus doubling the size of the bucket address table.
-        // It replaces each entry with two entries, both of which contain the same pointer as the original entry.
-        assert_eq!(directory_page.incr_global_depth(), true, "should be able to increase directory global depth");
-
-        self.split_local_bucket(bucket_index, directory_page, bucket_page_to_split, new_bucket_guard, bucket_page_id)
-    }
-
-
     /// Return the splitted bucket indices
-    fn split_local_bucket(&mut self, bucket_index: u32, directory_page: &mut <Self as TypeAliases>::DirectoryPage, bucket_page_to_split: &mut <Self as TypeAliases>::BucketPage, new_bucket_guard: &mut PinWritePageGuard, bucket_page_id: PageId) -> anyhow::Result<()> {
-
-
-        // 6. Find the bucket page id for the key
-
-        // Now two entries in the bucket address table point to bucket `j`.
-        //
-        // The system allocates a new bucket (bucket `z`)
+    fn split_local_bucket(&mut self, bucket_index: u32, directory_page: &mut <Self as TypeAliases>::DirectoryPage, bucket_page_to_split: &mut <Self as TypeAliases>::BucketPage, new_bucket_guard: &mut PinWritePageGuard) {
         let new_bucket_page_id = new_bucket_guard.get_page_id();
         let new_bucket_page = new_bucket_guard.cast_mut::<<Self as TypeAliases>::BucketPage>();
 
-        // and sets the second entry to point to the new bucket.
-        // let mut new_bucket_index = directory_page.size() - 1;
-        //
-        // // If the new bucket index point to the same page id bucket page
-        // if directory_page.get_bucket_page_id(new_bucket_index) == bucket_page_id {
-        //     new_bucket_index = directory_page.hash_to_bucket_index(key_hash);
-        //
-        //     // If the new bucket index is the same as the current bucket index, change the index to be the last one
-        //     if bucket_index == new_bucket_index {
-        //         new_bucket_index = directory_page.size() - 1
-        //     }
-        // }
-
-        // The new bucket index is always bucket index
+        // 1. Get the new bucket index
+        // The new bucket index is always the next bit turned on
         let new_bucket_index = bucket_index.turn_on_bit(directory_page.get_local_depth(bucket_index) as usize + 1);
 
-        /// TODO - this is quite complicated
-        /// We need to set the new bucket page id to the newly created bucket,
-        /// but which bucket index should it be?
-        /// if after expansion, the key hash to value larger than before than we should use that
-        /// if no, we should use the latest bucket index
-        /// should we split entries in any case?
-        ///
-        /// Only if the key was suppose to be inserted to the current bucket and now it should be inserted to the new bucket?
-        /// But if the key was not suppose we should split the other bucket values?
-        ///
 
-        // We have 2 cases
-        // - Case 1:
-        //   Splitting the page but the new item still is in the same bucket
-        //   then the new bucket index is the last item and should not move any items
-        //
-        // - Case 2:
-        //   Splitting the page and some of the items are moving
-        //   then the new bucket index is the new item expected location
-
-
-
-
-
-
-        // If after split the page still not map to the new page, (as the prefix hash is still the same)
-        // register it
+        // 2. Register the new bucket in the directory
         directory_page.set_bucket_page_id(new_bucket_index, new_bucket_page_id);
 
+        // 3. Update local length for both buckets
         directory_page.incr_local_depth(bucket_index);
         directory_page.incr_local_depth(new_bucket_index);
 
-        // 3. rehash all current bucket page content and find the correct bucket
+        // 4. Rehash all current bucket page content and find the correct bucket
         let (new_bucket_items, current_bucket_items): (Vec<(Key, Value)>, Vec<(Key, Value)>) = bucket_page_to_split
             .iter()
             .partition(|(key, _)| directory_page.hash_to_bucket_index(self.hash(key)) == new_bucket_index);
 
-        new_bucket_page.replace_all_entries(new_bucket_items.as_slice());
-        bucket_page_to_split.replace_all_entries(current_bucket_items.as_slice());
-
-        Ok(())
+        // 5. set the current bucket items in the new location
+        // Optimization: Only if not empty as if nothing to add to the new bucket than it means as is
+        if !new_bucket_items.is_empty() {
+            new_bucket_page.replace_all_entries(new_bucket_items.as_slice());
+            bucket_page_to_split.replace_all_entries(current_bucket_items.as_slice());
+        }
     }
 }
 
