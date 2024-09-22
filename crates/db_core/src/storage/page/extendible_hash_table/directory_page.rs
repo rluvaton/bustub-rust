@@ -290,7 +290,7 @@ impl DirectoryPage {
     /// * `bucket_idx`: bucket index to increment
     ///
     pub fn incr_local_depth(&mut self, bucket_idx: u32) {
-        assert!((self.local_depths[bucket_idx as usize] as u32) < self.global_depth, "can't increment more than the global depth");
+        assert!((self.local_depths[bucket_idx as usize] as u32) < self.global_depth, "can't increment more than the global depth {}", self.global_depth);
 
         self.local_depths[bucket_idx as usize] += 1;
     }
