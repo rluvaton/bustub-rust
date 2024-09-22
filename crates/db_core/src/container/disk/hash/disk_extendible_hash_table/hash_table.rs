@@ -176,11 +176,8 @@ where
 
         // 13. if bucket page is full, need to split
         if bucket_page.is_full() {
-            self.trigger_split(&mut directory, &mut bucket, directory_index, bucket_index, key_hash, key, value)?;
-
-            return Ok(());
+            bucket = self.trigger_split(&mut directory, bucket, directory_index, bucket_index, key_hash, key, value)?;
         }
-
 
         let bucket_page = bucket.cast_mut::<<Self as TypeAliases>::BucketPage>();
 
@@ -349,11 +346,12 @@ where
         KeyHasherImpl::hash_key(key) as u32
     }
 
-    fn trigger_split(&mut self, directory_page_guard: &mut PinWritePageGuard, bucket_page_guard: &mut PinWritePageGuard, directory_index: u32, bucket_index: u32, key_hash: u32, key: &Key, value: &Value) -> anyhow::Result<()> {
-        self.try_split(directory_page_guard, bucket_page_guard, directory_index, bucket_index, key_hash, key, value, 3)
+    fn trigger_split<'a>(&mut self, directory_page_guard: &mut PinWritePageGuard, bucket_page_guard: PinWritePageGuard<'a>, directory_index: u32, bucket_index: u32, key_hash: u32, key: &Key, value: &Value) -> anyhow::Result<PinWritePageGuard<'a>> {
+        // Try to split the bucket with 3 iteration (after that it seems like the hash function is not good, or we have a bug)
+        self.try_split(directory_page_guard, bucket_page_guard, bucket_index, key_hash, key, value, 3)
     }
 
-    fn try_split(&mut self, directory_page_guard: &mut PinWritePageGuard, bucket_page_guard: &mut PinWritePageGuard, directory_index: u32, bucket_index: u32, key_hash: u32, key: &Key, value: &Value, tries_left: usize) -> anyhow::Result<()> {
+    fn try_split<'a>(&mut self, directory_page_guard: &mut PinWritePageGuard, mut bucket_page_guard: PinWritePageGuard<'a>, bucket_index: u32, key_hash: u32, key: &Key, value: &Value, tries_left: usize) -> anyhow::Result<PinWritePageGuard<'a>> {
         // 1. Check if reached max tries
         if tries_left == 0 {
             eprintln!("Trying to insert key but after split the page is still full, the hash might not evenly distribute the keys");
@@ -388,20 +386,15 @@ where
 
         // 7. Check if still after the split we can't insert
         if bucket_to_insert.is_full() {
-            let bucket_guard_to_insert = if bucket_to_insert_page_id == new_bucket_page_id { &mut new_bucket_guard } else { bucket_page_guard };
+            let bucket_guard_to_insert = if bucket_to_insert_page_id == new_bucket_page_id { new_bucket_guard } else { bucket_page_guard };
 
             // 7.1 Split again with the current bucket that is full (The bucket index is always the one that about to overflow)
-            return self.try_split(directory_page_guard, bucket_guard_to_insert, directory_index, bucket_index_to_insert, key_hash, key, value, tries_left - 1);
+            return self.try_split(directory_page_guard, bucket_guard_to_insert, bucket_index_to_insert, key_hash, key, value, tries_left - 1);
         }
 
-        // 8. Insert key
-        let inserted = bucket_to_insert.insert(key, value, &self.cmp);
+        let bucket_guard_to_insert = if bucket_to_insert_page_id == new_bucket_page_id { new_bucket_guard } else { bucket_page_guard };
 
-        if !inserted {
-            Err(anyhow!("Failed to insert the key"))
-        } else {
-            Ok(())
-        }
+        Ok(bucket_guard_to_insert)
     }
 
     fn insert_to_new_directory(&self, header: &<Self as TypeAliases>::HeaderPage, directory_idx: u32, hash: u32, key: &Key, value: &Value) -> bool {
