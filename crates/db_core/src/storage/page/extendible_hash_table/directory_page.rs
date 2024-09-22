@@ -6,7 +6,6 @@ use std::collections::HashMap;
 use std::fmt::{Debug, Formatter};
 use std::hash::Hash;
 use std::mem::size_of;
-use crate::storage::ExtendibleHashTableBucketPage;
 
 const _HASH_TABLE_DIRECTORY_PAGE_METADATA_SIZE: usize = size_of::<u32>() * 2;
 
@@ -336,7 +335,7 @@ impl DirectoryPage {
                 let old_ld = *page_id_to_ld.get_or(&curr_page_id, &0);
                 println!("Verify Integrity: curr_local_depth: {}, old_local_depth {}, for page_id: {}", curr_ld, old_ld, curr_page_id);
                 self.print_directory();
-                assert_eq!(curr_ld, *page_id_to_ld.get_or(&curr_page_id, &0), "local depth is not the same at each index with same bucket page id");
+                assert_eq!(curr_ld, *page_id_to_ld.get_or(&curr_page_id, &0), "local depth is not the same at each index with same bucket page id for page id {}", curr_page_id);
             } else {
                 page_id_to_ld.insert(curr_page_id, curr_ld);
             }
@@ -359,6 +358,33 @@ impl DirectoryPage {
     pub fn print_directory(&self) {
         println!("{:?}", self)
     }
+
+    pub fn extended_format<GetKeysForBucketFn: Fn(PageId) -> Vec<String>>(&self, f: &mut Formatter<'_>, get_keys_for_bucket: GetKeysForBucketFn) -> std::fmt::Result {
+        f.write_str(format!("======== DIRECTORY (global_depth: {}) ========\n", self.global_depth).as_str())?;
+
+        let mut table = Table::new();
+
+        table.add_row(row!["prefix", "page_id", "local_depth", "keys"]);
+
+        let max_id = (0x1 << self.global_depth) as u32;
+        for idx in 0..(max_id as usize) {
+            let page_id = self.bucket_page_ids[idx];
+            let local_depth = self.local_depths[idx];
+
+            let keys_for_bucket = get_keys_for_bucket(page_id);
+
+            table.add_row(row![
+                format_number_in_bits(idx as u64, self.global_depth),
+                page_id,
+                local_depth,
+                keys_for_bucket.join(", ")
+            ]);
+        }
+
+        f.write_str(table.to_string().as_str())?;
+
+        f.write_str("================ END DIRECTORY ================\n")
+    }
 }
 
 impl Debug for DirectoryPage {
@@ -367,21 +393,26 @@ impl Debug for DirectoryPage {
 
         let mut table = Table::new();
 
-        table.add_row(row!["bucket_idx", "page_id", "local_depth"]);
+        table.add_row(row!["prefix", "page_id", "local_depth"]);
 
         let max_id = (0x1 << self.global_depth) as u32;
         for idx in 0..(max_id as usize) {
             let page_id = self.bucket_page_ids[idx];
             let local_depth = self.local_depths[idx];
 
-            table.add_row(row![idx, page_id, local_depth]);
+            table.add_row(row![format_number_in_bits(idx as u64, self.global_depth), page_id, local_depth]);
         }
 
         f.write_str(table.to_string().as_str())?;
 
-        f.write_str("================ END DIRECTORY ================")
+        f.write_str("================ END DIRECTORY ================\n")
     }
 }
+
+fn format_number_in_bits(n: u64, number_of_bits: u32) -> String {
+    format!("{n:#064b}")[64 - number_of_bits as usize..].to_string()
+}
+
 
 #[cfg(test)]
 mod tests {

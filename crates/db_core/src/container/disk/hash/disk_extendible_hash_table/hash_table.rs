@@ -65,7 +65,7 @@ where
     Key: PageKey,
     Value: PageValue,
     KeyComparator: Comparator<Key>,
-    KeyHasherImpl: KeyHasher
+    KeyHasherImpl: KeyHasher,
 {
     /// @brief Creates a new DiskExtendibleHashTable.
     ///
@@ -178,7 +178,7 @@ where
         if bucket_page.is_full() {
             self.trigger_split(&mut directory, &mut bucket, directory_index, bucket_index, key_hash, key, value)?;
 
-            return Ok(())
+            return Ok(());
         }
 
 
@@ -377,13 +377,15 @@ where
         let mut new_bucket_guard = new_bucket.upgrade_write();
 
         if directory_page.get_local_depth(bucket_index) != directory_page.get_global_depth() {
-            // 4. Split bucket
-            self.split_local_bucket_page(directory_page, bucket_page, &mut new_bucket_guard, bucket_index);
 
+            self.split_local_bucket(bucket_index, &mut directory_page, &mut bucket_page, &mut new_bucket_guard, bucket_page_id)?;
+            // 4. Split bucket
+            // self.split_local_bucket_page(directory_page, bucket_page, &mut new_bucket_guard, bucket_index);
         } else {
 
             // 4. Expand directory
             // TODO - check if need to have directory split
+            // TODO - after tests pass move split local later
             self.insert_when_bucket_is_full_and_need_to_update_global_depth(key, value, &mut directory_page, &mut bucket_page, &mut new_bucket_guard, bucket_page_id)?;
         }
 
@@ -399,8 +401,9 @@ where
         if bucket_to_insert.is_full() {
 
             // 6.1. Try again with the expected bucket to insert
-            let bucket_guard_to_insert =  if bucket_to_insert_page_id == new_bucket_page_id { &mut new_bucket_guard } else { bucket_page_guard };
+            let bucket_guard_to_insert = if bucket_to_insert_page_id == new_bucket_page_id { &mut new_bucket_guard } else { bucket_page_guard };
 
+            // The bucket index is always the one that about to overflow
             return self.try_split(directory_page_guard, bucket_guard_to_insert, directory_index, bucket_index_to_insert, key_hash, key, value, tries_left - 1);
         }
 
@@ -861,8 +864,6 @@ where
     /// 7. directory expansion is bounded to a single directory
     ///
     fn insert_when_bucket_is_full_and_need_to_update_global_depth(&mut self, key: &Key, value: &Value, directory_page: &mut <Self as TypeAliases>::DirectoryPage, bucket_page_to_split: &mut <Self as TypeAliases>::BucketPage, new_bucket_guard: &mut PinWritePageGuard, bucket_page_id: PageId) -> anyhow::Result<()> {
-        let cmp_f = &self.cmp.clone();
-
         // 1. Hash the key
         let key_hash = self.hash(&key);
 
@@ -881,7 +882,16 @@ where
         // It does so by considering an additional bit of the hash value. It increments the value of `i` by 1, thus doubling the size of the bucket address table.
         // It replaces each entry with two entries, both of which contain the same pointer as the original entry.
         assert_eq!(directory_page.incr_global_depth(), true, "should be able to increase directory global depth");
-        let global_depth = directory_page.get_global_depth();
+
+        self.split_local_bucket(bucket_index, directory_page, bucket_page_to_split, new_bucket_guard, bucket_page_id)
+    }
+
+
+    /// Return the splitted bucket indices
+    fn split_local_bucket(&mut self, bucket_index: u32, directory_page: &mut <Self as TypeAliases>::DirectoryPage, bucket_page_to_split: &mut <Self as TypeAliases>::BucketPage, new_bucket_guard: &mut PinWritePageGuard, bucket_page_id: PageId) -> anyhow::Result<()> {
+
+
+        // 6. Find the bucket page id for the key
 
         // Now two entries in the bucket address table point to bucket `j`.
         //
@@ -890,51 +900,62 @@ where
         let new_bucket_page = new_bucket_guard.cast_mut::<<Self as TypeAliases>::BucketPage>();
 
         // and sets the second entry to point to the new bucket.
-        let mut new_bucket_index = directory_page.size() - 1;
-        if directory_page.get_bucket_page_id(new_bucket_index) == bucket_page_id {
-            new_bucket_index = directory_page.hash_to_bucket_index(key_hash);
-        }
+        // let mut new_bucket_index = directory_page.size() - 1;
+        //
+        // // If the new bucket index point to the same page id bucket page
+        // if directory_page.get_bucket_page_id(new_bucket_index) == bucket_page_id {
+        //     new_bucket_index = directory_page.hash_to_bucket_index(key_hash);
+        //
+        //     // If the new bucket index is the same as the current bucket index, change the index to be the last one
+        //     if bucket_index == new_bucket_index {
+        //         new_bucket_index = directory_page.size() - 1
+        //     }
+        // }
+
+        // The new bucket index is always bucket index
+        let new_bucket_index = bucket_index.turn_on_bit(directory_page.get_local_depth(bucket_index) as usize + 1);
+
+        /// TODO - this is quite complicated
+        /// We need to set the new bucket page id to the newly created bucket,
+        /// but which bucket index should it be?
+        /// if after expansion, the key hash to value larger than before than we should use that
+        /// if no, we should use the latest bucket index
+        /// should we split entries in any case?
+        ///
+        /// Only if the key was suppose to be inserted to the current bucket and now it should be inserted to the new bucket?
+        /// But if the key was not suppose we should split the other bucket values?
+        ///
+
+        // We have 2 cases
+        // - Case 1:
+        //   Splitting the page but the new item still is in the same bucket
+        //   then the new bucket index is the last item and should not move any items
+        //
+        // - Case 2:
+        //   Splitting the page and some of the items are moving
+        //   then the new bucket index is the new item expected location
+
+
+
 
 
 
         // If after split the page still not map to the new page, (as the prefix hash is still the same)
         // register it
-            directory_page.set_bucket_page_id(new_bucket_index, new_bucket_page_id);
+        directory_page.set_bucket_page_id(new_bucket_index, new_bucket_page_id);
 
-        // It sets `i_j` and `i_z` to `i`.
-        directory_page.set_local_depth(bucket_index, global_depth as u8);
-        directory_page.set_local_depth(new_bucket_index, global_depth as u8);
-
-
-        // Next, it rehashes each record in bucket `j` and, depending on the first `i` bits (remember the system has added 1 to `i`), either keeps it in bucket `j` or allocates it to the newly created bucket.
+        directory_page.incr_local_depth(bucket_index);
+        directory_page.incr_local_depth(new_bucket_index);
 
         // 3. rehash all current bucket page content and find the correct bucket
         let (new_bucket_items, current_bucket_items): (Vec<(Key, Value)>, Vec<(Key, Value)>) = bucket_page_to_split
             .iter()
             .partition(|(key, _)| directory_page.hash_to_bucket_index(self.hash(key)) == new_bucket_index);
 
-        // TODO - check if there is some items that moved to new bucket
-
         new_bucket_page.replace_all_entries(new_bucket_items.as_slice());
         bucket_page_to_split.replace_all_entries(current_bucket_items.as_slice());
 
         Ok(())
-    }
-
-
-
-    /// Return the splitted bucket indices
-    fn split_local_bucket(&mut self, key_hash: u32, directory_page: <Self as TypeAliases>::DirectoryPage) -> (u32, u32) {
-        let bucket_index = directory_page.hash_to_bucket_index(key_hash);
-        let local_depth = directory_page.get_local_depth(bucket_index);
-        let local_depth_mask = directory_page.get_local_depth_mask(bucket_index);
-        let bucket_page_id = directory_page.get_bucket_page_id(bucket_index);
-
-        let original_bucket_index = bucket_index & local_depth_mask;
-
-        let new_depth_mask = local_depth_mask.turn_on_bit(local_depth as usize + 1);
-
-        todo!()
     }
 }
 
@@ -949,6 +970,9 @@ impl<const BUCKET_MAX_SIZE: usize, Key: PageKey, Value: PageValue, KeyComparator
 
         write!(f, "{:?}", header)?;
 
+        // TODO - have another way of changing this as it will avoid printing the values of the keys
+        let print_buckets_inside_directory = self.bucket_max_size < 5;
+
         for idx in 0..header.max_size() {
             let directory_page_id = header.get_directory_page_id(idx);
             if directory_page_id == INVALID_PAGE_ID {
@@ -962,17 +986,32 @@ impl<const BUCKET_MAX_SIZE: usize, Key: PageKey, Value: PageValue, KeyComparator
             let directory = directory_guard.cast::<<Self as TypeAliases>::DirectoryPage>();
             write!(f, "Directory {}, page_id: {}\n", idx, directory_page_id)?;
 
-            write!(f, "{:?}", directory)?;
+            // Extended format
 
-            for idx2 in 0..directory.size() {
-                let bucket_page_id = directory.get_bucket_page_id(idx2);
-                let bucket_guard = self.bpm.fetch_page_basic(bucket_page_id).expect(format!("Should be able to fetch bucket page with id {}", bucket_page_id).as_str());
-                let bucket_guard = bucket_guard.read();
+            if print_buckets_inside_directory {
+                directory.extended_format(f, |bucket_page_id| {
+                    let bucket_guard = self.bpm.fetch_page_basic(bucket_page_id).expect(format!("Should be able to fetch bucket page with id {}", bucket_page_id).as_str());
+                    let bucket_guard = bucket_guard.read();
+                    let bucket = bucket_guard.cast::<<Self as TypeAliases>::BucketPage>();
 
-                let bucket = bucket_guard.cast::<<Self as TypeAliases>::BucketPage>();
+                    bucket
+                        .iter()
+                        .map(|(key, _)| format!("{}", key))
+                        .collect()
+                })?
+            } else {
+                write!(f, "{:?}", directory)?;
 
-                write!(f, "Bucket {}, page id: {}\n", idx2, bucket_page_id)?;
-                write!(f, "{:?}", bucket)?;
+                for idx2 in 0..directory.size() {
+                    let bucket_page_id = directory.get_bucket_page_id(idx2);
+                    let bucket_guard = self.bpm.fetch_page_basic(bucket_page_id).expect(format!("Should be able to fetch bucket page with id {}", bucket_page_id).as_str());
+                    let bucket_guard = bucket_guard.read();
+
+                    let bucket = bucket_guard.cast::<<Self as TypeAliases>::BucketPage>();
+
+                    write!(f, "Bucket {}, page id: {}\n", idx2, bucket_page_id)?;
+                    write!(f, "{:?}", bucket)?;
+                }
             }
         }
 
