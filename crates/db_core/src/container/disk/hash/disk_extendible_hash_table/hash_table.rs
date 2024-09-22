@@ -386,15 +386,15 @@ where
         let bucket_to_insert_page_id = directory_page.get_bucket_page_id(bucket_index_to_insert);
         let bucket_to_insert = if bucket_to_insert_page_id == new_bucket_page_id { new_bucket_page} else { bucket_page };
 
-        // 6. Check if still after the split we can't insert
+        // 7. Check if still after the split we can't insert
         if bucket_to_insert.is_full() {
             let bucket_guard_to_insert = if bucket_to_insert_page_id == new_bucket_page_id { &mut new_bucket_guard } else { bucket_page_guard };
 
-            // 6.1 Split again with the current bucket that is full (The bucket index is always the one that about to overflow)
+            // 7.1 Split again with the current bucket that is full (The bucket index is always the one that about to overflow)
             return self.try_split(directory_page_guard, bucket_guard_to_insert, directory_index, bucket_index_to_insert, key_hash, key, value, tries_left - 1);
         }
 
-        // 7. Insert key
+        // 8. Insert key
         let inserted = bucket_to_insert.insert(key, value, &self.cmp);
 
         if !inserted {
