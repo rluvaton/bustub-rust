@@ -437,7 +437,7 @@ mod tests {
     }
 
     #[test]
-    fn lifecycle() {
+    fn lifecycle_in_single_directory() {
         let disk_manager = Arc::new(Mutex::new(DiskManagerUnlimitedMemory::new()));
         let bpm = Arc::new(BufferPoolManager::new(100, disk_manager, Some(100), None));
 
@@ -470,8 +470,6 @@ mod tests {
         // Example of value taken from
         // https://www.youtube.com/watch?v=TtkN2xRAgv4
 
-        // empty
-
 
 
         // Reach the initial state:
@@ -497,34 +495,10 @@ mod tests {
         // ```
         // [AsciiFlow](https://asciiflow.com/#/share/eJyrVspLzE1VslLKzMssyUzMUSguSSxJVdJRykmsTC0CilfHKJWlFhVn5ufFKFkZ6cQoVQBpSzNTIKsSyDI2NgOySlIrSoCcGCUFgsCpNDk7taTYCsaPickjrAkdEKXJJz8Z6J%2BU1IKSDCsFI%2BI0PZrS82hKAwytwcGegOQGl8yi1OSS%2FKJKK1ymIKFpux5NaVIwASpoMgKThmYgEqjFEI%2FrICqgzClIBm7BwZ6B5D73nPwklGBANRBHKOH0AT40wRDNraSEpYEBirPgZsxB9xfCWEhowuxEJo1gvphDui%2BWGKEEO2khbmBI2BdoaAa%2BWCDH%2FcZkp2dDIuIAB4LEBTg1GxmBSLhZxpT4xQTFHaTEhCFxMTGBUD6YQrqrZ6DmMdLLFKwAu1Mg4W4Oss4Y5mMIaUJceUd8mCrVKtUCAADbshE%3D))
 
-
-        hash_table.insert(&4, &4, None).unwrap();
-        hash_table.verify_integrity();
-
-        hash_table.insert(&24, &24, None).unwrap();
-        hash_table.verify_integrity();
-
-        hash_table.insert(&16, &16, None).unwrap();
-        hash_table.verify_integrity();
-
-        hash_table.insert(&6, &6, None).unwrap();
-        hash_table.verify_integrity();
-
-        hash_table.insert(&22, &22, None).unwrap();
-        hash_table.verify_integrity();
-
-        hash_table.insert(&10, &10, None).unwrap();
-        hash_table.verify_integrity();
-
-        hash_table.insert(&7, &7, None).unwrap();
-        hash_table.verify_integrity();
-
-        hash_table.insert(&31, &31, None).unwrap();
-        hash_table.verify_integrity();
-
-        hash_table.print_hash_table();
-        println!("\n\n");
-        hash_table.verify_integrity();
+        for key in vec![4, 24, 16, 6, 22, 10, 7, 31] {
+            hash_table.insert(&key, &key, None).unwrap();
+            hash_table.verify_integrity();
+        }
 
         // Insert 9 to the 2nd bucket
         //
@@ -549,9 +523,6 @@ mod tests {
         //                                  └───┴───┴───┘
         // ```
         hash_table.insert(&9, &9, None).unwrap();
-
-        hash_table.print_hash_table();
-        println!("\n\n");
         hash_table.verify_integrity();
 
         // Try to insert 20 and cause an overflow which will trigger directory expansion
@@ -613,9 +584,6 @@ mod tests {
         //     └────────────────┘
         // ```
         hash_table.insert(&20, &20, None).unwrap();
-
-        hash_table.print_hash_table();
-        println!("\n\n");
         hash_table.verify_integrity();
 
         // Try to insert 26 and cause an overflow which will trigger **local** bucket 3 to split
@@ -681,9 +649,6 @@ mod tests {
         //                                   └───┴───┴───┘
         // ```
         hash_table.insert(&26, &26, None).unwrap();
-
-        hash_table.print_hash_table();
-        println!("\n\n");
         hash_table.verify_integrity();
 
         let all_keys = [24, 16, 9, 10, 26, 7, 31, 4, 20, 6, 22];
