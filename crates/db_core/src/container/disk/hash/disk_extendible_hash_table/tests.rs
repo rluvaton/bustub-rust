@@ -32,7 +32,7 @@ mod tests {
     }
 
     #[test]
-    fn should_allow_basic_hash_map_operation_on_a_lot_of_keys_across_multiple_pages() {
+    fn should_allow_basic_hash_map_operation_on_a_lot_of_keys_across_multiple_pages_for_real_world_entries() {
         let mut hash_table = create_extendible_hash_table();
 
         // Having enough keys so a split would happen
@@ -433,7 +433,6 @@ mod tests {
         hash_table.print_hash_table();
         println!("\n\n");
         hash_table.verify_integrity();
-
     }
 
     #[test]
@@ -469,7 +468,6 @@ mod tests {
 
         // Example of value taken from
         // https://www.youtube.com/watch?v=TtkN2xRAgv4
-
 
 
         // Reach the initial state:
@@ -656,6 +654,105 @@ mod tests {
         for key in all_keys {
             assert_eq!(hash_table.get_value(&key, None), vec![key]);
         }
+    }
+
+    #[test]
+    fn should_allow_basic_hash_map_operation_on_a_lot_of_keys_across_multiple_pages() {
+        let disk_manager = Arc::new(Mutex::new(DiskManagerUnlimitedMemory::new()));
+        let bpm = Arc::new(BufferPoolManager::new(4, disk_manager, Some(2), None));
+
+        type Key = u64;
+        type Value = u64;
+
+        let mut hash_table = DiskExtendibleHashTable::<
+            { hash_table_bucket_array_size::<Key, Value>() },
+            Key,
+            Value,
+            U64Comparator,
+            U64IdentityKeyHasher,
+        >::new(
+            "temp".to_string(),
+            bpm,
+            U64Comparator,
+
+            // TODO - change to `None`
+            Some(2),
+            Some(5),
+            None,
+        );
+
+        // Having enough keys so a split would happen
+        let total = (BUSTUB_PAGE_SIZE * 100) as Key;
+
+        // Should not find any values before init
+        let tmp = (0..total).shuffle();
+        for &key in &tmp[0..10] {
+            assert_eq!(hash_table.get_value(&key, None), vec![], "should not find values for key {}", key);
+        }
+
+        hash_table.verify_integrity();
+
+        // insert a few (key, value) pairs
+        for key in 0..total {
+
+
+            /// Abort process on panic, this should be used in thread
+            // This can lead to corruption, but if we panicked it is a bug in the db (I think)
+            assert!(hash_table.insert(&key, &key, None).is_ok(), "should insert new key {}", key);
+
+        }
+
+        hash_table.verify_integrity();
+
+        // Should not find missing keys after the hash map is initialized
+        for &key in &(total..total + 1_000_000).shuffle()[0..10] {
+
+            assert_eq!(hash_table.get_value(&key, None), vec![], "should not find values for key {}", key);
+        }
+
+        hash_table.verify_integrity();
+
+        // Fetch those in random order
+        for key in (0..total).shuffle() {
+            assert_eq!(hash_table.get_value(&key, None), vec![key], "should find values for key {}", key);
+        }
+
+        hash_table.verify_integrity();
+
+        // Remove 1/7 random keys
+        let random_key_index_to_remove = &(0..total).shuffle()[0..(total / 7) as usize];
+
+        for &key in random_key_index_to_remove {
+            assert_eq!(hash_table.remove(&key, None).expect("should remove"), true, "should remove key {}", key);
+        }
+
+        hash_table.verify_integrity();
+
+        // Fetch all in random order
+        {
+            let removed_keys = HashSet::<Key>::from_iter(random_key_index_to_remove.iter().cloned());
+
+            for key in (0..total).shuffle() {
+                let expected_return = if removed_keys.contains(&key) { vec![] } else { vec![key] };
+
+                assert_eq!(hash_table.get_value(&key, None), expected_return, "get value for key {}", key);
+            }
+        }
+
+        hash_table.verify_integrity();
+
+        let mut removed_random_keys_to_reinsert = random_key_index_to_remove.iter().cloned().collect::<Vec<_>>().clone();
+        removed_random_keys_to_reinsert.shuffle(&mut thread_rng());
+
+        // Add back 1/4 of the removed keys
+        let removed_random_keys_to_reinsert = &removed_random_keys_to_reinsert[0..removed_random_keys_to_reinsert.len() / 4];
+
+        let offset_for_reinserted_values = total * 100;
+
+        {
+            // insert back some of the removed keys with different values
+            for &key in removed_random_keys_to_reinsert {
+                let value = key + offset_for_reinserted_values;
 
     }
 
