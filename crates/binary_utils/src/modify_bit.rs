@@ -1,3 +1,5 @@
+use crate::IsBitOn;
+
 pub trait ModifyBit {
     fn turn_on_bit(&self, n: usize) -> Self;
 
@@ -9,6 +11,10 @@ pub trait ModifyBit {
         } else {
             self.turn_off_bit(n)
         }
+    }
+
+    fn toggle_bit(&self, n: usize) -> Self where Self: Sized + IsBitOn {
+        self.modify_bit(n, !self.is_bit_on(n))
     }
 }
 
@@ -23,6 +29,7 @@ macro_rules! modify_bit_on_impl {
             fn turn_off_bit(&self, n: usize) -> Self {
                 self & !(1 << (n - 1))
             }
+
         }
     )+)
 }
@@ -89,7 +96,6 @@ mod tests {
         assert_eq!(num.modify_bit(08, T), 0b10110010);
         assert_eq!(num.modify_bit(08, F), 0b00110010);
     }
-
     #[test]
     fn test_modify_bit_on_u16() {
         let num: u16 = 0b0000000000000000;
@@ -685,4 +691,41 @@ mod tests {
         assert_eq!(num.modify_bit(64, F), 0b0001111000001000100000010000100110100001111111110000000000000000);
 
     }
+
+    #[test]
+    fn test_toggle_bit_on_u8() {
+        let num: u8 = 0b00000000;
+
+        assert_eq!(num.toggle_bit(01), 0b00000001);
+        assert_eq!(num.toggle_bit(02), 0b00000010);
+        assert_eq!(num.toggle_bit(03), 0b00000100);
+        assert_eq!(num.toggle_bit(04), 0b00001000);
+        assert_eq!(num.toggle_bit(05), 0b00010000);
+        assert_eq!(num.toggle_bit(06), 0b00100000);
+        assert_eq!(num.toggle_bit(07), 0b01000000);
+        assert_eq!(num.toggle_bit(08), 0b10000000);
+
+        let num: u8 = 0b11111111;
+
+        assert_eq!(num.toggle_bit(01), 0b11111110);
+        assert_eq!(num.toggle_bit(02), 0b11111101);
+        assert_eq!(num.toggle_bit(03), 0b11111011);
+        assert_eq!(num.toggle_bit(04), 0b11110111);
+        assert_eq!(num.toggle_bit(05), 0b11101111);
+        assert_eq!(num.toggle_bit(06), 0b11011111);
+        assert_eq!(num.toggle_bit(07), 0b10111111);
+        assert_eq!(num.toggle_bit(08), 0b01111111);
+
+        let num: u8 = 0b10110010;
+
+        assert_eq!(num.toggle_bit(01), 0b10110011);
+        assert_eq!(num.toggle_bit(02), 0b10110000);
+        assert_eq!(num.toggle_bit(03), 0b10110110);
+        assert_eq!(num.toggle_bit(04), 0b10111010);
+        assert_eq!(num.toggle_bit(05), 0b10100010);
+        assert_eq!(num.toggle_bit(06), 0b10010010);
+        assert_eq!(num.toggle_bit(07), 0b11110010);
+        assert_eq!(num.toggle_bit(08), 0b00110010);
+    }
+
 }
