@@ -235,7 +235,8 @@ where
             let header = self.bpm.fetch_page_read(self.header_page_id);
 
             // 3. If header is missing than the table is not yet initialized so return empty vector
-            if header.is_none() {
+            // TODO - should maybe propagate the error?
+            if header.is_err() {
                 // TODO - init header page if uninitialized to avoid cache hits until first set value
                 return vec![];
             }
@@ -259,7 +260,8 @@ where
             let directory = self.bpm.fetch_page_read(directory_page_id);
 
             // 7. If directory page is missing than not found
-            if directory.is_none() {
+            // TODO - should maybe propagate the error?
+            if directory.is_err() {
                 // TODO - Should we log warning that the page don't exists?
                 return vec![];
             }
@@ -285,7 +287,8 @@ where
             let bucket = self.bpm.fetch_page_read(bucket_page_id);
 
             // 11. If bucket page is missing than not found
-            if bucket.is_none() {
+            // TODO - should maybe propagate the error?
+            if bucket.is_err() {
                 // TODO - Should we log warning that the page don't exists?
                 return vec![];
             }

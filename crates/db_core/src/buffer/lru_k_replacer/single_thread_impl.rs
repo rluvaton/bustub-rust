@@ -95,7 +95,6 @@ impl LRUKReplacerImpl {
             return None;
         }
 
-        // This is not really performant, and we should better track the most likely to be evicted in a sorted way
         let evictable_frame = self
             .get_next_to_evict()
             .expect("Cant have missing evictable frame");

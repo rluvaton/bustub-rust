@@ -11,6 +11,7 @@ use std::collections::{HashMap, LinkedList};
 use std::sync::atomic::{Ordering};
 use std::sync::Arc;
 use tracy_client::{non_continuous_frame, secondary_frame_mark, span};
+use crate::buffer::buffer_pool_manager::{BufferPoolError, BufferPoolResult};
 
 // While waiting - red-ish (brighter than page lock)
 const ROOT_LOCK_WAITING_COLOR: u32 = 0xEF0107;
@@ -40,7 +41,7 @@ impl BufferPoolManager {
 
             inner: UnsafeCell::new(InnerBufferPoolManager {
                 next_page_id: AtomicPageId::new(0),
-                log_manager: log_manager,
+                log_manager,
 
                 // we allocate a consecutive memory space for the buffer pool
                 pages: Vec::with_capacity(pool_size),
@@ -88,7 +89,7 @@ impl BufferPoolManager {
      * Original: @param[out] page_id id of created page, (--- no need as can get from the page itself ---)
      * Original: @return nullptr if no new pages could be created, otherwise pointer to new page
      */
-    pub fn new_page(&self) -> Option<Page> {
+    pub fn new_page(&self) -> BufferPoolResult<Page> {
         let acquiring_root_latch = span!("Acquiring root latch");
 
         // Red color while waiting
@@ -167,7 +168,7 @@ impl BufferPoolManager {
                     underlying.increment_pin_count_unchecked();
                 });
 
-                return Some(old_page.clone());
+                return Ok(old_page.clone());
             }
 
             // In new page we're holding the root lock until we finish creating the new page
@@ -181,7 +182,7 @@ impl BufferPoolManager {
             // Pin before returning to the caller to avoid page to be evicted in the meantime
             new_page.pin();
 
-            Some(new_page)
+            Ok(new_page)
         }
     }
 
@@ -197,16 +198,16 @@ impl BufferPoolManager {
      * @param[out] page_id, the id of the new page
      * @return BasicPageGuard holding a new page
      */
-    pub fn new_page_guarded(self: &Arc<Self>) -> Option<PinPageGuard> {
+    pub fn new_page_guarded(self: &Arc<Self>) -> BufferPoolResult<PinPageGuard> {
         let page = self.new_page()?;
 
-        Some(PinPageGuard::new(self.clone(), page))
+        Ok(PinPageGuard::new(self.clone(), page))
     }
 
-    pub fn new_page_write_guarded<'a>(self: &Arc<Self>) -> Option<PinWritePageGuard<'a>> {
+    pub fn new_page_write_guarded<'a>(self: &Arc<Self>) -> BufferPoolResult<PinWritePageGuard<'a>> {
         let page = self.new_page_guarded()?;
 
-        Some(page.upgrade_write())
+        Ok(page.upgrade_write())
     }
 
     /**
@@ -226,16 +227,16 @@ impl BufferPoolManager {
      * @param access_type type of access to the page, only needed for leaderboard tests. - TODO - default for  = AccessType::Unknown
      * @return nullptr if page_id cannot be fetched, otherwise pointer to the requested page
      */
-    pub fn fetch_page(&self, page_id: PageId, access_type: AccessType) -> Option<Page> {
+    pub fn fetch_page(&self, page_id: PageId, access_type: AccessType) -> BufferPoolResult<Page> {
         if page_id == INVALID_PAGE_ID {
-            return None;
+            return Err(BufferPoolError::InvalidPageId);
         }
 
         self.fetch_page_unchecked(page_id, access_type)
     }
 
     #[inline(always)]
-    fn fetch_page_unchecked(&self, page_id: PageId, access_type: AccessType) -> Option<Page> {
+    fn fetch_page_unchecked(&self, page_id: PageId, access_type: AccessType) -> BufferPoolResult<Page> {
         assert_ne!(page_id, INVALID_PAGE_ID);
 
         let acquiring_root_latch = span!("Acquiring root latch");
@@ -290,7 +291,7 @@ impl BufferPoolManager {
 
                 let p = (*inner).pages[frame_id as usize].clone();
 
-                return Some(p);
+                return Ok(p);
             }
 
             // Need to fetch from disk
@@ -353,7 +354,7 @@ impl BufferPoolManager {
                     Self::fetch_specific_page_unchecked(&mut *scheduler, underlying);
                 });
 
-                return Some(old_page.clone());
+                return Ok(old_page.clone());
             }
 
             // We create a new page
@@ -389,7 +390,7 @@ impl BufferPoolManager {
                     Self::fetch_specific_page_unchecked(&mut *scheduler, &mut underlying);
                 });
 
-            Some(page)
+            Ok(page)
         }
     }
 
@@ -428,10 +429,10 @@ impl BufferPoolManager {
      * @param page_id, the id of the page to fetch
      * @return PageGuard holding the fetched page
      */
-    pub fn fetch_page_basic(self: &Arc<Self>, page_id: PageId) -> Option<PinPageGuard> {
+    pub fn fetch_page_basic(self: &Arc<Self>, page_id: PageId) -> BufferPoolResult<PinPageGuard> {
         let page = self.fetch_page(page_id, AccessType::Unknown)?;
 
-        Some(PinPageGuard::new(self.clone(), page))
+        Ok(PinPageGuard::new(self.clone(), page))
     }
 
     /**
@@ -447,10 +448,10 @@ impl BufferPoolManager {
      * @param page_id, the id of the page to fetch
      * @return PageGuard holding the fetched page
      */
-    pub fn fetch_page_read<'a>(self: &Arc<Self>, page_id: PageId) -> Option<PinReadPageGuard<'a>> {
+    pub fn fetch_page_read<'a>(self: &Arc<Self>, page_id: PageId) -> BufferPoolResult<PinReadPageGuard<'a>> {
         let page = self.fetch_page_basic(page_id)?;
 
-        Some(page.upgrade_read())
+        Ok(page.upgrade_read())
     }
 
     /**
@@ -466,10 +467,10 @@ impl BufferPoolManager {
      * @param page_id, the id of the page to fetch
      * @return PageGuard holding the fetched page
      */
-    pub fn fetch_page_write<'a>(self: &Arc<Self>, page_id: PageId) -> Option<PinWritePageGuard<'a>> {
+    pub fn fetch_page_write<'a>(self: &Arc<Self>, page_id: PageId) -> BufferPoolResult<PinWritePageGuard<'a>> {
         let page = self.fetch_page_basic(page_id)?;
 
-        Some(page.upgrade_write())
+        Ok(page.upgrade_write())
     }
 
     /**
@@ -731,14 +732,14 @@ impl BufferPoolManager {
         true
     }
 
-    fn find_replacement_frame(inner: &mut InnerBufferPoolManager) -> Option<FrameId> {
+    fn find_replacement_frame(inner: &mut InnerBufferPoolManager) -> BufferPoolResult<FrameId> {
         // Pick the replacement frame from the free list first
         if !inner.free_list.is_empty() {
             // Can't be empty
-            inner.free_list.pop_front()
+            inner.free_list.pop_front().ok_or(BufferPoolError::NoAvailableFrameFound)
         } else {
             // pick replacement from the replacer, can't be empty
-            inner.replacer.evict()
+            inner.replacer.evict().ok_or(BufferPoolError::NoAvailableFrameFound)
         }
     }
 

@@ -8,6 +8,7 @@ mod tests {
     use crate::storage::{AlignToPageData, DefaultDiskManager};
 
     use tempdir::TempDir;
+    use crate::buffer::buffer_pool_manager::BufferPoolError;
 
     fn setup() -> TempDir {
         TempDir::new("buffer_pool_manager_tests").expect("Should create tmp directory")
@@ -32,12 +33,8 @@ mod tests {
         let disk_manager = DefaultDiskManager::new(db_name).expect("should create disk manager");
         let bpm = BufferPoolManager::new(buffer_pool_size, Arc::new(Mutex::new(disk_manager)), Some(k), None);
 
-        let page0 = bpm.new_page();
-
         // Scenario: The buffer pool is empty. We should be able to create a new page.
-        assert_ne!(page0, None);
-
-        let page0 = page0.unwrap();
+        let page0 = bpm.new_page().expect("The buffer pool is empty. We should be able to create a new page");
 
         assert_eq!(page0.with_read(|u| u.get_page_id()), 0);
 
@@ -56,12 +53,12 @@ mod tests {
 
         // Scenario: We should be able to create new pages until we fill up the buffer pool.
         for _ in 1..buffer_pool_size {
-            assert_ne!(bpm.new_page(), None);
+            bpm.new_page().expect("Should be able to create new page");
         }
 
         // Scenario: Once the buffer pool is full, we should not be able to create any new pages.
         for _ in buffer_pool_size..buffer_pool_size * 2 {
-            assert_eq!(bpm.new_page(), None);
+            assert_eq!(bpm.new_page(), Err(BufferPoolError::NoAvailableFrameFound));
         }
 
         // Scenario: After unpinning pages {0, 1, 2, 3, 4}, we should be able to create 5 new pages
@@ -80,9 +77,8 @@ mod tests {
         }
 
         // Scenario: We should be able to fetch the data we wrote a while ago.
-        let page0 = bpm.fetch_page(0, AccessType::default());
-        assert_ne!(page0, None);
-        let page0 = page0.unwrap();
+        let page0 = bpm.fetch_page(0, AccessType::default())
+            .expect("We should be able to fetch the data we wrote a while ago");
 
         // EXPECT_EQ(0, memcmp(page0->GetData(), random_binary_data, BUSTUB_PAGE_SIZE));
         page0.with_read(|u| assert_eq!(u.get_data(), random_binary_data.as_slice()));
@@ -111,9 +107,7 @@ mod tests {
         let page0 = bpm.new_page();
 
         // Scenario: The buffer pool is empty. We should be able to create a new page.
-        assert_ne!(page0, None);
-
-        let page0 = page0.unwrap();
+        let page0 = bpm.new_page().expect("The buffer pool is empty. We should be able to create a new page");
 
         assert_eq!(page0.with_read(|u| u.get_page_id()), 0);
 
@@ -127,12 +121,12 @@ mod tests {
 
         // Scenario: We should be able to create new pages until we fill up the buffer pool.
         for _ in 1..buffer_pool_size {
-            assert_ne!(bpm.new_page(), None);
+            bpm.new_page().expect("Should be able to create new page");
         }
 
         // Scenario: Once the buffer pool is full, we should not be able to create any new pages.
         for _ in buffer_pool_size..buffer_pool_size * 2 {
-            assert_eq!(bpm.new_page(), None);
+            assert_eq!(bpm.new_page(), Err(BufferPoolError::NoAvailableFrameFound));
         }
 
         // Scenario: After unpinning pages {0, 1, 2, 3, 4} and pinning another 4 new pages,
@@ -142,7 +136,7 @@ mod tests {
         }
 
         for _ in 0..4 {
-            assert_ne!(bpm.new_page(), None);
+            assert_eq!(bpm.new_page(), Err(BufferPoolError::NoAvailableFrameFound));
         }
 
         // Scenario: We should be able to fetch the data we wrote a while ago.
@@ -153,7 +147,7 @@ mod tests {
         // now be pinned. Fetching page 0 again should fail.
         assert!(bpm.unpin_page(0, true, AccessType::default()));
         bpm.new_page().expect("Should create new page");
-        assert_eq!(bpm.fetch_page(0, AccessType::default()), None);
+        assert_eq!(bpm.fetch_page(0, AccessType::default()), Err(BufferPoolError::NoAvailableFrameFound));
 
         // Shutdown the disk manager and remove the temporary file we created.
         // TODO - shutdown

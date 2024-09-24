@@ -110,7 +110,7 @@ fn run_multi_threads_tests(options: Options) {
             while !duration_runner.should_finish() {
                 let page_id = page_ids.read()[page_idx as usize];
                 let page = bpm.fetch_page(page_id, AccessType::Scan);
-                if page.is_none() {
+                if page.is_err() {
                     continue;
                 }
 
@@ -153,8 +153,8 @@ fn run_multi_threads_tests(options: Options) {
                 let page_idx = page_id_getter.get();
                 let page = bpm.fetch_page(page_ids.read()[page_idx as usize], AccessType::Lookup);
 
-                if page.is_none() {
-                    eprintln!("cannot fetch page");
+                if let Some(err) = page.clone().err() {
+                    eprintln!("cannot fetch page {}", err);
                     panic!();
                 }
 
