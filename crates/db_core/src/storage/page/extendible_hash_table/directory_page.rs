@@ -168,7 +168,13 @@ impl DirectoryPage {
     /// returns: u32 mask of local 1's and the rest 0's (with 1's from LSB upwards)
     ///
     pub fn get_local_depth_mask(&self, bucket_idx: u32) -> u32 {
-        0xFFFFFFFFu32.get_n_lsb_bits(self.local_depths[bucket_idx as usize])
+        let local_depth = self.get_local_depth(bucket_idx);
+
+        if local_depth == 0 {
+            0u32
+        } else {
+            0xFFFFFFFFu32.get_n_lsb_bits(local_depth as u8)
+        }
     }
 
     /// Get the global depth of the hash table directory

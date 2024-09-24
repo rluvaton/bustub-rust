@@ -2,18 +2,17 @@
 mod tests {
     use crate::buffer::BufferPoolManager;
     use crate::catalog::Schema;
+    use crate::container::test_util::U64IdentityKeyHasher;
     use crate::container::{DefaultKeyHasher, DiskExtendibleHashTable};
-    use crate::storage::{hash_table_bucket_array_size, DiskManagerUnlimitedMemory, GenericComparator, GenericKey};
+    use crate::storage::{hash_table_bucket_array_size, DiskManagerUnlimitedMemory, GenericComparator, GenericKey, OrdComparator, U64Comparator};
     use common::config::{PageId, BUSTUB_PAGE_SIZE};
-    use common::{PageKey, PageValue, RID};
+    use common::RID;
     use generics::Shuffle;
     use parking_lot::Mutex;
     use rand::seq::SliceRandom;
     use rand::thread_rng;
     use std::collections::HashSet;
     use std::sync::Arc;
-    use crate::container::test_util::U64IdentityKeyHasher;
-    use crate::storage::test_util::U64Comparator;
 
     fn create_extendible_hash_table() -> DiskExtendibleHashTable<{ hash_table_bucket_array_size::<GenericKey<8>, RID>() }, GenericKey<8>, RID, GenericComparator<8>, DefaultKeyHasher> {
         let disk_manager = Arc::new(Mutex::new(DiskManagerUnlimitedMemory::new()));
@@ -32,7 +31,7 @@ mod tests {
     }
 
     #[test]
-    fn should_allow_basic_hash_map_operation_on_a_lot_of_keys_across_multiple_pages_for_real_world_entries() {
+    fn lifecycle() {
         let mut hash_table = create_extendible_hash_table();
 
         // Having enough keys so a split would happen
@@ -50,6 +49,7 @@ mod tests {
         }
 
         hash_table.verify_integrity();
+        let index_with_problem = 237732;
 
         // insert a few (key, value) pairs
         for i in 0..total {
@@ -57,6 +57,14 @@ mod tests {
 
             rid.set(i as PageId, i as u32);
 
+            if i == index_with_problem {
+                hash_table.print_hash_table();
+                hash_table.verify_integrity();
+            }
+
+            /// Abort process on panic, this should be used in thread
+            // This can lead to corruption, but if we panicked it is a bug in the db (I think)
+            // TODO - maybe do not abort as the DB can be in the middle of other things that can lead to corruption
             assert!(hash_table.insert(&index_key, &rid, None).is_ok(), "should insert new key {}", i);
         }
 
@@ -436,7 +444,7 @@ mod tests {
     }
 
     #[test]
-    fn lifecycle_in_single_directory() {
+    fn test_from_example_in_single_directory() {
         let disk_manager = Arc::new(Mutex::new(DiskManagerUnlimitedMemory::new()));
         let bpm = Arc::new(BufferPoolManager::new(100, disk_manager, Some(100), None));
 
@@ -452,7 +460,7 @@ mod tests {
         >::new(
             "temp".to_string(),
             bpm,
-            U64Comparator,
+            OrdComparator::<Key>::default(),
 
             // 1 directory is enough for us 2^0
             Some(0),
@@ -668,16 +676,16 @@ mod tests {
             { hash_table_bucket_array_size::<Key, Value>() },
             Key,
             Value,
-            U64Comparator,
+            OrdComparator<Key>,
             U64IdentityKeyHasher,
         >::new(
             "temp".to_string(),
             bpm,
-            U64Comparator,
+            OrdComparator::<Key>::default(),
 
             // TODO - change to `None`
-            Some(2),
-            Some(5),
+            None,
+            None,
             None,
         );
 
@@ -692,21 +700,24 @@ mod tests {
 
         hash_table.verify_integrity();
 
+        let problematic_key = 409600;
+
         // insert a few (key, value) pairs
         for key in 0..total {
-
+            if key == problematic_key {
+                hash_table.print_hash_table();
+                hash_table.verify_integrity();
+            }
 
             /// Abort process on panic, this should be used in thread
             // This can lead to corruption, but if we panicked it is a bug in the db (I think)
             assert!(hash_table.insert(&key, &key, None).is_ok(), "should insert new key {}", key);
-
         }
 
         hash_table.verify_integrity();
 
         // Should not find missing keys after the hash map is initialized
         for &key in &(total..total + 1_000_000).shuffle()[0..10] {
-
             assert_eq!(hash_table.get_value(&key, None), vec![], "should not find values for key {}", key);
         }
 
@@ -754,6 +765,38 @@ mod tests {
             for &key in removed_random_keys_to_reinsert {
                 let value = key + offset_for_reinserted_values;
 
+                assert!(hash_table.insert(&key, &value, None).is_ok(), "should insert new key {}", key);
+            }
+        }
+
+        hash_table.verify_integrity();
+
+        {
+            let reinserted_keys = HashSet::<Key>::from_iter(removed_random_keys_to_reinsert.iter().cloned());
+            let removed_keys = HashSet::<Key>::from_iter(random_key_index_to_remove.iter().cloned());
+
+            let removed_keys: HashSet::<Key> = &removed_keys - &reinserted_keys;
+
+            // Fetch all in random order
+            for key in (0..total).shuffle() {
+                let found_value = hash_table.get_value(&key, None);
+
+                if removed_keys.contains(&key) {
+                    assert_eq!(found_value, vec![], "should not find any values for removed key {}", key);
+                    continue;
+                } else if reinserted_keys.contains(&key) {
+                    let value = key + offset_for_reinserted_values;
+
+                    assert_eq!(found_value, vec![value], "should find updated value for reinserted key {}", key);
+                } else {
+                    let value = key;
+
+                    assert_eq!(found_value, vec![value], "should find original value for not changed key {}", key);
+                }
+            }
+        }
+
+        hash_table.verify_integrity();
     }
 
     // TODO - add test for deletion to already deleted should not do anything

@@ -8,6 +8,6 @@ mod key_comparator;
 pub use page::{Page, PageWriteGuard, PageReadGuard};
 pub use underlying_page::UnderlyingPage;
 pub use extendible_hash_table::*;
-pub use key_comparator::{Comparator, test_util};
+pub use key_comparator::*;
 
 pub use utils::AlignToPageData;

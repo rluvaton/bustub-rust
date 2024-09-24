@@ -31,7 +31,7 @@ const _: () = {
 
 const HASH_TABLE_BUCKET_PAGE_METADATA_SIZE: usize = size_of::<u32>() * 2;
 
-pub const fn hash_table_bucket_array_size<Key, Value>() -> usize {
+pub const fn hash_table_bucket_array_size<Key: PageKey, Value: PageValue>() -> usize {
     (BUSTUB_PAGE_SIZE - HASH_TABLE_BUCKET_PAGE_METADATA_SIZE) / size_of::<MappingType<Key, Value>>()
 }
 

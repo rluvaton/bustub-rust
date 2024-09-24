@@ -114,6 +114,8 @@ where
     ///
     /// Returns: `anyhow::Result` with empty value if succeed or error if failed
     ///
+    /// TODO - return custom result if inserted or not - NotInsertedError
+    ///
     pub fn insert(&mut self, key: &Key, value: &Value, transaction: Option<Arc<Transaction>>) -> anyhow::Result<()> {
         // TODO - use transaction
         assert!(transaction.is_none(), "transaction is not none, transactions are not supported at the moment");
@@ -351,12 +353,13 @@ where
         self.try_split(directory_page_guard, bucket_page_guard, bucket_index, key_hash, 3)
     }
 
-    fn try_split<'a>(&mut self, directory_page_guard: &mut PinWritePageGuard, mut bucket_page_guard: PinWritePageGuard<'a>, bucket_index: u32, key_hash: u32, tries_left: usize) -> anyhow::Result<PinWritePageGuard<'a>> {
+    fn try_split<'a>(&mut self, directory_page_guard: &mut PinWritePageGuard, mut bucket_page_guard: PinWritePageGuard<'a>, mut bucket_index: u32, key_hash: u32, tries_left: usize) -> anyhow::Result<PinWritePageGuard<'a>> {
         // 1. Check if reached max tries
         if tries_left == 0 {
             eprintln!("Trying to insert key but after split the page is still full, the hash might not evenly distribute the keys");
             panic!("Can't insert key");
         }
+
 
         let mut directory_page = directory_page_guard.cast_mut::<<Self as TypeAliases>::DirectoryPage>();
         let mut bucket_page = bucket_page_guard.cast_mut::<<Self as TypeAliases>::BucketPage>();
@@ -450,13 +453,34 @@ where
     }
 
     /// Return the splitted bucket indices
-    fn split_local_bucket(&mut self, bucket_index: u32, directory_page: &mut <Self as TypeAliases>::DirectoryPage, bucket_page_to_split: &mut <Self as TypeAliases>::BucketPage, new_bucket_guard: &mut PinWritePageGuard) {
+    fn split_local_bucket(&mut self, mut bucket_index: u32, directory_page: &mut <Self as TypeAliases>::DirectoryPage, bucket_page_to_split: &mut <Self as TypeAliases>::BucketPage, new_bucket_guard: &mut PinWritePageGuard) {
+
+        // Change bucket index to be the first bucket of the specific page, so it will be the index of the bucket that will be kept as is
+        // Example:
+        // If we want to split bucket with page id 3, and we got the bucket index with value 11 we want the
+        // +--------+---------+-------------+
+        // | prefix | page_id | local_depth |
+        // +--------+---------+-------------+
+        // | 00     | 2       | 2           |
+        // +--------+---------+-------------+
+        // | 01     | 3       | 1           |
+        // +--------+---------+-------------+
+        // | 10     | 4       | 2           |
+        // +--------+---------+-------------+
+        // | 11     | 3       | 1           |
+        // +--------+---------+-------------+
+
         let new_bucket_page_id = new_bucket_guard.get_page_id();
         let new_bucket_page = new_bucket_guard.cast_mut::<<Self as TypeAliases>::BucketPage>();
 
-        // 1. Get the new bucket index
         // The new bucket index is always the next bit turned on
+        // let new_bucket_index = bucket_index.toggle_bit(directory_page.get_local_depth(bucket_index) as usize + 1);
         let new_bucket_index = bucket_index.turn_on_bit(directory_page.get_local_depth(bucket_index) as usize + 1);
+
+        bucket_index = bucket_index & directory_page.get_local_depth_mask(bucket_index);
+
+        // If bit is already on, this means that we need to go to the old
+        assert_ne!(bucket_index, new_bucket_index, "Bucket index cannot be the same as the new bucket index");
 
 
         // 2. Register the new bucket in the directory
