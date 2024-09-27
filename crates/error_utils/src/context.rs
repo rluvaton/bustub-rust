@@ -1,4 +1,4 @@
-use crate::error_wrapper::{ErrorWrapper, UnderlyingError};
+use crate::error_wrapper::{Error, UnderlyingError};
 use crate::std_error_ext::StdErrorExt;
 use std::error::Error as StdError;
 use std::fmt::{Debug, Display};
@@ -6,13 +6,13 @@ use std::ops::Deref;
 
 pub trait Context<T, E: UnderlyingError> {
     /// Wrap the error value with additional context.
-    fn context<C>(self, context: C) -> Result<T, ErrorWrapper<E>>
+    fn context<C>(self, context: C) -> Result<T, Error<E>>
     where
         C: 'static + Display + Send + Sync;
 
     /// Wrap the error value with additional context that is evaluated lazily
     /// only once an error does occur.
-    fn with_context<C, F>(self, f: F) -> Result<T, ErrorWrapper<E>>
+    fn with_context<C, F>(self, f: F) -> Result<T, Error<E>>
     where
         C: 'static + Display + Send + Sync,
         F: FnOnce() -> C;
@@ -23,7 +23,7 @@ impl<T, E> Context<T, E> for Result<T, E>
 where
     E: StdError + Send + Sync + 'static,
 {
-    fn context<C>(self, context: C) -> Result<T, ErrorWrapper<E>>
+    fn context<C>(self, context: C) -> Result<T, Error<E>>
     where
         C: Display + Send + Sync + 'static,
     {
@@ -35,7 +35,7 @@ where
         }
     }
 
-    fn with_context<C, F>(self, context: F) -> Result<T, ErrorWrapper<E>>
+    fn with_context<C, F>(self, context: F) -> Result<T, Error<E>>
     where
         C: Display + Send + Sync + 'static,
         F: FnOnce() -> C,
@@ -47,11 +47,11 @@ where
     }
 }
 
-impl<T, E> Context<T, E> for Result<T, ErrorWrapper<E>>
+impl<T, E> Context<T, E> for Result<T, Error<E>>
 where
     E: UnderlyingError,
 {
-    fn context<C>(self, context: C) -> Result<T, ErrorWrapper<E>>
+    fn context<C>(self, context: C) -> Result<T, Error<E>>
     where
         C: Display + Send + Sync + 'static,
     {
@@ -63,7 +63,7 @@ where
         }
     }
 
-    fn with_context<C, F>(self, context: F) -> Result<T, ErrorWrapper<E>>
+    fn with_context<C, F>(self, context: F) -> Result<T, Error<E>>
     where
         C: Display + Send + Sync + 'static,
         F: FnOnce() -> C,
@@ -92,7 +92,7 @@ mod tests {
             Something(i8)
         }
 
-        type MyCustomErrorWithContext = crate::ErrorWrapper<MyCustomError>;
+        type MyCustomErrorWithContext = crate::Error<MyCustomError>;
 
         fn some_fn() -> Result<(), MyCustomError> {
             Err(MyCustomError::Something(1))

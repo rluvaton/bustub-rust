@@ -303,7 +303,6 @@ dependencies = [
 name = "db_core"
 version = "0.1.0"
 dependencies = [
- "anyhow",
  "atomic",
  "binary_utils",
  "bytemuck",
@@ -311,7 +310,7 @@ dependencies = [
  "common",
  "data_types",
  "derive_builder",
- "error-context",
+ "error_utils",
  "generics",
  "mut-binary-heap",
  "num-format",
@@ -382,12 +381,6 @@ name = "encode_unicode"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "34aa73646ffb006b8f5147f3dc182bd4bcb190227ce861fc4a4844bf8e3cb2c0"
-
-[[package]]
-name = "error-context"
-version = "0.1.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5edbf7c4b86d78ada1c60c758075b8de5ef5ceed043c0d70c2c98f4b47782933"
 
 [[package]]
 name = "error_utils"
