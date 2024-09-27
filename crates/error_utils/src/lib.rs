@@ -1,8 +1,7 @@
 mod context;
-mod error_wrapper;
+mod error;
 mod std_error_ext;
-mod macros;
 pub mod anyhow;
 
-pub use error_wrapper::Error as Error;
+pub use error::Error as Error;
 pub use context::Context;

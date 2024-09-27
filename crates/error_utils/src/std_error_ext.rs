@@ -1,6 +1,6 @@
 use std::fmt::{Debug, Display};
 use std::marker::PhantomData;
-use crate::error_wrapper::{Error, UnderlyingError};
+use crate::error::{Error, UnderlyingError};
 
 pub trait StdErrorExt<E: UnderlyingError> {
     fn ext_context<C>(self, context: C) -> Error<E>

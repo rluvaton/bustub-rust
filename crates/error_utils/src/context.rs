@@ -1,4 +1,4 @@
-use crate::error_wrapper::{Error, UnderlyingError};
+use crate::error::{Error, UnderlyingError};
 use crate::std_error_ext::StdErrorExt;
 use std::error::Error as StdError;
 use std::fmt::{Debug, Display};

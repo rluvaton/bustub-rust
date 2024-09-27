@@ -3,7 +3,7 @@ use std::fmt::{Debug, Display, Formatter};
 use std::marker::PhantomData;
 use std::ops::Deref;
 
-pub(crate) trait UnderlyingError: Display + Debug + Send + Sync + 'static {}
+pub trait UnderlyingError: Display + Debug + Send + Sync + 'static {}
 impl <E: Display + Debug + Send + Sync + 'static> UnderlyingError for E {}
 
 pub struct Error<E: UnderlyingError> {
@@ -13,6 +13,17 @@ pub struct Error<E: UnderlyingError> {
 
 unsafe impl<E: UnderlyingError> Send for Error<E> {}
 unsafe impl<E: UnderlyingError> Sync for Error<E> {}
+
+impl Error<crate::anyhow::Underlying> {
+    pub fn new_anyhow(error: crate::anyhow::Underlying) -> Self {
+        Self {
+            error,
+            phantom_data: PhantomData
+        }
+
+    }
+}
+
 
 impl<E: UnderlyingError> Debug for Error<E> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
