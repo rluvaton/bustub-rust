@@ -28,7 +28,7 @@ impl Value {
         &self.value
     }
 
-    pub fn try_cast_as(&self, db_type_id: DBTypeId) -> anyhow::Result<Value> {
+    pub fn try_cast_as(&self, db_type_id: DBTypeId) -> error_utils::anyhow::Result<Value> {
         let new = run_on_impl!(&self.value, current, {
            current.try_cast_as(db_type_id)?
         });

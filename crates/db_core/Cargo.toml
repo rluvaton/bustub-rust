@@ -9,9 +9,9 @@ binary_utils = {path = "../binary_utils"}
 generics = {path = "../generics"}
 stats = {path = "../stats"}
 data_types = {path = "../data_types"}
+error_utils = {path = "../error_utils"}
 
 thiserror = "1.0.64"
-anyhow = "1.0.86"
 prettytable = "0.10.0"
 atomic = "0.6.0"
 bytemuck = "1.18.0"

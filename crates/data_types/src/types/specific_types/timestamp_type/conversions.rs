@@ -1,5 +1,5 @@
 use crate::{TimestampType, TimestampUnderlyingType, ConversionDBTypeTrait, DBTypeId, DBTypeIdImpl, StorageDBTypeTrait, Value, ComparisonDBTypeTrait};
-use anyhow::anyhow;
+use error_utils::anyhow::anyhow;
 
 impl From<TimestampUnderlyingType> for TimestampType {
     fn from(value: TimestampUnderlyingType) -> Self {
@@ -94,7 +94,7 @@ impl ConversionDBTypeTrait for TimestampType {
         TimestampType::new(TimestampUnderlyingType::from_ne_bytes(storage[..Self::SIZE as usize].try_into().unwrap()))
     }
 
-    fn try_cast_as(&self, db_type_id: DBTypeId) -> anyhow::Result<DBTypeIdImpl> {
+    fn try_cast_as(&self, db_type_id: DBTypeId) -> error_utils::anyhow::Result<DBTypeIdImpl> {
 
         // TODO - if null
         match db_type_id {

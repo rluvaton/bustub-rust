@@ -1,5 +1,5 @@
 use crate::{assert_in_range, IntUnderlyingType, IntType, ConversionDBTypeTrait, DBTypeId, DBTypeIdImpl, StorageDBTypeTrait, Value, ComparisonDBTypeTrait, SmallIntType, SmallIntUnderlyingType, BigIntType, BigIntUnderlyingType, DecimalType, DecimalUnderlyingType, TinyIntType, TinyIntUnderlyingType};
-use anyhow::anyhow;
+use error_utils::anyhow::anyhow;
 
 impl From<IntUnderlyingType> for IntType {
     fn from(value: IntUnderlyingType) -> Self {
@@ -50,7 +50,7 @@ impl ConversionDBTypeTrait for IntType {
         IntType::new(IntUnderlyingType::from_ne_bytes(storage[..Self::SIZE as usize].try_into().unwrap()))
     }
 
-    fn try_cast_as(&self, db_type_id: DBTypeId) -> anyhow::Result<DBTypeIdImpl> {
+    fn try_cast_as(&self, db_type_id: DBTypeId) -> error_utils::anyhow::Result<DBTypeIdImpl> {
 
         // TODO - if null
         match db_type_id {

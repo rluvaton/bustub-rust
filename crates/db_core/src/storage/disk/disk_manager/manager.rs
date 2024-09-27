@@ -1,5 +1,3 @@
-use anyhow::{anyhow, Result};
-
 use crate::storage::disk::disk_manager::disk_manager_trait::DiskManager;
 use crate::storage::disk::disk_manager::utils::get_file_size;
 use common::config::{PageId, BUSTUB_PAGE_SIZE};
@@ -9,6 +7,8 @@ use std::fs::{File, OpenOptions};
 use std::io::{Read, Seek, SeekFrom, Write};
 use std::path::PathBuf;
 use std::time::Duration;
+use error_utils::anyhow::anyhow;
+use error_utils::ToAnyhowResult;
 
 static BUFFER_USED: Mutex<Option<Vec<u8>>> = Mutex::new(None);
 
@@ -42,7 +42,7 @@ impl DefaultDiskManager {
      * Creates a new disk manager that writes to the specified database file.
      * @param db_file the file name of the database file to write to
      */
-    pub fn new(db_file: PathBuf) -> Result<DefaultDiskManager> {
+    pub fn new(db_file: PathBuf) -> error_utils::anyhow::Result<DefaultDiskManager> {
         if db_file.extension().is_none() {
             println!("wrong file format");
 
@@ -61,7 +61,8 @@ impl DefaultDiskManager {
             .append(true) // std::ios::app
             // no std::ios::binary in rust
             .create(true) // if missing, create the file
-            .open(&log_name)?;
+            .open(&log_name)
+            .to_anyhow()?;
 
         // directory or file does not exist
         // if (!log_io.is_open()) {
@@ -80,7 +81,8 @@ impl DefaultDiskManager {
             .write(true) // std::ios::out
             // no std::ios::binary in rust
             .create(true) // if missing, create the file
-            .open(&file_name)?;
+            .open(&file_name)
+            .to_anyhow()?;
 
 
         // db_io_.open(db_file, std::ios::binary | std::ios::in | std::ios::out);

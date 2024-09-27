@@ -1,15 +1,18 @@
 use super::type_alias_trait::TypeAliases;
-use crate::buffer::{BufferPoolManager, PinPageGuard, PinWritePageGuard};
+use crate::buffer::{BufferPoolError, BufferPoolManager, PinPageGuard, PinWritePageGuard};
 use crate::concurrency::Transaction;
 use crate::container::hash::KeyHasher;
 use crate::storage::{Comparator, HASH_TABLE_DIRECTORY_MAX_DEPTH as DIRECTORY_MAX_DEPTH, HASH_TABLE_HEADER_MAX_DEPTH as HEADER_MAX_DEPTH};
-use anyhow::{anyhow, Context};
 use binary_utils::{IsBitOn, ModifyBit};
 use common::config::{PageId, HEADER_PAGE_ID, INVALID_PAGE_ID};
 use common::{PageKey, PageValue};
 use std::fmt::{Debug, Formatter};
 use std::marker::PhantomData;
 use std::sync::Arc;
+use error_utils::Context;
+use super::errors;
+
+const NUMBER_OF_SPLIT_RETRIES: usize = 3;
 
 /// Implementation of extendible hash table that is backed by a buffer pool
 /// manager. Non-unique keys are supported. Supports insert and delete. The
@@ -79,16 +82,16 @@ where
     /// - `directory_max_depth`: the max depth allowed for the directory page
     /// - `bucket_max_size`: the max size allowed for the bucket page array
     ///
-    pub fn new(name: String, bpm: Arc<BufferPoolManager>, cmp: KeyComparator, header_max_depth: Option<u32>, directory_max_depth: Option<u32>, bucket_max_size: Option<u32>) -> Self {
+    pub fn new(name: String, bpm: Arc<BufferPoolManager>, cmp: KeyComparator, header_max_depth: Option<u32>, directory_max_depth: Option<u32>, bucket_max_size: Option<u32>) -> Result<Self, errors::InitError> {
         // Validate correct generic at compile time
         let _ = <Self as TypeAliases>::BucketPage::ARRAY_SIZE_OK;
 
         assert_eq!(BUCKET_MAX_SIZE as u32 as usize, BUCKET_MAX_SIZE, "Bucket max size must be u32 in size");
 
         let header_max_depth = header_max_depth.unwrap_or(HEADER_MAX_DEPTH);
-        Self::init_new_header(bpm.clone(), header_max_depth);
+        Self::init_new_header(bpm.clone(), header_max_depth)?;
 
-        Self {
+        Ok(Self {
             index_name: name,
             bpm,
             cmp,
@@ -100,7 +103,7 @@ where
             bucket_max_size: bucket_max_size.unwrap_or(BUCKET_MAX_SIZE as u32),
 
             phantom_data: PhantomData,
-        }
+        })
     }
 
     /// TODO(P2): Add implementation
@@ -116,7 +119,7 @@ where
     ///
     /// TODO - return custom result if inserted or not - NotInsertedError
     ///
-    pub fn insert(&mut self, key: &Key, value: &Value, transaction: Option<Arc<Transaction>>) -> anyhow::Result<()> {
+    pub fn insert(&mut self, key: &Key, value: &Value, transaction: Option<Arc<Transaction>>) -> Result<(), errors::InsertionError> {
         // TODO - use transaction
         assert!(transaction.is_none(), "transaction is not none, transactions are not supported at the moment");
 
@@ -141,7 +144,8 @@ where
 
         // 5. If no directory exists create it
         if directory_page_id == INVALID_PAGE_ID {
-            let directory_guard = self.init_new_directory().context("Failed to initialize new directory page while trying to insert new entry to the hash table")?;
+            let directory_guard = self.init_new_directory()
+                .context("Failed to initialize new directory page while trying to insert new entry to the hash table")?;
             directory_page_id = directory_guard.get_page_id();
 
             // 6. Register the directory in the header page
@@ -173,7 +177,7 @@ where
 
         // 12. If the bucket already contain the data return error
         if bucket_page.lookup(&key, &self.cmp).is_some() {
-            return Err(anyhow!("Key already exists"));
+            return Err(errors::InsertionError::KeyAlreadyExists);
         }
 
         // 13. if bucket page is full, need to split
@@ -184,13 +188,9 @@ where
         let bucket_page = bucket.cast_mut::<<Self as TypeAliases>::BucketPage>();
 
         // 13. try to insert the key
-        let inserted = bucket_page.insert(key, value, &self.cmp);
+        bucket_page.insert(key, value, &self.cmp)?;
 
-        if !inserted {
-            Err(anyhow!("Failed to insert the key"))
-        } else {
-            Ok(())
-        }
+        Ok(())
     }
 
     /// TODO(P2): Add implementation
@@ -203,7 +203,7 @@ where
     ///
     /// Returns: `true` if remove succeeded, `false` otherwise
     ///
-    pub fn remove(&mut self, key: &Key, transaction: Option<Arc<Transaction>>) -> anyhow::Result<bool> {
+    pub fn remove(&mut self, key: &Key, transaction: Option<Arc<Transaction>>) -> error_utils::anyhow::Result<bool> {
         unimplemented!()
     }
 
@@ -351,16 +351,16 @@ where
         KeyHasherImpl::hash_key(key) as u32
     }
 
-    fn trigger_split<'a>(&mut self, directory_page_guard: &mut PinWritePageGuard, bucket_page_guard: PinWritePageGuard<'a>, bucket_index: u32, key_hash: u32) -> anyhow::Result<PinWritePageGuard<'a>> {
+    fn trigger_split<'a>(&mut self, directory_page_guard: &mut PinWritePageGuard, bucket_page_guard: PinWritePageGuard<'a>, bucket_index: u32, key_hash: u32) -> Result<PinWritePageGuard<'a>, errors::SplitError> {
         // Try to split the bucket with 3 iteration (after that it seems like the hash function is not good, or we have a bug)
-        self.try_split(directory_page_guard, bucket_page_guard, bucket_index, key_hash, 3)
+        self.try_split(directory_page_guard, bucket_page_guard, bucket_index, key_hash, NUMBER_OF_SPLIT_RETRIES)
     }
 
-    fn try_split<'a>(&mut self, directory_page_guard: &mut PinWritePageGuard, mut bucket_page_guard: PinWritePageGuard<'a>, mut bucket_index: u32, key_hash: u32, tries_left: usize) -> anyhow::Result<PinWritePageGuard<'a>> {
+    fn try_split<'a>(&mut self, directory_page_guard: &mut PinWritePageGuard, mut bucket_page_guard: PinWritePageGuard<'a>, mut bucket_index: u32, key_hash: u32, tries_left: usize) -> Result<PinWritePageGuard<'a>, errors::SplitError> {
         // 1. Check if reached max tries
         if tries_left == 0 {
             eprintln!("Trying to insert key but after split the page is still full, the hash might not evenly distribute the keys");
-            panic!("Can't insert key");
+            return Err(errors::SplitError::ReachedRetryLimit(NUMBER_OF_SPLIT_RETRIES));
         }
 
 
@@ -388,7 +388,7 @@ where
 
         let bucket_index_to_insert = directory_page.hash_to_bucket_index(key_hash);
         let bucket_to_insert_page_id = directory_page.get_bucket_page_id(bucket_index_to_insert);
-        let bucket_to_insert = if bucket_to_insert_page_id == new_bucket_page_id { new_bucket_page} else { bucket_page };
+        let bucket_to_insert = if bucket_to_insert_page_id == new_bucket_page_id { new_bucket_page } else { bucket_page };
 
         // 7. Check if still after the split we can't insert
         if bucket_to_insert.is_full() {
@@ -415,9 +415,9 @@ where
         todo!()
     }
 
-    fn init_new_header(bpm: Arc<BufferPoolManager>, header_max_depth: u32) {
+    fn init_new_header(bpm: Arc<BufferPoolManager>, header_max_depth: u32) -> Result<(), errors::InitError> {
         // TODO - this should be removed, we should not create on each instance and instead it should depend if the hash table exists or not
-        let header_page = bpm.new_page_guarded().expect("should create page");
+        let header_page = bpm.new_page_guarded()?;
 
         assert_eq!(header_page.get_page_id(), HEADER_PAGE_ID, "must be uninitialized");
         let mut page_guard = header_page.upgrade_write();
@@ -425,9 +425,11 @@ where
         let page = page_guard.cast_mut::<<Self as TypeAliases>::HeaderPage>();
 
         page.init(Some(header_max_depth));
+
+        Ok(())
     }
 
-    fn init_new_directory(&mut self) -> anyhow::Result<PinPageGuard> {
+    fn init_new_directory(&mut self) -> Result<PinPageGuard, BufferPoolError> {
 
         // TODO - do not expect that and abort instead
         let directory_page = self.bpm.new_page_guarded().context("Should be able to create page")?;
@@ -442,7 +444,7 @@ where
         Ok(directory_page)
     }
 
-    fn init_new_bucket(&mut self) -> anyhow::Result<PinPageGuard> {
+    fn init_new_bucket(&mut self) -> Result<PinPageGuard, BufferPoolError> {
         let bucket_page = self.bpm.new_page_guarded().context("Should be able to create page")?;
 
         {

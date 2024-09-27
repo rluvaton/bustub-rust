@@ -1,5 +1,5 @@
+use error_utils::anyhow::anyhow;
 use crate::catalog::Column;
-use anyhow::{anyhow, Result};
 use data_types::DBTypeId;
 use std::fmt::{Debug, Display, Formatter};
 use std::sync::Arc;
@@ -143,7 +143,7 @@ impl Schema {
 
     // exported only for tests
     #[cfg(test)]
-    pub fn parse_create_statement(sql_base: &str) -> Result<Arc<Schema>> {
+    pub fn parse_create_statement(sql_base: &str) -> error_utils::anyhow::Result<Arc<Schema>> {
         let mut n: usize;
         let mut v: Vec<Column> = vec![];
         let mut column_name: &str;

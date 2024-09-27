@@ -2,7 +2,7 @@
 mod tests {
     use crate::buffer::BufferPoolManager;
     use crate::catalog::Schema;
-    use crate::storage::{hash_table_bucket_array_size, DiskManagerUnlimitedMemory, ExtendibleHashTableBucketPage, ExtendibleHashTableDirectoryPage, ExtendibleHashTableHeaderPage, GenericComparator, GenericKey};
+    use crate::storage::{hash_table_bucket_array_size, DiskManagerUnlimitedMemory, ExtendibleHashBucketPageInsertionErrors, ExtendibleHashTableBucketPage, ExtendibleHashTableDirectoryPage, ExtendibleHashTableHeaderPage, GenericComparator, GenericKey};
     use common::config::{PageId, INVALID_PAGE_ID};
     use common::RID;
     use parking_lot::Mutex;
@@ -30,13 +30,14 @@ mod tests {
             for i in 0..10 {
                 index_key.set_from_integer(i);
                 rid.set(i as PageId, i as u32);
-                assert!(bucket_page.insert(&index_key, &rid, &comparator), "should insert new key {}", i);
+                bucket_page.insert(&index_key, &rid, &comparator).expect(format!("should insert new key {}", i).as_str());
             }
 
             index_key.set_from_integer(11);
             rid.set(11, 11);
             assert!(bucket_page.is_full(), "bucket should be full");
-            assert_eq!(bucket_page.insert(&index_key, &rid, &comparator), false, "should not insert existing key");
+
+            assert_eq!(bucket_page.insert(&index_key, &rid, &comparator), Err(ExtendibleHashBucketPageInsertionErrors::KeyAlreadyExists), "should not insert existing key");
 
             // check for the inserted pairs
             for i in 0..10 {

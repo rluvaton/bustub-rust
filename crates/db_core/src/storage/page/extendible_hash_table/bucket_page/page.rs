@@ -7,7 +7,8 @@ use std::mem::size_of;
 use std::slice::Iter;
 use prettytable::{row, Table};
 use common::{PageKey, PageValue, RID};
-use crate::storage::{Comparator, GenericComparator, GenericKey};
+use crate::storage::{Comparator, ExtendibleHashBucketPageInsertionErrors, GenericComparator, GenericKey};
+use crate::storage::page::extendible_hash_table::bucket_page::errors;
 
 // Test assertion helper type
 const _ASSERTION_TEST_TYPE: usize = hash_table_bucket_array_size::<GenericKey<8>, RID>();
@@ -142,7 +143,7 @@ where
     /// returns: Option<& Value> None if the key was missing, Some with reference to the found value if not
     ///
     pub fn lookup(&self, key: &Key, comparator: &KeyComparator) -> Option<&Value> {
-        self.array[0..self.size as usize]
+        self
             .iter()
             .find(|(item_key, _)| comparator.cmp(key, &item_key) == Ordering::Equal)
             .map(|(_key, value)| value)
@@ -156,9 +157,9 @@ where
      * @param cmp the comparator to use
      * @return true if inserted, false if bucket is full or the same key is already present
      */
-    pub fn insert(&mut self, key: &Key, value: &Value, comparator: &KeyComparator) -> bool {
+    pub fn insert(&mut self, key: &Key, value: &Value, comparator: &KeyComparator) -> Result<(), ExtendibleHashBucketPageInsertionErrors> {
         if self.is_full() {
-            return false;
+            return Err(ExtendibleHashBucketPageInsertionErrors::BucketIsFull);
         }
 
         let missing = self.array[0..self.size as usize]
@@ -166,7 +167,7 @@ where
             .all(|(item_key, _)| comparator.cmp(key, &item_key) != Ordering::Equal);
 
         if !missing {
-            return false;
+            return Err(ExtendibleHashBucketPageInsertionErrors::KeyAlreadyExists);
         }
 
         let entry: MappingType<Key, Value> = (key.clone(), value.clone());
@@ -174,7 +175,7 @@ where
         self.array[self.size as usize] = entry;
         self.size += 1;
 
-        true
+        Ok(())
     }
 
     /**

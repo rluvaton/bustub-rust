@@ -1,5 +1,5 @@
 use crate::{ArithmeticsDBTypeTrait, BooleanType, Value};
-use anyhow::anyhow;
+use error_utils::anyhow::anyhow;
 use std::ops::{Add, Div, Mul, Rem, Sub};
 
 impl Add for BooleanType {
@@ -83,7 +83,7 @@ impl Rem<Value> for BooleanType {
 }
 
 impl ArithmeticsDBTypeTrait for BooleanType {
-    fn operate_null(&self, rhs: &Value) -> anyhow::Result<Value> {
+    fn operate_null(&self, rhs: &Value) -> error_utils::anyhow::Result<Value> {
         Err(anyhow!("operate null on boolean is not available"))
     }
 }

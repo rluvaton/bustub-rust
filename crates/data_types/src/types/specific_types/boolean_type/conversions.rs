@@ -1,5 +1,5 @@
 use crate::{BooleanType, BooleanUnderlyingType, ConversionDBTypeTrait, DBTypeId, DBTypeIdImpl, StorageDBTypeTrait, Value};
-use anyhow::anyhow;
+use error_utils::anyhow::anyhow;
 
 impl From<BooleanUnderlyingType> for BooleanType {
     fn from(value: BooleanUnderlyingType) -> Self {
@@ -85,7 +85,7 @@ impl ConversionDBTypeTrait for BooleanType {
         BooleanType::new(BooleanUnderlyingType::from_ne_bytes(storage[..Self::SIZE as usize].try_into().unwrap()))
     }
 
-    fn try_cast_as(&self, db_type_id: DBTypeId) -> anyhow::Result<DBTypeIdImpl> {
+    fn try_cast_as(&self, db_type_id: DBTypeId) -> error_utils::anyhow::Result<DBTypeIdImpl> {
 
         // TODO - if null
         match db_type_id {

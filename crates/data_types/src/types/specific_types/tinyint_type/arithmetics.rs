@@ -1,5 +1,5 @@
 use crate::{run_on_numeric_impl, ArithmeticsDBTypeTrait, BigIntType, BigIntUnderlyingType, ComparisonDBTypeTrait, DBTypeId, DBTypeIdImpl, DecimalType, DecimalUnderlyingType, FormatDBTypeTrait, IntType, IntUnderlyingType, SmallIntType, SmallIntUnderlyingType, TinyIntType, Value};
-use anyhow::anyhow;
+use error_utils::anyhow::anyhow;
 use std::ops::{Add, Div, Mul, Rem, Sub};
 
 impl Add for TinyIntType {
@@ -293,7 +293,7 @@ impl Rem<Value> for TinyIntType {
 }
 
 impl ArithmeticsDBTypeTrait for TinyIntType {
-    fn operate_null(&self, rhs: &Value) -> anyhow::Result<Value> {
+    fn operate_null(&self, rhs: &Value) -> error_utils::anyhow::Result<Value> {
         match rhs.get_db_type_id() {
             DBTypeId::TINYINT => Ok(Value::new(TinyIntType::default().into())),
             DBTypeId::SMALLINT => Ok(Value::new(SmallIntType::default().into())),

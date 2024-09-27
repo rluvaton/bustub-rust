@@ -21,7 +21,7 @@ ops::Rem<Value, Output=Value> // '%'
         todo!()
     }
 
-    fn operate_null(&self, rhs: &Value) -> anyhow::Result<Value>;
+    fn operate_null(&self, rhs: &Value) -> error_utils::anyhow::Result<Value>;
 
     unsafe fn operate_null_unchecked(&self, rhs: &Value) -> Value {
         self.operate_null(rhs).expect("Must be able to operate null")
@@ -61,7 +61,7 @@ Into<DBTypeIdImpl>
     // Return a stringified version of this value
     fn as_string(&self) -> String;
 
-    fn try_cast_as(&self, db_type_id: DBTypeId) -> anyhow::Result<DBTypeIdImpl>;
+    fn try_cast_as(&self, db_type_id: DBTypeId) -> error_utils::anyhow::Result<DBTypeIdImpl>;
 
     unsafe fn cast_as_unchecked(&self, db_type_id: DBTypeId) -> DBTypeIdImpl {
         self.try_cast_as(db_type_id).expect("cannot cast as the requested_type")

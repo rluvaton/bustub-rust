@@ -11,7 +11,7 @@ use std::collections::{HashMap, LinkedList};
 use std::sync::atomic::{Ordering};
 use std::sync::Arc;
 use tracy_client::{non_continuous_frame, secondary_frame_mark, span};
-use crate::buffer::buffer_pool_manager::{BufferPoolError, BufferPoolResult};
+use crate::buffer::buffer_pool_manager::{BufferPoolError, BufferPoolResult, UnderlyingBufferPoolError};
 
 // While waiting - red-ish (brighter than page lock)
 const ROOT_LOCK_WAITING_COLOR: u32 = 0xEF0107;
@@ -229,7 +229,7 @@ impl BufferPoolManager {
      */
     pub fn fetch_page(&self, page_id: PageId, access_type: AccessType) -> BufferPoolResult<Page> {
         if page_id == INVALID_PAGE_ID {
-            return Err(BufferPoolError::InvalidPageId);
+            return Err(UnderlyingBufferPoolError::InvalidPageId.into());
         }
 
         self.fetch_page_unchecked(page_id, access_type)
@@ -736,10 +736,10 @@ impl BufferPoolManager {
         // Pick the replacement frame from the free list first
         if !inner.free_list.is_empty() {
             // Can't be empty
-            inner.free_list.pop_front().ok_or(BufferPoolError::NoAvailableFrameFound)
+            inner.free_list.pop_front().ok_or(UnderlyingBufferPoolError::NoAvailableFrameFound.into())
         } else {
             // pick replacement from the replacer, can't be empty
-            inner.replacer.evict().ok_or(BufferPoolError::NoAvailableFrameFound)
+            inner.replacer.evict().ok_or(UnderlyingBufferPoolError::NoAvailableFrameFound.into())
         }
     }
 

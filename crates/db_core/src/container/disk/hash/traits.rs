@@ -2,7 +2,7 @@ use crate::concurrency::Transaction;
 use common::{PageKey, PageValue};
 use std::hash::Hash;
 use std::sync::Arc;
-
+use crate::container::disk::hash::errors::HashTableResult;
 // pub enum HashTableWithSingleKeyError {
 //     KeyAlreadyExists,
 //     BufferPoolError(BufferPoolError),
@@ -23,7 +23,7 @@ pub trait HashTableWithSingleKey<Key: PageKey, Value: PageValue> {
     ///
     /// TODO - return custom result if inserted or not - NotInsertedError
     ///
-    fn insert(&mut self, key: &Key, value: &Value, transaction: Option<Arc<Transaction>>) -> anyhow::Result<()>;
+    fn insert(&mut self, key: &Key, value: &Value, transaction: Option<Arc<Transaction>>) -> HashTableResult<()>;
 
     /// TODO(P2): Add implementation
     /// Removes a key-value pair from the hash table.
@@ -35,7 +35,7 @@ pub trait HashTableWithSingleKey<Key: PageKey, Value: PageValue> {
     ///
     /// Returns: `true` if remove succeeded, `false` otherwise
     ///
-    fn remove(&mut self, key: &Key, transaction: Option<Arc<Transaction>>) -> anyhow::Result<bool>;
+    fn remove(&mut self, key: &Key, transaction: Option<Arc<Transaction>>) -> HashTableResult<bool>;
 
     /// TODO(P2): Add implementation
     /// Get the value associated with a given key in the hash table.
@@ -49,7 +49,7 @@ pub trait HashTableWithSingleKey<Key: PageKey, Value: PageValue> {
     ///
     /// Returns: `Vec<Value` the value(s) associated with the given key
     ///
-    fn get_value(&self, key: &Key, transaction: Option<Arc<Transaction>>) -> Option<Value>;
+    fn get_value(&self, key: &Key, transaction: Option<Arc<Transaction>>) -> HashTableResult<Option<Value>>;
 
     /// Helper function to verify the integrity of the extendible hash table's directory.
     fn verify_integrity(&self);

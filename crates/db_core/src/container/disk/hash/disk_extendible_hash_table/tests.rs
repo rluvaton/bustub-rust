@@ -27,7 +27,7 @@ mod tests {
             None,
             None,
             None,
-        )
+        ).expect("Should be able to create hash table")
     }
 
     #[test]
@@ -186,7 +186,7 @@ mod tests {
             Some(3),
             Some(3),
             Some(3),
-        );
+        ).expect("Should be able to create hash table");
 
 
         let mut index_key = GenericKey::<8>::default();
@@ -470,7 +470,7 @@ mod tests {
 
             // can hold up to 3 items
             Some(3),
-        );
+        ).expect("Should be able to create hash table");
 
         hash_table.verify_integrity();
 
@@ -687,7 +687,7 @@ mod tests {
             None,
             None,
             None,
-        );
+        ).expect("Should be able to create hash table");
 
         // Having enough keys so a split would happen
         let total = (BUSTUB_PAGE_SIZE * 100) as Key;

@@ -86,6 +86,20 @@ pub struct Error<E: UnderlyingError> {
 unsafe impl<E: UnderlyingError> Send for Error<E> {}
 unsafe impl<E: UnderlyingError> Sync for Error<E> {}
 
+impl<E:UnderlyingError + PartialEq> PartialEq for Error<E> {
+    fn eq(&self, other: &Self) -> bool {
+        self.deref().eq(other.deref())
+    }
+}
+impl<E:UnderlyingError + Clone + std::error::Error> Clone for Error<E> {
+    fn clone(&self) -> Self {
+        Error {
+            error: self.deref().clone().into(),
+            phantom_data: PhantomData
+        }
+    }
+}
+
 impl Error<anyhow::Error> {
     pub fn new_anyhow(error: anyhow::Error) -> Self {
         Self {
@@ -194,10 +208,8 @@ where
 
 #[cfg(test)]
 mod tests {
-use crate::UnderlyingError;
-use std::fs::OpenOptions;
     use std::io;
-    use crate::anyhow::Error;
+    use crate::ToAnyhowResult;
 
     #[test]
     fn casting_as_before_for_io_error_and_anyhow() {
@@ -217,7 +229,7 @@ use std::fs::OpenOptions;
                 return Err(crate::anyhow::anyhow!("hello"));
             }
 
-            std::fs::OpenOptions::new().open("foo.txt").map_err(|e| anyhow::Error::from(e)).map_err(|err| Error::new_anyhow(err))?;
+            std::fs::OpenOptions::new().open("foo.txt").to_anyhow()?;
 
             Ok(())
         }
