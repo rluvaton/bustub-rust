@@ -21,7 +21,7 @@
 #[macro_export]
 macro_rules! anyhow {
     ($msg:literal $(,)?) => {
-        $crate::Error::new_anyhow(error: anyhow::anyhow!($msg))
+        $crate::Error::new_anyhow(anyhow::anyhow!($msg))
     };
     ($err:expr $(,)?) => {
         $crate::Error::new_anyhow(anyhow::anyhow!($err))

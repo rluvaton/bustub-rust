@@ -16,7 +16,10 @@ where
     where
         C: Display + Send + Sync + 'static,
     {
-        let error: Error<E> = self.into();
+        let error: Error<E> = Error {
+            error: self.into(),
+            phantom_data: PhantomData
+        };
 
         error.ext_context(context)
     }
