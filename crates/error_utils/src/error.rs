@@ -117,6 +117,12 @@ impl<E: UnderlyingError> Debug for Error<E> {
     }
 }
 
+impl<E: UnderlyingError> Display for Error<E> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        Display::fmt(&self.error, f)
+    }
+}
+
 impl<E: UnderlyingError> Deref for Error<E> {
     type Target = E;
 

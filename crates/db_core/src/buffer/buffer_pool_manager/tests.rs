@@ -8,7 +8,7 @@ mod tests {
     use crate::storage::{AlignToPageData, DefaultDiskManager};
 
     use tempdir::TempDir;
-    use crate::buffer::buffer_pool_manager::BufferPoolError;
+    use crate::buffer::buffer_pool_manager::{BufferPoolError, UnderlyingBufferPoolError};
 
     fn setup() -> TempDir {
         TempDir::new("buffer_pool_manager_tests").expect("Should create tmp directory")
@@ -58,7 +58,7 @@ mod tests {
 
         // Scenario: Once the buffer pool is full, we should not be able to create any new pages.
         for _ in buffer_pool_size..buffer_pool_size * 2 {
-            assert_eq!(bpm.new_page(), Err(BufferPoolError::NoAvailableFrameFound));
+            assert_eq!(bpm.new_page(), Err(UnderlyingBufferPoolError::NoAvailableFrameFound.into()));
         }
 
         // Scenario: After unpinning pages {0, 1, 2, 3, 4}, we should be able to create 5 new pages
@@ -126,7 +126,7 @@ mod tests {
 
         // Scenario: Once the buffer pool is full, we should not be able to create any new pages.
         for _ in buffer_pool_size..buffer_pool_size * 2 {
-            assert_eq!(bpm.new_page(), Err(BufferPoolError::NoAvailableFrameFound));
+            assert_eq!(bpm.new_page(), Err(UnderlyingBufferPoolError::NoAvailableFrameFound.into()));
         }
 
         // Scenario: After unpinning pages {0, 1, 2, 3, 4} and pinning another 4 new pages,
@@ -136,7 +136,7 @@ mod tests {
         }
 
         for _ in 0..4 {
-            assert_eq!(bpm.new_page(), Err(BufferPoolError::NoAvailableFrameFound));
+            assert_eq!(bpm.new_page(), Err(UnderlyingBufferPoolError::NoAvailableFrameFound.into()));
         }
 
         // Scenario: We should be able to fetch the data we wrote a while ago.
@@ -147,7 +147,7 @@ mod tests {
         // now be pinned. Fetching page 0 again should fail.
         assert!(bpm.unpin_page(0, true, AccessType::default()));
         bpm.new_page().expect("Should create new page");
-        assert_eq!(bpm.fetch_page(0, AccessType::default()), Err(BufferPoolError::NoAvailableFrameFound));
+        assert_eq!(bpm.fetch_page(0, AccessType::default()), Err(UnderlyingBufferPoolError::NoAvailableFrameFound.into()));
 
         // Shutdown the disk manager and remove the temporary file we created.
         // TODO - shutdown

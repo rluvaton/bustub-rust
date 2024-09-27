@@ -3,7 +3,7 @@ use crate::catalog::Column;
 use data_types::DBTypeId;
 use std::fmt::{Debug, Display, Formatter};
 use std::sync::Arc;
-
+use error_utils::ToAnyhowResult;
 
 // TODO - implement src/include/catalog/schema.h
 pub struct Schema {
@@ -180,7 +180,7 @@ impl Schema {
             if let Some(white_space_position) = t.find("(") {
                 n = white_space_position;
 
-                column_length = i32::from_ne_bytes(column_type.as_bytes()[n + 1..].try_into()?);
+                column_length = i32::from_ne_bytes(column_type.as_bytes()[n + 1..].try_into().to_anyhow()?);
                 column_type = &column_type[..n];
             }
 

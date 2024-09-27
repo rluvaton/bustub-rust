@@ -172,7 +172,7 @@ fn main() {
                 let page = bpm.fetch_page(page_ids.read()[page_idx as usize], AccessType::Scan);
                 drop(fetch_page);
 
-                if page.is_none() {
+                if page.is_err() {
                     continue;
                 }
 
@@ -240,7 +240,7 @@ fn main() {
                 let page = bpm.fetch_page(page_ids.read()[page_idx], AccessType::Lookup);
                 drop(fetch_page_span);
 
-                if page.is_none() {
+                if page.is_err() {
                     eprintln!("cannot fetch page");
                     abort();
                 }
@@ -348,7 +348,7 @@ fn validate_initialized_pages(bustub_page_cnt: usize, bpm: &Arc<BufferPoolManage
 
         let page = bpm.fetch_page(page_ids.read()[page_idx], AccessType::Lookup);
 
-        if page.is_none() {
+        if page.is_err() {
             eprintln!("cannot fetch page");
             abort();
         }

@@ -188,7 +188,9 @@ where
         let bucket_page = bucket.cast_mut::<<Self as TypeAliases>::BucketPage>();
 
         // 13. try to insert the key
-        bucket_page.insert(key, value, &self.cmp)?;
+        // Safety: doing unwrap as it should not happen since we split
+        //         and we have a lock - TODO - add a lock
+        bucket_page.insert(key, value, &self.cmp).unwrap();
 
         Ok(())
     }
