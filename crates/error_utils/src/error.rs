@@ -15,7 +15,9 @@ impl<E: Display + Debug + Send + Sync + 'static> UnderlyingError for E {}
 /// Anyhow and std::Error type
 ///
 /// ```
-/// // THis is how you did it with anyhow
+/// use error_utils::ToAnyhowResult;
+///
+/// // This is how you did it with anyhow
 /// fn create_error_using_anyhow(io_error: bool) -> anyhow::Result<()> {
 ///     if !io_error {
 ///         return Err(anyhow::anyhow!("hello"));
@@ -32,7 +34,7 @@ impl<E: Display + Debug + Send + Sync + 'static> UnderlyingError for E {}
 ///         return Err(error_utils::anyhow::anyhow!("hello"));
 ///     }
 ///
-///     std::fs::OpenOptions::new().open("foo.txt")?;
+///     std::fs::OpenOptions::new().open("foo.txt").to_anyhow()?;
 ///
 ///     Ok(())
 /// }
@@ -42,7 +44,7 @@ impl<E: Display + Debug + Send + Sync + 'static> UnderlyingError for E {}
 /// ```
 ///
 /// // You need to derive from `error_utils::Error` or implement `CustomError`
-/// #[derive(thiserror::Error, error_utils::Error, Debug)]
+/// #[derive(thiserror::Error, Debug)]
 /// pub enum MyCustomError {
 ///     #[error("something 1")]
 ///     Unknown1,

@@ -387,18 +387,7 @@ name = "error_utils"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "error_utils_derive",
  "thiserror",
-]
-
-[[package]]
-name = "error_utils_derive"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "proc-macro2",
- "quote",
- "syn",
 ]
 
 [[package]]

@@ -7,5 +7,4 @@ edition = "2021"
 anyhow = "1.0.89"
 thiserror = "1.0.64"
 
-error_utils_derive = { path = "../error_utils_derive" }  # The wrapper crate
 
