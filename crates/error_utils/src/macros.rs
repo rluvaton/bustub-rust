@@ -1,5 +1,3 @@
-use std::marker::PhantomData;
-use crate::anyhow::UnderlyingAnyhowError;
 
 /// Construct an ad-hoc error from a string or existing non-`anyhow` error
 /// value.
@@ -32,13 +30,13 @@ use crate::anyhow::UnderlyingAnyhowError;
 #[macro_export]
 macro_rules! anyhow {
     ($msg:literal $(,)?) => {
-        $crate::Error::<$crate::anyhow::UnderlyingAnyhowError> { error: anyhow::anyhow!($msg), phantom_data: core::marker::PhantomData }
+        $crate::Error::<$crate::anyhow::Underlying> { error: anyhow::anyhow!($msg), phantom_data: core::marker::PhantomData }
     };
     ($err:expr $(,)?) => {
-        $crate::Error::<$crate::anyhow::UnderlyingAnyhowError> { error: anyhow::anyhow!($err), phantom_data: core::marker::PhantomData }
+        $crate::Error::<$crate::anyhow::Underlying> { error: anyhow::anyhow!($err), phantom_data: core::marker::PhantomData }
     };
     ($fmt:expr, $($arg:tt)*) => {
-        $crate::Error::<$crate::anyhow::UnderlyingAnyhowError> { error: anyhow::anyhow!($fmt, $($arg)*), phantom_data: core::marker::PhantomData }
+        $crate::Error::<$crate::anyhow::Underlying> { error: anyhow::anyhow!($fmt, $($arg)*), phantom_data: core::marker::PhantomData }
     };
 }
 
@@ -48,8 +46,9 @@ mod tests {
 
     #[test]
     fn anyhow_macro() {
-        let error = anyhow!("something");
+        let error: crate::anyhow::Error = anyhow!("something");
 
+        // Making sure not crashing
         let value = error.deref();
     }
 }
