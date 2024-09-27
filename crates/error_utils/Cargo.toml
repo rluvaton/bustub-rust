@@ -1,0 +1,8 @@
+[package]
+name = "error_utils"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow = "1.0.89"
+thiserror = "1.0.64"
