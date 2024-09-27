@@ -1,5 +1,5 @@
 pub type Underlying = anyhow::Error;
-pub type Error = crate::Error<Underlying>;
+pub type Error = crate::Error<anyhow::Error>;
 pub type Result<T> = std::result::Result<T, Error>;
 
 mod macros;

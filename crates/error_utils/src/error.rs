@@ -1,32 +1,96 @@
 use std::any::Any;
-use std::backtrace::Backtrace;
+use std::error::Error as StdError;
 use std::fmt::{Debug, Display, Formatter};
 use std::marker::PhantomData;
 use std::ops::Deref;
-use std::error::Error as StdError;
-
 
 pub trait UnderlyingError: Display + Debug + Send + Sync + 'static {}
-impl <E: Display + Debug + Send + Sync + 'static> UnderlyingError for E {}
-pub trait CustomError: Sized {
-    fn create_anyhow(self) -> anyhow::Error where Self: UnderlyingError + StdError {
-        anyhow::Error::new(self)
-    }
-}
 
+impl<E: Display + Debug + Send + Sync + 'static> UnderlyingError for E {}
+
+/// Error wrapper with context support and strong type safety
+///
+/// # Examples
+///
+/// Anyhow and std::Error type
+///
+/// ```
+/// // THis is how you did it with anyhow
+/// fn create_error_using_anyhow(io_error: bool) -> anyhow::Result<()> {
+///     if !io_error {
+///         return Err(anyhow::anyhow!("hello"));
+///     }
+///
+///     std::fs::OpenOptions::new().open("foo.txt")?;
+///
+///     Ok(())
+/// }
+///
+/// // And this is how you do it with this crate, note that the type of the error does not save the underlying type here
+/// fn create_error_using_error_utils(io_error: bool) -> error_utils::anyhow::Result<()> {
+///     if !io_error {
+///         return Err(error_utils::anyhow::anyhow!("hello"));
+///     }
+///
+///     std::fs::OpenOptions::new().open("foo.txt")?;
+///
+///     Ok(())
+/// }
+/// ```
+///
+/// `thiserror::Error` and this crate:
+/// ```
+///
+/// // You need to derive from `error_utils::Error` or implement `CustomError`
+/// #[derive(thiserror::Error, error_utils::Error, Debug)]
+/// pub enum MyCustomError {
+///     #[error("something 1")]
+///     Unknown1,
+///     #[error("something 2")]
+///     Unknown2
+/// }
+///
+/// fn create_custom_error() -> Result<(), MyCustomError> {
+///     Err(MyCustomError::Unknown1)
+/// }
+///
+/// // This is how you did it with `anyhow`, as you can see the error type is not saved
+/// fn create_error_using_anyhow(custom_error: bool) -> anyhow::Result<()> {
+///     if !custom_error {
+///         return Err(MyCustomError::Unknown2.into());
+///     }
+///
+///     create_custom_error()?;
+///
+///     Ok(())
+/// }
+///
+/// // This is how you do it in with this crate
+/// fn create_error_using_error_utils(custom_error: bool) -> Result<(), error_utils::Error<MyCustomError>> {
+///     if !custom_error {
+///         return Err(MyCustomError::Unknown2.into());
+///     }
+///
+///     create_custom_error()?;
+///
+///     Ok(())
+/// }
+///
+/// ```
+///
 pub struct Error<E: UnderlyingError> {
     pub(crate) error: anyhow::Error,
-    pub(crate) phantom_data: PhantomData<E>
+    pub(crate) phantom_data: PhantomData<E>,
 }
 
 unsafe impl<E: UnderlyingError> Send for Error<E> {}
 unsafe impl<E: UnderlyingError> Sync for Error<E> {}
 
-impl Error<crate::anyhow::Underlying> {
-    pub fn new_anyhow(error: crate::anyhow::Underlying) -> Self {
+impl Error<anyhow::Error> {
+    pub fn new_anyhow(error: anyhow::Error) -> Self {
         Self {
             error,
-            phantom_data: PhantomData
+            phantom_data: PhantomData,
         }
     }
 }
@@ -48,7 +112,7 @@ impl<E: UnderlyingError> Deref for Error<E> {
         // different type: just print it out unadorned.
         match value_any.downcast_ref::<E>() {
             Some(as_underlying) => {
-               as_underlying
+                as_underlying
             }
             None => {
                 // Safety: The type system should ensure that the underlying type is the same
@@ -58,31 +122,55 @@ impl<E: UnderlyingError> Deref for Error<E> {
     }
 }
 
-impl<E> From<E> for Error<crate::anyhow::Underlying>
+// Convert between unknown to StdError
+// impl<E> From<E> for Error<crate::anyhow::Underlying>
+// where
+//     E: StdError + Send + Sync + 'static,
+// {
+//     #[cold]
+//     fn from(error: E) -> Self {
+//         Self {
+//             error: anyhow::Error::from(error),
+//             phantom_data: PhantomData,
+//         }
+//     }
+// }
+
+// impl From<anyhow::Error> for Error<anyhow::Error>
+// {
+//     #[cold]
+//     fn from(error: anyhow::Error) -> Self {
+//         Self {
+//             error,
+//             phantom_data: PhantomData,
+//         }
+//     }
+// }
+
+impl<E> From<E> for Error<E>
 where
     E: StdError + Send + Sync + 'static,
 {
     #[cold]
     fn from(error: E) -> Self {
         Self {
-            error: anyhow::Error::from(error),
-            phantom_data: PhantomData
+            error: anyhow::Error::new(error),
+            phantom_data: PhantomData,
         }
     }
 }
 
-impl<E> From<E> for Error<E>
-where
-    E: CustomError + Send + Sync + 'static + std::fmt::Display + std::fmt::Debug + std::error::Error,
-{
-    #[cold]
-    fn from(error: E) -> Self {
-        Self {
-            error: error.create_anyhow(),
-            phantom_data: PhantomData
-        }
-    }
-}
+
+// impl From<anyhow::Error> for Error<anyhow::Error>
+// {
+//     #[cold]
+//     fn from(error: anyhow::Error) -> Self {
+//         Self {
+//             error,
+//             phantom_data: PhantomData,
+//         }
+//     }
+// }
 
 // impl<E: UnderlyingError + std::error::Error> From<E> for Error<E> {
 //     fn from(error: E) -> Self {
@@ -106,18 +194,20 @@ where
 
 #[cfg(test)]
 mod tests {
-    use std::fs::OpenOptions;
-    use crate::CustomError;
+use crate::UnderlyingError;
+use std::fs::OpenOptions;
+    use std::io;
+    use crate::anyhow::Error;
 
     #[test]
-    fn casting_as_before_for_io_error() {
+    fn casting_as_before_for_io_error_and_anyhow() {
         // Making sure that the same type works
         fn create_error_using_anyhow(io_error: bool) -> anyhow::Result<()> {
             if !io_error {
                 return Err(anyhow::anyhow!("hello"));
             }
 
-            OpenOptions::new().open("foo.txt")?;
+            std::fs::OpenOptions::new().open("foo.txt")?;
 
             Ok(())
         }
@@ -127,7 +217,23 @@ mod tests {
                 return Err(crate::anyhow::anyhow!("hello"));
             }
 
-            OpenOptions::new().open("foo.txt")?;
+            std::fs::OpenOptions::new().open("foo.txt").map_err(|e| anyhow::Error::from(e)).map_err(|err| Error::new_anyhow(err))?;
+
+            Ok(())
+        }
+    }
+
+    #[test]
+    fn casting_as_before_for_io_error_only() {
+        // Making sure that the same type works
+        fn create_error_using_anyhow() -> anyhow::Result<()> {
+            std::fs::OpenOptions::new().open("foo.txt")?;
+
+            Ok(())
+        }
+
+        fn create_error_using_error_utils() -> Result<(), crate::Error<io::Error>> {
+            std::fs::OpenOptions::new().open("foo.txt")?;
 
             Ok(())
         }
@@ -135,12 +241,12 @@ mod tests {
 
     #[test]
     fn casting_as_before_for_this_error() {
-        #[derive(thiserror::Error, crate::Error, Debug, PartialEq, Clone)]
+        #[derive(thiserror::Error, Debug)]
         pub enum MyCustomError {
             #[error("something 1")]
             Unknown1,
             #[error("something 2")]
-            Unknown2
+            Unknown2,
         }
 
         fn create_custom_error() -> Result<(), MyCustomError> {
@@ -150,7 +256,7 @@ mod tests {
         // Making sure that the same type works
         fn create_error_using_anyhow(custom_error: bool) -> anyhow::Result<()> {
             if !custom_error {
-                return Err(anyhow::anyhow!("using anyhow"));
+                return Err(MyCustomError::Unknown2.into());
             }
 
             create_custom_error()?;

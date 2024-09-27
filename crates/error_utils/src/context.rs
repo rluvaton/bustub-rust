@@ -1,8 +1,9 @@
-use crate::error::{Error, UnderlyingError};
+use crate::error::{Error};
 use crate::std_error_ext::StdErrorExt;
 use std::error::Error as StdError;
 use std::fmt::{Debug, Display};
 use std::ops::Deref;
+use crate::UnderlyingError;
 
 pub trait Context<T, E: UnderlyingError> {
     /// Wrap the error value with additional context.
@@ -78,7 +79,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use std::fmt::Display;
+use std::fmt::Display;
 
     fn remove_stack_trace(error_string: String) -> String {
         error_string.split_at(error_string.find("Stack backtrace:").unwrap()).0.to_string()
