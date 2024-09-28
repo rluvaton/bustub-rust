@@ -49,6 +49,15 @@ mod tests {
             assert_eq!(hash_table.get_value(&key, None), Ok(vec![]), "should not find values for key {}", i);
         }
 
+        // Should not delete anything before init
+        println!("Testing trying to delete missing values before init");
+        let tmp = (0..total).shuffle();
+        for &i in &tmp[0..10] {
+            let (key, _) = get_entry_for_index(i);
+
+            assert_eq!(hash_table.remove(&key, None), Ok(false), "should not delete for key {}", i);
+        }
+
         hash_table.verify_integrity(false);
 
         println!("Inserting {} entries", total);
@@ -76,6 +85,15 @@ mod tests {
             let (key, _) = get_entry_for_index(i);
 
             assert_eq!(hash_table.get_value(&key, None), Ok(vec![]), "should not find values for key {}", i);
+        }
+
+        println!("Asserting not deleting missing values after init");
+        // Should not find missing keys after the hash map is initialized
+        // Should not find missing keys after the hash map is initialized
+        for &i in &(total..total + 1_000_000).shuffle()[0..10] {
+            let (key, _) = get_entry_for_index(i);
+
+            assert_eq!(hash_table.remove(&key, None), Ok(false), "should not delete values for key {}", i);
         }
 
         hash_table.verify_integrity(false);
