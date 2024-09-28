@@ -6,8 +6,7 @@ use std::sync::Arc;
 use tracy_client::span;
 
 use common::config::FrameId;
-
-use super::access_type::AccessType;
+use crate::buffer::{AccessType, LRUKReplacer, Replacer};
 use super::counter::AtomicU64Counter;
 use super::lru_k_node::LRUKNode;
 
@@ -43,6 +42,7 @@ pub struct LRUKReplacerImpl {
     history_access_counter: Arc<AtomicU64Counter>,
 }
 
+// TODO - can remove this?
 unsafe impl Send for LRUKReplacerImpl {}
 
 
@@ -74,6 +74,30 @@ impl LRUKReplacerImpl {
         }
     }
 
+    fn is_valid_frame_id(&self, frame_id: FrameId) -> bool {
+        self.replacer_size > frame_id as usize
+    }
+
+    fn assert_valid_frame_id(&self, frame_id: FrameId) {
+        assert!(self.is_valid_frame_id(frame_id));
+    }
+
+    /// Helper for debugging in tests
+    pub(in crate::buffer) fn get_order_of_eviction(&self) -> Vec<FrameId> {
+        unsafe {
+            self.evictable_heap.clone().into_iter_sorted().map(|item| (*item.get()).get_frame_id()).collect()
+        }
+    }
+
+    fn get_next_to_evict(&mut self) -> Option<FrameId> {
+        let top = self.evictable_heap.peek()?;
+
+        unsafe { Some((*top.get()).get_frame_id()) }
+    }
+}
+
+
+impl Replacer for LRUKReplacerImpl {
     /// Find the frame with the largest backward k-distance and evict that frame. Only frames
     /// that are marked as `evictable` are candidates for eviction.
     ///
@@ -87,7 +111,7 @@ impl LRUKReplacerImpl {
     /// returns: Option<FrameId> `None` if no frame to evict or `Some(FrameId)` with the frame that
     ///          got evicted
     ///
-    pub fn evict(&mut self) -> Option<FrameId> {
+    fn evict(&mut self) -> Option<FrameId> {
         let _unpin = span!("Evict");
 
         // No frame is evictable
@@ -116,7 +140,7 @@ impl LRUKReplacerImpl {
     /// * `access_type`: type of access that was received.
     ///                  This parameter is only needed for leaderboard tests.
     ///
-    pub fn record_access(&mut self, frame_id: FrameId, access_type: AccessType) {
+    fn record_access(&mut self, frame_id: FrameId, access_type: AccessType) {
         if !self.is_valid_frame_id(frame_id) {
             return;
         }
@@ -139,7 +163,7 @@ impl LRUKReplacerImpl {
     ///
     /// # Unsafe
     /// unsafe as we are certain that the frame id is valid
-    pub unsafe fn record_access_unchecked(&mut self, frame_id: FrameId, _access_type: AccessType) {
+    unsafe fn record_access_unchecked(&mut self, frame_id: FrameId, _access_type: AccessType) {
         self.assert_valid_frame_id(frame_id);
 
         let node = self.node_store.get_mut(&frame_id);
@@ -180,7 +204,7 @@ impl LRUKReplacerImpl {
     /// * `frame_id`: id of the frame whose `evictable` status will be modified
     /// * `set_evictable`: whether the given frame should be evictable or not
     ///
-    pub fn set_evictable(&mut self, frame_id: FrameId, set_evictable: bool) {
+    fn set_evictable(&mut self, frame_id: FrameId, set_evictable: bool) {
         if !self.is_valid_frame_id(frame_id) {
             return;
         }
@@ -206,7 +230,7 @@ impl LRUKReplacerImpl {
     ///
     /// # Unsafe
     /// This is unsafe because we are certain that the frame id is valid
-    pub unsafe fn set_evictable_unchecked(&mut self, frame_id: FrameId, set_evictable: bool) {
+    unsafe fn set_evictable_unchecked(&mut self, frame_id: FrameId, set_evictable: bool) {
         // We are certain that the frame id is valid
         self.assert_valid_frame_id(frame_id);
 
@@ -253,7 +277,7 @@ impl LRUKReplacerImpl {
     ///
     /// * `frame_id`: Frame ID to remove, the frame must be evictable
     ///
-    pub fn remove(&mut self, frame_id: FrameId) {
+    fn remove(&mut self, frame_id: FrameId) {
         let frame = self.node_store.get(&frame_id);
 
         unsafe {
@@ -284,10 +308,6 @@ impl LRUKReplacerImpl {
     /// # Unsafe:
     /// This is unsafe because we are certain that the frame is evictable
     ///
-    /// # Visibility
-    /// function is not public as it is not locking by itself
-    /// as the functions that called it should be responsible for that
-    ///
     unsafe fn remove_unchecked(&mut self, frame_id: FrameId) {
         let frame = self.node_store.get(&frame_id);
         if frame.is_none() {
@@ -311,29 +331,7 @@ impl LRUKReplacerImpl {
     ///
     /// returns: isize the number of evictable frames
     ///
-    pub fn size(&self) -> usize {
+    fn size(&self) -> usize {
         self.evictable_frames
     }
-
-    fn is_valid_frame_id(&self, frame_id: FrameId) -> bool {
-        self.replacer_size > frame_id as usize
-    }
-
-    fn assert_valid_frame_id(&self, frame_id: FrameId) {
-        assert!(self.is_valid_frame_id(frame_id));
-    }
-
-    /// Helper for debugging in tests
-    pub(in crate::buffer) fn get_order_of_eviction(&self) -> Vec<FrameId> {
-        unsafe {
-            self.evictable_heap.clone().into_iter_sorted().map(|item| (*item.get()).get_frame_id()).collect()
-        }
-    }
-
-    fn get_next_to_evict(&mut self) -> Option<FrameId> {
-        let top = self.evictable_heap.peek()?;
-
-        unsafe { Some((*top.get()).get_frame_id()) }
-    }
 }
-

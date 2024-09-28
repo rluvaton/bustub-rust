@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use crate::buffer::{LRUKReplacer, AccessType};
+    use crate::buffer::{LRUKReplacer, AccessType, Replacer};
     use common::config::FrameId;
     use rand::Rng;
     use std::sync::atomic::AtomicBool;

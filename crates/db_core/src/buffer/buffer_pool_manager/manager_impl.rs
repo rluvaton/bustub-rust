@@ -1,5 +1,5 @@
 use super::manager::{BufferPoolManager, InnerBufferPoolManager};
-use crate::buffer::{PinPageGuard, BufferPoolManagerStats, PinReadPageGuard, PinWritePageGuard};
+use crate::buffer::{PinPageGuard, BufferPoolManagerStats, PinReadPageGuard, PinWritePageGuard, ThreadSafeReplacer, Replacer};
 use crate::buffer::{AccessType, LRUKReplacer};
 use crate::storage::{DiskManager, DiskScheduler, Page, ReadDiskRequest, UnderlyingPage, WriteDiskRequest};
 use common::config::{AtomicPageId, FrameId, PageId, INVALID_PAGE_ID, LRUK_REPLACER_K};
