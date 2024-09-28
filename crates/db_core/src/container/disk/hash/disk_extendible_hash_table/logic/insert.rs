@@ -12,6 +12,7 @@ use std::hash::Hash;
 use std::sync::Arc;
 use binary_utils::ModifyBit;
 use crate::buffer::{PinPageGuard, PinWritePageGuard};
+use crate::buffer::errors::MapErrorToBufferPoolError;
 
 #[derive(thiserror::Error, Debug, PartialEq, Clone)]
 pub enum InsertionError {
@@ -22,13 +23,10 @@ pub enum InsertionError {
     ReachedSplitRetryLimit(usize),
 
     #[error("buffer pool error")]
-    BufferPoolError(#[from] buffer::BufferPoolError),
+    BufferPoolError(#[from] buffer::errors::BufferPoolError),
 
     #[error("No space left for inserting as the bucket is full and it cannot be splitted again")]
     BucketIsFull,
-
-    #[error("unknown error during insert")]
-    Unknown,
 }
 
 const NUMBER_OF_SPLIT_RETRIES: usize = 3;
@@ -68,7 +66,7 @@ where
 
         // 2. Get the header page
         // TODO - get the page as read and upgrade if needed as most of the time the header page exists as well as the directory page
-        let mut header = self.bpm.fetch_page_write(self.header_page_id).context("Hash Table header page must exists when trying to insert")?;
+        let mut header = self.bpm.fetch_page_write(self.header_page_id).map_err_to_buffer_pool_err().context("Hash Table header page must exists when trying to insert")?;
 
         let header_page = header.cast_mut::<<Self as TypeAliases>::HeaderPage>();
 
@@ -88,7 +86,7 @@ where
 
         // 6. Get the directory page
         // TODO - get the page as read and upgrade if needed?
-        let mut directory = self.bpm.fetch_page_write(directory_page_id).context("Directory page should exists")?;
+        let mut directory = self.bpm.fetch_page_write(directory_page_id).map_err_to_buffer_pool_err().context("Directory page should exists")?;
 
         let directory_page = directory.cast_mut::<<Self as TypeAliases>::DirectoryPage>();
 
@@ -106,7 +104,7 @@ where
         } // Drop the new bucket - on purpose we don't keep it for simplicity
 
         // 10. Get the bucket page
-        let mut bucket = self.bpm.fetch_page_write(bucket_page_id).context("Failed to fetch bucket page")?;
+        let mut bucket = self.bpm.fetch_page_write(bucket_page_id).map_err_to_buffer_pool_err().context("Failed to fetch bucket page")?;
         let bucket_page = bucket.cast::<<Self as TypeAliases>::BucketPage>();
 
         // 11. If the bucket already contain the data return error
@@ -218,8 +216,8 @@ where
         }
     }
 
-    fn init_new_directory(&mut self) -> Result<PinPageGuard, buffer::BufferPoolError> {
-        let directory_page = self.bpm.new_page_guarded().context("Should be able to create page")?;
+    fn init_new_directory(&mut self) -> Result<PinPageGuard, buffer::errors::BufferPoolError> {
+        let directory_page = self.bpm.new_page_guarded().map_err_to_buffer_pool_err().context("Should be able to create page")?;
 
         {
             let mut directory_guard = directory_page.write();
@@ -231,8 +229,8 @@ where
         Ok(directory_page)
     }
 
-    fn init_new_bucket(&mut self) -> Result<PinPageGuard, buffer::BufferPoolError> {
-        let bucket_page = self.bpm.new_page_guarded().context("Should be able to create page")?;
+    fn init_new_bucket(&mut self) -> Result<PinPageGuard, buffer::errors::BufferPoolError> {
+        let bucket_page = self.bpm.new_page_guarded().map_err_to_buffer_pool_err().context("Should be able to create page")?;
 
         {
             let mut bucket_guard = bucket_page.write();

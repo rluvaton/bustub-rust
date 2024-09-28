@@ -1,16 +1,14 @@
+use super::errors;
 use super::type_alias_trait::TypeAliases;
-use crate::buffer::{BufferPoolError, BufferPoolManager, PinPageGuard, PinWritePageGuard};
-use crate::concurrency::Transaction;
+use crate::buffer::BufferPoolManager;
 use crate::container::hash::KeyHasher;
 use crate::storage::{Comparator, HASH_TABLE_DIRECTORY_MAX_DEPTH as DIRECTORY_MAX_DEPTH, HASH_TABLE_HEADER_MAX_DEPTH as HEADER_MAX_DEPTH};
-use binary_utils::{IsBitOn, ModifyBit};
 use common::config::{PageId, HEADER_PAGE_ID, INVALID_PAGE_ID};
 use common::{PageKey, PageValue};
 use std::fmt::{Debug, Formatter};
 use std::marker::PhantomData;
 use std::sync::Arc;
-use error_utils::Context;
-use super::errors;
+use crate::buffer::errors::{BufferPoolError, MapErrorToBufferPoolError};
 
 /// Implementation of extendible hash table that is backed by a buffer pool
 /// manager. Non-unique keys are supported. Supports insert and delete. The
@@ -152,7 +150,7 @@ where
 
     fn init_new_header(bpm: Arc<BufferPoolManager>, header_max_depth: u32) -> Result<(), errors::InitError> {
         // TODO - this should be removed, we should not create on each instance and instead it should depend if the hash table exists or not
-        let header_page = bpm.new_page_guarded()?;
+        let header_page = bpm.new_page_guarded().map_err_to_buffer_pool_err()?;
 
         assert_eq!(header_page.get_page_id(), HEADER_PAGE_ID, "must be uninitialized");
         let mut page_guard = header_page.upgrade_write();

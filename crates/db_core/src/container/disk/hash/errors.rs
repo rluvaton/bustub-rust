@@ -4,7 +4,7 @@ use crate::buffer;
 #[derive(Error, Debug, PartialEq, Clone)]
 pub enum HashTableErrors {
     #[error("buffer pool error")]
-    BufferPoolError(#[from] buffer::BufferPoolError),
+    BufferPoolError(#[from] buffer::errors::BufferPoolError),
 
     #[error("unknown buffer pool error")]
     Unknown,

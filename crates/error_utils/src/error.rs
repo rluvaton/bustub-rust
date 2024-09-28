@@ -111,6 +111,7 @@ impl Error<anyhow::Error> {
     }
 }
 
+
 impl<E: UnderlyingError> Debug for Error<E> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         Debug::fmt(&self.error, f)

@@ -11,7 +11,7 @@ use std::collections::{HashMap, LinkedList};
 use std::sync::atomic::{Ordering};
 use std::sync::Arc;
 use tracy_client::{non_continuous_frame, secondary_frame_mark, span};
-use crate::buffer::buffer_pool_manager::{BufferPoolError, BufferPoolResult, UnderlyingBufferPoolError};
+use super::errors::{NewPageError, FetchPageError, NoAvailableFrameFound, DeletePageError, InvalidPageId};
 
 // While waiting - red-ish (brighter than page lock)
 const ROOT_LOCK_WAITING_COLOR: u32 = 0xEF0107;
@@ -89,7 +89,7 @@ impl BufferPoolManager {
      * Original: @param[out] page_id id of created page, (--- no need as can get from the page itself ---)
      * Original: @return nullptr if no new pages could be created, otherwise pointer to new page
      */
-    pub fn new_page(&self) -> BufferPoolResult<Page> {
+    pub fn new_page(&self) -> Result<Page, NewPageError> {
         let acquiring_root_latch = span!("Acquiring root latch");
 
         // Red color while waiting
@@ -140,7 +140,6 @@ impl BufferPoolManager {
                 old_page.with_write(|mut underlying| {
                     // 1. Remove reference to the old page in the page table
                     (*inner).page_table.remove(&underlying.get_page_id());
-
 
                     if underlying.is_dirty() {
                         let mut scheduler = (*inner).disk_scheduler.lock();
@@ -198,13 +197,13 @@ impl BufferPoolManager {
      * @param[out] page_id, the id of the new page
      * @return BasicPageGuard holding a new page
      */
-    pub fn new_page_guarded(self: &Arc<Self>) -> BufferPoolResult<PinPageGuard> {
+    pub fn new_page_guarded(self: &Arc<Self>) -> Result<PinPageGuard, NewPageError> {
         let page = self.new_page()?;
 
         Ok(PinPageGuard::new(self.clone(), page))
     }
 
-    pub fn new_page_write_guarded<'a>(self: &Arc<Self>) -> BufferPoolResult<PinWritePageGuard<'a>> {
+    pub fn new_page_write_guarded<'a>(self: &Arc<Self>) -> Result<PinWritePageGuard<'a>, NewPageError> {
         let page = self.new_page_guarded()?;
 
         Ok(page.upgrade_write())
@@ -227,16 +226,16 @@ impl BufferPoolManager {
      * @param access_type type of access to the page, only needed for leaderboard tests. - TODO - default for  = AccessType::Unknown
      * @return nullptr if page_id cannot be fetched, otherwise pointer to the requested page
      */
-    pub fn fetch_page(&self, page_id: PageId, access_type: AccessType) -> BufferPoolResult<Page> {
+    pub fn fetch_page(&self, page_id: PageId, access_type: AccessType) -> Result<Page, FetchPageError> {
         if page_id == INVALID_PAGE_ID {
-            return Err(UnderlyingBufferPoolError::InvalidPageId.into());
+            return Err(InvalidPageId.into());
         }
 
         self.fetch_page_unchecked(page_id, access_type)
     }
 
     #[inline(always)]
-    fn fetch_page_unchecked(&self, page_id: PageId, access_type: AccessType) -> BufferPoolResult<Page> {
+    fn fetch_page_unchecked(&self, page_id: PageId, access_type: AccessType) -> Result<Page, FetchPageError> {
         assert_ne!(page_id, INVALID_PAGE_ID);
 
         let acquiring_root_latch = span!("Acquiring root latch");
@@ -429,7 +428,7 @@ impl BufferPoolManager {
      * @param page_id, the id of the page to fetch
      * @return PageGuard holding the fetched page
      */
-    pub fn fetch_page_basic(self: &Arc<Self>, page_id: PageId) -> BufferPoolResult<PinPageGuard> {
+    pub fn fetch_page_basic(self: &Arc<Self>, page_id: PageId) -> Result<PinPageGuard, FetchPageError> {
         let page = self.fetch_page(page_id, AccessType::Unknown)?;
 
         Ok(PinPageGuard::new(self.clone(), page))
@@ -448,7 +447,7 @@ impl BufferPoolManager {
      * @param page_id, the id of the page to fetch
      * @return PageGuard holding the fetched page
      */
-    pub fn fetch_page_read<'a>(self: &Arc<Self>, page_id: PageId) -> BufferPoolResult<PinReadPageGuard<'a>> {
+    pub fn fetch_page_read<'a>(self: &Arc<Self>, page_id: PageId) -> Result<PinReadPageGuard<'a>, FetchPageError> {
         let page = self.fetch_page_basic(page_id)?;
 
         Ok(page.upgrade_read())
@@ -467,7 +466,7 @@ impl BufferPoolManager {
      * @param page_id, the id of the page to fetch
      * @return PageGuard holding the fetched page
      */
-    pub fn fetch_page_write<'a>(self: &Arc<Self>, page_id: PageId) -> BufferPoolResult<PinWritePageGuard<'a>> {
+    pub fn fetch_page_write<'a>(self: &Arc<Self>, page_id: PageId) -> Result<PinWritePageGuard<'a>, FetchPageError> {
         let page = self.fetch_page_basic(page_id)?;
 
         Ok(page.upgrade_write())
@@ -487,7 +486,6 @@ impl BufferPoolManager {
      * @param access_type type of access to the page, only needed for leaderboard tests. TODO - default  = AccessType::Unknown
      * @return false if the page is not in the page table or its pin count is <= 0 before this call, true otherwise
      */
-    #[inline(always)]
     pub fn unpin_page(&self, page_id: PageId, is_dirty: bool, _access_type: AccessType) -> bool {
         // TODO - performance improvement, Unpinning page can bypass some locks as if it was pinned nothing could evict it
 
@@ -529,6 +527,7 @@ impl BufferPoolManager {
 
             let page: Option<&mut Page> = (*inner).pages.get_mut(frame_id_ref as usize);
 
+            // TODO - should convert to assertion
             if page.is_none() {
                 eprintln!("Could not find requested page to unpin, it shouldn't be possible");
                 // TODO - log warning or something as this mean we have corruption
@@ -683,7 +682,11 @@ impl BufferPoolManager {
      * @param page_id id of page to be deleted
      * @return false if the page exists but could not be deleted, true if the page didn't exist or deletion succeeded
      */
-    pub fn delete_page(&mut self, page_id: PageId) -> bool {
+    pub fn delete_page(&self, page_id: PageId) -> Result<bool, DeletePageError> {
+        if page_id == INVALID_PAGE_ID {
+            return Err(InvalidPageId.into());
+        }
+
         let acquiring_root_latch = span!("Acquiring root latch");
 
         // Red color while waiting
@@ -702,44 +705,46 @@ impl BufferPoolManager {
         holding_root_latch_span.emit_color(ROOT_LOCK_HOLDING_COLOR);
         let _holding_root_latch = self.stats.holding_root_latch.create_single();
 
-        let inner = self.inner.get_mut();
+        let inner = self.inner.get();
 
-        let frame_id = inner.page_table.get(&page_id);
+        unsafe {
+            let frame_id = (*inner).page_table.get(&page_id);
 
-        if frame_id.is_none() {
-            return true;
+            if frame_id.is_none() {
+                return Ok(true);
+            }
+            let frame_id = frame_id.cloned().unwrap();
+
+            let page: &mut Page = (*inner).pages.get_mut(frame_id as usize).expect("page must exists as it is in the page table");
+
+            // If not evictable
+            if page.get_pin_count() > 0 {
+                return Err(DeletePageError::PageIsNotEvictable(page_id));
+            }
+
+            // TODO - what about if page is dirty?
+
+            (*inner).page_table.remove(&page_id);
+            (*inner).free_list.push_front(frame_id);
+
+            (*inner).replacer.remove(frame_id);
+            (*inner).pages.remove(frame_id as usize);
+
+
+            Self::deallocate_page(page_id);
+
+            Ok(true)
         }
-        let frame_id = frame_id.cloned().unwrap();
-
-        let page: &mut Page = inner.pages.get_mut(frame_id as usize).expect("page must exists as it is in the page table");
-
-        // If not evictable
-        if page.get_pin_count() > 0 {
-            return false;
-        }
-
-        // TODO - what about if page is dirty?
-
-        inner.page_table.remove(&page_id);
-        inner.free_list.push_front(frame_id);
-
-        inner.replacer.remove(frame_id);
-        inner.pages.remove(frame_id as usize);
-
-
-        Self::deallocate_page(page_id);
-
-        true
     }
 
-    fn find_replacement_frame(inner: &mut InnerBufferPoolManager) -> BufferPoolResult<FrameId> {
+    fn find_replacement_frame(inner: &mut InnerBufferPoolManager) -> Result<FrameId, NoAvailableFrameFound> {
         // Pick the replacement frame from the free list first
         if !inner.free_list.is_empty() {
             // Can't be empty
-            inner.free_list.pop_front().ok_or(UnderlyingBufferPoolError::NoAvailableFrameFound.into())
+            inner.free_list.pop_front().ok_or(NoAvailableFrameFound)
         } else {
             // pick replacement from the replacer, can't be empty
-            inner.replacer.evict().ok_or(UnderlyingBufferPoolError::NoAvailableFrameFound.into())
+            inner.replacer.evict().ok_or(NoAvailableFrameFound)
         }
     }
 
@@ -757,6 +762,7 @@ impl BufferPoolManager {
      */
     fn deallocate_page(_page_id: PageId) {
         // This is a no-nop right now without a more complex data structure to track deallocated pages
+        // TODO - call disk scheduler to deallocate the page
     }
 
     pub fn get_stats(&self) -> BufferPoolManagerStats {
