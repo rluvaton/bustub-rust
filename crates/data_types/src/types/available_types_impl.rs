@@ -4,14 +4,13 @@ use crate::types::{BigIntType, BooleanType, DBTypeId, DecimalType, IntType, Smal
 /// # Example
 ///
 /// ```
-///  use common::run_on_impl;
-///  use common::types::*;
-///  let e = DBTypeIdImpl::BIGINT(BigIntType::new(1));
+/// use data_types::*;
+/// let e = DBTypeIdImpl::BIGINT(BigIntType::new(1));
 ///
-///  // Apply the macro to run trait_function on the enum's variant
-///  let _ = run_on_impl!(e, v, {
-///     v.is_null()
-///  });
+/// // Apply the macro to run trait_function on the enum's variant
+/// let _ = run_on_impl!(e, v, {
+///    v.is_null()
+/// });
 /// ```
 #[macro_export]
 macro_rules! run_on_impl {
@@ -33,9 +32,8 @@ macro_rules! run_on_impl {
 /// # Example
 ///
 /// ```
-///  use common::run_on_numeric_impl;
-///  use common::types::*;
-///  let e = DBTypeIdImpl::BIGINT(BigIntType::new(1));
+/// use data_types::*;
+/// let e = DBTypeIdImpl::BIGINT(BigIntType::new(1));
 ///
 ///  // Apply the macro to run trait_function on the enum's variant
 ///  let res = run_on_numeric_impl!(e, v, {
