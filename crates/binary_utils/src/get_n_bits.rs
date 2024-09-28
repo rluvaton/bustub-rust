@@ -11,12 +11,17 @@ pub trait GetNBits {
     ///
     /// ```
     /// use binary_utils::GetNBits;
-    /// let num = 0b1010u8;
+    ///
+    /// let num: u8 = 0b10010000;
     ///
     /// assert_eq!(num.get_n_msb_bits(1), 0b1);
     /// assert_eq!(num.get_n_msb_bits(2), 0b10);
-    /// assert_eq!(num.get_n_msb_bits(3), 0b101);
-    /// assert_eq!(num.get_n_msb_bits(4), 0b1010);
+    /// assert_eq!(num.get_n_msb_bits(3), 0b100);
+    /// assert_eq!(num.get_n_msb_bits(4), 0b1001);
+    /// assert_eq!(num.get_n_msb_bits(5), 0b10010);
+    /// assert_eq!(num.get_n_msb_bits(6), 0b100100);
+    /// assert_eq!(num.get_n_msb_bits(7), 0b1001000);
+    /// assert_eq!(num.get_n_msb_bits(8), num);
     /// ```
     fn get_n_msb_bits(&self, n: u8) -> Self;
 
@@ -32,13 +37,17 @@ pub trait GetNBits {
     ///
     /// ```
     /// use binary_utils::GetNBits;
-    /// let num = 0b1010u8;
+    /// let num: u8 = 0b10010000;
     ///
     /// unsafe {
     ///     assert_eq!(num.get_n_msb_bits_unchecked(1), 0b1);
     ///     assert_eq!(num.get_n_msb_bits_unchecked(2), 0b10);
-    ///     assert_eq!(num.get_n_msb_bits_unchecked(3), 0b101);
-    ///     assert_eq!(num.get_n_msb_bits_unchecked(4), 0b1010);
+    ///     assert_eq!(num.get_n_msb_bits_unchecked(3), 0b100);
+    ///     assert_eq!(num.get_n_msb_bits_unchecked(4), 0b1001);
+    ///     assert_eq!(num.get_n_msb_bits_unchecked(5), 0b10010);
+    ///     assert_eq!(num.get_n_msb_bits_unchecked(6), 0b100100);
+    ///     assert_eq!(num.get_n_msb_bits_unchecked(7), 0b1001000);
+    ///     assert_eq!(num.get_n_msb_bits_unchecked(8), num);
     /// }
     /// ```
     ///
