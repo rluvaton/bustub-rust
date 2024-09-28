@@ -46,7 +46,7 @@ mod tests {
         for &i in &tmp[0..10] {
             let (key, _) = get_entry_for_index(i);
 
-            assert_eq!(hash_table.get_value(&key, None), vec![], "should not find values for key {}", i);
+            assert_eq!(hash_table.get_value(&key, None), Ok(vec![]), "should not find values for key {}", i);
         }
 
         hash_table.verify_integrity(false);
@@ -75,7 +75,7 @@ mod tests {
         for &i in &(total..total + 1_000_000).shuffle()[0..10] {
             let (key, _) = get_entry_for_index(i);
 
-            assert_eq!(hash_table.get_value(&key, None), vec![], "should not find values for key {}", i);
+            assert_eq!(hash_table.get_value(&key, None), Ok(vec![]), "should not find values for key {}", i);
         }
 
         hash_table.verify_integrity(false);
@@ -89,7 +89,7 @@ mod tests {
                 println!("Fetched {}%", counter / one_percent);
             }
 
-            assert_eq!(hash_table.get_value(&key, None), vec![value], "should find values for key {}", i);
+            assert_eq!(hash_table.get_value(&key, None), Ok(vec![value]), "should find values for key {}", i);
 
             counter += 1;
         }
@@ -121,7 +121,7 @@ mod tests {
 
                 let expected_return = if removed_keys.contains(&i) { vec![] } else { vec![value] };
 
-                assert_eq!(hash_table.get_value(&key, None), expected_return, "get value for key {}", i);
+                assert_eq!(hash_table.get_value(&key, None), Ok(expected_return), "get value for key {}", i);
 
                 counter += 1;
             }
@@ -169,16 +169,14 @@ mod tests {
                 let found_value = hash_table.get_value(&key, None);
 
                 if removed_keys.contains(&i) {
-                    assert_eq!(found_value, vec![], "should not find any values for removed key {}", i);
+                    assert_eq!(found_value, Ok(vec![]), "should not find any values for removed key {}", i);
                     continue;
                 } else if reinserted_keys.contains(&i) {
-
-                    let (key, _) = get_entry_for_index(i);
                     let (_, value) = get_entry_for_index(i + offset_for_reinserted_values);
 
-                    assert_eq!(found_value, vec![value], "should find updated value for reinserted key {}", i);
+                    assert_eq!(found_value, Ok(vec![value]), "should find updated value for reinserted key {}", i);
                 } else {
-                    assert_eq!(found_value, vec![value], "should find original value for not changed key {}", i);
+                    assert_eq!(found_value, Ok(vec![value]), "should find original value for not changed key {}", i);
                 }
 
                 counter += 1;
@@ -417,7 +415,7 @@ mod tests {
         let all_keys = [24, 16, 9, 10, 26, 7, 31, 4, 20, 6, 22];
 
         for key in all_keys {
-            assert_eq!(hash_table.get_value(&key, None), vec![key]);
+            assert_eq!(hash_table.get_value(&key, None), Ok(vec![key]));
         }
     }
 

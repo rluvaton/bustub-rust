@@ -14,7 +14,7 @@ pub enum InitError {
     #[error("buffer pool error")]
     BufferPoolError(#[from] buffer::BufferPoolError),
 
-    #[error("unknown buffer pool error")]
+    #[error("unknown error during init")]
     Unknown,
 }
 
@@ -32,7 +32,7 @@ pub enum InsertionError {
     #[error("No space left for inserting as the bucket is full and it cannot be splitted again")]
     BucketIsFull,
 
-    #[error("unknown buffer pool error")]
+    #[error("unknown error during insert")]
     Unknown,
 }
 
@@ -52,7 +52,7 @@ pub enum InsertionSplitError {
     #[error("Tried to split bucket for {0} times")]
     ReachedRetryLimit(usize),
 
-    #[error("unknown split error")]
+    #[error("unknown split during insertion error")]
     Unknown,
 }
 
@@ -71,3 +71,11 @@ pub enum SplitError {
     Unknown,
 }
 
+#[derive(thiserror::Error, Debug, PartialEq, Clone)]
+pub enum LookupError {
+    #[error("buffer pool error")]
+    BufferPoolError(#[from] buffer::BufferPoolError),
+
+    #[error("unknown error")]
+    Unknown,
+}

@@ -221,7 +221,7 @@ where
     ///
     /// Returns: `Vec<Value` the value(s) associated with the given key
     ///
-    pub fn get_value(&self, key: &Key, transaction: Option<Arc<Transaction>>) -> Vec<Value> {
+    pub fn get_value(&self, key: &Key, transaction: Option<Arc<Transaction>>) -> Result<Vec<Value>, errors::LookupError> {
         // TODO - use transaction
         assert!(transaction.is_none(), "transaction is not none, transactions are not supported at the moment");
 
@@ -234,67 +234,42 @@ where
 
         {
             // 2. Get the header page
-            let header = self.bpm.fetch_page_read(self.header_page_id);
-
-            // 3. If header is missing than the table is not yet initialized so return empty vector
-            // TODO - should maybe propagate the error?
-            if header.is_err() {
-                // TODO - init header page if uninitialized to avoid cache hits until first set value
-                return vec![];
-            }
-            let header = header.unwrap();
+            let header = self.bpm.fetch_page_read(self.header_page_id)
+                .context("Failed to fetch header")?;
 
             let header_page = header.cast::<<Self as TypeAliases>::HeaderPage>();
 
-            // 4. Find the directory page id where the value might be
+            // 3. Find the directory page id where the value might be
             let directory_index = header_page.hash_to_directory_index(key_hash);
             directory_page_id = header_page.get_directory_page_id(directory_index);
         } // Drop header page guard
 
-        // 5. Making sure we got a valid page id
+        // 4. If we got invalid page than the directory is missing
         if directory_page_id == INVALID_PAGE_ID {
-            // TODO - should we panic as it's not possible?
-            return vec![];
+            return Ok(vec![])
         }
 
         {
-            // 6. Get the directory page
-            let directory = self.bpm.fetch_page_read(directory_page_id);
-
-            // 7. If directory page is missing than not found
-            // TODO - should maybe propagate the error?
-            if directory.is_err() {
-                // TODO - Should we log warning that the page don't exists?
-                return vec![];
-            }
-            let directory = directory.unwrap();
+            // 5. Get the directory page
+            let directory = self.bpm.fetch_page_read(directory_page_id)?;
 
             let directory_page = directory.cast::<<Self as TypeAliases>::DirectoryPage>();
 
-            // 8. Find the bucket page id where the value might be
+            // 6. Find the bucket page id where the value might be
             let bucket_index = directory_page.hash_to_bucket_index(key_hash);
             bucket_page_id = directory_page.get_bucket_page_id(bucket_index)
         } // Release directory page guard
 
-        // 9. Making sure we got a valid page id
+        // 7. If we got invalid page than the bucket is missing
         if bucket_page_id == INVALID_PAGE_ID {
-            // TODO - should we panic as it's not possible? - or
-            return vec![];
+            return Ok(vec![])
         }
 
         let found_value: Option<Value>;
 
         {
-            // 10. Get the bucket page
-            let bucket = self.bpm.fetch_page_read(bucket_page_id);
-
-            // 11. If bucket page is missing than not found
-            // TODO - should maybe propagate the error?
-            if bucket.is_err() {
-                // TODO - Should we log warning that the page don't exists?
-                return vec![];
-            }
-            let bucket = bucket.unwrap();
+            // 8. Get the bucket page
+            let bucket = self.bpm.fetch_page_read(bucket_page_id)?;
 
 
             let bucket_page = bucket.cast::<<Self as TypeAliases>::BucketPage>();
@@ -306,14 +281,14 @@ where
         } // Drop bucket page guard
 
 
-        found_value.map_or_else(
+        Ok(found_value.map_or_else(
 
             // In case None, return empty results
             || vec![],
 
             // In case found return that result
             |v| vec![v],
-        )
+        ))
     }
 
     /// Helper function to verify the integrity of the extendible hash table's directory.
