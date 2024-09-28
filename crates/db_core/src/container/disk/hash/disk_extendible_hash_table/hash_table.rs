@@ -317,7 +317,7 @@ where
     }
 
     /// Helper function to verify the integrity of the extendible hash table's directory.
-    pub fn verify_integrity(&self) {
+    pub fn verify_integrity(&self, print_content_on_failure: bool) {
         assert_ne!(self.header_page_id, INVALID_PAGE_ID, "header page id is invalid");
         let header_guard = self.bpm.fetch_page_basic(self.header_page_id).expect("Should fetch the header page");
         let header_guard = header_guard.read();
@@ -332,7 +332,7 @@ where
                 let directory_guard = directory_guard.read();
 
                 let directory = directory_guard.cast::<<Self as TypeAliases>::DirectoryPage>();
-                directory.verify_integrity();
+                directory.verify_integrity(print_content_on_failure);
             }
         }
     }

@@ -33,6 +33,15 @@ impl<const KEY_SIZE: usize> GenericKey<KEY_SIZE> {
         self.data[..size_of_val(&key)].copy_from_slice(key.to_ne_bytes().as_slice());
     }
 
+    /// NOTE: for test purpose only
+    pub(crate) fn new_from_integer(key: i64) -> Self {
+        let mut generic_key = Self::default();
+
+        generic_key.set_from_integer(key);
+
+        generic_key
+    }
+
     pub(crate) fn to_value(&self, schema: &Schema, column_idx: u32) -> Value {
         let data_slice: &[u8];
         let col = schema.get_column(column_idx);

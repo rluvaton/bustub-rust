@@ -322,7 +322,7 @@ impl DirectoryPage {
     /// (2) Each bucket has precisely 2^(GD - LD) pointers pointing to it.
     /// (3) The LD is the same at each index with the same bucket_page_id
     ///
-    pub fn verify_integrity(&self) {
+    pub fn verify_integrity(&self, print_directory_on_failure: bool) {
         // build maps of {bucket_page_id : pointer_count} and {bucket_page_id : local_depth}
         let mut page_id_to_count: HashMap<PageId, u32> = HashMap::new();
         let mut page_id_to_ld: HashMap<PageId, u32> = HashMap::new();
@@ -340,7 +340,9 @@ impl DirectoryPage {
             if page_id_to_ld.contains_key(&curr_page_id) && curr_ld != page_id_to_ld[&curr_page_id] {
                 let old_ld = *page_id_to_ld.get_or(&curr_page_id, &0);
                 println!("Verify Integrity: curr_local_depth: {}, old_local_depth {}, for page_id: {}", curr_ld, old_ld, curr_page_id);
-                self.print_directory();
+                if print_directory_on_failure {
+                    self.print_directory();
+                }
                 assert_eq!(curr_ld, *page_id_to_ld.get_or(&curr_page_id, &0), "local depth is not the same at each index with same bucket page id for page id {}", curr_page_id);
             } else {
                 page_id_to_ld.insert(curr_page_id, curr_ld);
@@ -354,7 +356,9 @@ impl DirectoryPage {
 
             if curr_count != required_count {
                 println!("Verify Integrity: curr_count: {}, required_count {}, for page_id: {}", curr_count, required_count, curr_page_id);
-                self.print_directory();
+                if print_directory_on_failure {
+                    self.print_directory();
+                }
                 assert_eq!(curr_count, required_count, "a bucket does not have precisely 2^(GD - LD) pointers to it")
             }
         }

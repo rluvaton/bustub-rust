@@ -157,7 +157,7 @@ mod tests {
             // ================ END DIRECTORY ================
             //
 
-            directory_page.verify_integrity();
+            directory_page.verify_integrity(true);
             assert_eq!(directory_page.size(), 1);
             assert_eq!(directory_page.get_bucket_page_id(0), bucket_page_id_1);
 
@@ -173,7 +173,7 @@ mod tests {
             // |    1       |    3    |      1      |
             // ================ END DIRECTORY ================
             //
-            directory_page.verify_integrity();
+            directory_page.verify_integrity(true);
             assert_eq!(directory_page.size(), 2);
             assert_eq!(directory_page.get_bucket_page_id(0), bucket_page_id_1);
             assert_eq!(directory_page.get_bucket_page_id(1), bucket_page_id_2);
@@ -194,7 +194,7 @@ mod tests {
             // |    3       |    3    |      1      |
             // ================ END DIRECTORY ================
 
-            directory_page.verify_integrity();
+            directory_page.verify_integrity(true);
             assert_eq!(directory_page.size(), 4);
             assert_eq!(directory_page.get_bucket_page_id(0), bucket_page_id_1);
             assert_eq!(directory_page.get_bucket_page_id(1), bucket_page_id_2);
@@ -224,7 +224,7 @@ mod tests {
             // ================ END DIRECTORY ================
 
 
-            directory_page.verify_integrity();
+            directory_page.verify_integrity(true);
             assert_eq!(directory_page.size(), 8);
             assert_eq!(directory_page.get_bucket_page_id(0), bucket_page_id_1);
             assert_eq!(directory_page.get_bucket_page_id(1), bucket_page_id_2);
@@ -272,7 +272,7 @@ mod tests {
             // |     3      |    3    |      1      |
             // ================ END DIRECTORY ================
 
-            directory_page.verify_integrity();
+            directory_page.verify_integrity(true);
             assert_eq!(directory_page.size(), 4);
             assert_eq!(directory_page.can_shrink(), false);
 

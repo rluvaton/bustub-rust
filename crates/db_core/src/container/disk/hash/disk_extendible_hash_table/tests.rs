@@ -3,10 +3,10 @@ mod tests {
     use crate::buffer::BufferPoolManager;
     use crate::catalog::Schema;
     use crate::container::test_util::U64IdentityKeyHasher;
-    use crate::container::{DefaultKeyHasher, DiskExtendibleHashTable};
-    use crate::storage::{hash_table_bucket_array_size, DiskManagerUnlimitedMemory, GenericComparator, GenericKey, OrdComparator, U64Comparator};
+    use crate::container::{DefaultKeyHasher, DiskExtendibleHashTable, KeyHasher};
+    use crate::storage::{hash_table_bucket_array_size, Comparator, DiskManagerUnlimitedMemory, GenericComparator, GenericKey, OrdComparator, U64Comparator};
     use common::config::{PageId, BUSTUB_PAGE_SIZE};
-    use common::RID;
+    use common::{PageKey, PageValue, RID};
     use generics::Shuffle;
     use parking_lot::Mutex;
     use rand::seq::SliceRandom;
@@ -30,98 +30,103 @@ mod tests {
         ).expect("Should be able to create hash table")
     }
 
-    #[test]
-    fn lifecycle() {
-        let mut hash_table = create_extendible_hash_table();
-
-        // Having enough keys so a split would happen
-        let total = (BUSTUB_PAGE_SIZE * 100) as i64;
-
-        let mut index_key = GenericKey::<8>::default();
-        let mut rid = RID::default();
+    fn test_lifecycle<
+        const ARRAY_SIZE: usize,
+        Key: PageKey,
+        Value: PageValue,
+        KeyComparator: Comparator<Key>,
+        KeyHasherImpl: KeyHasher,
+        GetEntryFn: Fn(i64) -> (Key, Value)
+    >(mut hash_table: DiskExtendibleHashTable<ARRAY_SIZE, Key, Value, KeyComparator, KeyHasherImpl>, total: i64, get_entry_for_index: GetEntryFn) {
+        let one_percent = total / 100;
 
         // Should not find any values before init
+        println!("Testing trying to find missing values before init");
         let tmp = (0..total).shuffle();
         for &i in &tmp[0..10] {
-            index_key.set_from_integer(i);
+            let (key, _) = get_entry_for_index(i);
 
-            assert_eq!(hash_table.get_value(&index_key, None), vec![], "should not find values for key {}", i);
+            assert_eq!(hash_table.get_value(&key, None), vec![], "should not find values for key {}", i);
         }
 
-        hash_table.verify_integrity();
-        let index_with_problem = 237732;
+        hash_table.verify_integrity(false);
 
+        println!("Inserting {} entries", total);
         // insert a few (key, value) pairs
         for i in 0..total {
-            index_key.set_from_integer(i);
+            let (key, value) = get_entry_for_index(i);
 
-            rid.set(i as PageId, i as u32);
-
-            if i == index_with_problem {
-                hash_table.print_hash_table();
-                hash_table.verify_integrity();
+            if i % (10 * one_percent) == 0 {
+                println!("Inserted {}%", i / one_percent);
             }
 
             /// Abort process on panic, this should be used in thread
             // This can lead to corruption, but if we panicked it is a bug in the db (I think)
             // TODO - maybe do not abort as the DB can be in the middle of other things that can lead to corruption
-            assert!(hash_table.insert(&index_key, &rid, None).is_ok(), "should insert new key {}", i);
+            assert!(hash_table.insert(&key, &value, None).is_ok(), "should insert new key {}", i);
         }
 
-        hash_table.verify_integrity();
+        println!("Inserted all entries, verifying first integrity");
 
+        hash_table.verify_integrity(false);
+
+        println!("Testing trying to find missing values after init");
         // Should not find missing keys after the hash map is initialized
         for &i in &(total..total + 1_000_000).shuffle()[0..10] {
-            index_key.set_from_integer(i);
+            let (key, _) = get_entry_for_index(i);
 
-            assert_eq!(hash_table.get_value(&index_key, None), vec![], "should not find values for key {}", i);
+            assert_eq!(hash_table.get_value(&key, None), vec![], "should not find values for key {}", i);
         }
 
-        hash_table.verify_integrity();
+        hash_table.verify_integrity(false);
 
         // Fetch those in random order
+        println!("Asserting all inserted entries exists");
         for i in (0..total).shuffle() {
-            index_key.set_from_integer(i);
+            let (key, value) = get_entry_for_index(i);
+            if i % (10 * one_percent) == 0 {
+                println!("Fetched {}%", i / one_percent);
+            }
 
-            rid.set(i as PageId, i as u32);
-
-            assert_eq!(hash_table.get_value(&index_key, None), vec![rid], "should find values for key {}", i);
+            assert_eq!(hash_table.get_value(&key, None), vec![value], "should find values for key {}", i);
         }
 
-        hash_table.verify_integrity();
+        hash_table.verify_integrity(false);
 
-        // Remove 1/7 random keys
+        println!("Remove 1/7 random keys");
         let random_key_index_to_remove = &(0..total).shuffle()[0..(total / 7) as usize];
 
         for &i in random_key_index_to_remove {
-            index_key.set_from_integer(i);
-            rid.set(i as PageId, i as u32);
+            let (key, _) = get_entry_for_index(i);
 
-            assert_eq!(hash_table.remove(&index_key, None).expect("should remove"), true, "should remove key {}", i);
+            assert_eq!(hash_table.remove(&key, None).expect("should remove"), true, "should remove key {}", i);
         }
 
-        hash_table.verify_integrity();
+        hash_table.verify_integrity(false);
 
-        // Fetch all in random order
+        println!("Fetch all in random order");
         {
             let removed_keys = HashSet::<i64>::from_iter(random_key_index_to_remove.iter().cloned());
 
             for i in (0..total).shuffle() {
-                index_key.set_from_integer(i);
+                if i % (10 * one_percent) == 0 {
+                    println!("Fetched {}%", i / one_percent);
+                }
 
-                rid.set(i as PageId, i as u32);
+                let (key, value) = get_entry_for_index(i);
 
-                let expected_return = if removed_keys.contains(&i) { vec![] } else { vec![rid] };
+                let expected_return = if removed_keys.contains(&i) { vec![] } else { vec![value] };
 
-                assert_eq!(hash_table.get_value(&index_key, None), expected_return, "get value for key {}", i);
+                assert_eq!(hash_table.get_value(&key, None), expected_return, "get value for key {}", i);
             }
         }
 
-        hash_table.verify_integrity();
+        hash_table.verify_integrity(false);
 
         let mut removed_random_keys_to_reinsert = random_key_index_to_remove.iter().cloned().collect::<Vec<_>>().clone();
         removed_random_keys_to_reinsert.shuffle(&mut thread_rng());
 
+        println!("Add back 1/4 of the removed keys with different values");
         // Add back 1/4 of the removed keys
         let removed_random_keys_to_reinsert = &removed_random_keys_to_reinsert[0..removed_random_keys_to_reinsert.len() / 4];
 
@@ -130,17 +135,16 @@ mod tests {
         {
             // insert back some of the removed keys with different values
             for &i in removed_random_keys_to_reinsert {
-                index_key.set_from_integer(i);
+                let (key, _) = get_entry_for_index(i);
+                let (_, value) = get_entry_for_index(i + offset_for_reinserted_values);
 
-                let rid_value = i + offset_for_reinserted_values;
-                rid.set(rid_value as PageId, rid_value as u32);
-
-                assert!(hash_table.insert(&index_key, &rid, None).is_ok(), "should insert new key {}", i);
+                assert!(hash_table.insert(&key, &value, None).is_ok(), "should insert new key {}", i);
             }
         }
 
-        hash_table.verify_integrity();
+        hash_table.verify_integrity(false);
 
+        println!("Fetch all in random order");
         {
             let reinserted_keys = HashSet::<i64>::from_iter(removed_random_keys_to_reinsert.iter().cloned());
             let removed_keys = HashSet::<i64>::from_iter(random_key_index_to_remove.iter().cloned());
@@ -149,298 +153,42 @@ mod tests {
 
             // Fetch all in random order
             for i in (0..total).shuffle() {
-                index_key.set_from_integer(i);
+                if i % (10 * one_percent) == 0 {
+                    println!("Fetched {}%", i / one_percent);
+                }
 
-                let found_value = hash_table.get_value(&index_key, None);
+                let (key, value) = get_entry_for_index(i);
+
+                let found_value = hash_table.get_value(&key, None);
 
                 if removed_keys.contains(&i) {
                     assert_eq!(found_value, vec![], "should not find any values for removed key {}", i);
                     continue;
                 } else if reinserted_keys.contains(&i) {
-                    let rid_value = i + offset_for_reinserted_values;
-                    rid.set(rid_value as PageId, rid_value as u32);
 
-                    assert_eq!(found_value, vec![rid], "should find updated value for reinserted key {}", i);
+                    let (key, _) = get_entry_for_index(i);
+                    let (_, value) = get_entry_for_index(i + offset_for_reinserted_values);
+
+                    assert_eq!(found_value, vec![value], "should find updated value for reinserted key {}", i);
                 } else {
-                    rid.set(i as PageId, i as u32);
-
-                    assert_eq!(found_value, vec![rid], "should find original value for not changed key {}", i);
+                    assert_eq!(found_value, vec![value], "should find original value for not changed key {}", i);
                 }
             }
         }
 
-        hash_table.verify_integrity();
+        hash_table.verify_integrity(false);
     }
 
     #[test]
-    fn should_work_with_split() {
-        let disk_manager = Arc::new(Mutex::new(DiskManagerUnlimitedMemory::new()));
-        let bpm = Arc::new(BufferPoolManager::new(4, disk_manager, Some(2), None));
+    fn lifecycle() {
+        let hash_table = create_extendible_hash_table();
 
-        let key_schema = Schema::parse_create_statement("a bigint").expect("Should be able to create schema");
-
-        let mut hash_table = DiskExtendibleHashTable::<{ hash_table_bucket_array_size::<GenericKey<8>, RID>() }, GenericKey<8>, RID, GenericComparator<8>, DefaultKeyHasher>::new(
-            "temp".to_string(),
-            bpm,
-            GenericComparator::from(key_schema),
-            Some(3),
-            Some(3),
-            Some(3),
-        ).expect("Should be able to create hash table");
-
-
-        let mut index_key = GenericKey::<8>::default();
-        let mut rid = RID::default();
-
-        let mut i = 0;
-
-        hash_table.print_hash_table();
-        hash_table.verify_integrity();
-
-        // empty
-
-        i += 1;
-        index_key.set_from_integer(i);
-        rid.set(i as PageId, i as u32);
-        hash_table.insert(&index_key, &rid, None).expect(format!("Should insert {}", i).as_str());
-
-        hash_table.print_hash_table();
-        println!("\n\n");
-        hash_table.verify_integrity();
-
-        i += 1;
-        index_key.set_from_integer(i);
-        rid.set(i as PageId, i as u32);
-        hash_table.insert(&index_key, &rid, None).expect(format!("Should insert {}", i).as_str());
-
-        hash_table.print_hash_table();
-        println!("\n\n");
-        hash_table.verify_integrity();
-
-        i += 1;
-        index_key.set_from_integer(i);
-        rid.set(i as PageId, i as u32);
-        hash_table.insert(&index_key, &rid, None).expect(format!("Should insert {}", i).as_str());
-
-        hash_table.print_hash_table();
-        println!("\n\n");
-        hash_table.verify_integrity();
-
-        i += 1;
-        index_key.set_from_integer(i);
-        rid.set(i as PageId, i as u32);
-        hash_table.insert(&index_key, &rid, None).expect(format!("Should insert {}", i).as_str());
-
-        hash_table.print_hash_table();
-        println!("\n\n");
-        hash_table.verify_integrity();
-
-        i += 1;
-        index_key.set_from_integer(i);
-        rid.set(i as PageId, i as u32);
-        hash_table.insert(&index_key, &rid, None).expect(format!("Should insert {}", i).as_str());
-
-        hash_table.print_hash_table();
-        println!("\n\n");
-        hash_table.verify_integrity();
-
-        i += 1;
-        index_key.set_from_integer(i);
-        rid.set(i as PageId, i as u32);
-        hash_table.insert(&index_key, &rid, None).expect(format!("Should insert {}", i).as_str());
-
-        hash_table.print_hash_table();
-        println!("\n\n");
-        hash_table.verify_integrity();
-
-        i += 1;
-        index_key.set_from_integer(i);
-        rid.set(i as PageId, i as u32);
-        hash_table.insert(&index_key, &rid, None).expect(format!("Should insert {}", i).as_str());
-
-        hash_table.print_hash_table();
-        println!("\n\n");
-        hash_table.verify_integrity();
-
-        i += 1;
-        index_key.set_from_integer(i);
-        rid.set(i as PageId, i as u32);
-        hash_table.insert(&index_key, &rid, None).expect(format!("Should insert {}", i).as_str());
-
-        hash_table.print_hash_table();
-        println!("\n\n");
-        hash_table.verify_integrity();
-
-        i += 1;
-        index_key.set_from_integer(i);
-        rid.set(i as PageId, i as u32);
-        hash_table.insert(&index_key, &rid, None).expect(format!("Should insert {}", i).as_str());
-
-        hash_table.print_hash_table();
-        println!("\n\n");
-        hash_table.verify_integrity();
-
-        i += 1;
-        index_key.set_from_integer(i);
-        rid.set(i as PageId, i as u32);
-        hash_table.insert(&index_key, &rid, None).expect(format!("Should insert {}", i).as_str());
-
-        hash_table.print_hash_table();
-        println!("\n\n");
-        hash_table.verify_integrity();
-
-        i += 1;
-        index_key.set_from_integer(i);
-        rid.set(i as PageId, i as u32);
-        hash_table.insert(&index_key, &rid, None).expect(format!("Should insert {}", i).as_str());
-
-        hash_table.print_hash_table();
-        println!("\n\n");
-        hash_table.verify_integrity();
-
-        i += 1;
-        index_key.set_from_integer(i);
-        rid.set(i as PageId, i as u32);
-        hash_table.insert(&index_key, &rid, None).expect(format!("Should insert {}", i).as_str());
-
-        hash_table.print_hash_table();
-        println!("\n\n");
-        hash_table.verify_integrity();
-
-        i += 1;
-        index_key.set_from_integer(i);
-        rid.set(i as PageId, i as u32);
-        hash_table.insert(&index_key, &rid, None).expect(format!("Should insert {}", i).as_str());
-
-        hash_table.print_hash_table();
-        println!("\n\n");
-        hash_table.verify_integrity();
-
-        i += 1;
-        index_key.set_from_integer(i);
-        rid.set(i as PageId, i as u32);
-        hash_table.insert(&index_key, &rid, None).expect(format!("Should insert {}", i).as_str());
-
-        hash_table.print_hash_table();
-        println!("\n\n");
-        hash_table.verify_integrity();
-
-        i += 1;
-        index_key.set_from_integer(i);
-        rid.set(i as PageId, i as u32);
-        hash_table.insert(&index_key, &rid, None).expect(format!("Should insert {}", i).as_str());
-
-        hash_table.print_hash_table();
-        println!("\n\n");
-        hash_table.verify_integrity();
-
-        i += 1;
-        index_key.set_from_integer(i);
-        rid.set(i as PageId, i as u32);
-        hash_table.insert(&index_key, &rid, None).expect(format!("Should insert {}", i).as_str());
-
-        hash_table.print_hash_table();
-        println!("\n\n");
-        hash_table.verify_integrity();
-
-        i += 1;
-        index_key.set_from_integer(i);
-        rid.set(i as PageId, i as u32);
-        hash_table.insert(&index_key, &rid, None).expect(format!("Should insert {}", i).as_str());
-
-        hash_table.print_hash_table();
-        println!("\n\n");
-        hash_table.verify_integrity();
-
-        i += 1;
-        index_key.set_from_integer(i);
-        rid.set(i as PageId, i as u32);
-        hash_table.insert(&index_key, &rid, None).expect(format!("Should insert {}", i).as_str());
-
-        hash_table.print_hash_table();
-        println!("\n\n");
-        hash_table.verify_integrity();
-
-        i += 1;
-        index_key.set_from_integer(i);
-        rid.set(i as PageId, i as u32);
-        hash_table.insert(&index_key, &rid, None).expect(format!("Should insert {}", i).as_str());
-
-        hash_table.print_hash_table();
-        println!("\n\n");
-        hash_table.verify_integrity();
-
-        i += 1;
-        index_key.set_from_integer(i);
-        rid.set(i as PageId, i as u32);
-        hash_table.insert(&index_key, &rid, None).expect(format!("Should insert {}", i).as_str());
-
-        hash_table.print_hash_table();
-        println!("\n\n");
-        hash_table.verify_integrity();
-
-        i += 1;
-        index_key.set_from_integer(i);
-        rid.set(i as PageId, i as u32);
-        hash_table.insert(&index_key, &rid, None).expect(format!("Should insert {}", i).as_str());
-
-        hash_table.print_hash_table();
-        println!("\n\n");
-        hash_table.verify_integrity();
-
-        i += 1;
-        index_key.set_from_integer(i);
-        rid.set(i as PageId, i as u32);
-        hash_table.insert(&index_key, &rid, None).expect(format!("Should insert {}", i).as_str());
-
-        hash_table.print_hash_table();
-        println!("\n\n");
-        hash_table.verify_integrity();
-
-        i += 1;
-        index_key.set_from_integer(i);
-        rid.set(i as PageId, i as u32);
-        hash_table.insert(&index_key, &rid, None).expect(format!("Should insert {}", i).as_str());
-
-        hash_table.print_hash_table();
-        println!("\n\n");
-        hash_table.verify_integrity();
-
-        i += 1;
-        index_key.set_from_integer(i);
-        rid.set(i as PageId, i as u32);
-        hash_table.insert(&index_key, &rid, None).expect(format!("Should insert {}", i).as_str());
-
-        hash_table.print_hash_table();
-        println!("\n\n");
-        hash_table.verify_integrity();
-
-        i += 1;
-        index_key.set_from_integer(i);
-        rid.set(i as PageId, i as u32);
-        hash_table.insert(&index_key, &rid, None).expect(format!("Should insert {}", i).as_str());
-
-        hash_table.print_hash_table();
-        println!("\n\n");
-        hash_table.verify_integrity();
-
-        i += 1;
-        index_key.set_from_integer(i);
-        rid.set(i as PageId, i as u32);
-        hash_table.insert(&index_key, &rid, None).expect(format!("Should insert {}", i).as_str());
-
-        hash_table.print_hash_table();
-        println!("\n\n");
-        hash_table.verify_integrity();
-
-        i += 1;
-        index_key.set_from_integer(i);
-        rid.set(i as PageId, i as u32);
-        hash_table.insert(&index_key, &rid, None).expect(format!("Should insert {}", i).as_str());
-
-        hash_table.print_hash_table();
-        println!("\n\n");
-        hash_table.verify_integrity();
+        // Having enough keys so a split would happen
+        let total = (BUSTUB_PAGE_SIZE * 100) as i64;
+        test_lifecycle(hash_table, total, |i| (
+            GenericKey::<8>::new_from_integer(i),
+            RID::new(i as PageId, i as u32)
+        ));
     }
 
     #[test]
@@ -472,7 +220,7 @@ mod tests {
             Some(3),
         ).expect("Should be able to create hash table");
 
-        hash_table.verify_integrity();
+        hash_table.verify_integrity(true);
 
         // Example of value taken from
         // https://www.youtube.com/watch?v=TtkN2xRAgv4
@@ -503,7 +251,7 @@ mod tests {
 
         for key in vec![4, 24, 16, 6, 22, 10, 7, 31] {
             hash_table.insert(&key, &key, None).unwrap();
-            hash_table.verify_integrity();
+            hash_table.verify_integrity(true);
         }
 
         // Insert 9 to the 2nd bucket
@@ -529,7 +277,7 @@ mod tests {
         //                                  └───┴───┴───┘
         // ```
         hash_table.insert(&9, &9, None).unwrap();
-        hash_table.verify_integrity();
+        hash_table.verify_integrity(true);
 
         // Try to insert 20 and cause an overflow which will trigger directory expansion
         //
@@ -590,7 +338,7 @@ mod tests {
         //     └────────────────┘
         // ```
         hash_table.insert(&20, &20, None).unwrap();
-        hash_table.verify_integrity();
+        hash_table.verify_integrity(true);
 
         // Try to insert 26 and cause an overflow which will trigger **local** bucket 3 to split
         //
@@ -655,7 +403,7 @@ mod tests {
         //                                   └───┴───┴───┘
         // ```
         hash_table.insert(&26, &26, None).unwrap();
-        hash_table.verify_integrity();
+        hash_table.verify_integrity(true);
 
         let all_keys = [24, 16, 9, 10, 26, 7, 31, 4, 20, 6, 22];
 
@@ -672,7 +420,7 @@ mod tests {
         type Key = u64;
         type Value = u64;
 
-        let mut hash_table = DiskExtendibleHashTable::<
+        let hash_table = DiskExtendibleHashTable::<
             { hash_table_bucket_array_size::<Key, Value>() },
             Key,
             Value,
@@ -690,114 +438,17 @@ mod tests {
         ).expect("Should be able to create hash table");
 
         // Having enough keys so a split would happen
-        let total = (BUSTUB_PAGE_SIZE * 100) as Key;
+        let total = (BUSTUB_PAGE_SIZE * 100) as i64;
+        test_lifecycle(hash_table, total, |i| (
+            i as Key,
+            i as Value
+        ));
 
-        // Should not find any values before init
-        let tmp = (0..total).shuffle();
-        for &key in &tmp[0..10] {
-            assert_eq!(hash_table.get_value(&key, None), vec![], "should not find values for key {}", key);
-        }
-
-        hash_table.verify_integrity();
-
-        let problematic_key = 409600;
-
-        // insert a few (key, value) pairs
-        for key in 0..total {
-            if key == problematic_key {
-                hash_table.print_hash_table();
-                hash_table.verify_integrity();
-            }
-
-            /// Abort process on panic, this should be used in thread
-            // This can lead to corruption, but if we panicked it is a bug in the db (I think)
-            assert!(hash_table.insert(&key, &key, None).is_ok(), "should insert new key {}", key);
-        }
-
-        hash_table.verify_integrity();
-
-        // Should not find missing keys after the hash map is initialized
-        for &key in &(total..total + 1_000_000).shuffle()[0..10] {
-            assert_eq!(hash_table.get_value(&key, None), vec![], "should not find values for key {}", key);
-        }
-
-        hash_table.verify_integrity();
-
-        // Fetch those in random order
-        for key in (0..total).shuffle() {
-            assert_eq!(hash_table.get_value(&key, None), vec![key], "should find values for key {}", key);
-        }
-
-        hash_table.verify_integrity();
-
-        // Remove 1/7 random keys
-        let random_key_index_to_remove = &(0..total).shuffle()[0..(total / 7) as usize];
-
-        for &key in random_key_index_to_remove {
-            assert_eq!(hash_table.remove(&key, None).expect("should remove"), true, "should remove key {}", key);
-        }
-
-        hash_table.verify_integrity();
-
-        // Fetch all in random order
-        {
-            let removed_keys = HashSet::<Key>::from_iter(random_key_index_to_remove.iter().cloned());
-
-            for key in (0..total).shuffle() {
-                let expected_return = if removed_keys.contains(&key) { vec![] } else { vec![key] };
-
-                assert_eq!(hash_table.get_value(&key, None), expected_return, "get value for key {}", key);
-            }
-        }
-
-        hash_table.verify_integrity();
-
-        let mut removed_random_keys_to_reinsert = random_key_index_to_remove.iter().cloned().collect::<Vec<_>>().clone();
-        removed_random_keys_to_reinsert.shuffle(&mut thread_rng());
-
-        // Add back 1/4 of the removed keys
-        let removed_random_keys_to_reinsert = &removed_random_keys_to_reinsert[0..removed_random_keys_to_reinsert.len() / 4];
-
-        let offset_for_reinserted_values = total * 100;
-
-        {
-            // insert back some of the removed keys with different values
-            for &key in removed_random_keys_to_reinsert {
-                let value = key + offset_for_reinserted_values;
-
-                assert!(hash_table.insert(&key, &value, None).is_ok(), "should insert new key {}", key);
-            }
-        }
-
-        hash_table.verify_integrity();
-
-        {
-            let reinserted_keys = HashSet::<Key>::from_iter(removed_random_keys_to_reinsert.iter().cloned());
-            let removed_keys = HashSet::<Key>::from_iter(random_key_index_to_remove.iter().cloned());
-
-            let removed_keys: HashSet::<Key> = &removed_keys - &reinserted_keys;
-
-            // Fetch all in random order
-            for key in (0..total).shuffle() {
-                let found_value = hash_table.get_value(&key, None);
-
-                if removed_keys.contains(&key) {
-                    assert_eq!(found_value, vec![], "should not find any values for removed key {}", key);
-                    continue;
-                } else if reinserted_keys.contains(&key) {
-                    let value = key + offset_for_reinserted_values;
-
-                    assert_eq!(found_value, vec![value], "should find updated value for reinserted key {}", key);
-                } else {
-                    let value = key;
-
-                    assert_eq!(found_value, vec![value], "should find original value for not changed key {}", key);
-                }
-            }
-        }
-
-        hash_table.verify_integrity();
+        // let problematic_key = 409600;
     }
+
+
+    // TODO - add tests for concurrency
 
     // TODO - add test for deletion to already deleted should not do anything
 }
