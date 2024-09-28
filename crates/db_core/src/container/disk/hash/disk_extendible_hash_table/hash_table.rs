@@ -358,7 +358,7 @@ where
         self.try_split(directory_page_guard, bucket_page_guard, bucket_index, key_hash, NUMBER_OF_SPLIT_RETRIES)
     }
 
-    fn try_split<'a>(&mut self, directory_page_guard: &mut PinWritePageGuard, mut bucket_page_guard: PinWritePageGuard<'a>, mut bucket_index: u32, key_hash: u32, tries_left: usize) -> Result<PinWritePageGuard<'a>, errors::SplitError> {
+    fn try_split<'a>(&mut self, directory_page_guard: &mut PinWritePageGuard, mut bucket_page_guard: PinWritePageGuard<'a>, bucket_index: u32, key_hash: u32, tries_left: usize) -> Result<PinWritePageGuard<'a>, errors::SplitError> {
         // 1. Check if reached max tries
         if tries_left == 0 {
             eprintln!("Trying to insert key but after split the page is still full, the hash might not evenly distribute the keys");
@@ -379,7 +379,11 @@ where
 
         // 4. Expand the directory if needed
         if directory_page.get_local_depth(bucket_index) == directory_page.get_global_depth() {
-            assert_eq!(directory_page.incr_global_depth(), true, "should be able to increase directory global depth");
+            let increase_result = directory_page.incr_global_depth();
+
+            if !increase_result {
+                return Err(errors::SplitError::DirectoryIsFull)
+            }
         }
 
         // 5. Split bucket
@@ -462,47 +466,30 @@ where
     /// Return the splitted bucket indices
     fn split_local_bucket(&mut self, mut bucket_index: u32, directory_page: &mut <Self as TypeAliases>::DirectoryPage, bucket_page_to_split: &mut <Self as TypeAliases>::BucketPage, new_bucket_guard: &mut PinWritePageGuard) {
 
-        // Change bucket index to be the first bucket of the specific page, so it will be the index of the bucket that will be kept as is
-        // Example:
-        // If we want to split bucket with page id 3, and we got the bucket index with value 11 we want the
-        // +--------+---------+-------------+
-        // | prefix | page_id | local_depth |
-        // +--------+---------+-------------+
-        // | 00     | 2       | 2           |
-        // +--------+---------+-------------+
-        // | 01     | 3       | 1           |
-        // +--------+---------+-------------+
-        // | 10     | 4       | 2           |
-        // +--------+---------+-------------+
-        // | 11     | 3       | 1           |
-        // +--------+---------+-------------+
-
         let new_bucket_page_id = new_bucket_guard.get_page_id();
         let new_bucket_page = new_bucket_guard.cast_mut::<<Self as TypeAliases>::BucketPage>();
 
-        // The new bucket index is always the next bit turned on
-        // let new_bucket_index = bucket_index.toggle_bit(directory_page.get_local_depth(bucket_index) as usize + 1);
+        // 1. Change bucket index to be the first bucket of the specific page, so it will be the index of the bucket that will be kept as is
         let new_bucket_index = bucket_index.turn_on_bit(directory_page.get_local_depth(bucket_index) as usize + 1);
 
+        // 2. Trim bucket index to the first index that point to the bucket
         bucket_index = bucket_index & directory_page.get_local_depth_mask(bucket_index);
 
-        // If bit is already on, this means that we need to go to the old
         assert_ne!(bucket_index, new_bucket_index, "Bucket index cannot be the same as the new bucket index");
 
-
-        // 2. Register the new bucket in the directory
+        // 3. Register the new bucket in the directory
         directory_page.set_bucket_page_id(new_bucket_index, new_bucket_page_id);
 
-        // 3. Update local length for both buckets
+        // 4. Update local length for both buckets
         directory_page.incr_local_depth(bucket_index);
         directory_page.incr_local_depth(new_bucket_index);
 
-        // 4. Rehash all current bucket page content and find the correct bucket
+        // 5. Rehash all current bucket page content and find the correct bucket
         let (new_bucket_items, current_bucket_items): (Vec<(Key, Value)>, Vec<(Key, Value)>) = bucket_page_to_split
             .iter()
             .partition(|(key, _)| directory_page.hash_to_bucket_index(self.hash(key)) == new_bucket_index);
 
-        // 5. set the current bucket items in the new location
+        // 6. set the current bucket items in the new location
         // Optimization: Only if not empty as if nothing to add to the new bucket than it means as is
         if !new_bucket_items.is_empty() {
             new_bucket_page.replace_all_entries(new_bucket_items.as_slice());

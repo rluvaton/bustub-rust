@@ -63,14 +63,14 @@ mod tests {
             /// Abort process on panic, this should be used in thread
             // This can lead to corruption, but if we panicked it is a bug in the db (I think)
             // TODO - maybe do not abort as the DB can be in the middle of other things that can lead to corruption
-            assert!(hash_table.insert(&key, &value, None).is_ok(), "should insert new key {}", i);
+            assert_eq!(hash_table.insert(&key, &value, None), Ok(()), "should insert new key {}", i);
         }
 
-        println!("Inserted all entries, verifying first integrity");
+        println!("All entries inserted");
 
         hash_table.verify_integrity(false);
 
-        println!("Testing trying to find missing values after init");
+        println!("Asserting not finding missing values after init");
         // Should not find missing keys after the hash map is initialized
         for &i in &(total..total + 1_000_000).shuffle()[0..10] {
             let (key, _) = get_entry_for_index(i);
@@ -82,13 +82,16 @@ mod tests {
 
         // Fetch those in random order
         println!("Asserting all inserted entries exists");
+        let mut counter = 0;
         for i in (0..total).shuffle() {
             let (key, value) = get_entry_for_index(i);
-            if i % (10 * one_percent) == 0 {
-                println!("Fetched {}%", i / one_percent);
+            if counter % (10 * one_percent) == 0 {
+                println!("Fetched {}%", counter / one_percent);
             }
 
             assert_eq!(hash_table.get_value(&key, None), vec![value], "should find values for key {}", i);
+
+            counter += 1;
         }
 
         hash_table.verify_integrity(false);
@@ -108,9 +111,10 @@ mod tests {
         {
             let removed_keys = HashSet::<i64>::from_iter(random_key_index_to_remove.iter().cloned());
 
+            let mut counter = 0;
             for i in (0..total).shuffle() {
-                if i % (10 * one_percent) == 0 {
-                    println!("Fetched {}%", i / one_percent);
+                if counter % (10 * one_percent) == 0 {
+                    println!("Fetched {}%", counter / one_percent);
                 }
 
                 let (key, value) = get_entry_for_index(i);
@@ -118,6 +122,8 @@ mod tests {
                 let expected_return = if removed_keys.contains(&i) { vec![] } else { vec![value] };
 
                 assert_eq!(hash_table.get_value(&key, None), expected_return, "get value for key {}", i);
+
+                counter += 1;
             }
         }
 
@@ -138,7 +144,7 @@ mod tests {
                 let (key, _) = get_entry_for_index(i);
                 let (_, value) = get_entry_for_index(i + offset_for_reinserted_values);
 
-                assert!(hash_table.insert(&key, &value, None).is_ok(), "should insert new key {}", i);
+                assert_eq!(hash_table.insert(&key, &value, None), Ok(()), "should insert back key {}", i);
             }
         }
 
@@ -152,9 +158,10 @@ mod tests {
             let removed_keys: HashSet::<i64> = &removed_keys - &reinserted_keys;
 
             // Fetch all in random order
+            let mut counter = 0;
             for i in (0..total).shuffle() {
-                if i % (10 * one_percent) == 0 {
-                    println!("Fetched {}%", i / one_percent);
+                if counter % (10 * one_percent) == 0 {
+                    println!("Fetched {}%", counter / one_percent);
                 }
 
                 let (key, value) = get_entry_for_index(i);
@@ -173,6 +180,8 @@ mod tests {
                 } else {
                     assert_eq!(found_value, vec![value], "should find original value for not changed key {}", i);
                 }
+
+                counter += 1;
             }
         }
 

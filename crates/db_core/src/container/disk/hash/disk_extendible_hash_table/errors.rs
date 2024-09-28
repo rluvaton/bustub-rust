@@ -24,12 +24,13 @@ pub enum InsertionError {
     KeyAlreadyExists,
 
     #[error("error during split")]
-    SplitError(SplitError),
+    InsertionSplitError(InsertionSplitError),
 
     #[error("buffer pool error")]
     BufferPoolError(#[from] buffer::BufferPoolError),
 
-
+    #[error("No space left for inserting as the bucket is full and it cannot be splitted again")]
+    BucketIsFull,
 
     #[error("unknown buffer pool error")]
     Unknown,
@@ -39,9 +40,20 @@ impl From<SplitError> for InsertionError {
     fn from(value: SplitError) -> Self {
         match value {
             SplitError::BufferPoolError(e) => Self::BufferPoolError(e),
-            _ => Self::SplitError(value)
+            SplitError::DirectoryIsFull => Self::BucketIsFull,
+            SplitError::ReachedRetryLimit(v) => Self::InsertionSplitError(InsertionSplitError::ReachedRetryLimit(v)),
+            SplitError::Unknown => Self::InsertionSplitError(InsertionSplitError::Unknown),
         }
     }
+}
+
+#[derive(thiserror::Error, Debug, PartialEq, Clone)]
+pub enum InsertionSplitError {
+    #[error("Tried to split bucket for {0} times")]
+    ReachedRetryLimit(usize),
+
+    #[error("unknown split error")]
+    Unknown,
 }
 
 #[derive(thiserror::Error, Debug, PartialEq, Clone)]
@@ -49,10 +61,13 @@ pub enum SplitError {
     #[error("Tried to split bucket for {0} times")]
     ReachedRetryLimit(usize),
 
+    #[error("Directory is full")]
+    DirectoryIsFull,
+
     #[error("buffer pool error")]
     BufferPoolError(#[from] buffer::BufferPoolError),
 
-    #[error("unknown buffer pool error")]
+    #[error("unknown split error")]
     Unknown,
 }
 
