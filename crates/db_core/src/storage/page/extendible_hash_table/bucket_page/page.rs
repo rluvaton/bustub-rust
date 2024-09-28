@@ -8,7 +8,6 @@ use std::slice::Iter;
 use prettytable::{row, Table};
 use common::{PageKey, PageValue, RID};
 use crate::storage::{Comparator, ExtendibleHashBucketPageInsertionErrors, GenericComparator, GenericKey};
-use crate::storage::page::extendible_hash_table::bucket_page::errors;
 
 // Test assertion helper type
 const _ASSERTION_TEST_TYPE: usize = hash_table_bucket_array_size::<GenericKey<8>, RID>();
@@ -56,11 +55,11 @@ pub const fn hash_table_bucket_array_size<Key: PageKey, Value: PageValue>() -> u
 /// ```rust
 /// use std::cmp::Ordering;
 /// use common::RID;
-/// use db_core::storage::{ExtendibleHashTableBucketPage, hash_table_bucket_array_size, GenericComparator, GenericKey};
+/// use db_core::storage::{ExtendibleHashTableBucketPage, hash_table_bucket_array_size, U8Comparator};
 ///
 /// const a: usize = hash_table_bucket_array_size::<u8, u8>();
 ///
-/// type B = ExtendibleHashTableBucketPage::<a, GenericKey<8>, RID, GenericComparator<8>>;
+/// type B = ExtendibleHashTableBucketPage::<a, u8, u8, U8Comparator>;
 ///
 /// let _ = B::ARRAY_SIZE_OK;
 /// ```
@@ -69,11 +68,11 @@ pub const fn hash_table_bucket_array_size<Key: PageKey, Value: PageValue>() -> u
 /// ```compile_fail
 /// use std::cmp::Ordering;
 /// use common::RID;
-/// use db_core::storage::{ExtendibleHashTableBucketPage, hash_table_bucket_array_size, GenericComparator, GenericKey};
+/// use db_core::storage::{ExtendibleHashTableBucketPage, hash_table_bucket_array_size, U8Comparator};
 ///
 /// const a: usize = hash_table_bucket_array_size::<u8, u8>() - 1;
 ///
-/// type B = ExtendibleHashTableBucketPage::<a, GenericKey<8>, RID, GenericComparator<8>>;
+/// type B = ExtendibleHashTableBucketPage::<a, u8, u8, U8Comparator>;
 ///
 /// let _ = B::ARRAY_SIZE_OK;
 /// ```
