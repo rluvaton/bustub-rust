@@ -40,7 +40,6 @@ mod tests {
         GetEntryFn: Fn(i64) -> (Key, Value)
     >(mut hash_table: DiskExtendibleHashTable<ARRAY_SIZE, Key, Value, KeyComparator, KeyHasherImpl>, total: i64, get_entry_for_index: GetEntryFn) {
         let shuffle_seed: u64 = thread_rng().gen();
-        let shuffle_seed: u64 = 0;
         println!("Seed used: {}", shuffle_seed);
         let mut rng = ChaChaRng::seed_from_u64(shuffle_seed);
         let one_percent = total / 100;
@@ -75,8 +74,6 @@ mod tests {
             }
 
             /// Abort process on panic, this should be used in thread
-            // This can lead to corruption, but if we panicked it is a bug in the db (I think)
-            // TODO - maybe do not abort as the DB can be in the middle of other things that can lead to corruption
             assert_eq!(hash_table.insert(&key, &value, None), Ok(()), "should insert new key {}", i);
         }
 
@@ -214,17 +211,8 @@ mod tests {
         {
             let mut counter = 0;
             for i in (0..total).shuffle_with_seed(&mut rng) {
-                println!("i: {} | {}", i, format!("{i:#064b}")[64 - hash_table.directory_max_depth as usize..].to_string());
-
-
                 if counter % (10 * one_percent) == 0 {
                     println!("Deleted {}%", counter / one_percent);
-                }
-
-                // if i == 1224 || i == 2392 {
-                if i == 2392 {
-                    println!("Problem");
-                    // hash_table.print_hash_table();
                 }
 
                 let (key, _) = get_entry_for_index(i);
