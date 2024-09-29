@@ -15,7 +15,7 @@ mod tests {
     use std::sync::Arc;
     use rand_chacha::ChaChaRng;
 
-    fn create_extendible_hash_table() -> DiskExtendibleHashTable<{ hash_table_bucket_array_size::<GenericKey<8>, RID>() }, GenericKey<8>, RID, GenericComparator<8>, DefaultKeyHasher> {
+    fn create_extendible_hash_table(pool_size: usize) -> DiskExtendibleHashTable<{ hash_table_bucket_array_size::<GenericKey<8>, RID>() }, GenericKey<8>, RID, GenericComparator<8>, DefaultKeyHasher> {
         let disk_manager = Arc::new(Mutex::new(DiskManagerUnlimitedMemory::new()));
         let bpm = Arc::new(BufferPoolManager::new(4, disk_manager, Some(2), None));
 
@@ -256,8 +256,20 @@ mod tests {
     }
 
     #[test]
-    fn lifecycle() {
-        let hash_table = create_extendible_hash_table();
+    fn lifecycle_small_pool_size() {
+        let hash_table = create_extendible_hash_table(4);
+
+        // Having enough keys so a split would happen
+        let total = (BUSTUB_PAGE_SIZE * 100) as i64;
+        test_lifecycle(hash_table, total, |i| (
+            GenericKey::<8>::new_from_integer(i),
+            RID::new(i as PageId, i as u32)
+        ));
+    }
+
+    #[test]
+    fn lifecycle_large_pool_size() {
+        let hash_table = create_extendible_hash_table(1000);
 
         // Having enough keys so a split would happen
         let total = (BUSTUB_PAGE_SIZE * 100) as i64;
@@ -518,6 +530,246 @@ mod tests {
             i as Key,
             i as Value
         ));
+    }
+
+    fn test_lifecycle_concurrent<
+        const ARRAY_SIZE: usize,
+        Key: PageKey,
+        Value: PageValue,
+        KeyComparator: Comparator<Key>,
+        KeyHasherImpl: KeyHasher,
+        GetEntryFn: Fn(i64) -> (Key, Value)
+    >(mut hash_table: DiskExtendibleHashTable<ARRAY_SIZE, Key, Value, KeyComparator, KeyHasherImpl>, total: i64, get_entry_for_index: GetEntryFn) {
+        let shuffle_seed: u64 = thread_rng().gen();
+        println!("Seed used: {}", shuffle_seed);
+        let mut rng = ChaChaRng::seed_from_u64(shuffle_seed);
+        let one_percent = total / 100;
+
+        // Should not find any values before init
+        println!("Testing trying to find missing values before init");
+        let tmp = (0..total).shuffle_with_seed(&mut rng);
+
+        // TODO - run with concurrency
+        todo!();
+        for &i in &tmp[0..10] {
+            let (key, _) = get_entry_for_index(i);
+
+            assert_eq!(hash_table.get_value(&key, None), Ok(vec![]), "should not find values for key {}", i);
+        }
+
+        // Should not delete anything before init
+        // TODO - run with concurrency
+        println!("Testing trying to delete missing values before init");
+        let tmp = (0..total).shuffle_with_seed(&mut rng);
+        for &i in &tmp[0..10] {
+            let (key, _) = get_entry_for_index(i);
+
+            assert_eq!(hash_table.remove(&key, None), Ok(false), "should not delete for key {}", i);
+        }
+
+        hash_table.verify_integrity(false);
+
+        println!("Inserting {} entries", total);
+        // insert a few (key, value) pairs
+
+        // TODO - run with concurrency
+        for i in 0..total {
+            let (key, value) = get_entry_for_index(i);
+
+            if i % (10 * one_percent) == 0 {
+                println!("Inserted {}%", i / one_percent);
+            }
+
+            /// Abort process on panic, this should be used in thread
+            assert_eq!(hash_table.insert(&key, &value, None), Ok(()), "should insert new key {}", i);
+        }
+
+        println!("All entries inserted");
+
+        hash_table.verify_integrity(false);
+
+        println!("Asserting not finding missing values after init");
+        // Should not find missing keys after the hash map is initialized
+        // TODO - run with concurrency
+        for &i in &(total..total + 1_000_000).shuffle_with_seed(&mut rng)[0..10] {
+            let (key, _) = get_entry_for_index(i);
+
+            assert_eq!(hash_table.get_value(&key, None), Ok(vec![]), "should not find values for key {}", i);
+        }
+
+        println!("Asserting not deleting missing values after init");
+        // TODO - run with concurrency
+        // Should not find missing keys after the hash map is initialized
+        for &i in &(total..total + 1_000_000).shuffle_with_seed(&mut rng)[0..10] {
+            let (key, _) = get_entry_for_index(i);
+
+            assert_eq!(hash_table.remove(&key, None), Ok(false), "should not delete values for key {}", i);
+        }
+
+        hash_table.verify_integrity(false);
+
+        // Fetch those in random order
+        println!("Asserting all inserted entries exists");
+        {
+            let mut counter = 0;
+        // TODO - run with concurrency
+            for i in (0..total).shuffle_with_seed(&mut rng) {
+                let (key, value) = get_entry_for_index(i);
+                if counter % (10 * one_percent) == 0 {
+                    println!("Fetched {}%", counter / one_percent);
+                }
+
+                assert_eq!(hash_table.get_value(&key, None), Ok(vec![value]), "should find values for key {}", i);
+
+                counter += 1;
+            }
+        }
+
+        hash_table.verify_integrity(false);
+
+        println!("Remove 1/7 random keys");
+        let random_key_index_to_remove = &(0..total).shuffle_with_seed(&mut rng)[0..(total / 7) as usize];
+
+        // TODO - run with concurrency
+        for &i in random_key_index_to_remove {
+            let (key, _) = get_entry_for_index(i);
+
+            assert_eq!(hash_table.remove(&key, None).expect("should remove"), true, "should remove key {}", i);
+        }
+
+        hash_table.verify_integrity(false);
+
+        println!("Fetch all in random order");
+        {
+            let removed_keys = HashSet::<i64>::from_iter(random_key_index_to_remove.iter().cloned());
+
+            let mut counter = 0;
+        // TODO - run with concurrency
+            for i in (0..total).shuffle_with_seed(&mut rng) {
+                if counter % (10 * one_percent) == 0 {
+                    println!("Fetched {}%", counter / one_percent);
+                }
+
+                let (key, value) = get_entry_for_index(i);
+
+                let expected_return = if removed_keys.contains(&i) { vec![] } else { vec![value] };
+
+                assert_eq!(hash_table.get_value(&key, None), Ok(expected_return), "get value for key {}", i);
+
+                counter += 1;
+            }
+        }
+
+        hash_table.verify_integrity(false);
+
+        let mut removed_random_keys_to_reinsert = random_key_index_to_remove.iter().cloned().collect::<Vec<_>>().clone();
+        removed_random_keys_to_reinsert.shuffle(&mut thread_rng());
+
+        println!("Add back 1/4 of the removed keys with different values");
+        // Add back 1/4 of the removed keys
+        let removed_random_keys_to_reinsert = &removed_random_keys_to_reinsert[0..removed_random_keys_to_reinsert.len() / 4];
+
+        let offset_for_reinserted_values = total * 100;
+
+        {
+            // TODO - run with concurrency
+            // insert back some of the removed keys with different values
+            for &i in removed_random_keys_to_reinsert {
+                let (key, _) = get_entry_for_index(i);
+                let (_, value) = get_entry_for_index(i + offset_for_reinserted_values);
+
+                assert_eq!(hash_table.insert(&key, &value, None), Ok(()), "should insert back key {}", i);
+            }
+        }
+
+        hash_table.verify_integrity(false);
+
+        println!("Fetch all in random order");
+
+        let reinserted_keys = HashSet::<i64>::from_iter(removed_random_keys_to_reinsert.iter().cloned());
+        let removed_keys = HashSet::<i64>::from_iter(random_key_index_to_remove.iter().cloned());
+
+        let removed_keys: HashSet::<i64> = &removed_keys - &reinserted_keys;
+        {
+            // Fetch all in random order
+            let mut counter = 0;
+            // TODO - run with concurrency
+
+            for i in (0..total).shuffle_with_seed(&mut rng) {
+                if counter % (10 * one_percent) == 0 {
+                    println!("Fetched {}%", counter / one_percent);
+                }
+
+                let (key, value) = get_entry_for_index(i);
+
+                let found_value = hash_table.get_value(&key, None);
+
+                if removed_keys.contains(&i) {
+                    assert_eq!(found_value, Ok(vec![]), "should not find any values for removed key {}", i);
+                    continue;
+                } else if reinserted_keys.contains(&i) {
+                    let (_, value) = get_entry_for_index(i + offset_for_reinserted_values);
+
+                    assert_eq!(found_value, Ok(vec![value]), "should find updated value for reinserted key {}", i);
+                } else {
+                    assert_eq!(found_value, Ok(vec![value]), "should find original value for not changed key {}", i);
+                }
+
+                counter += 1;
+            }
+        }
+
+        hash_table.verify_integrity(false);
+
+        println!("Delete all in random order");
+        {
+            let mut counter = 0;
+            // TODO - run with concurrency
+
+            for i in (0..total).shuffle_with_seed(&mut rng) {
+                if counter % (10 * one_percent) == 0 {
+                    println!("Deleted {}%", counter / one_percent);
+                }
+
+                let (key, _) = get_entry_for_index(i);
+
+                let should_be_removed = !removed_keys.contains(&i);
+                let remove_result = hash_table.remove(&key, None);
+
+                if removed_keys.contains(&i) {
+                    assert_eq!(remove_result, Ok(false), "should not delete already deleted key, index: {}", i);
+                } else {
+                    assert_eq!(remove_result, Ok(true), "should delete key, index: {}", i);
+                }
+
+                if counter % one_percent == 0 {
+                    hash_table.verify_integrity(false);
+                }
+
+                counter += 1;
+            }
+        }
+
+        hash_table.verify_integrity(false);
+
+        println!("Fetch all after everything deleted in random order");
+        {
+            let mut counter = 0;
+            // TODO - run with concurrency
+            for i in (0..total).shuffle_with_seed(&mut rng) {
+                if counter % (10 * one_percent) == 0 {
+                    println!("Fetched {}%", counter / one_percent);
+                }
+
+                let (key, _) = get_entry_for_index(i);
+
+                assert_eq!(hash_table.get_value(&key, None), Ok(vec![]), "should not find any values for removed key {}", i);
+
+                counter += 1;
+            }
+        }
+
+        hash_table.verify_integrity(false);
     }
 
     // TODO - add tests for concurrency
