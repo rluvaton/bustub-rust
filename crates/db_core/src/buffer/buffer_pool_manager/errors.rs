@@ -2,7 +2,7 @@ use common::config::PageId;
 use error_utils::{Error};
 
 #[derive(thiserror::Error, Debug, PartialEq, Clone)]
-#[error("all available frame has been found")]
+#[error("all available frames are used and not evictable")]
 pub(super) struct NoAvailableFrameFound;
 
 #[derive(thiserror::Error, Debug, PartialEq, Clone)]

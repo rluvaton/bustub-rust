@@ -311,6 +311,7 @@ impl BufferPoolManager {
             }
 
             // Add it to the page id to the frame mapping
+
             (*inner).page_table.insert(page_id, frame_id);
 
             let old_page: Option<&mut Page> = (*inner).pages.get_mut(frame_id as usize);
@@ -363,10 +364,7 @@ impl BufferPoolManager {
             // 1. Pin the page
             page.pin();
 
-            // 2. Add to the page table
-            (*inner).page_table.insert(page_id, frame_id);
-
-            // 3. Add to the frame list
+            // 2. Add to the frame list
             (*inner).pages.insert(frame_id as usize, page.clone());
 
             page.with_write(
@@ -525,16 +523,7 @@ impl BufferPoolManager {
             let frame_id = frame_id.unwrap();
             let frame_id_ref = *frame_id;
 
-            let page: Option<&mut Page> = (*inner).pages.get_mut(frame_id_ref as usize);
-
-            // TODO - should convert to assertion
-            if page.is_none() {
-                eprintln!("Could not find requested page to unpin, it shouldn't be possible");
-                // TODO - log warning or something as this mean we have corruption
-                return false;
-            }
-
-            let page = page.unwrap();
+            let page: &mut Page = (*inner).pages.get_mut(frame_id_ref as usize).expect("Page cannot be missing as it exists in the page table");
 
             // Also, set the dirty flag on the page to indicate if the page was modified.
             if is_dirty {
@@ -716,20 +705,24 @@ impl BufferPoolManager {
             let frame_id = frame_id.cloned().unwrap();
 
             let page: &mut Page = (*inner).pages.get_mut(frame_id as usize).expect("page must exists as it is in the page table");
+            let mut page_write_guard = page.write();
+
+            assert_eq!(page_write_guard.get_page_id(), page_id, "Page to remove must be the same as the requested page");
 
             // If not evictable
-            if page.get_pin_count() > 0 {
+            if page_write_guard.get_pin_count() > 0 {
                 return Err(DeletePageError::PageIsNotEvictable(page_id));
             }
 
             // TODO - what about if page is dirty?
-
             (*inner).page_table.remove(&page_id);
             (*inner).free_list.push_front(frame_id);
 
             (*inner).replacer.remove(frame_id);
-            (*inner).pages.remove(frame_id as usize);
 
+            // Do not remove the item, and instead change it to INVALID_PAGE_ID
+            // so we won't change the frame location
+            page_write_guard.reset(INVALID_PAGE_ID);
 
             Self::deallocate_page(page_id);
 
