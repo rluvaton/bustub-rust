@@ -1,18 +1,18 @@
 use super::super::type_alias_trait::TypeAliases;
 use super::super::HashTable;
 use crate::buffer;
+use crate::buffer::errors::MapErrorToBufferPoolError;
+use crate::buffer::{PinPageGuard, PinWritePageGuard};
 use crate::concurrency::Transaction;
 use crate::container::hash::KeyHasher;
 use crate::storage::Comparator;
+use binary_utils::ModifyBit;
 use common::config::{PageId, INVALID_PAGE_ID};
 use common::{PageKey, PageValue};
 use error_utils::Context;
 use std::fmt::Debug;
 use std::hash::Hash;
 use std::sync::Arc;
-use binary_utils::ModifyBit;
-use crate::buffer::{PinPageGuard, PinWritePageGuard};
-use crate::buffer::errors::MapErrorToBufferPoolError;
 
 #[derive(thiserror::Error, Debug, PartialEq, Clone)]
 pub enum InsertionError {

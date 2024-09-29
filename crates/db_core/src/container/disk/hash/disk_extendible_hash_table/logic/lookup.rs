@@ -65,7 +65,7 @@ where
 
         // 4. If we got invalid page than the directory is missing
         if directory_page_id == INVALID_PAGE_ID {
-            return Ok(vec![])
+            return Ok(vec![]);
         }
 
         {
@@ -81,7 +81,7 @@ where
 
         // 7. If we got invalid page than the bucket is missing
         if bucket_page_id == INVALID_PAGE_ID {
-            return Ok(vec![])
+            return Ok(vec![]);
         }
 
         let found_value: Option<Value>;
