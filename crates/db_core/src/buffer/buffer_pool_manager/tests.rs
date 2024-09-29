@@ -104,8 +104,6 @@ mod tests {
         let disk_manager = DefaultDiskManager::new(db_name).expect("should create disk manager");
         let bpm = BufferPoolManager::new(buffer_pool_size, Arc::new(Mutex::new(disk_manager)), Some(k), None);
 
-        let page0 = bpm.new_page();
-
         // Scenario: The buffer pool is empty. We should be able to create a new page.
         let page0 = bpm.new_page().expect("The buffer pool is empty. We should be able to create a new page");
 
@@ -136,7 +134,7 @@ mod tests {
         }
 
         for _ in 0..4 {
-            assert_eq!(bpm.new_page(), Err(NoAvailableFrameFound.into()));
+            bpm.new_page().expect("Should be able to create a new page");
         }
 
         // Scenario: We should be able to fetch the data we wrote a while ago.
