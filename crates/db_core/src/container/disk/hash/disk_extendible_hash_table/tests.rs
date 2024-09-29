@@ -10,9 +10,10 @@ mod tests {
     use generics::Shuffle;
     use parking_lot::Mutex;
     use rand::seq::SliceRandom;
-    use rand::thread_rng;
+    use rand::{thread_rng, Rng, SeedableRng};
     use std::collections::HashSet;
     use std::sync::Arc;
+    use rand_chacha::ChaChaRng;
 
     fn create_extendible_hash_table() -> DiskExtendibleHashTable<{ hash_table_bucket_array_size::<GenericKey<8>, RID>() }, GenericKey<8>, RID, GenericComparator<8>, DefaultKeyHasher> {
         let disk_manager = Arc::new(Mutex::new(DiskManagerUnlimitedMemory::new()));
@@ -38,11 +39,14 @@ mod tests {
         KeyHasherImpl: KeyHasher,
         GetEntryFn: Fn(i64) -> (Key, Value)
     >(mut hash_table: DiskExtendibleHashTable<ARRAY_SIZE, Key, Value, KeyComparator, KeyHasherImpl>, total: i64, get_entry_for_index: GetEntryFn) {
+        let shuffle_seed: u64 = thread_rng().gen();
+        println!("Seed used: {}", shuffle_seed);
+        let mut rng = ChaChaRng::seed_from_u64(shuffle_seed);
         let one_percent = total / 100;
 
         // Should not find any values before init
         println!("Testing trying to find missing values before init");
-        let tmp = (0..total).shuffle();
+        let tmp = (0..total).shuffle_with_seed(&mut rng);
         for &i in &tmp[0..10] {
             let (key, _) = get_entry_for_index(i);
 
@@ -51,7 +55,7 @@ mod tests {
 
         // Should not delete anything before init
         println!("Testing trying to delete missing values before init");
-        let tmp = (0..total).shuffle();
+        let tmp = (0..total).shuffle_with_seed(&mut rng);
         for &i in &tmp[0..10] {
             let (key, _) = get_entry_for_index(i);
 
@@ -81,7 +85,7 @@ mod tests {
 
         println!("Asserting not finding missing values after init");
         // Should not find missing keys after the hash map is initialized
-        for &i in &(total..total + 1_000_000).shuffle()[0..10] {
+        for &i in &(total..total + 1_000_000).shuffle_with_seed(&mut rng)[0..10] {
             let (key, _) = get_entry_for_index(i);
 
             assert_eq!(hash_table.get_value(&key, None), Ok(vec![]), "should not find values for key {}", i);
@@ -90,7 +94,7 @@ mod tests {
         println!("Asserting not deleting missing values after init");
         // Should not find missing keys after the hash map is initialized
         // Should not find missing keys after the hash map is initialized
-        for &i in &(total..total + 1_000_000).shuffle()[0..10] {
+        for &i in &(total..total + 1_000_000).shuffle_with_seed(&mut rng)[0..10] {
             let (key, _) = get_entry_for_index(i);
 
             assert_eq!(hash_table.remove(&key, None), Ok(false), "should not delete values for key {}", i);
@@ -100,22 +104,24 @@ mod tests {
 
         // Fetch those in random order
         println!("Asserting all inserted entries exists");
-        let mut counter = 0;
-        for i in (0..total).shuffle() {
-            let (key, value) = get_entry_for_index(i);
-            if counter % (10 * one_percent) == 0 {
-                println!("Fetched {}%", counter / one_percent);
+        {
+            let mut counter = 0;
+            for i in (0..total).shuffle_with_seed(&mut rng) {
+                let (key, value) = get_entry_for_index(i);
+                if counter % (10 * one_percent) == 0 {
+                    println!("Fetched {}%", counter / one_percent);
+                }
+
+                assert_eq!(hash_table.get_value(&key, None), Ok(vec![value]), "should find values for key {}", i);
+
+                counter += 1;
             }
-
-            assert_eq!(hash_table.get_value(&key, None), Ok(vec![value]), "should find values for key {}", i);
-
-            counter += 1;
         }
 
         hash_table.verify_integrity(false);
 
         println!("Remove 1/7 random keys");
-        let random_key_index_to_remove = &(0..total).shuffle()[0..(total / 7) as usize];
+        let random_key_index_to_remove = &(0..total).shuffle_with_seed(&mut rng)[0..(total / 7) as usize];
 
         for &i in random_key_index_to_remove {
             let (key, _) = get_entry_for_index(i);
@@ -130,7 +136,7 @@ mod tests {
             let removed_keys = HashSet::<i64>::from_iter(random_key_index_to_remove.iter().cloned());
 
             let mut counter = 0;
-            for i in (0..total).shuffle() {
+            for i in (0..total).shuffle_with_seed(&mut rng) {
                 if counter % (10 * one_percent) == 0 {
                     println!("Fetched {}%", counter / one_percent);
                 }
@@ -169,15 +175,15 @@ mod tests {
         hash_table.verify_integrity(false);
 
         println!("Fetch all in random order");
+
+        let reinserted_keys = HashSet::<i64>::from_iter(removed_random_keys_to_reinsert.iter().cloned());
+        let removed_keys = HashSet::<i64>::from_iter(random_key_index_to_remove.iter().cloned());
+
+        let removed_keys: HashSet::<i64> = &removed_keys - &reinserted_keys;
         {
-            let reinserted_keys = HashSet::<i64>::from_iter(removed_random_keys_to_reinsert.iter().cloned());
-            let removed_keys = HashSet::<i64>::from_iter(random_key_index_to_remove.iter().cloned());
-
-            let removed_keys: HashSet::<i64> = &removed_keys - &reinserted_keys;
-
             // Fetch all in random order
             let mut counter = 0;
-            for i in (0..total).shuffle() {
+            for i in (0..total).shuffle_with_seed(&mut rng) {
                 if counter % (10 * one_percent) == 0 {
                     println!("Fetched {}%", counter / one_percent);
                 }
@@ -196,6 +202,50 @@ mod tests {
                 } else {
                     assert_eq!(found_value, Ok(vec![value]), "should find original value for not changed key {}", i);
                 }
+
+                counter += 1;
+            }
+        }
+
+        hash_table.verify_integrity(false);
+
+        println!("Delete all in random order");
+        {
+            let mut counter = 0;
+            for i in (0..total).shuffle_with_seed(&mut rng) {
+                println!("i: {}", i);
+                if counter % (10 * one_percent) == 0 {
+                    println!("Deleted {}%", counter / one_percent);
+                }
+
+                if i == 4032 {
+                    println!("Problem");
+                }
+
+                let (key, _) = get_entry_for_index(i);
+
+                let should_be_removed = !removed_keys.contains(&i);
+
+                assert_eq!(hash_table.remove(&key, None), Ok(should_be_removed), "should not delete for key {}", i);
+                hash_table.verify_integrity(true);
+
+                counter += 1;
+            }
+        }
+
+        hash_table.verify_integrity(false);
+
+        println!("Fetch all after everything deleted in random order");
+        {
+            let mut counter = 0;
+            for i in (0..total).shuffle_with_seed(&mut rng) {
+                if counter % (10 * one_percent) == 0 {
+                    println!("Fetched {}%", counter / one_percent);
+                }
+
+                let (key, _) = get_entry_for_index(i);
+
+                assert_eq!(hash_table.get_value(&key, None), Ok(vec![]), "should not find any values for removed key {}", i);
 
                 counter += 1;
             }
@@ -455,8 +505,6 @@ mod tests {
             "temp".to_string(),
             bpm,
             OrdComparator::<Key>::default(),
-
-            // TODO - change to `None`
             None,
             None,
             None,
@@ -470,6 +518,70 @@ mod tests {
         ));
 
         // let problematic_key = 409600;
+    }
+
+
+    #[test]
+    fn lifecycle_small_number_of_keys() {
+        let disk_manager = Arc::new(Mutex::new(DiskManagerUnlimitedMemory::new()));
+        let bpm = Arc::new(BufferPoolManager::new(4, disk_manager, Some(2), None));
+
+        type Key = u64;
+        type Value = u64;
+
+        let hash_table = DiskExtendibleHashTable::<
+            { hash_table_bucket_array_size::<Key, Value>() },
+            Key,
+            Value,
+            OrdComparator<Key>,
+            U64IdentityKeyHasher,
+        >::new(
+            "temp".to_string(),
+            bpm,
+            OrdComparator::<Key>::default(),
+
+            None,
+            None,
+            None,
+        ).expect("Should be able to create hash table");
+
+        // Having enough keys so a split would happen
+        let total = BUSTUB_PAGE_SIZE as i64;
+        test_lifecycle(hash_table, total, |i| (
+            i as Key,
+            i as Value
+        ));
+    }
+
+    #[test]
+    fn delete_all() {
+        let disk_manager = Arc::new(Mutex::new(DiskManagerUnlimitedMemory::new()));
+        let bpm = Arc::new(BufferPoolManager::new(4, disk_manager, Some(2), None));
+
+        type Key = u64;
+        type Value = u64;
+
+        let mut hash_table = DiskExtendibleHashTable::<
+            { hash_table_bucket_array_size::<Key, Value>() },
+            Key,
+            Value,
+            OrdComparator<Key>,
+            U64IdentityKeyHasher,
+        >::new(
+            "temp".to_string(),
+            bpm,
+            OrdComparator::<Key>::default(),
+
+            None,
+            None,
+            None,
+        ).expect("Should be able to create hash table");
+
+        hash_table.insert(&1, &1, None).expect("Should insert");
+        hash_table.insert(&2, &2, None).expect("Should insert");
+
+        hash_table.remove(&1, None).expect("Should remove");
+        hash_table.remove(&2, None).expect("Should remove");
     }
 
 

@@ -1,7 +1,6 @@
 use std::ops::Range;
 use rand::seq::SliceRandom;
 use rand::thread_rng;
-use rand_chacha::ChaChaRng;
 
 
 /// Shuffle, implemented for range for easier testing

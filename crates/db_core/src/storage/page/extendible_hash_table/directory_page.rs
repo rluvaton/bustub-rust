@@ -233,12 +233,21 @@ impl DirectoryPage {
 
     /// Decrement the global depth of the directory
     pub fn decr_global_depth(&mut self) -> bool {
-        // If reached the max depth
         if self.global_depth == 0 {
             return false;
         }
 
+
+        let size_before = self.size() as usize;
         self.global_depth -= 1;
+        let size_after = self.size() as usize;
+
+
+        // Reset page id
+        self.bucket_page_ids[size_after..size_before].fill(INVALID_PAGE_ID);
+        
+        // Reset depth
+        self.local_depths[size_after..size_before].fill(0);
 
         true
     }

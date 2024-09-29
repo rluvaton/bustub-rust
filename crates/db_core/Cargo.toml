@@ -28,6 +28,7 @@ mut-binary-heap = "0.1.0"
 tracy-client = { version = "0.17.3", default-features = false, features = [
         #    "enable"
 ] }
+rand_chacha = "0.3.1"
 [dev-dependencies]
 tempdir = "0.3.7"
 zipf = "7"

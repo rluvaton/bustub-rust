@@ -7,6 +7,7 @@ use std::mem::size_of;
 use std::slice::Iter;
 use prettytable::{row, Table};
 use common::{PageKey, PageValue, RID};
+use crate::buffer::PinWritePageGuard;
 use crate::storage::{Comparator, ExtendibleHashBucketPageInsertionErrors, GenericComparator, GenericKey};
 
 // Test assertion helper type
@@ -169,6 +170,7 @@ where
             return Err(ExtendibleHashBucketPageInsertionErrors::KeyAlreadyExists);
         }
 
+        // TODO - No need to clone as key and value support copy
         let entry: MappingType<Key, Value> = (key.clone(), value.clone());
 
         self.array[self.size as usize] = entry;
@@ -243,10 +245,27 @@ where
 
     // Replace all entries with different one, this is useful for rehashing
     pub fn replace_all_entries(&mut self, new_items: &[MappingType<Key, Value>]) {
-        assert!(self.array.len() >= new_items.len(), "can't insert more items than bucket can hold");
+        assert!(self.max_size as usize >= new_items.len(), "can't insert more items than bucket can hold");
+
+        // TODO - should do swap to the memory or something for better perf?
         self.array[0..new_items.len()].copy_from_slice(new_items);
 
         self.size = new_items.len() as u32;
+    }
+
+    /// Append all entries, this should only be used when merging buckets
+    ///
+    /// # Safety
+    /// This is unsafe as it does not check if the key already exists and it does not clone the entries
+    pub unsafe fn merge_bucket(&mut self, other_guard: PinWritePageGuard) {
+        // TODO - should not get page guard as it is implementation detail
+        let other = other_guard.cast::<Self>();
+        assert!(self.size + other.size <= self.max_size, "can't insert more items than bucket can hold");
+
+        // TODO - should do swap to the memory or something for better perf?
+        self.array[self.size as usize..self.size as usize + other.size as usize].copy_from_slice(&other.array[..other.size as usize]);
+
+        self.size += other.size;
     }
 
     /**
