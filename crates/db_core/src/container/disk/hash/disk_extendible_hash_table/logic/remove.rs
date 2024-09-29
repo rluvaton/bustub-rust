@@ -166,73 +166,72 @@ where
             return Ok(());
         }
 
+        // 5. Get the empty bucket to remove and possibly non-empty bucket to keep
+        let ((empty_bucket_index, empty_bucket_guard), (non_empty_bucket_index, mut non_empty_bucket_guard)) = self.get_buckets_to_remove_and_keep(&directory_page, bucket_page_guard, bucket_index)?;
+        assert_ne!(empty_bucket_index, non_empty_bucket_index, "Bucket index to delete cannot be the same as the bucket index to remove");
 
-        // 5. Trim bucket index to the first index that point to the bucket
-        bucket_index = bucket_index & directory_page.get_local_depth_mask(bucket_index);
+        // 6. Decrementing the buckets local depth
+        directory_page.decr_local_depth(empty_bucket_index);
+        directory_page.decr_local_depth(non_empty_bucket_index);
 
-        // 6. Get bucket index of the previous bucket so it will be the bucket we will merge into
-        let bucket_index_to_merge_into = bucket_index.turn_off_bit(bucket_local_depth as usize);
+        // 7. Point both indices to the possibly non-empty bucket so we can avoid moving around data
+        directory_page.set_bucket_page_id(empty_bucket_index, non_empty_bucket_guard.get_page_id());
+        directory_page.set_bucket_page_id(non_empty_bucket_index, non_empty_bucket_guard.get_page_id());
 
-        assert_ne!(bucket_index, bucket_index_to_merge_into, "Bucket index cant be the one to merge into");
+        let empty_bucket_page_id = empty_bucket_guard.get_page_id();
 
-        directory_page.decr_local_depth(bucket_index_to_merge_into);
+        // 8. Drop the source bucket so we can delete it
+        //    there is nothing pointing to this page so it is safe to drop the lock so we can delete it
+        drop(empty_bucket_guard);
 
-        let bucket_page_id_to_merge_into = directory_page.get_bucket_page_id(bucket_index_to_merge_into);
+        // 10. remove the old bucket after moving everything
+        self.bpm.delete_page(empty_bucket_page_id).map_err_to_buffer_pool_err().context("Was unable to delete empty bucket page")?;
 
-        // 7. Get the bucket page
-        let mut bucket_guard_to_merge_into = self.bpm.fetch_page_write(bucket_page_id_to_merge_into).map_err_to_buffer_pool_err().context("Failed to fetch bucket page")?;
-        let bucket_to_merge_into = bucket_guard_to_merge_into.cast_mut::<<Self as TypeAliases>::BucketPage>();
-
-        // 8. Move all bucket items to the bucket to merge into
-        // Safety: this is safe as we are inside merge buckets
-        unsafe { bucket_to_merge_into.merge_bucket(bucket_page_guard) }
-
-        // 9. Check if still after the merge the bucket is still empty
-        if bucket_to_merge_into.is_empty() {
-            // 10. Try to merge current bucket as well
-            return self.try_merge(directory_page_guard, bucket_guard_to_merge_into, bucket_index_to_merge_into);
+        // 11. Check if after the merge the bucket is still empty
+        if non_empty_bucket_guard.cast::<<Self as TypeAliases>::BucketPage>().is_empty() {
+            // 12. Try to merge current bucket as well
+            return self.try_merge(directory_page_guard, non_empty_bucket_guard, non_empty_bucket_index);
         }
 
         Ok(())
     }
 
-    /// Return the splitted bucket indices
-    fn merge_local_bucket(&mut self, mut bucket_index: u32, directory_page: &mut <Self as TypeAliases>::DirectoryPage, bucket_page_to_merge: &mut <Self as TypeAliases>::BucketPage, bucket_page_guard_to_merge_into: &mut PinWritePageGuard) {
-        let bucket_local_depth = directory_page.get_local_depth(bucket_index);
 
-        // 1. If bucket local depth is 0 we can't merge anymore
-        if bucket_local_depth == 0 {
-            return
-        }
+    /// Return the page indices and page guard to the page that is empty and to the page that is possibly not empty (the one to keep)
+    ///
+    /// # Arguments
+    ///
+    /// * `directory_page`:
+    /// * `bucket_page_guard`:
+    /// * `bucket_index`:
+    ///
+    /// returns: Result<((u32, PinWritePageGuard), (u32, PinWritePageGuard)), MergeError> return 2 tuples, 1 tuple to remove and 1 to keep, each tuple is the bucket index and bucket page guard
+    fn get_buckets_to_remove_and_keep<'a>(&mut self, directory_page: &<Self as TypeAliases>::DirectoryPage, empty_bucket_page_guard: PinWritePageGuard<'a>, mut empty_bucket_index: u32) -> Result<(
+        // (bucket_index, bucket_page_guard)
 
-        let new_bucket_page_id = bucket_page_guard_to_merge_into.get_page_id();
-        let new_bucket_page = bucket_page_guard_to_merge_into.cast_mut::<<Self as TypeAliases>::BucketPage>();
+        // Empty bucket to remove
+        (u32, PinWritePageGuard<'a>),
 
-        // 2. Change bucket index to be the last bucket of the specific page, so it will be the index of the bucket that will be kept as is
-        let bucket_index_to_merge_into = bucket_index.turn_off_bit(bucket_local_depth as usize);
+        // Other bucket to keep
+        (u32, PinWritePageGuard<'a>)
+    ), MergeError> {
+        let local_depth = directory_page.get_local_depth(empty_bucket_index);
 
-        // 2. Trim bucket index to the first index that point to the bucket
-        bucket_index = bucket_index & directory_page.get_local_depth_mask(bucket_index);
+        // 1. Trim bucket index to the first index that point to the bucket
+        empty_bucket_index = empty_bucket_index & directory_page.get_local_depth_mask(empty_bucket_index);
 
-        assert_ne!(bucket_index, bucket_index_to_merge_into, "Bucket index cannot be the same as the bucket index to merge into");
+        // 2. Get the other bucket index
+        let non_empty_bucket_index = empty_bucket_index.toggle_bit(local_depth as usize);
 
-        // 3. Register the new bucket in the directory
-        directory_page.set_bucket_page_id(bucket_index_to_merge_into, new_bucket_page_id);
+        // 4. Get the other bucket
+        let non_empty_bucket_page_id = directory_page.get_bucket_page_id(non_empty_bucket_index);
 
-        // 4. Update local length for both buckets
-        directory_page.decr_local_depth(bucket_index);
-        directory_page.decr_local_depth(bucket_index_to_merge_into);
+        assert_ne!(empty_bucket_page_guard.get_page_id(), non_empty_bucket_page_id, "other bucket page id can't be the same as the first bucket page id");
 
-        // 5. Rehash all current bucket page content and find the correct bucket
-        let (new_bucket_items, current_bucket_items): (Vec<(Key, Value)>, Vec<(Key, Value)>) = bucket_page_to_merge
-            .iter()
-            .partition(|(key, _)| directory_page.hash_to_bucket_index(self.hash(key)) == bucket_index_to_merge_into);
+        let non_empty_bucket_page_guard = self.bpm.fetch_page_write(non_empty_bucket_page_id).map_err_to_buffer_pool_err().context("Failed to fetch bucket page")?;
 
-        // 6. set the current bucket items in the new location
-        // Optimization: Only if not empty as if nothing to add to the new bucket than it means as is
-        if !new_bucket_items.is_empty() {
-            new_bucket_page.replace_all_entries(new_bucket_items.as_slice());
-        }
+        // 5. Return the empty bucket and the non-empty bucket
+        Ok(((empty_bucket_index, empty_bucket_page_guard), (non_empty_bucket_index, non_empty_bucket_page_guard)))
     }
 
     fn remove_directory(&mut self, header_page_guard: &mut PinWritePageGuard, directory_page_guard: PinWritePageGuard, directory_index: u32) -> Result<(), BufferPoolError> {
@@ -242,6 +241,8 @@ where
 
         // Drop the directory to be able to delete it
         drop(directory_page_guard);
+
+        println!("Trying to delete directory with page id: {}", directory_page_id);
 
         let deleted = self.bpm.delete_page(directory_page_id).map_err_to_buffer_pool_err().context("Was unable to delete empty directory page")?;
 
@@ -259,6 +260,8 @@ where
         // Drop the bucket to be able to delete it
         drop(bucket_page_guard);
 
+        println!("Trying to delete bucket with page id: {}", bucket_page_id);
+
         let deleted = self.bpm.delete_page(bucket_page_id).map_err_to_buffer_pool_err().context("Was unable to delete empty bucket page")?;
 
         assert_eq!(deleted, true, "Should be able to delete page");
@@ -267,5 +270,10 @@ where
     }
 
 
+
 }
 
+
+fn format_number_in_bits(n: u64, number_of_bits: u32) -> String {
+    format!("{n:#064b}")[64 - number_of_bits as usize..].to_string()
+}

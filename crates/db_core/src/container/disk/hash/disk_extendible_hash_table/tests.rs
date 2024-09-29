@@ -40,6 +40,7 @@ mod tests {
         GetEntryFn: Fn(i64) -> (Key, Value)
     >(mut hash_table: DiskExtendibleHashTable<ARRAY_SIZE, Key, Value, KeyComparator, KeyHasherImpl>, total: i64, get_entry_for_index: GetEntryFn) {
         let shuffle_seed: u64 = thread_rng().gen();
+        let shuffle_seed: u64 = 0;
         println!("Seed used: {}", shuffle_seed);
         let mut rng = ChaChaRng::seed_from_u64(shuffle_seed);
         let one_percent = total / 100;
@@ -213,20 +214,30 @@ mod tests {
         {
             let mut counter = 0;
             for i in (0..total).shuffle_with_seed(&mut rng) {
-                println!("i: {}", i);
+                println!("i: {} | {}", i, format!("{i:#064b}")[64 - hash_table.directory_max_depth as usize..].to_string());
+
+
                 if counter % (10 * one_percent) == 0 {
                     println!("Deleted {}%", counter / one_percent);
                 }
 
-                if i == 4032 {
+                // if i == 1224 || i == 2392 {
+                if i == 2392 {
                     println!("Problem");
+                    // hash_table.print_hash_table();
                 }
 
                 let (key, _) = get_entry_for_index(i);
 
                 let should_be_removed = !removed_keys.contains(&i);
+                let remove_result = hash_table.remove(&key, None);
 
-                assert_eq!(hash_table.remove(&key, None), Ok(should_be_removed), "should not delete for key {}", i);
+                if removed_keys.contains(&i) {
+                    assert_eq!(remove_result, Ok(false), "should not delete already deleted key, index: {}", i);
+                } else {
+                    assert_eq!(remove_result, Ok(true), "should delete key, index: {}", i);
+                }
+
                 hash_table.verify_integrity(true);
 
                 counter += 1;

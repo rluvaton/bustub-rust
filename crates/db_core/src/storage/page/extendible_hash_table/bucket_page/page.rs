@@ -253,21 +253,6 @@ where
         self.size = new_items.len() as u32;
     }
 
-    /// Append all entries, this should only be used when merging buckets
-    ///
-    /// # Safety
-    /// This is unsafe as it does not check if the key already exists and it does not clone the entries
-    pub unsafe fn merge_bucket(&mut self, other_guard: PinWritePageGuard) {
-        // TODO - should not get page guard as it is implementation detail
-        let other = other_guard.cast::<Self>();
-        assert!(self.size + other.size <= self.max_size, "can't insert more items than bucket can hold");
-
-        // TODO - should do swap to the memory or something for better perf?
-        self.array[self.size as usize..self.size as usize + other.size as usize].copy_from_slice(&other.array[..other.size as usize]);
-
-        self.size += other.size;
-    }
-
     /**
      * @return number of entries in the bucket
      */
