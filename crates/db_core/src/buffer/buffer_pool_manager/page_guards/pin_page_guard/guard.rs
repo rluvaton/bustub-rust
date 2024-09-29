@@ -10,7 +10,7 @@ use crate::storage::Page;
 #[clippy::has_significant_drop]
 #[must_use = "if unused the PinPageGuard will immediately unpin"]
 pub struct PinPageGuard {
-    pub(in crate::buffer) page: Page,
+    pub(in super::super) page: Page,
     bpm: Arc<BufferPoolManager>,
 }
 
@@ -73,8 +73,7 @@ impl PinPageGuard {
     /// ```
     ///
     pub fn upgrade_read<'a>(self) -> PinReadPageGuard<'a> {
-        let page = self.page.clone();
-        PinReadPageGuard::from_guard(self, page)
+        PinReadPageGuard::from(self)
     }
 
     /// TODO(P2): Add implementation
@@ -87,8 +86,7 @@ impl PinPageGuard {
     /// @return an upgraded WritePageGuard
     ///
     pub fn upgrade_write<'a>(self) -> PinWritePageGuard<'a> {
-        let page = self.page.clone();
-        PinWritePageGuard::from_guard(self, page)
+        PinWritePageGuard::from(self)
     }
 
     pub fn get_page_id(&self) -> PageId {
@@ -118,6 +116,17 @@ impl PinPageGuard {
         // old_page.unpin();
         //
         // unimplemented!()
+    }
+
+    /// Create new page guard from this guard
+    ///
+    /// # Safety:
+    /// This is unsafe as we will create 2 pin guards in the same time without releasing the old one
+    pub(in super::super) unsafe fn create_new(&self) -> Self {
+        PinPageGuard {
+            page: self.page.clone(),
+            bpm: self.bpm.clone(),
+        }
     }
 }
 
@@ -201,7 +210,6 @@ mod tests {
         assert_eq!(page.get_pin_count(), 2, "Dropping pin page guard should decrease the pin count");
     }
 
-
     #[test]
     fn should_not_unpin_when_getting_read_pin_guard_from_guard() {
         let bpm = Arc::new(BufferPoolManager::new(
@@ -267,4 +275,56 @@ mod tests {
 
         assert_eq!(page.get_pin_count(), 2, "Dropping write guard should unpin only once");
     }
+
+    #[test]
+    fn should_allow_upgrading_and_downgrading() {
+        let bpm = Arc::new(BufferPoolManager::new(
+            10,
+            Arc::new(Mutex::new(DiskManagerUnlimitedMemory::new())),
+            Some(2),
+            None,
+        ));
+        let mut page = bpm.new_page().expect("Should be able to create a page");
+
+        {
+            assert_eq!(page.get_pin_count(), 1, "new_page should return pinned page");
+
+            let pin_count = page.get_pin_count();
+
+            let guard = PinPageGuard::new(Arc::clone(&bpm), page.clone());
+            assert_eq!(guard.get_pin_count(), pin_count, "should have the same pin count");
+            assert_eq!(guard.page.is_locked(), false, "Should not be locked");
+
+            let read_pin_guard = guard.upgrade_read();
+
+            // Should not unpin
+            assert_eq!(read_pin_guard.get_pin_count(), pin_count, "should have the same pin count");
+            assert_eq!(page.is_locked_shared(), true, "Should be locked in read mode");
+
+            let write_pin_guard = read_pin_guard.upgrade_write();
+
+            // Should not unpin
+            assert_eq!(write_pin_guard.get_pin_count(), pin_count, "should have the same pin count");
+            assert_eq!(page.is_locked_exclusive(), true, "Should be locked in write mode");
+
+            let read_pin_guard = write_pin_guard.downgrade_to_read();
+
+            // Should not unpin
+            assert_eq!(read_pin_guard.get_pin_count(), pin_count, "should have the same pin count");
+            assert_eq!(page.is_locked_shared(), true, "Should be locked in read mode");
+
+            let write_pin_guard = read_pin_guard.upgrade_write();
+
+            // Should not unpin
+            assert_eq!(write_pin_guard.get_pin_count(), pin_count, "should have the same pin count");
+            assert_eq!(page.is_locked_exclusive(), true, "Should be locked in write mode");
+        }
+
+        assert_eq!(page.get_pin_count(), 0, "should reduce pin count on drop");
+        assert_eq!(page.is_locked(), false, "Should not be locked");
+
+    }
+
+    #[test]
+    fn should_not_allow_upgrading_to_write_guard_when_other_read_guard_exists() {}
 }
