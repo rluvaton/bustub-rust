@@ -238,6 +238,22 @@ impl Page {
         self.inner.force_unlock_write();
     }
 
+    /// Check if the current page is locked in any way
+    pub fn is_locked(&self) -> bool {
+        self.inner.is_locked()
+    }
+
+    /// Check if the current page is locked in read
+    pub fn is_locked_shared(&self) -> bool {
+        self.inner.is_locked() && !self.is_locked_exclusive()
+    }
+
+    /// Check if the current page is locked in write
+    pub fn is_locked_exclusive(&self) -> bool {
+        self.inner.is_locked_exclusive()
+    }
+
+
 }
 
 impl Clone for Page {
