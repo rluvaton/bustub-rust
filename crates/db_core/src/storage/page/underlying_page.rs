@@ -131,7 +131,7 @@ impl UnderlyingPage {
 
     pub fn partial_reset(&mut self, page_id: PageId) {
         self.page_id = page_id;
-        self.is_dirty = true;
+        self.is_dirty = false;
         self.pin_count = 0;
     }
 

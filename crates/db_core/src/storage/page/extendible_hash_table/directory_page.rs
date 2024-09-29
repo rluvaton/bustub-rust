@@ -155,7 +155,7 @@ impl DirectoryPage {
     /// returns: u32 mask of global_depth 1's and the rest 0's (with 1's from LSB upwards)
     ///
     pub fn get_global_depth_mask(&self) -> u32 {
-        0xFFFFFFFFu32.get_n_lsb_bits(self.global_depth as u8)
+        u32::MAX.get_n_lsb_bits(self.global_depth as u8)
     }
 
     /// same as global depth mask, except it
@@ -194,16 +194,13 @@ impl DirectoryPage {
     /// Increment the global depth of the directory
     pub fn incr_global_depth(&mut self) -> bool {
         // If reached the max depth
-        if self.global_depth + 1 == self.max_depth {
+        if self.global_depth + 1 > self.max_depth {
             return false;
         }
 
         let size_before = self.size() as usize;
         self.global_depth += 1;
         let size_after = self.size() as usize;
-
-
-        // TODO - when have multiple directory this is not correct
 
 
         // When increasing global depth, we now have double the size we had before
@@ -241,7 +238,6 @@ impl DirectoryPage {
         let size_before = self.size() as usize;
         self.global_depth -= 1;
         let size_after = self.size() as usize;
-
 
         // Reset page id
         self.bucket_page_ids[size_after..size_before].fill(INVALID_PAGE_ID);

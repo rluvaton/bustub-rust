@@ -37,7 +37,7 @@ mod tests {
             rid.set(11, 11);
             assert!(bucket_page.is_full(), "bucket should be full");
 
-            assert_eq!(bucket_page.insert(&index_key, &rid, &comparator), Err(ExtendibleHashBucketPageInsertionErrors::KeyAlreadyExists), "should not insert existing key");
+            assert_eq!(bucket_page.insert(&index_key, &rid, &comparator), Err(ExtendibleHashBucketPageInsertionErrors::BucketIsFull), "should not insert when bucket is full");
 
             // check for the inserted pairs
             for i in 0..10 {
@@ -163,7 +163,7 @@ mod tests {
 
             // grow the directory, local depths should change!
             directory_page.set_local_depth(0, 1);
-            directory_page.incr_global_depth();
+            assert_eq!(directory_page.incr_global_depth(), true);
             directory_page.set_bucket_page_id(1, bucket_page_id_2);
             directory_page.set_local_depth(1, 1);
 
@@ -183,7 +183,7 @@ mod tests {
             }
 
             directory_page.set_local_depth(0, 2);
-            directory_page.incr_global_depth();
+            assert_eq!(directory_page.incr_global_depth(), true);
             directory_page.set_bucket_page_id(2, bucket_page_id_3);
 
             // ======== DIRECTORY (global_depth: 2) ========
@@ -206,7 +206,7 @@ mod tests {
             }
 
             directory_page.set_local_depth(0, 3);
-            directory_page.incr_global_depth();
+            assert_eq!(directory_page.incr_global_depth(), true);
             directory_page.set_bucket_page_id(4, bucket_page_id_4);
             assert_eq!(directory_page.get_global_depth_mask(), 7);
 

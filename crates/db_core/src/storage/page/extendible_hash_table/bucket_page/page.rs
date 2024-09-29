@@ -1,14 +1,13 @@
-use std::cmp::Ordering;
 use crate::storage::page::b_plus_tree::MappingType;
-use common::config::{PageId, BUSTUB_PAGE_SIZE};
+use crate::storage::{Comparator, ExtendibleHashBucketPageInsertionErrors, GenericComparator, GenericKey};
+use common::config::BUSTUB_PAGE_SIZE;
+use common::{PageKey, PageValue, RID};
+use prettytable::{row, Table};
+use std::cmp::Ordering;
 use std::fmt::{Debug, Display, Formatter};
 use std::marker::PhantomData;
 use std::mem::size_of;
 use std::slice::Iter;
-use prettytable::{row, Table};
-use common::{PageKey, PageValue, RID};
-use crate::buffer::PinWritePageGuard;
-use crate::storage::{Comparator, ExtendibleHashBucketPageInsertionErrors, GenericComparator, GenericKey};
 
 // Test assertion helper type
 const _ASSERTION_TEST_TYPE: usize = hash_table_bucket_array_size::<GenericKey<8>, RID>();
@@ -308,8 +307,8 @@ impl<const ARRAY_SIZE: usize, Key: PageKey, Value: PageValue, KeyComparator: Com
 
 #[cfg(test)]
 mod tests {
-    use std::array;
     use super::*;
+    use std::array;
 
     #[test]
     fn assert_size() {
