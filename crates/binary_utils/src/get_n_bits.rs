@@ -145,7 +145,7 @@ macro_rules! get_n_bits_impl {
     )+)
 }
 
-get_n_bits_impl! { u8 u16 u32 u64 }
+get_n_bits_impl! { u8 u16 u32 u64 usize }
 
 
 #[cfg(test)]
