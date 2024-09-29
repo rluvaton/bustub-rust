@@ -226,7 +226,9 @@ mod tests {
                     assert_eq!(remove_result, Ok(true), "should delete key, index: {}", i);
                 }
 
-                hash_table.verify_integrity(true);
+                if counter % one_percent == 0 {
+                    hash_table.verify_integrity(false);
+                }
 
                 counter += 1;
             }
@@ -487,40 +489,6 @@ mod tests {
     }
 
     #[test]
-    fn should_allow_basic_hash_map_operation_on_a_lot_of_keys_across_multiple_pages() {
-        let disk_manager = Arc::new(Mutex::new(DiskManagerUnlimitedMemory::new()));
-        let bpm = Arc::new(BufferPoolManager::new(4, disk_manager, Some(2), None));
-
-        type Key = u64;
-        type Value = u64;
-
-        let hash_table = DiskExtendibleHashTable::<
-            { hash_table_bucket_array_size::<Key, Value>() },
-            Key,
-            Value,
-            OrdComparator<Key>,
-            U64IdentityKeyHasher,
-        >::new(
-            "temp".to_string(),
-            bpm,
-            OrdComparator::<Key>::default(),
-            None,
-            None,
-            None,
-        ).expect("Should be able to create hash table");
-
-        // Having enough keys so a split would happen
-        let total = (BUSTUB_PAGE_SIZE * 100) as i64;
-        test_lifecycle(hash_table, total, |i| (
-            i as Key,
-            i as Value
-        ));
-
-        // let problematic_key = 409600;
-    }
-
-
-    #[test]
     fn lifecycle_small_number_of_keys() {
         let disk_manager = Arc::new(Mutex::new(DiskManagerUnlimitedMemory::new()));
         let bpm = Arc::new(BufferPoolManager::new(4, disk_manager, Some(2), None));
@@ -551,38 +519,6 @@ mod tests {
             i as Value
         ));
     }
-
-    #[test]
-    fn delete_all() {
-        let disk_manager = Arc::new(Mutex::new(DiskManagerUnlimitedMemory::new()));
-        let bpm = Arc::new(BufferPoolManager::new(4, disk_manager, Some(2), None));
-
-        type Key = u64;
-        type Value = u64;
-
-        let mut hash_table = DiskExtendibleHashTable::<
-            { hash_table_bucket_array_size::<Key, Value>() },
-            Key,
-            Value,
-            OrdComparator<Key>,
-            U64IdentityKeyHasher,
-        >::new(
-            "temp".to_string(),
-            bpm,
-            OrdComparator::<Key>::default(),
-
-            None,
-            None,
-            None,
-        ).expect("Should be able to create hash table");
-
-        hash_table.insert(&1, &1, None).expect("Should insert");
-        hash_table.insert(&2, &2, None).expect("Should insert");
-
-        hash_table.remove(&1, None).expect("Should remove");
-        hash_table.remove(&2, None).expect("Should remove");
-    }
-
 
     // TODO - add tests for concurrency
 

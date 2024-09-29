@@ -206,7 +206,7 @@ where
         let new_bucket_local_depth = (empty_bucket_index_local_depth - 1) as u8;
 
         // 7. Get the first bucket index that is going to be updated
-        let starting_bucket_index = empty_bucket_index.get_n_lsb_bits(bucket_local_depth as u8 - 1);
+        let starting_bucket_index = empty_bucket_index.get_n_lsb_bits(new_bucket_local_depth);
 
         // 8. Go over all buckets that points to either buckets (empty or non empty) and update the depth and the page id
         for bucket_index_to_update in starting_bucket_index.get_all_numbers_with_prefix_bits_until_max_bits(new_bucket_local_depth, directory_page.get_global_depth() as u8) {
