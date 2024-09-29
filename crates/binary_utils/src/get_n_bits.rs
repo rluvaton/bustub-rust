@@ -113,13 +113,17 @@ macro_rules! get_n_bits_impl {
     ($($t:ty)+) => ($(
         impl GetNBits for $t {
             fn get_n_msb_bits(&self, n: u8) -> Self {
-                assert!(0 < n && n <= <$t>::BITS as u8, "n ({}) 0 < n <= {}", n, <$t>::BITS);
+                assert!(n <= <$t>::BITS as u8, "n ({}) n <= {}", n, <$t>::BITS);
 
                 unsafe { self.get_n_msb_bits_unchecked(n) }
             }
 
             #[inline]
             unsafe fn get_n_msb_bits_unchecked(&self, n: u8) -> Self {
+                if n == 0 {
+                    return 0 as $t;
+                }
+
                 if n == <$t>::BITS as u8 {
                     return *self
                 }
@@ -128,13 +132,17 @@ macro_rules! get_n_bits_impl {
             }
 
             fn get_n_lsb_bits(&self, n: u8) -> Self {
-                assert!(0 < n && n <= <$t>::BITS as u8, "n ({}) 0 < n <= {}", n, <$t>::BITS);
+                assert!(n <= <$t>::BITS as u8, "n ({}) n <= {}", n, <$t>::BITS);
 
                 unsafe { self.get_n_lsb_bits_unchecked(n) }
             }
 
             #[inline]
             unsafe fn get_n_lsb_bits_unchecked(&self, n: u8) -> Self {
+                if n == 0 {
+                    return 0 as $t;
+                }
+
                 if n == <$t>::BITS as u8 {
                     return *self
                 }
@@ -156,6 +164,7 @@ mod tests {
     fn get_n_msb_bits_u64() {
         let num: u64 = 0b1001111000001000100000010000100110100001111111110000000000000000;
 
+        assert_eq!(num.get_n_msb_bits(0), 0b0);
         assert_eq!(num.get_n_msb_bits(1), 0b1);
         assert_eq!(num.get_n_msb_bits(2), 0b10);
         assert_eq!(num.get_n_msb_bits(3), 0b100);
@@ -234,16 +243,11 @@ mod tests {
         1u8.get_n_msb_bits(65);
     }
 
-    #[should_panic]
-    #[test]
-    fn get_n_msb_bits_u64_should_panic_out_of_range_0() {
-        1u8.get_n_msb_bits(0);
-    }
-
     #[test]
     fn get_n_lsb_bits_u64() {
         let num: u64 = 0b1001111000001000100000010000100110100001111111110000000000000000;
 
+        assert_eq!(num.get_n_lsb_bits(0), 0b0);
         assert_eq!(num.get_n_lsb_bits(1), 0b0);
         assert_eq!(num.get_n_lsb_bits(2), 0b00);
         assert_eq!(num.get_n_lsb_bits(3), 0b000);
@@ -332,6 +336,7 @@ mod tests {
     fn get_n_msb_bits_u32() {
         let num: u32 = 0b10011110000010001111111000000000;
 
+        assert_eq!(num.get_n_msb_bits(0), 0b0);
         assert_eq!(num.get_n_msb_bits(1), 0b1);
         assert_eq!(num.get_n_msb_bits(2), 0b10);
         assert_eq!(num.get_n_msb_bits(3), 0b100);
@@ -370,6 +375,7 @@ mod tests {
     fn get_n_lsb_bits_u32() {
         let num: u32 = 0b10011110000010001111111000000000;
 
+        assert_eq!(num.get_n_lsb_bits(0), 0b0);
         assert_eq!(num.get_n_lsb_bits(1), 0b0);
         assert_eq!(num.get_n_lsb_bits(2), 0b00);
         assert_eq!(num.get_n_lsb_bits(3), 0b000);
@@ -408,6 +414,7 @@ mod tests {
     fn get_n_msb_bits_u16() {
         let num: u16 = 0b1001111001110000;
 
+        assert_eq!(num.get_n_msb_bits(0), 0b0);
         assert_eq!(num.get_n_msb_bits(1), 0b1);
         assert_eq!(num.get_n_msb_bits(2), 0b10);
         assert_eq!(num.get_n_msb_bits(3), 0b100);
@@ -430,6 +437,7 @@ mod tests {
     fn get_n_lsb_bits_u16() {
         let num: u16 = 0b1001111001110000;
 
+        assert_eq!(num.get_n_lsb_bits(0), 0b0);
         assert_eq!(num.get_n_lsb_bits(1), 0b0);
         assert_eq!(num.get_n_lsb_bits(2), 0b00);
         assert_eq!(num.get_n_lsb_bits(3), 0b000);
@@ -452,6 +460,7 @@ mod tests {
     fn get_n_msb_bits_u8() {
         let num: u8 = 0b10010000;
 
+        assert_eq!(num.get_n_msb_bits(0), 0b0);
         assert_eq!(num.get_n_msb_bits(1), 0b1);
         assert_eq!(num.get_n_msb_bits(2), 0b10);
         assert_eq!(num.get_n_msb_bits(3), 0b100);
@@ -466,6 +475,7 @@ mod tests {
     fn get_n_lsb_bits_u8() {
         let num: u8 = 0b10010000;
 
+        assert_eq!(num.get_n_lsb_bits(0), 0b0);
         assert_eq!(num.get_n_lsb_bits(1), 0b0);
         assert_eq!(num.get_n_lsb_bits(2), 0b00);
         assert_eq!(num.get_n_lsb_bits(3), 0b000);
