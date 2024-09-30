@@ -10,7 +10,7 @@ use std::marker::PhantomData;
 use std::sync::Arc;
 use crate::buffer::errors::{BufferPoolError, MapErrorToBufferPoolError};
 
-/// Implementation of extendible hash table that is backed by a buffer pool
+/// Thread safe implementation of extendible hash table that is backed by a buffer pool
 /// manager. Non-unique keys are supported. Supports insert and delete. The
 /// table grows/shrinks dynamically as buckets become full/empty.
 ///
@@ -55,6 +55,14 @@ where
     pub(super) header_page_id: PageId,
     pub(super) phantom_data: PhantomData<(Key, Value, KeyComparator, KeyHasherImpl)>,
 }
+
+unsafe impl<const BUCKET_MAX_SIZE: usize, Key, Value, KeyComparator, KeyHasherImpl> Sync for HashTable<BUCKET_MAX_SIZE, Key, Value, KeyComparator, KeyHasherImpl>
+where
+    Key: PageKey,
+    Value: PageValue,
+    KeyComparator: Comparator<Key>,
+    KeyHasherImpl: KeyHasher,
+{}
 
 impl<const BUCKET_MAX_SIZE: usize, Key, Value, KeyComparator, KeyHasherImpl> HashTable<BUCKET_MAX_SIZE, Key, Value, KeyComparator, KeyHasherImpl>
 where

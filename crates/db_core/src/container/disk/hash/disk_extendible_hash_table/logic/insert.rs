@@ -52,7 +52,7 @@ where
     ///
     /// TODO - return custom result if inserted or not - NotInsertedError
     ///
-    pub fn insert(&mut self, key: &Key, value: &Value, transaction: Option<Arc<Transaction>>) -> Result<(), InsertionError> {
+    pub fn insert(&self, key: &Key, value: &Value, transaction: Option<Arc<Transaction>>) -> Result<(), InsertionError> {
         // TODO - use transaction
         assert!(transaction.is_none(), "transaction is not none, transactions are not supported at the moment");
 
@@ -127,12 +127,12 @@ where
         Ok(())
     }
 
-    fn trigger_split<'a>(&mut self, directory_page_guard: &mut PinWritePageGuard, bucket_page_guard: PinWritePageGuard<'a>, bucket_index: u32, key_hash: u32) -> Result<PinWritePageGuard<'a>, InsertionError> {
+    fn trigger_split<'a>(&self, directory_page_guard: &mut PinWritePageGuard, bucket_page_guard: PinWritePageGuard<'a>, bucket_index: u32, key_hash: u32) -> Result<PinWritePageGuard<'a>, InsertionError> {
         // Try to split the bucket with 3 iteration (after that it seems like the hash function is not good, or we have a bug)
         self.try_split(directory_page_guard, bucket_page_guard, bucket_index, key_hash, NUMBER_OF_SPLIT_RETRIES)
     }
 
-    fn try_split<'a>(&mut self, directory_page_guard: &mut PinWritePageGuard, mut bucket_page_guard: PinWritePageGuard<'a>, bucket_index: u32, key_hash: u32, tries_left: usize) -> Result<PinWritePageGuard<'a>, InsertionError> {
+    fn try_split<'a>(&self, directory_page_guard: &mut PinWritePageGuard, mut bucket_page_guard: PinWritePageGuard<'a>, bucket_index: u32, key_hash: u32, tries_left: usize) -> Result<PinWritePageGuard<'a>, InsertionError> {
         // 1. Check if reached max tries
         if tries_left == 0 {
             eprintln!("Trying to insert key but after split the page is still full, the hash might not evenly distribute the keys");
@@ -183,7 +183,7 @@ where
     }
 
     /// Return the splitted bucket indices
-    fn split_local_bucket(&mut self, mut bucket_index: u32, directory_page: &mut <Self as TypeAliases>::DirectoryPage, bucket_page_to_split: &mut <Self as TypeAliases>::BucketPage, new_bucket_guard: &mut PinWritePageGuard) {
+    fn split_local_bucket(&self, mut bucket_index: u32, directory_page: &mut <Self as TypeAliases>::DirectoryPage, bucket_page_to_split: &mut <Self as TypeAliases>::BucketPage, new_bucket_guard: &mut PinWritePageGuard) {
 
         let new_bucket_page_id = new_bucket_guard.get_page_id();
         let new_bucket_page = new_bucket_guard.cast_mut::<<Self as TypeAliases>::BucketPage>();
@@ -216,12 +216,11 @@ where
         }
     }
 
-    fn init_new_directory(&mut self) -> Result<PinPageGuard, buffer::errors::BufferPoolError> {
-        let directory_page = self.bpm.new_page_guarded().map_err_to_buffer_pool_err().context("Should be able to create page")?;
+    fn init_new_directory(&self) -> Result<PinWritePageGuard, buffer::errors::BufferPoolError> {
+        let mut directory_page = self.bpm.new_page_write_guarded().map_err_to_buffer_pool_err().context("Should be able to create page")?;
 
         {
-            let mut directory_guard = directory_page.write();
-            let directory = directory_guard.cast_mut::<<Self as TypeAliases>::DirectoryPage>();
+            let directory = directory_page.cast_mut::<<Self as TypeAliases>::DirectoryPage>();
 
             directory.init(Some(self.directory_max_depth));
         }
@@ -229,7 +228,7 @@ where
         Ok(directory_page)
     }
 
-    fn init_new_bucket(&mut self) -> Result<PinPageGuard, buffer::errors::BufferPoolError> {
+    fn init_new_bucket(&self) -> Result<PinPageGuard, buffer::errors::BufferPoolError> {
         let bucket_page = self.bpm.new_page_guarded().map_err_to_buffer_pool_err().context("Should be able to create page")?;
 
         {

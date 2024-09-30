@@ -52,7 +52,7 @@ where
     /// Returns: `true` if remove succeeded, `false` otherwise
     ///
     pub fn remove(
-        &mut self,
+        &self,
         key: &Key,
         transaction: Option<Arc<Transaction>>,
     ) -> Result<bool, RemoveError> {
@@ -154,7 +154,7 @@ where
     }
 
     fn trigger_merge<'a>(
-        &mut self,
+        &self,
         directory_page_guard: &mut PinWritePageGuard,
         mut empty_bucket_page_guard: PinWritePageGuard<'a>,
         mut empty_bucket_index: u32,
@@ -255,7 +255,7 @@ where
     /// * `bucket_index`:
     ///
     /// returns: u32 Bucket index
-    fn get_bucket_index_merge_candidate<'a>(&mut self, directory_page: &<Self as TypeAliases>::DirectoryPage, mut bucket_index: u32, ) -> u32 {
+    fn get_bucket_index_merge_candidate<'a>(&self, directory_page: &<Self as TypeAliases>::DirectoryPage, mut bucket_index: u32, ) -> u32 {
         let local_depth = directory_page.get_local_depth(bucket_index);
 
         // 1. Trim bucket index to the first index that point to the bucket
@@ -266,7 +266,7 @@ where
     }
 
     fn remove_directory(
-        &mut self,
+        &self,
         header_page_guard: &mut PinWritePageGuard,
         directory_page_guard: PinWritePageGuard,
         directory_index: u32,
@@ -297,7 +297,7 @@ where
     }
 
     fn remove_bucket(
-        &mut self,
+        &self,
         directory_page_guard: &mut PinWritePageGuard,
         bucket_page_guard: PinWritePageGuard,
         bucket_index: u32,
