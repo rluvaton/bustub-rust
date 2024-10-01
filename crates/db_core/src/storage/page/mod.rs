@@ -5,11 +5,13 @@ mod b_plus_tree;
 mod utils;
 mod key_comparator;
 mod page_and_write_guard_container;
+mod page_and_read_guard_container;
 
-pub use page::{Page, PageWriteGuard, PageReadGuard, PageUpgradableReadGuard};
+pub use page::{Page, PageWriteGuard, PageReadGuard};
 pub use underlying_page::UnderlyingPage;
 pub use extendible_hash_table::*;
 pub use key_comparator::*;
 pub(crate) use page_and_write_guard_container::PageAndWriteGuard;
+pub(crate) use page_and_read_guard_container::PageAndReadGuard;
 
 pub use utils::AlignToPageData;

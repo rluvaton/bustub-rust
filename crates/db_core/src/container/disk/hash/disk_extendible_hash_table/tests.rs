@@ -11,9 +11,12 @@ mod tests {
     use parking_lot::Mutex;
     use rand::seq::SliceRandom;
     use rand::{thread_rng, Rng, SeedableRng};
+    use rand_chacha::ChaChaRng;
     use std::collections::HashSet;
     use std::sync::Arc;
-    use rand_chacha::ChaChaRng;
+    use std::sync::Barrier;
+    use std::thread;
+    use thread_id;
 
     fn create_extendible_hash_table(pool_size: usize) -> DiskExtendibleHashTable<{ hash_table_bucket_array_size::<GenericKey<8>, RID>() }, GenericKey<8>, RID, GenericComparator<8>, DefaultKeyHasher> {
         let disk_manager = Arc::new(Mutex::new(DiskManagerUnlimitedMemory::new()));
@@ -531,6 +534,124 @@ mod tests {
             i as Value
         ));
     }
+
+    #[test]
+    fn thread_safety_test() {
+        let disk_manager = Arc::new(Mutex::new(DiskManagerUnlimitedMemory::new()));
+        let bpm = Arc::new(BufferPoolManager::new(100, disk_manager, Some(2), None));
+
+        type Key = u64;
+        type Value = u64;
+
+        let hash_table = Arc::new(DiskExtendibleHashTable::<
+            { hash_table_bucket_array_size::<Key, Value>() },
+            Key,
+            Value,
+            OrdComparator<Key>,
+            DefaultKeyHasher,
+        >::new(
+            "temp".to_string(),
+            bpm,
+            OrdComparator::<Key>::default(),
+
+            None,
+            None,
+            None,
+        ).expect("Should be able to create hash table"));
+
+        let total = (BUSTUB_PAGE_SIZE * 10) as i64; // Reduce the number of operations for concurrency testing
+
+        // Number of threads to spawn
+        let num_threads = 8;
+        // Barrier to synchronize thread start
+        let barrier = Arc::new(Barrier::new(num_threads));
+
+        let mut handles = vec![];
+        { // only for #[cfg]
+            use std::thread;
+            use std::time::Duration;
+            use parking_lot::deadlock;
+
+            // Create a background thread which checks for deadlocks every 10s
+            thread::spawn(move || {
+                loop {
+                    thread::sleep(Duration::from_secs(1));
+                    let deadlocks = deadlock::check_deadlock();
+                    if deadlocks.is_empty() {
+                        println!("No dead lock detected");
+                        continue;
+                    }
+
+                    println!("{} deadlocks detected", deadlocks.len());
+                    for (i, threads) in deadlocks.iter().enumerate() {
+                        println!("Deadlock #{}", i);
+                        for t in threads {
+                            println!("Thread Id {:?}", t.thread_id());
+                            println!("{:#?}", t.backtrace());
+                        }
+                    }
+                }
+            });
+        } // only for #[cfg]
+
+        for thread_id in 0..num_threads {
+            let hash_table = Arc::clone(&hash_table);
+            let barrier = Arc::clone(&barrier);
+
+            let handle = thread::spawn(move || {
+                // Ensure all threads start simultaneously
+                barrier.wait();
+
+                let actual_thread_id = thread::current().id();
+                let actual_thread_id = thread_id::get();
+
+                let offset = thread_id as i64 * total;
+                for i in 0..total {
+                    let key = (i + offset) as Key;
+                    let rid = (i + offset) as Value;
+
+                    // Alternating between insert and delete for stress
+                    if i % 2 == 0 {
+                        let result = hash_table.insert(&key, &rid, None);
+
+                        assert_eq!(
+                            result,
+                            Ok(()),
+                            "Thread {} failed to insert key {}",
+                            thread_id,
+                            i + offset
+                        );
+                    } else {
+                        let result = hash_table.get_value(&key, None);
+
+                        assert!(result.is_ok(), "Thread {} failed to get key {}", thread_id, i + offset);
+                    }
+
+                    // if i % 3 == 0 {
+                    //
+                    //     let result = hash_table.remove(&key, None);
+                    //
+                    //     assert!(result.is_ok(), "Thread {} failed to remove key {}", thread_id, i + offset);
+                    // }
+                }
+
+                println!("Finished");
+
+                hash_table.verify_integrity(false);
+            });
+
+            handles.push(handle);
+        }
+
+        // Wait for all threads to finish
+        for handle in handles {
+            handle.join().expect("Thread failed");
+        }
+
+        // Final integrity check
+        hash_table.verify_integrity(false);
+    }
+
 
     fn test_lifecycle_concurrent<
         const ARRAY_SIZE: usize,

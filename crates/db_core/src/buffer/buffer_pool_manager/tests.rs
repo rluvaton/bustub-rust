@@ -6,7 +6,10 @@ mod tests {
     use parking_lot::Mutex;
     use rand::Rng;
     use std::sync::Arc;
-
+    use std::{mem, thread};
+    use std::ops::{Deref, DerefMut};
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::time::Duration;
     use crate::buffer::errors::NoAvailableFrameFound;
     use tempdir::TempDir;
 
@@ -154,6 +157,74 @@ mod tests {
         //
         // delete bpm;
         // delete disk_manager;
+    }
+
+    #[test]
+    fn basic_thread_safe() {
+        let tmpdir = setup();
+        let db_name = tmpdir.path().join("test.db");
+        let buffer_pool_size = 10;
+        let k = 5;
+
+        let disk_manager = DefaultDiskManager::new(db_name).expect("should create disk manager");
+        let bpm = Arc::new(BufferPoolManager::new(buffer_pool_size, Arc::new(Mutex::new(disk_manager)), Some(k), None));
+
+        let created_page_id = bpm.new_page().expect("should create new page").with_read(|u| u.get_page_id());
+
+        let wait_for_next = Arc::new(AtomicUsize::new(0));
+
+        let wait_for_next_thread_1 = wait_for_next.clone();
+        let wait_for_next_thread_2 = wait_for_next.clone();
+        let bpm_thread_1 = bpm.clone();
+
+        // Thread 1
+        let thread_1 = thread::spawn(move || {
+            // Fetch the created page with write lock
+            let fetch_page_with_write = bpm_thread_1.fetch_page_write(created_page_id).expect("Should be able to fetch page");
+
+            // Page fetched, Release lock so the next thread can now fetch
+            wait_for_next_thread_1.store(1, Ordering::SeqCst);
+
+            // Wait for the next thread to lock
+            while wait_for_next_thread_1.load(Ordering::SeqCst) == 1 {
+                thread::sleep(Duration::from_millis(1));
+            }
+
+            // Wait for the next thread to hold the buffer pool manager root lock
+            thread::sleep(Duration::from_millis(50));
+
+            println!("{}", wait_for_next_thread_1.load(Ordering::SeqCst));
+
+
+            // Try to create new page while the other thread fetching page
+            let _ = bpm_thread_1.new_page().expect("Should be able to create page");
+
+            println!("{}", wait_for_next_thread_1.load(Ordering::SeqCst));
+
+
+            // Release both pages
+        });
+
+
+        let bpm_thread_2 = bpm.clone();
+        let thread_2 = thread::spawn(move || {
+            // Wait for the buffer to fetch the page in buffer
+            while wait_for_next_thread_2.load(Ordering::SeqCst) != 1 {
+                thread::sleep(Duration::from_millis(1));
+            }
+
+            wait_for_next_thread_2.store(2, Ordering::SeqCst);
+
+            // Fetch the same page as write
+            let _ = bpm_thread_2.fetch_page_write(created_page_id).expect("Should be able to fetch page");
+
+            wait_for_next_thread_2.store(3, Ordering::SeqCst);
+        });
+
+        thread_1.join().unwrap();
+        thread_2.join().unwrap();
+
+        println!("{}", wait_for_next.load(Ordering::SeqCst))
     }
 
     // TODO - add test that 2 threads request the same page and should only fetch once and they point to the same page

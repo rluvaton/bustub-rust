@@ -1,15 +1,30 @@
+use std::fmt::Debug;
+use std::mem;
 use common::config::{PageData, PageId};
 use std::ops::Deref;
 use std::sync::Arc;
 
 use crate::buffer::{BufferPoolManager, PinPageGuard, PinWritePageGuard};
-use crate::storage::{Page, PageAndWriteGuard, PageUpgradableReadGuard, PageWriteGuard, UnderlyingPage};
+use crate::storage::{Page, PageAndReadGuard, PageAndWriteGuard, PageReadGuard, PageWriteGuard, UnderlyingPage};
+
+use super::super::PageLockComparator;
+
+#[derive(Debug)]
+pub enum UpgradePinWriteLockError<PageLockComparatorImpl: PageLockComparator> {
+    // #[error("page id changed (was {0}) when trying to upgrade write lock")]
+    PageIdChanged(PageId),
+
+    // #[error("page is not the same {0}")]
+    PageLockComparatorError(PageLockComparatorImpl::CompareError)
+}
+
+
 
 #[clippy::has_significant_drop]
 #[must_use = "if unused the PinReadPageGuard will immediately unpin and unlock"]
 pub struct PinReadPageGuard<'a> {
     // First drop this
-    pub(in super::super) read_guard: PageUpgradableReadGuard<'a>,
+    pub(in super::super) read_guard: PageReadGuard<'a>,
 
     // Then drop this
     pub(in super::super) guard: PinPageGuard,
@@ -18,6 +33,15 @@ pub struct PinReadPageGuard<'a> {
 impl<'a> PinReadPageGuard<'a> {
     pub fn new(bpm: Arc<BufferPoolManager>, page: Page) -> Self {
         Self::from(PinPageGuard::new(bpm, page.clone()))
+    }
+
+    pub fn from_read_guard(bpm: Arc<BufferPoolManager>, page_and_read_guard: PageAndReadGuard<'a>) -> Self {
+        let guard = PinPageGuard::new(bpm, page_and_read_guard.page_ref().clone());
+
+        Self {
+            read_guard: page_and_read_guard.read_guard(),
+            guard
+        }
     }
 
     pub fn from_write_guard(bpm: Arc<BufferPoolManager>, page_and_write_guard: PageAndWriteGuard<'a>) -> Self {
@@ -47,8 +71,29 @@ impl<'a> PinReadPageGuard<'a> {
         unimplemented!()
     }
 
-    pub fn upgrade_write(self) -> PinWritePageGuard<'a> {
-        PinWritePageGuard::from(self)
+    pub fn try_upgrade_write<PageLockComparatorImpl: PageLockComparator>(self) -> Result<PinWritePageGuard<'a>, UpgradePinWriteLockError<PageLockComparatorImpl>> {
+        let comparator = PageLockComparatorImpl::new(self.read_guard.deref());
+
+        let new_guard = unsafe { self.guard.create_new() };
+
+        let page_id = self.read_guard.get_page_id();
+
+        // Release the read lock
+        drop(self.read_guard);
+
+        let write_guard = PinWritePageGuard::from(new_guard);
+
+        // Avoid guard being unpinned, this should be before the compare
+        // as if the compare panic we won't unpin twice (one in the new_guard and on from the self.guard
+        mem::forget(self.guard);
+
+        comparator.compare(write_guard.deref()).map_err(|err| UpgradePinWriteLockError::PageLockComparatorError(err))?;
+
+        if write_guard.write_guard.get_page_id() != page_id {
+            return Err(UpgradePinWriteLockError::PageIdChanged(page_id));
+        }
+
+        Ok(write_guard)
     }
 }
 
@@ -79,7 +124,7 @@ impl Deref for PinReadPageGuard<'_> {
 
 impl From<PinPageGuard> for PinReadPageGuard<'_> {
     fn from(guard: PinPageGuard) -> Self {
-        let read_guard = unsafe { std::mem::transmute::<PageUpgradableReadGuard<'_>, PageUpgradableReadGuard<'static>>(guard.upgradable_read()) };
+        let read_guard = unsafe { std::mem::transmute::<PageReadGuard<'_>, PageReadGuard<'static>>(guard.read()) };
 
         PinReadPageGuard {
             read_guard,
@@ -90,7 +135,7 @@ impl From<PinPageGuard> for PinReadPageGuard<'_> {
 
 impl<'a> From<PinWritePageGuard<'a>> for PinReadPageGuard<'a> {
     fn from(guard: PinWritePageGuard) -> Self {
-        let read_guard = unsafe { std::mem::transmute::<PageUpgradableReadGuard<'_>, PageUpgradableReadGuard<'static>>(PageWriteGuard::downgrade_to_upgradable(guard.write_guard)) };
+        let read_guard = unsafe { std::mem::transmute::<PageReadGuard<'_>, PageReadGuard<'static>>(PageWriteGuard::downgrade(guard.write_guard)) };
 
         PinReadPageGuard {
             read_guard,

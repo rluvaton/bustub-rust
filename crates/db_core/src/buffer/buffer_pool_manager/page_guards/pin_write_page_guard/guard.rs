@@ -1,10 +1,11 @@
+use std::mem;
 use std::ops::{Deref, DerefMut};
 use std::sync::Arc;
 
 use common::config::{PageData, PageId};
 
 use crate::buffer::{BufferPoolManager, PinPageGuard, PinReadPageGuard};
-use crate::storage::{Page, PageAndWriteGuard, PageUpgradableReadGuard, PageWriteGuard, UnderlyingPage};
+use crate::storage::{Page, PageAndReadGuard, PageAndWriteGuard, PageWriteGuard, UnderlyingPage};
 
 #[clippy::has_significant_drop]
 #[must_use = "if unused the PinWritePageGuard will immediately unpin and unlock"]
@@ -19,6 +20,11 @@ pub struct PinWritePageGuard<'a> {
 impl<'a> PinWritePageGuard<'a> {
     pub fn new(bpm: Arc<BufferPoolManager>, page: Page) -> Self {
         Self::from(PinPageGuard::new(bpm, page.clone()))
+    }
+
+
+    pub fn from_read_guard(bpm: Arc<BufferPoolManager>, page_and_read_guard: PageAndReadGuard<'a>) -> Self {
+        Self::from(PinReadPageGuard::from_read_guard(bpm, page_and_read_guard))
     }
 
     pub fn from_write_guard(bpm: Arc<BufferPoolManager>, page_and_write_guard: PageAndWriteGuard<'a>) -> PinWritePageGuard<'a> {
@@ -98,11 +104,14 @@ impl From<PinPageGuard> for PinWritePageGuard<'_> {
 
 impl<'a> From<PinReadPageGuard<'a>> for PinWritePageGuard<'a> {
     fn from(guard: PinReadPageGuard) -> Self {
-        let write_guard = unsafe { std::mem::transmute::<PageWriteGuard<'_>, PageWriteGuard<'static>>(PageUpgradableReadGuard::upgrade(guard.read_guard)) };
+        let new_guard = unsafe { guard.guard.create_new() };
 
-        PinWritePageGuard {
-            write_guard,
-            guard: guard.guard,
-        }
+        // Release the read lock
+        drop(guard.read_guard);
+
+        // Avoid guard being unpinned
+        mem::forget(guard.guard);
+
+        PinWritePageGuard::from(new_guard)
     }
 }

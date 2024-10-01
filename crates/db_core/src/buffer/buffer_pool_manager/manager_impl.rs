@@ -1,7 +1,7 @@
 use super::manager::{BufferPoolManager, InnerBufferPoolManager};
 use crate::buffer::{PinPageGuard, BufferPoolManagerStats, PinReadPageGuard, PinWritePageGuard, ThreadSafeReplacer, Replacer};
 use crate::buffer::{AccessType, LRUKReplacer};
-use crate::storage::{DiskManager, DiskScheduler, Page, PageAndWriteGuard, PageWriteGuard, ReadDiskRequest, UnderlyingPage, WriteDiskRequest};
+use crate::storage::{DiskManager, DiskScheduler, Page, PageAndReadGuard, PageAndWriteGuard, PageWriteGuard, ReadDiskRequest, UnderlyingPage, WriteDiskRequest};
 use common::config::{AtomicPageId, FrameId, PageId, INVALID_PAGE_ID, LRUK_REPLACER_K};
 use common::{Promise, UnsafeSingleRefData, UnsafeSingleRefMutData};
 use parking_lot::Mutex;
@@ -11,6 +11,7 @@ use std::collections::{HashMap, LinkedList};
 use std::ops::{Deref, DerefMut};
 use std::sync::atomic::{Ordering};
 use std::sync::Arc;
+use std::time::Duration;
 use tracy_client::{non_continuous_frame, secondary_frame_mark, span};
 use super::errors::{NewPageError, FetchPageError, NoAvailableFrameFound, DeletePageError, InvalidPageId};
 
@@ -140,6 +141,11 @@ impl BufferPoolManager {
             // If we evicted and we have old page we will release the root lock to avoid blocking other processes while we flush the old page to disk
             if let Some(old_page) = old_page {
 
+
+
+                // 0. Pin the old page as it will be our new page
+                old_page.pin();
+
                 // 1. Hold writable lock on the page to make sure no one can access the page content before we finish
                 //    replacing the old page content with the new one
                 let mut old_page_with_guard = PageAndWriteGuard::from(old_page);
@@ -161,16 +167,12 @@ impl BufferPoolManager {
                     // and it will not as the disk scheduler is behind a Mutex
                     drop(root_latch_guard);
 
-
                     // 3. Flush the old page content if it's dirty
                     Self::flush_specific_page_unchecked(&mut *scheduler, old_page_with_guard.deref_mut());
                 }
 
                 // 3. Create new page
                 old_page_with_guard.reset(new_page_id);
-
-                // 4. Pin the old page as it will be our new page
-                old_page_with_guard.increment_pin_count_unchecked();
 
                 return Ok(old_page_with_guard);
             }
@@ -184,10 +186,10 @@ impl BufferPoolManager {
             // Add to the frame table
             (*inner).pages.insert(frame_id as usize, new_page.clone());
 
-            // Pin before returning to the caller to avoid page to be evicted in the meantime
-            let mut page_and_write_guard = PageAndWriteGuard::from(new_page);
+            new_page.pin();
 
-            Page::pin_with_write_guard(&mut page_and_write_guard);
+            // Pin before returning to the caller to avoid page to be evicted in the meantime
+            let page_and_write_guard = PageAndWriteGuard::from(new_page);
 
             Ok(page_and_write_guard)
         }
@@ -245,7 +247,7 @@ impl BufferPoolManager {
     }
 
     /// This return a page with write lock being held
-    fn fetch_page_unchecked(&self, page_id: PageId, access_type: AccessType) -> Result<PageAndWriteGuard, FetchPageError> {
+    fn fetch_page_unchecked(&self, page_id: PageId, access_type: AccessType) -> Result<PageAndReadGuard, FetchPageError> {
         assert_ne!(page_id, INVALID_PAGE_ID);
 
         let acquiring_root_latch = span!("Acquiring root latch");
@@ -285,10 +287,9 @@ impl BufferPoolManager {
                 });
 
                 let page = (*inner).pages[frame_id as usize].clone();
-                let mut page_with_write = PageAndWriteGuard::from(page);
 
                 // Pin before returning to the caller to avoid page to be evicted in the meantime
-                Page::pin_with_write_guard(&mut page_with_write);
+                page.pin();
 
                 drop(holding_root_latch);
                 drop(holding_root_latch_span);
@@ -300,7 +301,8 @@ impl BufferPoolManager {
                 // After pinned we can release the lock as nothing will change the page
                 drop(root_latch_guard);
 
-                return Ok(page_with_write);
+                let page_with_read = PageAndReadGuard::from(page);
+                return Ok(page_with_read);
             }
 
             // Need to fetch from disk
@@ -329,6 +331,9 @@ impl BufferPoolManager {
             // If we evicted and we have old page we will release the root lock to avoid blocking other processes while we flush the old page to disk
             if let Some(old_page) = old_page {
 
+                // 4. Pin the old page as it will be our new page
+                old_page.pin();
+
                 // 1. Hold writable lock on the page to make sure no one can access the page content before we finish
                 //    replacing the old page content with the new one
                 let mut old_page_with_guard = PageAndWriteGuard::from(old_page);
@@ -343,6 +348,7 @@ impl BufferPoolManager {
                 drop(holding_root_latch_span);
                 drop(f);
                 drop(holding_root_latch);
+
                 // #############################################################################
                 //                              Root Lock Release
                 // #############################################################################
@@ -350,6 +356,7 @@ impl BufferPoolManager {
                 // Until we finish flushing we don't want to allow fetching the old page id,
                 // and it will not as the disk scheduler is behind a Mutex
                 drop(root_latch_guard);
+
 
                 // 3. Flush the old page content if it's dirty
                 if old_page_with_guard.is_dirty() {
@@ -359,13 +366,10 @@ impl BufferPoolManager {
                 // 3. Create new page
                 old_page_with_guard.partial_reset(page_id);
 
-                // 4. Pin the old page as it will be our new page
-                Page::pin_with_write_guard(&mut old_page_with_guard);
-
                 // 5. Fetch data from disk
                 Self::fetch_specific_page_unchecked(&mut *scheduler, old_page_with_guard.deref_mut());
 
-                return Ok(old_page_with_guard);
+                return Ok(old_page_with_guard.downgrade());
             }
 
             // We create a new page
@@ -388,6 +392,7 @@ impl BufferPoolManager {
             drop(holding_root_latch_span);
             drop(f);
             drop(holding_root_latch);
+
             // #############################################################################
             //                              Root Lock Release
             // #############################################################################
@@ -398,7 +403,7 @@ impl BufferPoolManager {
 
             Self::fetch_specific_page_unchecked(&mut *scheduler, page_with_guard.deref_mut());
 
-            Ok(page_with_guard)
+            Ok(page_with_guard.downgrade())
         }
     }
 
@@ -461,10 +466,10 @@ impl BufferPoolManager {
             return Err(InvalidPageId.into());
         }
 
-        let page_and_write_guard = self.fetch_page_unchecked(page_id, AccessType::Unknown)?;
+        let page_and_read_guard = self.fetch_page_unchecked(page_id, AccessType::Unknown)?;
 
         Ok(
-            PinReadPageGuard::<'a>::from_write_guard(self.clone(), page_and_write_guard)
+            PinReadPageGuard::<'a>::from_read_guard(self.clone(), page_and_read_guard)
         )
     }
 
@@ -480,16 +485,19 @@ impl BufferPoolManager {
      *
      * @param page_id, the id of the page to fetch
      * @return PageGuard holding the fetched page
+     *
+     * SAFETY:
+     * This will try to upgrade the read lock,
      */
     pub fn fetch_page_write<'a>(self: &'a Arc<Self>, page_id: PageId) -> Result<PinWritePageGuard<'a>, FetchPageError> {
         if page_id == INVALID_PAGE_ID {
             return Err(InvalidPageId.into());
         }
 
-        let page_and_write_guard = self.fetch_page_unchecked(page_id, AccessType::Unknown)?;
+        let page_and_read_guard = self.fetch_page_unchecked(page_id, AccessType::Unknown)?;
 
         Ok(
-            PinWritePageGuard::<'a>::from_write_guard(self.clone(), page_and_write_guard)
+            PinWritePageGuard::<'a>::from_read_guard(self.clone(), page_and_read_guard)
         )
     }
 
@@ -550,8 +558,12 @@ impl BufferPoolManager {
 
             // Also, set the dirty flag on the page to indicate if the page was modified.
             if is_dirty {
-                let _update_dirty = span!("Update dirty");
-                page.with_write(|u| u.set_is_dirty(true));
+                // If page is not already dirty (without holding the write lock)
+                // TODO - can still lead to deadlock
+                if !page.is_dirty() {
+                    let _update_dirty = span!("Update dirty");
+                    page.with_write(|u| u.set_is_dirty(true));
+                }
             }
 
             let pin_count_before_unpin = page.get_pin_count();
@@ -728,14 +740,15 @@ impl BufferPoolManager {
             let frame_id = frame_id.cloned().unwrap();
 
             let page: &mut Page = (*inner).pages.get_mut(frame_id as usize).expect("page must exists as it is in the page table");
+
+            // If not evictable
+            if page.get_pin_count() > 0 {
+                return Err(DeletePageError::PageIsNotEvictable(page_id));
+            }
+
             let mut page_write_guard = page.write();
 
             assert_eq!(page_write_guard.get_page_id(), page_id, "Page to remove must be the same as the requested page");
-
-            // If not evictable
-            if page_write_guard.get_pin_count() > 0 {
-                return Err(DeletePageError::PageIsNotEvictable(page_id));
-            }
 
             // TODO - what about if page is dirty?
             (*inner).page_table.remove(&page_id);

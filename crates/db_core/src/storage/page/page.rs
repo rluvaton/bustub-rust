@@ -4,6 +4,7 @@ use common::config::{PageData, PageId, BUSTUB_PAGE_SIZE, INVALID_PAGE_ID};
 use common::ReaderWriterLatch;
 use std::ops::{Deref, DerefMut};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, AtomicIsize, AtomicUsize, Ordering};
 use parking_lot::{RwLockReadGuard, RwLockUpgradableReadGuard, RwLockWriteGuard};
 use tracy_client::span;
 use crate::storage::PageAndWriteGuard;
@@ -15,7 +16,6 @@ const PAGE_LOCK_WAITING_COLOR: u32 = 0xCC0000;
 const PAGE_LOCK_HOLDING_COLOR: u32 = 0x006A4E;
 
 pub type PageReadGuard<'a> = RwLockReadGuard<'a, UnderlyingPage>;
-pub type PageUpgradableReadGuard<'a> = RwLockUpgradableReadGuard<'a, UnderlyingPage>;
 pub type PageWriteGuard<'a> = RwLockWriteGuard<'a, UnderlyingPage>;
 
 /**
@@ -26,6 +26,8 @@ pub type PageWriteGuard<'a> = RwLockWriteGuard<'a, UnderlyingPage>;
 #[derive(Debug)]
 pub struct Page {
     inner: Arc<ReaderWriterLatch<UnderlyingPage>>,
+    pin_count: Arc<AtomicIsize>,
+    // is_dirty: Arc<AtomicBool>,
 }
 
 impl Page {
@@ -51,16 +53,15 @@ impl Page {
                     )
                 )
             ),
+            pin_count: Arc::new(AtomicIsize::new(0)),
+            // is_dirty: Arc::new(AtomicBool::new(false)),
         }
     }
 
 
     /** @return the pin count of this page */
     pub fn get_pin_count(&self) -> usize {
-        self.with_read(
-            #[inline(always)]
-            |u| u.get_pin_count()
-        )
+        self.pin_count.load(Ordering::Acquire) as usize
     }
 
     /// Pin page and return the current number of pins
@@ -69,44 +70,18 @@ impl Page {
     /// Calling pin multiple times can increase the pin counter more than needed
     ///
     /// only pin once per thread
-    pub fn pin(&mut self) -> usize {
-        self.with_write(
-            #[inline(always)]
-            |u| {
-                let mut p = u.get_pin_count();
+    pub fn pin(&self) {
+        let ref_count = Arc::strong_count(&self.inner);
+        let p = self.pin_count.fetch_add(1, Ordering::Acquire) as usize;
 
-                p += 1;
-                let ref_count = Arc::strong_count(&self.inner);
+        // Cant be more than there are references to the page
+        self.pin_count.fetch_min(ref_count as isize, Ordering::Acquire) as usize;
 
-                if p > ref_count {
-                    eprintln!("Got more pins than references to the page, this is probably a mistake");
 
-                    // Cant be more than there are references to the page
-                    p = ref_count;
-                }
-
-                u.set_pin_count(p);
-
-                p
-            })
-    }
-
-    pub fn pin_with_write_guard(page_write_guard: &mut PageAndWriteGuard) -> usize {
-        let mut p = page_write_guard.get_pin_count();
-
-        p += 1;
-        let ref_count = Arc::strong_count(&page_write_guard.page_ref().inner);
-
-        if p > ref_count {
+        // >= as fetch_add return the old value
+        if p >= ref_count {
             eprintln!("Got more pins than references to the page, this is probably a mistake");
-
-            // Cant be more than there are references to the page
-            p = ref_count;
         }
-
-        page_write_guard.set_pin_count(p);
-
-        p
     }
 
     /// Pin page without checking the pin if the number of pins are possible
@@ -115,9 +90,7 @@ impl Page {
     /// # Safety
     /// Just blindly increase pin count
     pub unsafe fn pin_unchecked(&self) {
-        self.with_write(|u| {
-            u.increment_pin_count_unchecked()
-        })
+        self.pin_count.fetch_add(1, Ordering::Acquire);
     }
 
 
@@ -127,23 +100,17 @@ impl Page {
     /// Calling unpin multiple times can decrease the pin counter more than needed
     ///
     /// only unpin after each pin
-    pub fn unpin(&mut self) -> usize {
-        self.with_write(
-            #[inline(always)]
-            |u| {
-                let mut p = u.get_pin_count();
+    pub fn unpin(&mut self) {
+        let p = self.pin_count.fetch_sub(1, Ordering::Acquire);
 
-                if p == 0 {
-                    eprintln!("Trying to unpin page which has no pins this is a mistake");
-                    return 0;
-                }
+        // Cant be less than 0 refs
+        self.pin_count.fetch_max(0, Ordering::Acquire);
 
-                p -= 1;
 
-                u.set_pin_count(p);
-
-                p
-            })
+        // <= 0 as fetch_sub return the prev value
+        if p <= 0 {
+            eprintln!("Trying to unpin page which has no pins this is a mistake");
+        }
     }
 
     pub fn is_pinned(&self) -> bool {
@@ -153,6 +120,11 @@ impl Page {
     pub fn is_unpinned(&self) -> bool {
         !self.is_pinned()
     }
+
+    pub unsafe fn is_dirty(&self) -> bool {
+        self.inner.data_ptr().as_ref().unwrap().is_dirty()
+    }
+
 
     /// Run function with read lock and get the underlying page
     ///
@@ -235,10 +207,6 @@ impl Page {
         self.inner.write()
     }
 
-    pub fn upgradable_read(&self) -> PageUpgradableReadGuard {
-        self.inner.upgradable_read()
-    }
-
     /// Check if the current page is locked in any way
     pub fn is_locked(&self) -> bool {
         self.inner.is_locked()
@@ -253,8 +221,6 @@ impl Page {
     pub fn is_locked_exclusive(&self) -> bool {
         self.inner.is_locked_exclusive()
     }
-
-
 }
 
 impl Clone for Page {
@@ -263,6 +229,8 @@ impl Clone for Page {
 
         let page = Page {
             inner,
+            pin_count: Arc::clone(&self.pin_count),
+            // is_dirty: Arc::clone(&self.is_dirty),
         };
 
         // Clone should not increase pin, this should be done by the consumer of the page
@@ -279,6 +247,7 @@ impl Default for Page {
 
 impl PartialEq for Page {
     fn eq(&self, other: &Self) -> bool {
+        // TODO - check is dirty
         let self_guard = self.inner.read();
         let other_guard = other.inner.read();
 

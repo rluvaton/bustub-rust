@@ -1,5 +1,5 @@
 use std::ops::{Deref, DerefMut};
-use crate::storage::{Page, PageWriteGuard};
+use crate::storage::{Page, PageAndReadGuard, PageWriteGuard};
 
 pub(crate) struct PageAndWriteGuard<'a>(
     // First drop the guard and then the page
@@ -26,6 +26,10 @@ impl<'a> PageAndWriteGuard<'a> {
     #[inline(always)]
     pub(crate) fn write_guard(self) -> PageWriteGuard<'a> {
         self.0
+    }
+
+    pub(crate) fn downgrade(self) -> PageAndReadGuard<'a> {
+        PageAndReadGuard::from(self)
     }
 }
 

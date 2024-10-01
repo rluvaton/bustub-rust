@@ -1,10 +1,11 @@
 use common::config::{PageData, PageId, BUSTUB_PAGE_SIZE, INVALID_PAGE_ID, LSN};
 use std::mem::size_of;
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 //noinspection RsAssertEqual
-const _:() = assert!(size_of::<PageId>() == 4);
+const _: () = assert!(size_of::<PageId>() == 4);
 //noinspection RsAssertEqual
-const _:() = assert!(size_of::<LSN>() == 4);
+const _: () = assert!(size_of::<LSN>() == 4);
 
 
 /**
@@ -24,7 +25,8 @@ pub struct UnderlyingPage {
     page_id: PageId,
 
     /** The pin count of this page. */
-    pin_count: usize,
+    // pin_count: usize,
+    // pin_count: AtomicUsize,
 
     /** True if the page is dirty, i.e. it is different from its corresponding page on disk. */
     is_dirty: bool,
@@ -45,7 +47,7 @@ impl UnderlyingPage {
         UnderlyingPage {
             page_id,
             is_dirty: false,
-            pin_count: 0,
+            // pin_count: AtomicUsize::new(0),
             data,
         }
     }
@@ -93,19 +95,23 @@ impl UnderlyingPage {
     }
 
     /** @return the pin count of this page */
-    pub fn get_pin_count(&self) -> usize {
-        self.pin_count
-    }
-
-    /// Increment pin count without the safety check for number of references to the page
-    pub unsafe fn increment_pin_count_unchecked(&mut self) {
-        self.pin_count += 1;
-    }
+    // pub fn get_pin_count(&self) -> usize {
+    //     self.pin_count.load(Ordering::SeqCst)
+    // }
+    //
+    // /// Increment pin count without the safety check for number of references to the page
+    // pub unsafe fn increment_pin_count_unchecked(&mut self) {
+    //     self.pin_count.fetch_add(1, Ordering::SeqCst);
+    // }
+    //
+    // pub unsafe fn increment_pin_count_unchecked_without_mut(&self) {
+    //     self.pin_count.fetch_add(1, Ordering::SeqCst);
+    // }
 
     /** @return the pin count of this page */
-    pub fn set_pin_count(&mut self, pin_count: usize) {
-        self.pin_count = pin_count;
-    }
+    // pub fn set_pin_count(&mut self, pin_count: usize) {
+    //     self.pin_count.store(pin_count, Ordering::SeqCst);
+    // }
 
     /** @return true if the page in memory has been modified from the page on disk, false otherwise */
     pub fn is_dirty(&self) -> bool {
@@ -132,7 +138,7 @@ impl UnderlyingPage {
     pub fn partial_reset(&mut self, page_id: PageId) {
         self.page_id = page_id;
         self.is_dirty = false;
-        self.pin_count = 0;
+        // self.pin_count.store(0, Ordering::SeqCst);
     }
 
     // When replacing content of page with different
@@ -141,7 +147,7 @@ impl UnderlyingPage {
         self.is_dirty = false;
         self.page_id = page_id;
         self.data = data;
-        self.pin_count = 0;
+        // self.pin_count.store(0, Ordering::SeqCst);
     }
 
     pub fn replace_page_id_without_content_update(&mut self, page_id: PageId) {
@@ -163,3 +169,11 @@ impl Default for UnderlyingPage {
     }
 }
 
+// impl PartialEq for UnderlyingPage {
+//     fn eq(&self, other: &Self) -> bool {
+//         self.data == other.data
+//             && self.page_id == other.page_id
+//             && self.is_dirty == other.is_dirty
+//             && self.pin_count.load(Ordering::SeqCst) == self.pin_count.load(Ordering::SeqCst)
+//     }
+// }
