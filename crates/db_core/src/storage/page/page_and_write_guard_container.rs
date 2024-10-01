@@ -1,7 +1,7 @@
 use std::ops::{Deref, DerefMut};
 use crate::storage::{Page, PageWriteGuard};
 
-pub(in super::super) struct PageAndWriteGuard<'a>(
+pub(crate) struct PageAndWriteGuard<'a>(
     // First drop the guard and then the page
     PageWriteGuard<'a>,
     Page,
@@ -9,22 +9,22 @@ pub(in super::super) struct PageAndWriteGuard<'a>(
 
 impl<'a> PageAndWriteGuard<'a> {
     #[inline(always)]
-    pub(in super::super) fn page(self) -> Page {
+    pub(crate) fn page(self) -> Page {
         self.1
     }
 
     #[inline(always)]
-    pub(in super::super) fn page_ref(&self) -> &Page {
+    pub(crate) fn page_ref(&self) -> &Page {
         &self.1
     }
 
     #[inline(always)]
-    pub(in super::super) fn page_mut_ref(&mut self) -> &mut Page {
+    pub(crate) fn page_mut_ref(&mut self) -> &mut Page {
         &mut self.1
     }
 
     #[inline(always)]
-    pub(in super::super) fn write_guard(self) -> PageWriteGuard<'a> {
+    pub(crate) fn write_guard(self) -> PageWriteGuard<'a> {
         self.0
     }
 }

@@ -1,7 +1,7 @@
 use super::manager::{BufferPoolManager, InnerBufferPoolManager};
 use crate::buffer::{PinPageGuard, BufferPoolManagerStats, PinReadPageGuard, PinWritePageGuard, ThreadSafeReplacer, Replacer};
 use crate::buffer::{AccessType, LRUKReplacer};
-use crate::storage::{DiskManager, DiskScheduler, Page, PageWriteGuard, ReadDiskRequest, UnderlyingPage, WriteDiskRequest};
+use crate::storage::{DiskManager, DiskScheduler, Page, PageAndWriteGuard, PageWriteGuard, ReadDiskRequest, UnderlyingPage, WriteDiskRequest};
 use common::config::{AtomicPageId, FrameId, PageId, INVALID_PAGE_ID, LRUK_REPLACER_K};
 use common::{Promise, UnsafeSingleRefData, UnsafeSingleRefMutData};
 use parking_lot::Mutex;
@@ -12,7 +12,6 @@ use std::ops::{Deref, DerefMut};
 use std::sync::atomic::{Ordering};
 use std::sync::Arc;
 use tracy_client::{non_continuous_frame, secondary_frame_mark, span};
-use crate::buffer::buffer_pool_manager::PageAndWriteGuard;
 use super::errors::{NewPageError, FetchPageError, NoAvailableFrameFound, DeletePageError, InvalidPageId};
 
 // While waiting - red-ish (brighter than page lock)
@@ -92,6 +91,10 @@ impl BufferPoolManager {
      * Original: @return nullptr if no new pages could be created, otherwise pointer to new page
      */
     pub fn new_page(&self) -> Result<Page, NewPageError> {
+        Ok(self.new_page_with_write_guard()?.page())
+    }
+
+    fn new_page_with_write_guard<'a>(&self) -> Result<PageAndWriteGuard<'a>, NewPageError> {
         let acquiring_root_latch = span!("Acquiring root latch");
 
         // Red color while waiting
@@ -139,37 +142,37 @@ impl BufferPoolManager {
 
                 // 1. Hold writable lock on the page to make sure no one can access the page content before we finish
                 //    replacing the old page content with the new one
-                old_page.with_write(|mut underlying| {
-                    // 1. Remove reference to the old page in the page table
-                    (*inner).page_table.remove(&underlying.get_page_id());
+                let mut old_page_with_guard = PageAndWriteGuard::from(old_page);
 
-                    if underlying.is_dirty() {
-                        let mut scheduler = (*inner).disk_scheduler.lock();
+                // 1. Remove reference to the old page in the page table
+                (*inner).page_table.remove(&old_page_with_guard.get_page_id());
 
-                        drop(holding_root_latch);
-                        drop(holding_root_latch_span);
+                if old_page_with_guard.is_dirty() {
+                    let mut scheduler = (*inner).disk_scheduler.lock();
 
-                        // #############################################################################
-                        //                              Root Lock Release
-                        // #############################################################################
-                        // 2. Once we hold the lock for the page and the disk scheduler we can release the root lock
-                        // Until we finish flushing we don't want to allow fetching the old page id,
-                        // and it will not as the disk scheduler is behind a Mutex
-                        drop(root_latch_guard);
+                    drop(holding_root_latch);
+                    drop(holding_root_latch_span);
+
+                    // #############################################################################
+                    //                              Root Lock Release
+                    // #############################################################################
+                    // 2. Once we hold the lock for the page and the disk scheduler we can release the root lock
+                    // Until we finish flushing we don't want to allow fetching the old page id,
+                    // and it will not as the disk scheduler is behind a Mutex
+                    drop(root_latch_guard);
 
 
-                        // 3. Flush the old page content if it's dirty
-                        Self::flush_specific_page_unchecked(&mut *scheduler, &mut underlying);
-                    }
+                    // 3. Flush the old page content if it's dirty
+                    Self::flush_specific_page_unchecked(&mut *scheduler, old_page_with_guard.deref_mut());
+                }
 
-                    // 3. Create new page
-                    underlying.reset(new_page_id);
+                // 3. Create new page
+                old_page_with_guard.reset(new_page_id);
 
-                    // 4. Pin the old page as it will be our new page
-                    underlying.increment_pin_count_unchecked();
-                });
+                // 4. Pin the old page as it will be our new page
+                old_page_with_guard.increment_pin_count_unchecked();
 
-                return Ok(old_page.clone());
+                return Ok(old_page_with_guard);
             }
 
             // In new page we're holding the root lock until we finish creating the new page
@@ -177,13 +180,16 @@ impl BufferPoolManager {
             // If we have a new page, create it
             let mut new_page = Page::new(new_page_id);
 
+
             // Add to the frame table
             (*inner).pages.insert(frame_id as usize, new_page.clone());
 
             // Pin before returning to the caller to avoid page to be evicted in the meantime
-            new_page.pin();
+            let mut page_and_write_guard = PageAndWriteGuard::from(new_page);
 
-            Ok(new_page)
+            Page::pin_with_write_guard(&mut page_and_write_guard);
+
+            Ok(page_and_write_guard)
         }
     }
 
@@ -206,9 +212,11 @@ impl BufferPoolManager {
     }
 
     pub fn new_page_write_guarded<'a>(self: &Arc<Self>) -> Result<PinWritePageGuard<'a>, NewPageError> {
-        let page = self.new_page_guarded()?;
+        let page_and_write_guard = self.new_page_with_write_guard()?;
 
-        Ok(page.upgrade_write())
+        Ok(
+            PinWritePageGuard::<'a>::from_write_guard(self.clone(), page_and_write_guard)
+        )
     }
 
     /**

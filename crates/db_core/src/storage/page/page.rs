@@ -6,7 +6,7 @@ use std::ops::{Deref, DerefMut};
 use std::sync::Arc;
 use parking_lot::{RwLockReadGuard, RwLockUpgradableReadGuard, RwLockWriteGuard};
 use tracy_client::span;
-
+use crate::storage::PageAndWriteGuard;
 
 // While waiting - red-ish (darker than page lock)
 const PAGE_LOCK_WAITING_COLOR: u32 = 0xCC0000;
@@ -89,6 +89,24 @@ impl Page {
 
                 p
             })
+    }
+
+    pub fn pin_with_write_guard(page_write_guard: &mut PageAndWriteGuard) -> usize {
+        let mut p = page_write_guard.get_pin_count();
+
+        p += 1;
+        let ref_count = Arc::strong_count(&page_write_guard.page_ref().inner);
+
+        if p > ref_count {
+            eprintln!("Got more pins than references to the page, this is probably a mistake");
+
+            // Cant be more than there are references to the page
+            p = ref_count;
+        }
+
+        page_write_guard.set_pin_count(p);
+
+        p
     }
 
     /// Pin page without checking the pin if the number of pins are possible
