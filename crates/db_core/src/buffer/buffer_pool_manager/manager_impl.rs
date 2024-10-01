@@ -288,7 +288,7 @@ impl BufferPoolManager {
                 let mut page_with_write = PageAndWriteGuard::from(page);
 
                 // Pin before returning to the caller to avoid page to be evicted in the meantime
-                page_with_write.increment_pin_count_unchecked();
+                Page::pin_with_write_guard(&mut page_with_write);
 
                 drop(holding_root_latch);
                 drop(holding_root_latch_span);
@@ -360,7 +360,7 @@ impl BufferPoolManager {
                 old_page_with_guard.partial_reset(page_id);
 
                 // 4. Pin the old page as it will be our new page
-                old_page_with_guard.increment_pin_count_unchecked();
+                Page::pin_with_write_guard(&mut old_page_with_guard);
 
                 // 5. Fetch data from disk
                 Self::fetch_specific_page_unchecked(&mut *scheduler, old_page_with_guard.deref_mut());
