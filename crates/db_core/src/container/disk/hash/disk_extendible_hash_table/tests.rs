@@ -14,6 +14,7 @@ mod tests {
     use rand_chacha::ChaChaRng;
     use std::collections::HashSet;
     use std::sync::Arc;
+    use std::sync::atomic::{AtomicBool, Ordering};
     use std::sync::Barrier;
     use std::thread;
     use thread_id;
@@ -566,6 +567,10 @@ mod tests {
         // Barrier to synchronize thread start
         let barrier = Arc::new(Barrier::new(num_threads));
 
+        let finished = Arc::new(AtomicBool::new(false));
+
+        let deadlock_finished = finished.clone();
+
         let mut handles = vec![];
         { // only for #[cfg]
             use std::thread;
@@ -574,7 +579,7 @@ mod tests {
 
             // Create a background thread which checks for deadlocks every 10s
             thread::spawn(move || {
-                loop {
+                while !deadlock_finished.load(Ordering::Relaxed) {
                     thread::sleep(Duration::from_secs(1));
                     let deadlocks = deadlock::check_deadlock();
                     if deadlocks.is_empty() {
@@ -601,6 +606,7 @@ mod tests {
             let handle = thread::spawn(move || {
                 // Ensure all threads start simultaneously
                 barrier.wait();
+                let one_percent = total / 100;
 
                 let actual_thread_id = thread::current().id();
                 let actual_thread_id = thread_id::get();
@@ -610,6 +616,9 @@ mod tests {
                     let key = (i + offset) as Key;
                     let rid = (i + offset) as Value;
 
+                    if i % one_percent == 0 {
+                        println!("Passed {}%", (i / one_percent))
+                    }
                     // Alternating between insert and delete for stress
                     if i % 2 == 0 {
                         let result = hash_table.insert(&key, &rid, None);
@@ -647,6 +656,10 @@ mod tests {
         for handle in handles {
             handle.join().expect("Thread failed");
         }
+
+        finished.store(true, Ordering::Relaxed);
+
+        println!("Finished");
 
         // Final integrity check
         hash_table.verify_integrity(false);

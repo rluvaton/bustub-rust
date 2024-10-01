@@ -1,4 +1,5 @@
 use std::ops::{Deref, DerefMut};
+use std::time::Duration;
 use crate::storage::{Page, PageAndReadGuard, PageWriteGuard};
 
 pub(crate) struct PageAndWriteGuard<'a>(
@@ -8,6 +9,17 @@ pub(crate) struct PageAndWriteGuard<'a>(
 );
 
 impl<'a> PageAndWriteGuard<'a> {
+    pub(crate) fn try_for(page: Page, duration: Duration) -> Option<Self> {
+        if let Some(write_guard) = page.clone().try_write_for(duration) {
+
+            let write_guard = unsafe { std::mem::transmute::<PageWriteGuard<'_>, PageWriteGuard<'static>>(write_guard) };
+
+            return Some(PageAndWriteGuard(write_guard, page));
+        }
+
+        None
+    }
+
     #[inline(always)]
     pub(crate) fn page(self) -> Page {
         self.1

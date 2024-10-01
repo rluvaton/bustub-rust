@@ -150,16 +150,17 @@ impl Deref for PinPageGuard {
 ///
 impl Drop for PinPageGuard {
     fn drop(&mut self) {
-        let (page_id, is_dirty) = self.page.with_read(|u| (u.get_page_id(), u.is_dirty()));
+        let page_id = self.page.with_read(|u| u.get_page_id());
 
-        self.bpm.unpin_page(page_id, is_dirty, AccessType::default());
+        // Setting is dirty as false as we did not manually change something here, the buffer pool won't set the is dirty to false, but keep current value
+        self.bpm.unpin_page(page_id, false, AccessType::default());
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::buffer::buffer_pool_manager::{AlwaysValidPageLockComparator, PinPageGuard};
-    use crate::buffer::BufferPoolManager;
+    use crate::buffer::buffer_pool_manager::PinPageGuard;
+    use crate::buffer::{AlwaysValidPageLockComparator, BufferPoolManager};
     use parking_lot::Mutex;
     use std::sync::Arc;
     use crate::storage::DiskManagerUnlimitedMemory;
@@ -237,7 +238,7 @@ mod tests {
 
             let read_pin_guard = guard.upgrade_read();
 
-            assert_eq!(read_pin_guard.guard.get_pin_count(), 3, "Creating read guard from regular guard should keep pin count");
+            assert_eq!(read_pin_guard.get_pin_count(), 3, "Creating read guard from regular guard should keep pin count");
         }
 
         assert_eq!(page.get_pin_count(), 2, "Dropping read guard should unpin only once");
@@ -270,7 +271,7 @@ mod tests {
 
             let write_pin_guard = guard.upgrade_write();
 
-            assert_eq!(write_pin_guard.guard.get_pin_count(), 3, "Creating write guard from regular guard should keep pin count");
+            assert_eq!(write_pin_guard.get_pin_count(), 3, "Creating write guard from regular guard should keep pin count");
         }
 
         assert_eq!(page.get_pin_count(), 2, "Dropping write guard should unpin only once");
@@ -298,25 +299,25 @@ mod tests {
             let read_pin_guard = guard.upgrade_read();
 
             // Should not unpin
-            assert_eq!(read_pin_guard.guard.get_pin_count(), pin_count, "should have the same pin count");
+            assert_eq!(read_pin_guard.get_pin_count(), pin_count, "should have the same pin count");
             assert_eq!(page.is_locked_shared(), true, "Should be locked in read mode");
 
-            let write_pin_guard = read_pin_guard.try_upgrade_write::<AlwaysValidPageLockComparator>().expect("Should work");
+            let write_pin_guard = read_pin_guard.try_upgrade_write::<AlwaysValidPageLockComparator>().unwrap();
 
             // Should not unpin
-            assert_eq!(write_pin_guard.guard.get_pin_count(), pin_count, "should have the same pin count");
+            assert_eq!(write_pin_guard.get_pin_count(), pin_count, "should have the same pin count");
             assert_eq!(page.is_locked_exclusive(), true, "Should be locked in write mode");
 
             let read_pin_guard = write_pin_guard.downgrade_to_read();
 
             // Should not unpin
-            assert_eq!(read_pin_guard.guard.get_pin_count(), pin_count, "should have the same pin count");
+            assert_eq!(read_pin_guard.get_pin_count(), pin_count, "should have the same pin count");
             assert_eq!(page.is_locked_shared(), true, "Should be locked in read mode");
 
-            let write_pin_guard = read_pin_guard.try_upgrade_write::<AlwaysValidPageLockComparator>().expect("Should work");
+            let write_pin_guard = read_pin_guard.try_upgrade_write::<AlwaysValidPageLockComparator>().unwrap();
 
             // Should not unpin
-            assert_eq!(write_pin_guard.guard.get_pin_count(), pin_count, "should have the same pin count");
+            assert_eq!(write_pin_guard.get_pin_count(), pin_count, "should have the same pin count");
             assert_eq!(page.is_locked_exclusive(), true, "Should be locked in write mode");
         }
 
