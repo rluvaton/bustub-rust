@@ -1,16 +1,18 @@
 use super::manager::{BufferPoolManager, InnerBufferPoolManager};
 use crate::buffer::{PinPageGuard, BufferPoolManagerStats, PinReadPageGuard, PinWritePageGuard, ThreadSafeReplacer, Replacer};
 use crate::buffer::{AccessType, LRUKReplacer};
-use crate::storage::{DiskManager, DiskScheduler, Page, ReadDiskRequest, UnderlyingPage, WriteDiskRequest};
+use crate::storage::{DiskManager, DiskScheduler, Page, PageWriteGuard, ReadDiskRequest, UnderlyingPage, WriteDiskRequest};
 use common::config::{AtomicPageId, FrameId, PageId, INVALID_PAGE_ID, LRUK_REPLACER_K};
 use common::{Promise, UnsafeSingleRefData, UnsafeSingleRefMutData};
 use parking_lot::Mutex;
 use crate::recovery::LogManager;
 use std::cell::{UnsafeCell};
 use std::collections::{HashMap, LinkedList};
+use std::ops::{Deref, DerefMut};
 use std::sync::atomic::{Ordering};
 use std::sync::Arc;
 use tracy_client::{non_continuous_frame, secondary_frame_mark, span};
+use crate::buffer::buffer_pool_manager::PageAndWriteGuard;
 use super::errors::{NewPageError, FetchPageError, NoAvailableFrameFound, DeletePageError, InvalidPageId};
 
 // While waiting - red-ish (brighter than page lock)
@@ -231,11 +233,11 @@ impl BufferPoolManager {
             return Err(InvalidPageId.into());
         }
 
-        self.fetch_page_unchecked(page_id, access_type)
+        Ok(self.fetch_page_unchecked(page_id, access_type)?.page())
     }
 
-    #[inline(always)]
-    fn fetch_page_unchecked(&self, page_id: PageId, access_type: AccessType) -> Result<Page, FetchPageError> {
+    /// This return a page with write lock being held
+    fn fetch_page_unchecked(&self, page_id: PageId, access_type: AccessType) -> Result<PageAndWriteGuard, FetchPageError> {
         assert_ne!(page_id, INVALID_PAGE_ID);
 
         let acquiring_root_latch = span!("Acquiring root latch");
@@ -274,23 +276,23 @@ impl BufferPoolManager {
                     replacer.record_access(frame_id, access_type);
                 });
 
-                // Pin before returning to the caller to avoid page to be evicted in the meantime
-                (*inner).pages[frame_id as usize].pin();
+                let page = (*inner).pages[frame_id as usize].clone();
+                let mut page_with_write = PageAndWriteGuard::from(page);
 
+                // Pin before returning to the caller to avoid page to be evicted in the meantime
+                page_with_write.increment_pin_count_unchecked();
 
                 drop(holding_root_latch);
                 drop(holding_root_latch_span);
                 drop(f);
+
                 // #############################################################################
                 //                              Root Lock Release
                 // #############################################################################
                 // After pinned we can release the lock as nothing will change the page
                 drop(root_latch_guard);
 
-
-                let p = (*inner).pages[frame_id as usize].clone();
-
-                return Ok(p);
+                return Ok(page_with_write);
             }
 
             // Need to fetch from disk
@@ -321,40 +323,41 @@ impl BufferPoolManager {
 
                 // 1. Hold writable lock on the page to make sure no one can access the page content before we finish
                 //    replacing the old page content with the new one
-                old_page.with_write(|mut underlying| {
-                    // 1. Remove reference to the old page in the page table
-                    (*inner).page_table.remove(&underlying.get_page_id());
+                let mut old_page_with_guard = PageAndWriteGuard::from(old_page);
 
-                    // 2. Acquire the scheduler lock
-                    let mut scheduler = (*inner).disk_scheduler.lock();
 
-                    drop(holding_root_latch_span);
-                    drop(f);
-                    drop(holding_root_latch);
-                    // #############################################################################
-                    //                              Root Lock Release
-                    // #############################################################################
-                    // 2. Once we hold the lock for the page and the disk scheduler we can release the root lock
-                    // Until we finish flushing we don't want to allow fetching the old page id,
-                    // and it will not as the disk scheduler is behind a Mutex
-                    drop(root_latch_guard);
+                // 1. Remove reference to the old page in the page table
+                (*inner).page_table.remove(&old_page_with_guard.get_page_id());
 
-                    // 3. Flush the old page content if it's dirty
-                    if underlying.is_dirty() {
-                        Self::flush_specific_page_unchecked(&mut *scheduler, &mut underlying);
-                    }
+                // 2. Acquire the scheduler lock
+                let mut scheduler = (*inner).disk_scheduler.lock();
 
-                    // 3. Create new page
-                    underlying.partial_reset(page_id);
+                drop(holding_root_latch_span);
+                drop(f);
+                drop(holding_root_latch);
+                // #############################################################################
+                //                              Root Lock Release
+                // #############################################################################
+                // 2. Once we hold the lock for the page and the disk scheduler we can release the root lock
+                // Until we finish flushing we don't want to allow fetching the old page id,
+                // and it will not as the disk scheduler is behind a Mutex
+                drop(root_latch_guard);
 
-                    // 4. Pin the old page as it will be our new page
-                    underlying.increment_pin_count_unchecked();
+                // 3. Flush the old page content if it's dirty
+                if old_page_with_guard.is_dirty() {
+                    Self::flush_specific_page_unchecked(&mut *scheduler, old_page_with_guard.deref_mut());
+                }
 
-                    // 5. Fetch data from disk
-                    Self::fetch_specific_page_unchecked(&mut *scheduler, underlying);
-                });
+                // 3. Create new page
+                old_page_with_guard.partial_reset(page_id);
 
-                return Ok(old_page.clone());
+                // 4. Pin the old page as it will be our new page
+                old_page_with_guard.increment_pin_count_unchecked();
+
+                // 5. Fetch data from disk
+                Self::fetch_specific_page_unchecked(&mut *scheduler, old_page_with_guard.deref_mut());
+
+                return Ok(old_page_with_guard);
             }
 
             // We create a new page
@@ -362,32 +365,32 @@ impl BufferPoolManager {
             let mut page: Page = Page::new(page_id);
 
             // 1. Pin the page
+
+            // Pin before returning to the caller to avoid page to be evicted in the meantime
             page.pin();
 
             // 2. Add to the frame list
             (*inner).pages.insert(frame_id as usize, page.clone());
 
-            page.with_write(
-                #[inline(always)]
-                |mut underlying| {
-                    // 1. Acquire the scheduler lock
-                    let mut scheduler = (*inner).disk_scheduler.lock();
+            let mut page_with_guard = PageAndWriteGuard::from(page);
 
-                    drop(holding_root_latch_span);
-                    drop(f);
-                    drop(holding_root_latch);
-                    // #############################################################################
-                    //                              Root Lock Release
-                    // #############################################################################
-                    // 2. Once we hold the lock for the page and the disk scheduler we can release the root lock
-                    // Until we finish flushing we don't want to allow fetching the old page id,
-                    // and it will not as the disk scheduler is behind a Mutex
-                    drop(root_latch_guard);
+            // 3. Acquire the scheduler lock
+            let mut scheduler = (*inner).disk_scheduler.lock();
 
-                    Self::fetch_specific_page_unchecked(&mut *scheduler, &mut underlying);
-                });
+            drop(holding_root_latch_span);
+            drop(f);
+            drop(holding_root_latch);
+            // #############################################################################
+            //                              Root Lock Release
+            // #############################################################################
+            // 4. Once we hold the lock for the page and the disk scheduler we can release the root lock
+            // Until we finish flushing we don't want to allow fetching the old page id,
+            // and it will not as the disk scheduler is behind a Mutex
+            drop(root_latch_guard);
 
-            Ok(page)
+            Self::fetch_specific_page_unchecked(&mut *scheduler, page_with_guard.deref_mut());
+
+            Ok(page_with_guard)
         }
     }
 
@@ -445,10 +448,16 @@ impl BufferPoolManager {
      * @param page_id, the id of the page to fetch
      * @return PageGuard holding the fetched page
      */
-    pub fn fetch_page_read<'a>(self: &Arc<Self>, page_id: PageId) -> Result<PinReadPageGuard<'a>, FetchPageError> {
-        let page = self.fetch_page_basic(page_id)?;
+    pub fn fetch_page_read<'a>(self: &'a Arc<Self>, page_id: PageId) -> Result<PinReadPageGuard<'a>, FetchPageError> {
+        if page_id == INVALID_PAGE_ID {
+            return Err(InvalidPageId.into());
+        }
 
-        Ok(page.upgrade_read())
+        let page_and_write_guard = self.fetch_page_unchecked(page_id, AccessType::Unknown)?;
+
+        Ok(
+            PinReadPageGuard::<'a>::from_write_guard(self.clone(), page_and_write_guard)
+        )
     }
 
     /**
@@ -464,10 +473,16 @@ impl BufferPoolManager {
      * @param page_id, the id of the page to fetch
      * @return PageGuard holding the fetched page
      */
-    pub fn fetch_page_write<'a>(self: &Arc<Self>, page_id: PageId) -> Result<PinWritePageGuard<'a>, FetchPageError> {
-        let page = self.fetch_page_basic(page_id)?;
+    pub fn fetch_page_write<'a>(self: &'a Arc<Self>, page_id: PageId) -> Result<PinWritePageGuard<'a>, FetchPageError> {
+        if page_id == INVALID_PAGE_ID {
+            return Err(InvalidPageId.into());
+        }
 
-        Ok(page.upgrade_write())
+        let page_and_write_guard = self.fetch_page_unchecked(page_id, AccessType::Unknown)?;
+
+        Ok(
+            PinWritePageGuard::<'a>::from_write_guard(self.clone(), page_and_write_guard)
+        )
     }
 
     /**

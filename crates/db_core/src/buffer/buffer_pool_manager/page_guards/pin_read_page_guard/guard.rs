@@ -1,16 +1,18 @@
-use std::mem;
-use std::sync::Arc;
-use std::ops::Deref;
-
 use common::config::{PageData, PageId};
+use std::ops::Deref;
+use std::sync::Arc;
 
+use crate::buffer::buffer_pool_manager::PageAndWriteGuard;
 use crate::buffer::{BufferPoolManager, PinPageGuard, PinWritePageGuard};
-use crate::storage::{Page, UnderlyingPage};
+use crate::storage::{Page, PageUpgradableReadGuard, PageWriteGuard, UnderlyingPage};
 
 #[clippy::has_significant_drop]
 #[must_use = "if unused the PinReadPageGuard will immediately unpin and unlock"]
 pub struct PinReadPageGuard<'a> {
-    pub(in super::super) underlying_page: &'a UnderlyingPage,
+    // First drop this
+    pub(in super::super) read_guard: PageUpgradableReadGuard<'a>,
+
+    // Then drop this
     pub(in super::super) guard: PinPageGuard,
 }
 
@@ -19,16 +21,20 @@ impl<'a> PinReadPageGuard<'a> {
         Self::from(PinPageGuard::new(bpm, page.clone()))
     }
 
+    pub fn from_write_guard(bpm: Arc<BufferPoolManager>, page_and_write_guard: PageAndWriteGuard<'a>) -> Self {
+        PinWritePageGuard::<'a>::from_write_guard(bpm, page_and_write_guard).into()
+    }
+
     pub fn get_page_id(&self) -> PageId {
-        self.underlying_page.get_page_id()
+        self.read_guard.get_page_id()
     }
 
     pub fn get_data(&self) -> &PageData {
-        self.underlying_page.get_data()
+        self.read_guard.get_data()
     }
 
     pub fn cast<T>(&self) -> &T {
-        self.underlying_page.cast::<T>()
+        self.read_guard.cast::<T>()
     }
 
     /// * TODO(P2): Add implementation
@@ -52,7 +58,7 @@ impl Deref for PinReadPageGuard<'_> {
 
     #[inline]
     fn deref(&self) -> &UnderlyingPage {
-        &self.underlying_page
+        self.read_guard.deref()
     }
 }
 
@@ -66,52 +72,30 @@ impl Deref for PinReadPageGuard<'_> {
 /// However, you should think VERY carefully about in which order you
 /// want to release these resources.
 ///
-impl Drop for PinReadPageGuard<'_> {
-    fn drop(&mut self) {
-        unsafe { self.guard.page.unlock_read_without_guard() }
-    }
-}
+// impl Drop for PinReadPageGuard<'_> {
+//     fn drop(&mut self) {
+//         unsafe { self.guard.page.unlock_read_without_guard() }
+//     }
+// }
 
 impl From<PinPageGuard> for PinReadPageGuard<'_> {
     fn from(guard: PinPageGuard) -> Self {
-        let page = guard.page.clone();
+        let read_guard = unsafe { std::mem::transmute::<PageUpgradableReadGuard<'_>, PageUpgradableReadGuard<'static>>(guard.upgradable_read()) };
 
-        unsafe {
-            PinReadPageGuard {
-                underlying_page: &*page.read_without_guard(),
-                guard,
-            }
+        PinReadPageGuard {
+            read_guard,
+            guard,
         }
     }
 }
 
 impl<'a> From<PinWritePageGuard<'a>> for PinReadPageGuard<'a> {
     fn from(guard: PinWritePageGuard) -> Self {
-        let pin_guard = unsafe {
-            guard.guard.create_new()
-        };
+        let read_guard = unsafe { std::mem::transmute::<PageUpgradableReadGuard<'_>, PageUpgradableReadGuard<'static>>(PageWriteGuard::downgrade_to_upgradable(guard.write_guard)) };
 
-        let underlying_page: &UnderlyingPage;
-
-        unsafe {
-            // Unlock write manually before acquiring read as it will lead to a deadlock
-            // due to we only release the write lock on PinWritePageGuard drop
-            pin_guard.unlock_write_without_guard();
-
-            // Acquire read
-            underlying_page = &*pin_guard.read_without_guard()
-        };
-
-        // Do not run:
-        // 1. Pin guard drop function: as we don't want to unpin, we transfer it
-        // 2. This guard drop function: as we already manually unlocked it and unlocking again will lead to an undefined behavior
-        mem::forget(guard);
-
-        unsafe {
-            PinReadPageGuard {
-                underlying_page,
-                guard: pin_guard,
-            }
+        PinReadPageGuard {
+            read_guard,
+            guard: guard.guard,
         }
     }
 }

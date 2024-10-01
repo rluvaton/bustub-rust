@@ -5,7 +5,7 @@ mod b_plus_tree;
 mod utils;
 mod key_comparator;
 
-pub use page::{Page, PageWriteGuard, PageReadGuard};
+pub use page::{Page, PageWriteGuard, PageReadGuard, PageUpgradableReadGuard};
 pub use underlying_page::UnderlyingPage;
 pub use extendible_hash_table::*;
 pub use key_comparator::*;

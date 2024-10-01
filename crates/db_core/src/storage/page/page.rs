@@ -4,7 +4,7 @@ use common::config::{PageData, PageId, BUSTUB_PAGE_SIZE, INVALID_PAGE_ID};
 use common::ReaderWriterLatch;
 use std::ops::{Deref, DerefMut};
 use std::sync::Arc;
-use parking_lot::{RwLockReadGuard, RwLockWriteGuard};
+use parking_lot::{RwLockReadGuard, RwLockUpgradableReadGuard, RwLockWriteGuard};
 use tracy_client::span;
 
 
@@ -15,6 +15,7 @@ const PAGE_LOCK_WAITING_COLOR: u32 = 0xCC0000;
 const PAGE_LOCK_HOLDING_COLOR: u32 = 0x006A4E;
 
 pub type PageReadGuard<'a> = RwLockReadGuard<'a, UnderlyingPage>;
+pub type PageUpgradableReadGuard<'a> = RwLockUpgradableReadGuard<'a, UnderlyingPage>;
 pub type PageWriteGuard<'a> = RwLockWriteGuard<'a, UnderlyingPage>;
 
 /**
@@ -216,26 +217,8 @@ impl Page {
         self.inner.write()
     }
 
-    pub unsafe fn read_without_guard(&self) -> *const UnderlyingPage {
-        let g = self.inner.read();
-        mem::forget(g);
-
-        self.inner.data_ptr()
-    }
-
-    pub unsafe fn unlock_read_without_guard(&self) {
-        self.inner.force_unlock_read();
-    }
-
-    pub unsafe fn write_without_guard(&self) -> *mut UnderlyingPage {
-        let g = self.inner.write();
-        mem::forget(g);
-
-        self.inner.data_ptr()
-    }
-
-    pub unsafe fn unlock_write_without_guard(&self) {
-        self.inner.force_unlock_write();
+    pub fn upgradable_read(&self) -> PageUpgradableReadGuard {
+        self.inner.upgradable_read()
     }
 
     /// Check if the current page is locked in any way
@@ -889,55 +872,5 @@ mod tests {
         });
 
         assert_eq!(res, 5);
-    }
-
-    #[test]
-    fn calling_read_multiple_times_and_unlock_should_not_release_all_locks() {
-        unsafe {
-            let mut page = Page::new(1);
-
-            assert_eq!(page.inner.is_locked(), false);
-            page.read_without_guard();
-            assert_eq!(page.inner.is_locked(), true);
-            page.read_without_guard();
-            page.read_without_guard();
-
-            page.unlock_read_without_guard();
-            assert_eq!(page.inner.is_locked(), true);
-            page.unlock_read_without_guard();
-            assert_eq!(page.inner.is_locked(), true);
-            page.unlock_read_without_guard();
-            assert_eq!(page.inner.is_locked(), false);
-        }
-    }
-
-    #[test]
-    fn calling_read_multiple_times_and_unlock_once_should_not_allow_writable_locks() {
-        unsafe {
-            let page = Page::new(1);
-
-            assert_eq!(page.inner.is_locked(), false);
-            page.read_without_guard();
-            assert_eq!(page.inner.is_locked(), true);
-            page.read_without_guard();
-            page.read_without_guard();
-
-            page.unlock_read_without_guard();
-            assert_eq!(page.inner.is_locked(), true);
-
-            let could_lock = page.inner.try_write_for(Duration::from_millis(30));
-
-            assert_eq!(could_lock.is_none(), true);
-
-            page.unlock_read_without_guard();
-            assert_eq!(page.inner.is_locked(), true);
-            page.unlock_read_without_guard();
-            assert_eq!(page.inner.is_locked(), false);
-
-
-            let could_lock = page.inner.try_write_for(Duration::from_millis(30));
-
-            assert_eq!(could_lock.is_some(), true);
-        }
     }
 }
