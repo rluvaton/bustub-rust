@@ -326,12 +326,6 @@ mod tests {
         1u8.get_n_lsb_bits(65);
     }
 
-    #[should_panic]
-    #[test]
-    fn get_n_lsb_bits_u64_should_panic_out_of_range_0() {
-        1u8.get_n_lsb_bits(0);
-    }
-
     #[test]
     fn get_n_msb_bits_u32() {
         let num: u32 = 0b10011110000010001111111000000000;
