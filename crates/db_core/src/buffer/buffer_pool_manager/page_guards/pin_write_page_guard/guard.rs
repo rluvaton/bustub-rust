@@ -11,10 +11,10 @@ use crate::storage::{Page, PageAndReadGuard, PageAndWriteGuard, PageWriteGuard, 
 #[must_use = "if unused the PinWritePageGuard will immediately unpin and unlock"]
 pub struct PinWritePageGuard<'a> {
     // First drop this
-    pub(in super::super) write_guard: PageWriteGuard<'a>,
+    pub(in super::super) write_guard: Option<PageWriteGuard<'a>>,
 
     // Then drop this
-    pub(in super::super) guard: PinPageGuard,
+    pub(in super::super) guard: Option<PinPageGuard>,
 }
 
 impl<'a> PinWritePageGuard<'a> {
@@ -31,17 +31,23 @@ impl<'a> PinWritePageGuard<'a> {
         let guard = PinPageGuard::new(bpm, page_and_write_guard.page_ref().clone());
 
         PinWritePageGuard {
-            write_guard: page_and_write_guard.write_guard(),
-            guard
+            write_guard: Some(page_and_write_guard.write_guard()),
+            guard: Some(guard),
         }
     }
 
     pub fn get_page_id(&self) -> PageId {
-        self.write_guard.get_page_id()
+        match &self.write_guard {
+            Some(u) => u.get_page_id(),
+            _ => unreachable!()
+        }
     }
 
     pub fn get_data_mut(&mut self) -> &mut PageData {
-        self.write_guard.get_data_mut()
+        match &mut self.write_guard {
+            Some(u) => u.get_data_mut(),
+            _ => unreachable!()
+        }
     }
 
     /// TODO(P2): Add implementation
@@ -65,14 +71,20 @@ impl Deref for PinWritePageGuard<'_> {
 
     #[inline]
     fn deref(&self) -> &UnderlyingPage {
-        self.write_guard.deref()
+        match &self.write_guard {
+            Some(u) => u,
+            _ => unreachable!()
+        }
     }
 }
 
 impl DerefMut for PinWritePageGuard<'_> {
     #[inline]
     fn deref_mut(&mut self) -> &mut Self::Target {
-        self.write_guard.deref_mut()
+        match &mut self.write_guard {
+            Some(u) => u,
+            _ => unreachable!()
+        }
     }
 }
 
@@ -85,32 +97,37 @@ impl DerefMut for PinWritePageGuard<'_> {
 /// However, you should think VERY carefully about in which order you
 /// want to release these resources.
 ///
-// impl Drop for PinWritePageGuard<'_> {
-//     fn drop(&mut self) {
-//         unsafe { self.guard.page.unlock_write_without_guard(); }
-//     }
-// }
+impl Drop for PinWritePageGuard<'_> {
+    fn drop(&mut self) {
+        // unsafe { self.guard.page.unlock_write_without_guard(); }
+    }
+}
 
 impl From<PinPageGuard> for PinWritePageGuard<'_> {
     fn from(guard: PinPageGuard) -> Self {
         let write_guard = unsafe { std::mem::transmute::<PageWriteGuard<'_>, PageWriteGuard<'static>>(guard.write()) };
 
         PinWritePageGuard {
-            write_guard,
-            guard,
+            write_guard: Some(write_guard),
+            guard: Some(guard),
         }
     }
 }
 
 impl<'a> From<PinReadPageGuard<'a>> for PinWritePageGuard<'a> {
-    fn from(guard: PinReadPageGuard) -> Self {
-        let new_guard = unsafe { guard.guard.create_new() };
+    fn from(mut guard: PinReadPageGuard) -> Self {
+        let new_guard = unsafe {
+            match &guard.guard {
+                Some(v) => v.create_new(),
+                _ => unreachable!()
+            }
+        };
 
         // Release the read lock
-        drop(guard.read_guard);
+        drop(mem::take(&mut guard.read_guard));
 
         // Avoid guard being unpinned
-        mem::forget(guard.guard);
+        mem::forget(mem::take(&mut guard.guard));
 
         PinWritePageGuard::from(new_guard)
     }
