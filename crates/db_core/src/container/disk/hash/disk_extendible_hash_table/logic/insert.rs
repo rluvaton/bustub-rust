@@ -74,19 +74,22 @@ where
         let directory_index = header_page.hash_to_directory_index(key_hash);
         directory_page_id = header_page.get_directory_page_id(directory_index);
 
+        let mut directory: PinWritePageGuard;
+
         // 4. If no directory exists create it
         if directory_page_id == INVALID_PAGE_ID {
-            let directory_guard = self.init_new_directory()
+            directory = self.init_new_directory()
                 .context("Failed to initialize new directory page while trying to insert new entry to the hash table")?;
-            directory_page_id = directory_guard.get_page_id();
+            directory_page_id = directory.get_page_id();
 
             // 5. Register the directory in the header page
             header_page.set_directory_page_id(directory_index, directory_page_id);
-        } // Drop the new directory - on purpose we don't keep it for simplicity
+        } else {
 
-        // 6. Get the directory page
-        // TODO - get the page as read and upgrade if needed?
-        let mut directory = self.bpm.fetch_page_write(directory_page_id).map_err_to_buffer_pool_err().context("Directory page should exists")?;
+            // 6. Get the directory page
+            // TODO - get the page as read and upgrade if needed?
+            directory = self.bpm.fetch_page_write(directory_page_id).map_err_to_buffer_pool_err().context("Directory page should exists")?;
+        }
 
         let directory_page = directory.cast_mut::<<Self as TypeAliases>::DirectoryPage>();
 
@@ -94,17 +97,20 @@ where
         let bucket_index = directory_page.hash_to_bucket_index(key_hash);
         bucket_page_id = directory_page.get_bucket_page_id(bucket_index);
 
+        let mut bucket: PinWritePageGuard;
+
         // 8. If no bucket exists create it
         if bucket_page_id == INVALID_PAGE_ID {
-            let bucket_guard = self.init_new_bucket().context("Failed to initialize new bucket page while trying to insert new entry to the hash table")?;
-            bucket_page_id = bucket_guard.get_page_id();
+            bucket = self.init_new_bucket().context("Failed to initialize new bucket page while trying to insert new entry to the hash table")?;
+            bucket_page_id = bucket.get_page_id();
 
             // 9. Register the bucket in the directory page
             directory_page.set_bucket_page_id(bucket_index, bucket_page_id);
-        } // Drop the new bucket - on purpose we don't keep it for simplicity
+        } else {
+            // 10. Get the bucket page
+            bucket = self.bpm.fetch_page_write(bucket_page_id).map_err_to_buffer_pool_err().context("Failed to fetch bucket page")?;
+        }
 
-        // 10. Get the bucket page
-        let mut bucket = self.bpm.fetch_page_write(bucket_page_id).map_err_to_buffer_pool_err().context("Failed to fetch bucket page")?;
         let bucket_page = bucket.cast::<<Self as TypeAliases>::BucketPage>();
 
         // 11. If the bucket already contain the data return error
@@ -127,12 +133,12 @@ where
         Ok(())
     }
 
-    fn trigger_split<'a>(&self, directory_page_guard: &mut PinWritePageGuard, bucket_page_guard: PinWritePageGuard<'a>, bucket_index: u32, key_hash: u32) -> Result<PinWritePageGuard<'a>, InsertionError> {
+    fn trigger_split<'a>(&'a self, directory_page_guard: &mut PinWritePageGuard, bucket_page_guard: PinWritePageGuard<'a>, bucket_index: u32, key_hash: u32) -> Result<PinWritePageGuard<'a>, InsertionError> {
         // Try to split the bucket with 3 iteration (after that it seems like the hash function is not good, or we have a bug)
         self.try_split(directory_page_guard, bucket_page_guard, bucket_index, key_hash, NUMBER_OF_SPLIT_RETRIES)
     }
 
-    fn try_split<'a>(&self, directory_page_guard: &mut PinWritePageGuard, mut bucket_page_guard: PinWritePageGuard<'a>, bucket_index: u32, key_hash: u32, tries_left: usize) -> Result<PinWritePageGuard<'a>, InsertionError> {
+    fn try_split<'a>(&'a self, directory_page_guard: &mut PinWritePageGuard, mut bucket_page_guard: PinWritePageGuard<'a>, bucket_index: u32, key_hash: u32, tries_left: usize) -> Result<PinWritePageGuard<'a>, InsertionError> {
         // 1. Check if reached max tries
         if tries_left == 0 {
             eprintln!("Trying to insert key but after split the page is still full, the hash might not evenly distribute the keys");
@@ -146,9 +152,8 @@ where
         assert!(bucket_page.is_full(), "page must be full before splitting");
 
         // 3. Create new bucket to be the new split bucket
-        let new_bucket = self.init_new_bucket().context("Failed to initialize new bucket page when trying to split bucket")?;
+        let mut new_bucket = self.init_new_bucket().context("Failed to initialize new bucket page when trying to split bucket")?;
         let new_bucket_page_id = new_bucket.get_page_id();
-        let mut new_bucket_guard = new_bucket.upgrade_write();
 
         // 4. Expand the directory if needed
         if directory_page.get_local_depth(bucket_index) == directory_page.get_global_depth() {
@@ -160,10 +165,10 @@ where
         }
 
         // 5. Split bucket
-        self.split_local_bucket(bucket_index, &mut directory_page, &mut bucket_page, &mut new_bucket_guard);
+        self.split_local_bucket(bucket_index, &mut directory_page, &mut bucket_page, &mut new_bucket);
 
         // 6. Find out which bucket to insert to after the split
-        let new_bucket_page = new_bucket_guard.cast_mut::<<Self as TypeAliases>::BucketPage>();
+        let new_bucket_page = new_bucket.cast_mut::<<Self as TypeAliases>::BucketPage>();
 
         let bucket_index_to_insert = directory_page.hash_to_bucket_index(key_hash);
         let bucket_to_insert_page_id = directory_page.get_bucket_page_id(bucket_index_to_insert);
@@ -171,13 +176,13 @@ where
 
         // 7. Check if still after the split we can't insert
         if bucket_to_insert.is_full() {
-            let bucket_guard_to_insert = if bucket_to_insert_page_id == new_bucket_page_id { new_bucket_guard } else { bucket_page_guard };
+            let bucket_guard_to_insert = if bucket_to_insert_page_id == new_bucket_page_id { new_bucket } else { bucket_page_guard };
 
             // 7.1 Split again with the current bucket that is full (The bucket index is always the one that about to overflow)
             return self.try_split(directory_page_guard, bucket_guard_to_insert, bucket_index_to_insert, key_hash, tries_left - 1);
         }
 
-        let bucket_guard_to_insert = if bucket_to_insert_page_id == new_bucket_page_id { new_bucket_guard } else { bucket_page_guard };
+        let bucket_guard_to_insert = if bucket_to_insert_page_id == new_bucket_page_id { new_bucket } else { bucket_page_guard };
 
         Ok(bucket_guard_to_insert)
     }
@@ -228,15 +233,12 @@ where
         Ok(directory_page)
     }
 
-    fn init_new_bucket(&self) -> Result<PinPageGuard, buffer::errors::BufferPoolError> {
-        let bucket_page = self.bpm.new_page_guarded().map_err_to_buffer_pool_err().context("Should be able to create page")?;
+    fn init_new_bucket(&self) -> Result<PinWritePageGuard, buffer::errors::BufferPoolError> {
+        let mut bucket_page = self.bpm.new_page_write_guarded().map_err_to_buffer_pool_err().context("Should be able to create page")?;
 
-        {
-            let mut bucket_guard = bucket_page.write();
-            let bucket = bucket_guard.cast_mut::<<Self as TypeAliases>::BucketPage>();
+        let bucket = bucket_page.cast_mut::<<Self as TypeAliases>::BucketPage>();
 
-            bucket.init(Some(self.bucket_max_size));
-        }
+        bucket.init(Some(self.bucket_max_size));
 
         Ok(bucket_page)
     }
