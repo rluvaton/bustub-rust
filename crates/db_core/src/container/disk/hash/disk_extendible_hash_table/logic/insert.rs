@@ -67,9 +67,9 @@ where
 
         // 2. Get the header page
         // TODO - get the page as read and upgrade if needed as most of the time the header page exists as well as the directory page
-        let mut header = self.bpm.fetch_page_read(self.header_page_id).map_err_to_buffer_pool_err().context("Hash Table header page must exists when trying to insert")?;
+        let mut header = self.bpm.fetch_page_write(self.header_page_id).map_err_to_buffer_pool_err().context("Hash Table header page must exists when trying to insert")?;
 
-        let header_page = header.cast::<<Self as TypeAliases>::HeaderPage>();
+        let header_page = header.cast_mut::<<Self as TypeAliases>::HeaderPage>();
 
         // 3. Find the directory page id where the value might be
         let directory_index = header_page.hash_to_directory_index(key_hash);
@@ -79,14 +79,10 @@ where
 
         // 4. If no directory exists create it
         if directory_page_id == INVALID_PAGE_ID {
-            let mut header = header.try_upgrade_write::<HeaderChangedPageLockComparator>().expect("Header page changed");
 
             directory = self.init_new_directory()
                 .context("Failed to initialize new directory page while trying to insert new entry to the hash table")?;
             directory_page_id = directory.get_page_id();
-
-            // TODO - remove expect
-            let header_page = header.cast_mut::<<Self as TypeAliases>::HeaderPage>();
 
             // 5. Register the directory in the header page
             header_page.set_directory_page_id(directory_index, directory_page_id);
@@ -96,8 +92,8 @@ where
             // TODO - get the page as read and upgrade if needed?
             directory = self.bpm.fetch_page_write(directory_page_id).map_err_to_buffer_pool_err().context("Directory page should exists")?;
             // TODO - should be before or after fetch directory
-            drop(header);
         }
+            drop(header);
 
 
         let directory_page = directory.cast_mut::<<Self as TypeAliases>::DirectoryPage>();
