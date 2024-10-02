@@ -4,6 +4,7 @@ use common::config::{PageData, PageId, BUSTUB_PAGE_SIZE, INVALID_PAGE_ID};
 use common::ReaderWriterLatch;
 use std::ops::{Deref, DerefMut};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, AtomicIsize, Ordering};
 use std::time::Duration;
 use parking_lot::{RwLockReadGuard, RwLockUpgradableReadGuard, RwLockWriteGuard};
 use tracy_client::span;
@@ -26,7 +27,10 @@ pub type PageWriteGuard<'a> = RwLockWriteGuard<'a, UnderlyingPage>;
  */
 #[derive(Debug)]
 pub struct Page {
+    // TODO - might wrap everything with Arc
     inner: Arc<ReaderWriterLatch<UnderlyingPage>>,
+    pin_count: Arc<AtomicIsize>,
+    is_dirty: Arc<AtomicBool>,
 }
 
 impl Page {
@@ -52,16 +56,31 @@ impl Page {
                     )
                 )
             ),
+            pin_count: Arc::new(AtomicIsize::new(0)),
+            is_dirty: Arc::new(AtomicBool::new(false)),
         }
+    }
+
+    /// Get page ID without by bypassing lock only use this when are sure that nothing will change the page id
+    #[inline]
+    pub unsafe fn get_page_id_bypass_lock(&self) -> PageId {
+        if self.inner.is_locked_exclusive() {
+            println!("Lock is held");
+            let page_id =
+                self.inner.data_ptr().as_ref().expect("Should be able to get data inner page").get_page_id();
+
+            println!("finish getting page id {}", page_id);
+
+            return page_id;
+        }
+        self.inner.data_ptr().as_ref().expect("Should be able to get data inner page").get_page_id()
     }
 
 
     /** @return the pin count of this page */
+    #[inline]
     pub fn get_pin_count(&self) -> usize {
-        self.with_read(
-            #[inline(always)]
-            |u| u.get_pin_count()
-        )
+        self.pin_count.load(Ordering::SeqCst) as usize
     }
 
     /// Pin page and return the current number of pins
@@ -70,55 +89,9 @@ impl Page {
     /// Calling pin multiple times can increase the pin counter more than needed
     ///
     /// only pin once per thread
-    pub fn pin(&mut self) -> usize {
-        self.with_write(
-            #[inline(always)]
-            |u| {
-                let mut p = u.get_pin_count();
-
-                p += 1;
-                let ref_count = Arc::strong_count(&self.inner);
-
-                if p > ref_count {
-                    eprintln!("Got more pins than references to the page, this is probably a mistake");
-
-                    // Cant be more than there are references to the page
-                    p = ref_count;
-                }
-
-                u.set_pin_count(p);
-
-                p
-            })
-    }
-
-    pub fn pin_with_write_guard(page_write_guard: &mut PageAndWriteGuard) -> usize {
-        let mut p = page_write_guard.get_pin_count();
-
-        p += 1;
-        let ref_count = Arc::strong_count(&page_write_guard.page_ref().inner);
-
-        if p > ref_count {
-            eprintln!("Got more pins than references to the page, this is probably a mistake");
-
-            // Cant be more than there are references to the page
-            p = ref_count;
-        }
-
-        page_write_guard.set_pin_count(p);
-
-        p
-    }
-
-    /// Pin page without checking the pin if the number of pins are possible
-    /// (more than the number of references)
-    ///
-    /// # Safety
-    /// Just blindly increase pin count
-    pub unsafe fn pin_unchecked(&self) {
-        self.with_write(|u| {
-            u.increment_pin_count_unchecked()
-        })
+    pub fn pin(&self) {
+        self.pin_count.fetch_add(1, Ordering::Relaxed);
+        // TODO - add assertion that pin count is not more than ref count
     }
 
 
@@ -128,14 +101,12 @@ impl Page {
     /// Calling unpin multiple times can decrease the pin counter more than needed
     ///
     /// only unpin after each pin
-    pub fn unpin(&mut self) -> usize {
-        self.with_write(
-            #[inline(always)]
-            |u| {
-                u.decrement_pin_count();
+    pub fn unpin(&self) {
+        self.pin_count.fetch_sub(1, Ordering::Relaxed);
 
-                u.get_pin_count()
-            })
+        // TODO - maybe avoid this for better performance?
+        // TODO - add assertion that pin count is not less than 0
+        self.pin_count.fetch_min(0, Ordering::Relaxed);
     }
 
     pub fn is_pinned(&self) -> bool {
@@ -146,6 +117,26 @@ impl Page {
         !self.is_pinned()
     }
 
+    pub fn is_dirty(&self) -> bool {
+        self.is_dirty.load(Ordering::SeqCst)
+    }
+
+    pub fn set_is_dirty(&self, is_dirty: bool) {
+        self.is_dirty.store(is_dirty, Ordering::SeqCst)
+    }
+
+    pub fn reset_with_write_guard(page_and_write_guard: &mut PageAndWriteGuard, new_page_id: PageId) {
+        page_and_write_guard.page_ref().set_is_dirty(false);
+        page_and_write_guard.page_ref().pin_count.store(0, Ordering::SeqCst);
+        page_and_write_guard.reset(new_page_id);
+    }
+
+    pub fn partial_reset_with_write_guard(page_and_write_guard: &mut PageAndWriteGuard, new_page_id: PageId) {
+        page_and_write_guard.page_ref().set_is_dirty(false);
+        page_and_write_guard.page_ref().pin_count.store(0, Ordering::SeqCst);
+        page_and_write_guard.partial_reset(new_page_id);
+    }
+
     /// Run function with read lock and get the underlying page
     ///
     /// # Arguments
@@ -154,17 +145,6 @@ impl Page {
     ///
     /// returns: R `with_read_lock` return value
     ///
-    /// # Examples
-    /// ```
-    /// use db_core::storage::Page;
-    ///
-    /// let page = Page::new(1);
-    /// let page_id = page.with_read(|u| u.get_page_id());
-    ///
-    /// page.with_read(|u| {
-    ///     assert_eq!(u.is_dirty(), false);
-    /// });
-    /// ```
     #[inline(always)]
     pub fn with_read<F: FnOnce(&UnderlyingPage) -> R, R>(&self, with_read_lock: F) -> R {
         let acquiring_page_latch = span!("Acquiring read page latch");
@@ -195,16 +175,6 @@ impl Page {
     ///
     /// returns: R `with_write_lock` return value
     ///
-    /// # Examples
-    /// ```
-    /// use db_core::storage::Page;
-    ///
-    /// let page = Page::new(1);
-    ///
-    /// page.with_write(|u| {
-    ///     u.set_is_dirty(true);
-    /// });
-    /// ```
     #[inline(always)]
     pub fn with_write<F: FnOnce(&mut UnderlyingPage) -> R, R>(&self, with_write_lock: F) -> R {
         let acquiring_page_latch = span!("Acquiring write page latch");
@@ -251,15 +221,11 @@ impl Page {
 
 impl Clone for Page {
     fn clone(&self) -> Self {
-        let inner = Arc::clone(&self.inner);
-
-        let page = Page {
-            inner,
-        };
-
-        // Clone should not increase pin, this should be done by the consumer of the page
-
-        page
+        Page {
+            inner: Arc::clone(&self.inner),
+            pin_count: Arc::clone(&self.pin_count),
+            is_dirty: Arc::clone(&self.is_dirty),
+        }
     }
 }
 
@@ -340,11 +306,11 @@ mod tests {
         let mut page = Page::new(1);
         page.pin();
 
-        assert_eq!(page.with_read(|u| u.is_dirty()), false);
+        assert_eq!(page.is_dirty(), false);
 
-        page.with_write(|u| u.set_is_dirty(true));
+        page.set_is_dirty(true);
 
-        assert_eq!(page.with_read(|u| u.is_dirty()), true);
+        assert_eq!(page.is_dirty(), true);
     }
 
     #[test]
@@ -354,20 +320,20 @@ mod tests {
         let mut page = page_og.clone();
         page.unpin();
 
-        assert_eq!(page.with_read(|u| u.is_dirty()), false);
-        assert_eq!(page_og.with_read(|u| u.is_dirty()), false);
+        assert_eq!(page.is_dirty(), false);
+        assert_eq!(page_og.is_dirty(), false);
 
         // Set as dirty and check that the original and the cloned are in sync
-        page.with_write(|u| u.set_is_dirty(true));
+        page.set_is_dirty(true);
 
-        assert_eq!(page.with_read(|u| u.is_dirty()), true);
-        assert_eq!(page_og.with_read(|u| u.is_dirty()), true);
+        assert_eq!(page.is_dirty(), true);
+        assert_eq!(page_og.is_dirty(), true);
 
         // Set as not dirty and check that the original and the cloned are in sync
-        page_og.with_write(|u| u.set_is_dirty(false));
+        page_og.set_is_dirty(false);
 
-        assert_eq!(page_og.with_read(|u| u.is_dirty()), false);
-        assert_eq!(page.with_read(|u| u.is_dirty()), false);
+        assert_eq!(page_og.is_dirty(), false);
+        assert_eq!(page.is_dirty(), false);
     }
 
     #[test]
@@ -376,9 +342,9 @@ mod tests {
 
         page.unpin();
 
-        page.with_write(|u| u.set_is_dirty(true));
+        page.set_is_dirty(true);
 
-        assert_eq!(page.with_read(|u| u.is_dirty()), true);
+        assert_eq!(page.is_dirty(), true);
     }
 
     // ##################
@@ -605,17 +571,17 @@ mod tests {
     fn clone_on_pinned_should_keep_dirty_status() {
         let mut page = Page::new(1);
 
-        assert_eq!(page.with_read(|u| u.is_dirty()), false);
-        page.with_write(|u| u.set_is_dirty(true));
-        assert_eq!(page.with_read(|u| u.is_dirty()), true);
+        assert_eq!(page.is_dirty(), false);
+        page.set_is_dirty(true);
+        assert_eq!(page.is_dirty(), true);
 
         page.pin();
         assert_eq!(page.is_pinned(), true);
 
         let other_page = page.clone();
 
-        assert_eq!(page.with_read(|u| u.is_dirty()), true);
-        assert_eq!(other_page.with_read(|u| u.is_dirty()), true);
+        assert_eq!(page.is_dirty(), true);
+        assert_eq!(other_page.is_dirty(), true);
     }
 
     #[test]
@@ -684,16 +650,16 @@ mod tests {
     fn clone_should_sync_dirty_status_changes() {
         let page = Page::new(1);
 
-        assert_eq!(page.with_read(|u| u.is_dirty()), false);
+        assert_eq!(page.is_dirty(), false);
 
         let other_page = page.clone();
 
-        assert_eq!(page.with_read(|u| u.is_dirty()), false);
-        assert_eq!(other_page.with_read(|u| u.is_dirty()), false);
+        assert_eq!(page.is_dirty(), false);
+        assert_eq!(other_page.is_dirty(), false);
 
-        page.with_write(|u| u.set_is_dirty(true));
-        assert_eq!(page.with_read(|u| u.is_dirty()), true);
-        assert_eq!(other_page.with_read(|u| u.is_dirty()), true);
+        page.set_is_dirty(true);
+        assert_eq!(page.is_dirty(), true);
+        assert_eq!(other_page.is_dirty(), true);
     }
 
     #[test]
@@ -863,13 +829,11 @@ mod tests {
     fn with_write_should_be_able_to_mutate_inner_page() {
         let page = Page::new(1);
 
-        assert_eq!(page.with_read(|u| u.is_dirty()), false);
+        assert_eq!(page.is_dirty(), false);
 
-        page.with_write(|u| {
-            u.set_is_dirty(true)
-        });
+        page.set_is_dirty(true);
 
-        assert_eq!(page.with_read(|u| u.is_dirty()), true);
+        assert_eq!(page.is_dirty(), true);
     }
 
     #[test]

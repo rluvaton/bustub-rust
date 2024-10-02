@@ -94,9 +94,9 @@ impl DerefMut for PinWritePageGuard<'_> {
 impl Drop for PinWritePageGuard<'_> {
     fn drop(&mut self) {
 
-        let mut write_guard = mem::take(&mut self.write_guard).unwrap();
+        let page = mem::take(&mut self.page);
 
-        self.bpm.unpin_page_from_write_guard(&mut write_guard, AccessType::default());
+        self.bpm.unpin_page_from_pinned_page(&page, AccessType::default());
 
         // unsafe { self.guard.page.unlock_write_without_guard(); }
     }

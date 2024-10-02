@@ -143,15 +143,17 @@ impl BufferPoolManager {
 
             // If we evicted and we have old page we will release the root lock to avoid blocking other processes while we flush the old page to disk
             if let Some(old_page) = old_page {
+                //
+                let mut old_page_with_guard: PageAndWriteGuard = PageAndWriteGuard::from(old_page.clone());
 
-                // 1. Hold writable lock on the page to make sure no one can access the page content before we finish
-                //    replacing the old page content with the new one
-                let mut old_page_with_guard = PageAndWriteGuard::from(old_page);
+
 
                 // 1. Remove reference to the old page in the page table
-                (*inner).page_table.remove(&old_page_with_guard.get_page_id());
+                //    We can bypass the lock as no pin exists on the page
+                let old_page_id = old_page.get_page_id_bypass_lock();
+                (*inner).page_table.remove(&old_page_id);
 
-                if old_page_with_guard.is_dirty() {
+                if old_page.is_dirty() {
                     let mut scheduler = (*inner).disk_scheduler.lock();
 
                     drop(holding_root_latch);
@@ -166,15 +168,21 @@ impl BufferPoolManager {
                     drop(root_latch_guard);
 
 
+                    // // 1. Hold writable lock on the page to make sure no one can access the page content before we finish
+                    // //    replacing the old page content with the new one
+                    // old_page_with_guard = PageAndWriteGuard::from(old_page.clone());
+
                     // 3. Flush the old page content if it's dirty
-                    Self::flush_specific_page_unchecked(&mut *scheduler, old_page_with_guard.deref_mut());
+                    Self::flush_specific_page_unchecked(&mut *scheduler, old_page, old_page_with_guard.deref_mut(), old_page_id);
+                } else {
+                    // old_page_with_guard = PageAndWriteGuard::from(old_page);
                 }
 
                 // 3. Create new page
-                old_page_with_guard.reset(new_page_id);
+                Page::reset_with_write_guard(&mut old_page_with_guard, new_page_id);
 
                 // 4. Pin the old page as it will be our new page
-                old_page_with_guard.increment_pin_count_unchecked();
+                old_page_with_guard.page_ref().pin();
 
                 return Ok(old_page_with_guard);
             }
@@ -184,14 +192,13 @@ impl BufferPoolManager {
             // If we have a new page, create it
             let mut new_page = Page::new(new_page_id);
 
-
             // Add to the frame table
             (*inner).pages.insert(frame_id as usize, new_page.clone());
 
             // Pin before returning to the caller to avoid page to be evicted in the meantime
-            let mut page_and_write_guard = PageAndWriteGuard::from(new_page);
+            new_page.pin();
 
-            Page::pin_with_write_guard(&mut page_and_write_guard);
+            let page_and_write_guard = PageAndWriteGuard::from(new_page);
 
             Ok(page_and_write_guard)
         }
@@ -278,33 +285,6 @@ impl BufferPoolManager {
             // Get the inner data
             let inner = self.inner.get();
 
-            let mut page_with_write_guard: Option<PageAndWriteGuard> = None;
-
-            // While having the page in the page table, wait till the page does not have any lock before continue
-            // As otherwise if the following happen:
-            // Time:      |------------------------------------------------------------------------------------------------------------- |
-            // Thread A:      Hold root lock  | Hold Page A  | Release root lock |                            Try to hold page B
-            // Thread B:                                                            Hold root lock | Try to hold page A
-            // As you can see, thread A have the page A, and want page B, but because in page B we wait for page A lock to release while holding the root lock
-            // we are causing deadlock
-            while let Some(frame_id) = self.get_frame_id_by_page_id(&page_id) {
-                let page = (*inner).pages[frame_id as usize].clone();
-
-                // TODO - 1ms is way too much, need to find a better way
-                page_with_write_guard = PageAndWriteGuard::try_for(page, Duration::from_millis(1));
-
-                // Page is free, can continue
-                if page_with_write_guard.is_some() {
-                    break;
-                }
-
-                // If page is locked, then wait for next root latch turn
-                // as we won't be able to hold the page and it will lead to deadlock
-
-                // Drop root latch and try again
-                drop(root_latch_guard);
-                root_latch_guard = self.root_level_latch.lock();
-            }
 
             // First search for page_id in the buffer pool
             if let Some(frame_id) = self.get_frame_id_by_page_id(&page_id) {
@@ -316,11 +296,10 @@ impl BufferPoolManager {
                     replacer.record_access(frame_id, access_type);
                 });
 
-                let mut page_with_write = page_with_write_guard.unwrap();
 
-
+                let page = (*inner).pages[frame_id as usize].clone();
                 // Pin before returning to the caller to avoid page to be evicted in the meantime
-                Page::pin_with_write_guard(&mut page_with_write);
+                page.pin();
 
                 drop(holding_root_latch);
                 drop(holding_root_latch_span);
@@ -332,7 +311,7 @@ impl BufferPoolManager {
                 // After pinned we can release the lock as nothing will change the page
                 drop(root_latch_guard);
 
-                return Ok(page_with_write);
+                return Ok(PageAndWriteGuard::from(page));
             }
 
             // Need to fetch from disk
@@ -361,13 +340,15 @@ impl BufferPoolManager {
             // If we evicted and we have old page we will release the root lock to avoid blocking other processes while we flush the old page to disk
             if let Some(old_page) = old_page {
 
+
+
                 // 1. Hold writable lock on the page to make sure no one can access the page content before we finish
                 //    replacing the old page content with the new one
-                let mut old_page_with_guard = PageAndWriteGuard::from(old_page);
-
+                let mut old_page_with_guard = PageAndWriteGuard::from(old_page.clone());
 
                 // 1. Remove reference to the old page in the page table
-                (*inner).page_table.remove(&old_page_with_guard.get_page_id());
+                let old_page_id = old_page.get_page_id_bypass_lock();
+                (*inner).page_table.remove(&old_page_id);
 
                 // 2. Acquire the scheduler lock
                 let mut scheduler = (*inner).disk_scheduler.lock();
@@ -383,19 +364,22 @@ impl BufferPoolManager {
                 // and it will not as the disk scheduler is behind a Mutex
                 drop(root_latch_guard);
 
+
+
+
                 // 3. Flush the old page content if it's dirty
-                if old_page_with_guard.is_dirty() {
-                    Self::flush_specific_page_unchecked(&mut *scheduler, old_page_with_guard.deref_mut());
+                if old_page.is_dirty() {
+                    Self::flush_specific_page_unchecked(&mut *scheduler, old_page, old_page_with_guard.deref_mut(), old_page_id);
                 }
 
                 // 3. Create new page
-                old_page_with_guard.partial_reset(page_id);
+                Page::partial_reset_with_write_guard(&mut old_page_with_guard, page_id);
 
                 // 4. Pin the old page as it will be our new page
-                Page::pin_with_write_guard(&mut old_page_with_guard);
+                old_page.pin();
 
                 // 5. Fetch data from disk
-                Self::fetch_specific_page_unchecked(&mut *scheduler, old_page_with_guard.deref_mut());
+                Self::fetch_specific_page_unchecked(&mut *scheduler, old_page_with_guard.deref_mut(), page_id);
 
                 return Ok(old_page_with_guard);
             }
@@ -428,14 +412,17 @@ impl BufferPoolManager {
             // and it will not as the disk scheduler is behind a Mutex
             drop(root_latch_guard);
 
-            Self::fetch_specific_page_unchecked(&mut *scheduler, page_with_guard.deref_mut());
+            Self::fetch_specific_page_unchecked(&mut *scheduler, page_with_guard.deref_mut(), page_id);
 
             Ok(page_with_guard)
         }
     }
 
     #[inline(always)]
-    fn fetch_specific_page_unchecked(disk_scheduler: &mut DiskScheduler, page: &mut UnderlyingPage) {
+    fn fetch_specific_page_unchecked(disk_scheduler: &mut DiskScheduler, page: &mut UnderlyingPage, requested_page_id: PageId) {
+        if requested_page_id == 31 {
+            println!("Requested page 31");
+        }
         let _fetch = span!("fetch page");
 
         // SAFETY:
@@ -448,7 +435,7 @@ impl BufferPoolManager {
 
         let promise = Promise::new();
         let future = promise.get_future();
-        let req = ReadDiskRequest::new(page.get_page_id(), data, promise);
+        let req = ReadDiskRequest::new(requested_page_id, data, promise);
 
         disk_scheduler.schedule(req.into());
 
@@ -582,8 +569,7 @@ impl BufferPoolManager {
 
             // Also, set the dirty flag on the page to indicate if the page was modified.
             if is_dirty {
-                let _update_dirty = span!("Update dirty");
-                page.with_write(|u| u.set_is_dirty(true));
+                page.set_is_dirty(is_dirty);
             }
 
             let pin_count_before_unpin = page.get_pin_count();
@@ -611,6 +597,7 @@ impl BufferPoolManager {
     // Same implementation as unpin page except we are coming with write guard so we have some assumption we can exploit
     pub fn unpin_page_from_pinned_page(&self, pinned_page: &Page, _access_type: AccessType) -> bool {
         // TODO - I really hope this is thread safe
+        let _root_latch_guard = self.root_level_latch.lock();
 
         // No need to hold root lock as we only touch 4 things:
         // 1. page - and we have it
@@ -618,11 +605,11 @@ impl BufferPoolManager {
         // 3. page map - same as page table
         // 4. replacer - replacer is thread safe
         let inner = self.inner.get();
-        let mut underlying_page = pinned_page.write();
 
 
         unsafe {
-            let frame_id = self.get_frame_id_by_page_id(&underlying_page.get_page_id());
+            //
+            let frame_id = self.get_frame_id_by_page_id(&pinned_page.get_page_id_bypass_lock());
 
             // If page_id is not in the buffer pool, return false
             if frame_id.is_none() {
@@ -635,64 +622,17 @@ impl BufferPoolManager {
             // Making sure the page exists
             (*inner).pages.get_mut(frame_id as usize).expect("Page cannot be missing as it exists in the page table");
 
-            let pin_count_before_unpin = underlying_page.get_pin_count();
+            let pin_count_before_unpin = pinned_page.get_pin_count();
 
             // If page's pin count is already 0, return false
             if pin_count_before_unpin == 0 {
                 return false;
             }
 
-            underlying_page.decrement_pin_count();
+            pinned_page.unpin();
 
             // If pin count reaches 0, mark as evictable
             if pin_count_before_unpin == 1 {
-                (*inner).replacer.set_evictable(frame_id, true);
-            }
-
-            true
-        }
-    }
-
-    // Same implementation as unpin page except we are coming with write guard so we have some assumption we can exploit
-    pub fn unpin_page_from_write_guard(&self, page_write_guard: &mut PageWriteGuard, _access_type: AccessType) -> bool {
-        // TODO - I really hope this is thread safe
-
-        // No need to hold root lock as we only touch 4 things:
-        // 1. page - and we have the write lock
-        // 2. page table - due to us having write lock, nothing can evict it or replace the content
-        // 3. page map - same as page table
-        // 4. replacer - replacer is thread safe
-        let inner = self.inner.get();
-
-        unsafe {
-            // TODO - the hash table is not thread safe
-
-            let frame_id = self.get_frame_id_by_page_id(&page_write_guard.get_page_id());
-
-            // If page_id is not in the buffer pool, return false
-            if frame_id.is_none() {
-                eprintln!("Frame is was not found based on the page, this should not be possible for pages that are tracked by the buffer pool, this might mean that we got different page");
-                panic!("No frame match the requested page");
-            }
-
-            let frame_id = frame_id.unwrap();
-
-            // Making sure the page exists
-            (*inner).pages.get_mut(frame_id as usize).expect("Page cannot be missing as it exists in the page table");
-
-
-            let pin_count_before_unpin = page_write_guard.get_pin_count();
-
-            // If page's pin count is already 0, return false
-            if pin_count_before_unpin == 0 {
-                return false;
-            }
-
-            page_write_guard.decrement_pin_count();
-
-            // If pin count reaches 0, mark as evictable
-            if pin_count_before_unpin == 1 {
-            // TODO - make sure we are still thread safe
                 (*inner).replacer.set_evictable(frame_id, true);
             }
 
@@ -748,39 +688,40 @@ impl BufferPoolManager {
 
             let page = &(*inner).pages[frame_id as usize];
 
-            page.with_write(
-                #[inline(always)]
-                |u| {
-                    // 1. Acquire the scheduler lock
-                    let mut scheduler = (*inner).disk_scheduler.lock();
+            let old_page_id = page.get_page_id_bypass_lock();
 
-                    drop(holding_root_latch_span);
-                    drop(f);
-                    drop(holding_root_latch);
-                    // #############################################################################
-                    //                              Root Lock Release
-                    // #############################################################################
-                    // 2. Once we hold the lock for the page and the disk scheduler we can release the root lock
-                    // Until we finish flushing we don't want to allow fetching the old page id,
-                    // and it will not as the disk scheduler is behind a Mutex
-                    drop(root_latch_guard);
+            // 1. Acquire the scheduler lock
+            let mut scheduler = (*inner).disk_scheduler.lock();
 
-                    Self::flush_specific_page_unchecked(&mut scheduler, u)
-                });
+            drop(holding_root_latch_span);
+            drop(f);
+            drop(holding_root_latch);
+            // #############################################################################
+            //                              Root Lock Release
+            // #############################################################################
+            // 2. Once we hold the lock for the page and the disk scheduler we can release the root lock
+            // Until we finish flushing we don't want to allow fetching the old page id,
+            // and it will not as the disk scheduler is behind a Mutex
+            drop(root_latch_guard);
+
+            let tmp_page = page.clone();
+            let mut page_write = tmp_page.write();
+
+            Self::flush_specific_page_unchecked(&mut scheduler, page, page_write.deref_mut(), old_page_id);
 
             true
         }
     }
 
-    fn flush_specific_page_unchecked(disk_scheduler: &mut DiskScheduler, page: &mut UnderlyingPage) {
+    fn flush_specific_page_unchecked(disk_scheduler: &mut DiskScheduler, page: &Page, underlying_page: &mut UnderlyingPage, page_id_to_flush: PageId) {
         let _flush_page = span!("Flush page");
 
         // SAFETY: because this function hold the lock on the page we are certain that the page data reference won't
         //         drop as we wait here
-        let data = unsafe { UnsafeSingleRefData::new(page.get_data()) };
+        let data = unsafe { UnsafeSingleRefData::new(underlying_page.get_data()) };
         let promise = Promise::new();
         let future = promise.get_future();
-        let req = WriteDiskRequest::new(page.get_page_id(), data, promise);
+        let req = WriteDiskRequest::new(page_id_to_flush, data, promise);
 
         disk_scheduler.schedule(req.into());
 
@@ -852,12 +793,12 @@ impl BufferPoolManager {
             let frame_id = frame_id.unwrap();
 
             let page: &mut Page = (*inner).pages.get_mut(frame_id as usize).expect("page must exists as it is in the page table");
-            let mut page_write_guard = page.write();
+            let mut page_write_guard = PageAndWriteGuard::from(page.clone());
 
             assert_eq!(page_write_guard.get_page_id(), page_id, "Page to remove must be the same as the requested page");
 
             // If not evictable
-            if page_write_guard.get_pin_count() > 0 {
+            if page.get_pin_count() > 0 {
                 return Err(DeletePageError::PageIsNotEvictable(page_id));
             }
 
@@ -869,7 +810,7 @@ impl BufferPoolManager {
 
             // Do not remove the item, and instead change it to INVALID_PAGE_ID
             // so we won't change the frame location
-            page_write_guard.reset(INVALID_PAGE_ID);
+            Page::reset_with_write_guard(&mut page_write_guard, INVALID_PAGE_ID);
 
             Self::deallocate_page(page_id);
 

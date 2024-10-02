@@ -23,11 +23,11 @@ pub struct UnderlyingPage {
     // TODO - default = INVALID_PAGE_ID;
     page_id: PageId,
 
-    /** The pin count of this page. */
-    pin_count: usize,
+    // The pin count of this page.
+    // pin_count: usize,
 
-    /** True if the page is dirty, i.e. it is different from its corresponding page on disk. */
-    is_dirty: bool,
+    // True if the page is dirty, i.e. it is different from its corresponding page on disk.
+    // is_dirty: bool,
 
     // Page latch.
     // rwlatch: ReaderWriterLatch<()>,
@@ -44,8 +44,8 @@ impl UnderlyingPage {
     pub fn new(page_id: PageId, data: PageData) -> Self {
         UnderlyingPage {
             page_id,
-            is_dirty: false,
-            pin_count: 0,
+            // is_dirty: false,
+            // pin_count: 0,
             data,
         }
     }
@@ -60,7 +60,7 @@ impl UnderlyingPage {
     /// Returns: the actual data contained within this page
     pub fn get_data_mut(&mut self) -> &mut PageData {
         // Set as dirty if getting mutable data
-        self.is_dirty = true;
+        // self.is_dirty = true;
 
         &mut self.data
     }
@@ -72,7 +72,7 @@ impl UnderlyingPage {
 
     pub fn cast_mut<T>(&mut self) -> &mut T {
         // Set as dirty if getting mutable data
-        self.is_dirty = true;
+        // self.is_dirty = true;
 
         unsafe { &mut *(self.data.as_mut_ptr() as *mut PageData as *mut T) }
     }
@@ -93,33 +93,33 @@ impl UnderlyingPage {
     }
 
     /** @return the pin count of this page */
-    pub fn get_pin_count(&self) -> usize {
-        self.pin_count
-    }
+    // pub fn get_pin_count(&self) -> usize {
+    //     self.pin_count
+    // }
 
     /// Increment pin count without the safety check for number of references to the page
-    pub unsafe fn increment_pin_count_unchecked(&mut self) {
-        self.pin_count += 1;
-    }
+    // pub unsafe fn increment_pin_count_unchecked(&mut self) {
+    //     self.pin_count += 1;
+    // }
 
-    pub fn decrement_pin_count(&mut self) {
-        if self.pin_count == 0 {
-            eprintln!("Trying to unpin page which has no pins this is a mistake");
-            return;
-        }
-
-        self.pin_count -= 1;
-    }
+    // pub fn decrement_pin_count(&mut self) {
+    //     if self.pin_count == 0 {
+    //         eprintln!("Trying to unpin page which has no pins this is a mistake");
+    //         return;
+    //     }
+    //
+    //     self.pin_count -= 1;
+    // }
 
     /** @return the pin count of this page */
-    pub fn set_pin_count(&mut self, pin_count: usize) {
-        self.pin_count = pin_count;
-    }
+    // pub fn set_pin_count(&mut self, pin_count: usize) {
+    //     self.pin_count = pin_count;
+    // }
 
     /** @return true if the page in memory has been modified from the page on disk, false otherwise */
-    pub fn is_dirty(&self) -> bool {
-        self.is_dirty
-    }
+    // pub fn is_dirty(&self) -> bool {
+    //     self.is_dirty
+    // }
 
     /** @return the page LSN. */
     pub fn get_lsn(&self) -> LSN {
@@ -139,27 +139,32 @@ impl UnderlyingPage {
     }
 
     pub fn partial_reset(&mut self, page_id: PageId) {
+        println!("Updating page id from {} to {}", self.page_id, page_id);
         self.page_id = page_id;
-        self.is_dirty = false;
-        self.pin_count = 0;
+        println!("page id updated");
+        // self.is_dirty = false;
+        // self.pin_count = 0;
     }
 
     // When replacing content of page with different
     // (not when updating existing page content but instead changing the underlying page)
     pub fn update_with_different_page(&mut self, page_id: PageId, data: PageData) {
-        self.is_dirty = false;
+        // self.is_dirty = false;
+
+        println!("Updating page id from {} to {}", self.page_id, page_id);
         self.page_id = page_id;
+        println!("page id updated");
         self.data = data;
-        self.pin_count = 0;
+        // self.pin_count = 0;
     }
 
     pub fn replace_page_id_without_content_update(&mut self, page_id: PageId) {
         self.page_id = page_id;
     }
 
-    pub fn set_is_dirty(&mut self, is_dirty: bool) {
-        self.is_dirty = is_dirty;
-    }
+    // pub fn set_is_dirty(&mut self, is_dirty: bool) {
+    //     self.is_dirty = is_dirty;
+    // }
 
     pub fn set_data(&mut self, data: PageData) {
         self.data = data;
