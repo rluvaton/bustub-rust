@@ -593,6 +593,7 @@ mod tests {
                             println!("{:#?}", t.backtrace());
                         }
                     }
+                    panic!("Dead lock detected");
                 }
             });
         } // only for #[cfg]
