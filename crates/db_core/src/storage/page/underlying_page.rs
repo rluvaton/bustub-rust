@@ -102,6 +102,15 @@ impl UnderlyingPage {
         self.pin_count += 1;
     }
 
+    pub fn decrement_pin_count(&mut self) {
+        if self.pin_count == 0 {
+            eprintln!("Trying to unpin page which has no pins this is a mistake");
+            return;
+        }
+
+        self.pin_count -= 1;
+    }
+
     /** @return the pin count of this page */
     pub fn set_pin_count(&mut self, pin_count: usize) {
         self.pin_count = pin_count;

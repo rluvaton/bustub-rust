@@ -132,18 +132,9 @@ impl Page {
         self.with_write(
             #[inline(always)]
             |u| {
-                let mut p = u.get_pin_count();
+                u.decrement_pin_count();
 
-                if p == 0 {
-                    eprintln!("Trying to unpin page which has no pins this is a mistake");
-                    return 0;
-                }
-
-                p -= 1;
-
-                u.set_pin_count(p);
-
-                p
+                u.get_pin_count()
             })
     }
 

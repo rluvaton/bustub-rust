@@ -2,7 +2,7 @@ use parking_lot::Mutex;
 use std::cell::UnsafeCell;
 use std::collections::{HashMap, LinkedList};
 use std::sync::Arc;
-
+use dashmap::DashMap;
 use common::config::{AtomicPageId, FrameId, PageId};
 
 use crate::buffer::{LRUKReplacer, BufferPoolManagerStats};
@@ -59,7 +59,9 @@ pub(crate) struct InnerBufferPoolManager {
     /// ```cpp
     /// std::unordered_map<page_id_t, frame_id_t> page_table_;
     /// ```
-    pub(super) page_table: HashMap<PageId, FrameId>,
+    ///
+    /// this is a thread safe hashmap
+    pub(super) page_table: DashMap<PageId, FrameId>,
 
     /** Replacer to find unpinned pages for replacement. */
     // std::unique_ptr<LRUKReplacer> replacer_;

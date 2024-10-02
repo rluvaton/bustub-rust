@@ -11,7 +11,7 @@ use crate::storage::Page;
 #[must_use = "if unused the PinPageGuard will immediately unpin"]
 pub struct PinPageGuard {
     pub(in super::super) page: Page,
-    bpm: Arc<BufferPoolManager>,
+    pub(in super::super) bpm: Arc<BufferPoolManager>,
 }
 
 impl PinPageGuard {

@@ -4,7 +4,7 @@ use common::config::{PageData, PageId};
 use std::ops::Deref;
 use std::sync::Arc;
 
-use crate::buffer::{BufferPoolManager, PinPageGuard, PinWritePageGuard};
+use crate::buffer::{AccessType, BufferPoolManager, PinPageGuard, PinWritePageGuard};
 use crate::storage::{Page, PageAndReadGuard, PageAndWriteGuard, PageReadGuard, PageWriteGuard, UnderlyingPage};
 
 use super::super::PageLockComparator;
@@ -25,8 +25,8 @@ pub struct PinReadPageGuard<'a> {
     // First drop this
     pub(in super::super) read_guard: Option<PageReadGuard<'a>>,
 
-    // Then drop this
-    pub(in super::super) guard: Option<PinPageGuard>,
+    pub(in super::super) page: Page,
+    pub(in super::super) bpm: Arc<BufferPoolManager>,
 }
 
 impl<'a> PinReadPageGuard<'a> {
@@ -35,11 +35,10 @@ impl<'a> PinReadPageGuard<'a> {
     }
 
     pub fn from_read_guard(bpm: Arc<BufferPoolManager>, page_and_read_guard: PageAndReadGuard<'a>) -> Self {
-        let guard = PinPageGuard::new(bpm, page_and_read_guard.page_ref().clone());
-
         Self {
+            page: page_and_read_guard.page_ref().clone(),
             read_guard: Some(page_and_read_guard.read_guard()),
-            guard: Some(guard),
+            bpm,
         }
     }
 
@@ -80,32 +79,32 @@ impl<'a> PinReadPageGuard<'a> {
     }
 
     pub fn try_upgrade_write<PageLockComparatorImpl: PageLockComparator>(mut self) -> Result<PinWritePageGuard<'a>, UpgradePinWriteLockError<PageLockComparatorImpl>> {
-        match (mem::take(&mut self.read_guard), mem::take(&mut self.guard)) {
-            (Some(read_guard), Some(guard)) => {
-                let comparator = PageLockComparatorImpl::new(read_guard.deref());
+        let read_guard = mem::take(&mut self.read_guard).unwrap();
+        let comparator = PageLockComparatorImpl::new(read_guard.deref());
 
-                let page_id = guard.get_page_id();
-                let new_guard = unsafe {guard.create_new()};
+        let page_id = read_guard.get_page_id();
 
-                // Release the read lock
-                drop(read_guard);
+        // Release the read lock
+        drop(read_guard);
 
-                let write_guard = PinWritePageGuard::from(new_guard);
+        let page = self.page.clone();
+        let bpm = self.bpm.clone();
 
-                // Avoid guard being unpinned, this should be before the compare
-                // as if the compare panic we won't unpin twice (one in the new_guard and on from the self.guard
-                mem::forget(guard);
+        // Avoid unpinning
+        mem::forget(self);
 
-                comparator.compare(write_guard.deref()).map_err(|err| UpgradePinWriteLockError::PageLockComparatorError(err))?;
+        let write_guard = PinWritePageGuard::new(bpm, page);
 
-                if write_guard.get_page_id() != page_id {
-                    return Err(UpgradePinWriteLockError::PageIdChanged(page_id));
-                }
+        // Avoid guard being unpinned, this should be before the compare
+        // as if the compare panic we won't unpin twice (one in the new_guard and on from the self.guard
 
-                Ok(write_guard)
-            },
-            _ => unreachable!()
+        comparator.compare(write_guard.deref()).map_err(|err| UpgradePinWriteLockError::PageLockComparatorError(err))?;
+
+        if write_guard.get_page_id() != page_id {
+            return Err(UpgradePinWriteLockError::PageIdChanged(page_id));
         }
+
+        Ok(write_guard)
     }
 }
 
@@ -133,7 +132,13 @@ impl Deref for PinReadPageGuard<'_> {
 ///
 impl Drop for PinReadPageGuard<'_> {
     fn drop(&mut self) {
-        println!("")
+        let read_guard = mem::take(&mut self.read_guard);
+
+        // Drop read lock
+        drop(read_guard);
+
+        // Acquire write lock, it should still be
+        self.bpm.unpin_page_from_pinned_page(&mut self.page, AccessType::default());
     }
 }
 
@@ -141,24 +146,34 @@ impl From<PinPageGuard> for PinReadPageGuard<'_> {
     fn from(guard: PinPageGuard) -> Self {
         let read_guard = unsafe { std::mem::transmute::<PageReadGuard<'_>, PageReadGuard<'static>>(guard.read()) };
 
+        let page = guard.page.clone();
+        let bpm = guard.bpm.clone();
+
+        // Avoid unpinning
+        mem::forget(guard);
+
         PinReadPageGuard {
             read_guard: Some(read_guard),
-            guard: Some(guard),
+            page,
+            bpm,
         }
     }
 }
 
 impl<'a> From<PinWritePageGuard<'a>> for PinReadPageGuard<'a> {
     fn from(mut guard: PinWritePageGuard) -> Self {
-        let write_guard = mem::take(&mut guard.write_guard);
+        let read_guard = unsafe { std::mem::transmute::<PageReadGuard<'_>, PageReadGuard<'static>>(PageWriteGuard::downgrade(mem::take(&mut guard.write_guard).unwrap())) };
 
-        let read_guard = unsafe { std::mem::transmute::<PageReadGuard<'_>, PageReadGuard<'static>>(PageWriteGuard::downgrade(write_guard.unwrap())) };
+        let page = guard.page.clone();
+        let bpm = guard.bpm.clone();
 
-        let new_guard = mem::take(&mut guard.guard);
+        // Avoid unpinning
+        mem::forget(guard);
 
         PinReadPageGuard {
             read_guard: Some(read_guard),
-            guard: new_guard,
+            page,
+            bpm,
         }
     }
 }

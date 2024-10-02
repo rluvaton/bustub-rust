@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 use common::config::{PageData, PageId};
 
-use crate::buffer::{BufferPoolManager, PinPageGuard, PinReadPageGuard};
+use crate::buffer::{AccessType, BufferPoolManager, PinPageGuard, PinReadPageGuard};
 use crate::storage::{Page, PageAndReadGuard, PageAndWriteGuard, PageWriteGuard, UnderlyingPage};
 
 #[clippy::has_significant_drop]
@@ -13,8 +13,8 @@ pub struct PinWritePageGuard<'a> {
     // First drop this
     pub(in super::super) write_guard: Option<PageWriteGuard<'a>>,
 
-    // Then drop this
-    pub(in super::super) guard: Option<PinPageGuard>,
+    pub(in super::super) page: Page,
+    pub(in super::super) bpm: Arc<BufferPoolManager>,
 }
 
 impl<'a> PinWritePageGuard<'a> {
@@ -22,17 +22,11 @@ impl<'a> PinWritePageGuard<'a> {
         Self::from(PinPageGuard::new(bpm, page.clone()))
     }
 
-
-    pub fn from_read_guard(bpm: Arc<BufferPoolManager>, page_and_read_guard: PageAndReadGuard<'a>) -> Self {
-        Self::from(PinReadPageGuard::from_read_guard(bpm, page_and_read_guard))
-    }
-
     pub fn from_write_guard(bpm: Arc<BufferPoolManager>, page_and_write_guard: PageAndWriteGuard<'a>) -> PinWritePageGuard<'a> {
-        let guard = PinPageGuard::new(bpm, page_and_write_guard.page_ref().clone());
-
         PinWritePageGuard {
+            page: page_and_write_guard.page_ref().clone(),
             write_guard: Some(page_and_write_guard.write_guard()),
-            guard: Some(guard),
+            bpm,
         }
     }
 
@@ -99,6 +93,11 @@ impl DerefMut for PinWritePageGuard<'_> {
 ///
 impl Drop for PinWritePageGuard<'_> {
     fn drop(&mut self) {
+
+        let mut write_guard = mem::take(&mut self.write_guard).unwrap();
+
+        self.bpm.unpin_page_from_write_guard(&mut write_guard, AccessType::default());
+
         // unsafe { self.guard.page.unlock_write_without_guard(); }
     }
 }
@@ -107,28 +106,35 @@ impl From<PinPageGuard> for PinWritePageGuard<'_> {
     fn from(guard: PinPageGuard) -> Self {
         let write_guard = unsafe { std::mem::transmute::<PageWriteGuard<'_>, PageWriteGuard<'static>>(guard.write()) };
 
+        let page = guard.page.clone();
+        let bpm = guard.bpm.clone();
+
+        // Avoid unpinning
+        mem::forget(guard);
+
         PinWritePageGuard {
             write_guard: Some(write_guard),
-            guard: Some(guard),
+            page,
+            bpm,
         }
     }
 }
 
-impl<'a> From<PinReadPageGuard<'a>> for PinWritePageGuard<'a> {
-    fn from(mut guard: PinReadPageGuard) -> Self {
-        let new_guard = unsafe {
-            match &guard.guard {
-                Some(v) => v.create_new(),
-                _ => unreachable!()
-            }
-        };
-
-        // Release the read lock
-        drop(mem::take(&mut guard.read_guard));
-
-        // Avoid guard being unpinned
-        mem::forget(mem::take(&mut guard.guard));
-
-        PinWritePageGuard::from(new_guard)
-    }
-}
+// impl<'a> From<PinReadPageGuard<'a>> for PinWritePageGuard<'a> {
+//     fn from(mut guard: PinReadPageGuard) -> Self {
+//         let new_guard = unsafe {
+//             match &guard.guard {
+//                 Some(v) => v.create_new(),
+//                 _ => unreachable!()
+//             }
+//         };
+//
+//         // Release the read lock
+//         drop(mem::take(&mut guard.read_guard));
+//
+//         // Avoid guard being unpinned
+//         mem::forget(mem::take(&mut guard.guard));
+//
+//         PinWritePageGuard::from(new_guard)
+//     }
+// }

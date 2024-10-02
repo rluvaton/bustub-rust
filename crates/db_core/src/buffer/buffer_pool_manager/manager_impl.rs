@@ -12,6 +12,9 @@ use std::ops::{Deref, DerefMut};
 use std::sync::atomic::{Ordering};
 use std::sync::Arc;
 use std::time::Duration;
+use dashmap::DashMap;
+use dashmap::mapref::one::Ref;
+use num_format::Locale::en;
 use tracy_client::{non_continuous_frame, secondary_frame_mark, span};
 use super::errors::{NewPageError, FetchPageError, NoAvailableFrameFound, DeletePageError, InvalidPageId};
 
@@ -54,7 +57,7 @@ impl BufferPoolManager {
                 ),
 
                 disk_scheduler: Arc::new(Mutex::new(DiskScheduler::new(disk_manager))),
-                page_table: HashMap::with_capacity(pool_size),
+                page_table: DashMap::with_capacity(pool_size),
                 free_list,
 
             }),
@@ -284,9 +287,7 @@ impl BufferPoolManager {
             // Thread B:                                                            Hold root lock | Try to hold page A
             // As you can see, thread A have the page A, and want page B, but because in page B we wait for page A lock to release while holding the root lock
             // we are causing deadlock
-            while((*inner).page_table.get(&page_id).is_some()) {
-                let &frame_id = (*inner).page_table.get(&page_id).unwrap();
-
+            while let Some(frame_id) = self.get_frame_id_by_page_id(&page_id) {
                 let page = (*inner).pages[frame_id as usize].clone();
 
                 // TODO - 1ms is way too much, need to find a better way
@@ -306,7 +307,7 @@ impl BufferPoolManager {
             }
 
             // First search for page_id in the buffer pool
-            if let Some(&frame_id) = (*inner).page_table.get(&page_id) {
+            if let Some(frame_id) = self.get_frame_id_by_page_id(&page_id) {
                 // Page exists in the table
 
                 // Prevent the frame to be evictable
@@ -567,7 +568,7 @@ impl BufferPoolManager {
         let inner = self.inner.get();
 
         unsafe {
-            let frame_id = (*inner).page_table.get(&page_id);
+            let frame_id = self.get_frame_id_by_page_id(&page_id);
 
             // If page_id is not in the buffer pool, return false
             if frame_id.is_none() {
@@ -575,9 +576,9 @@ impl BufferPoolManager {
             }
 
             let frame_id = frame_id.unwrap();
-            let frame_id_ref = *frame_id;
 
-            let page: &mut Page = (*inner).pages.get_mut(frame_id_ref as usize).expect("Page cannot be missing as it exists in the page table");
+
+            let page: &mut Page = (*inner).pages.get_mut(frame_id as usize).expect("Page cannot be missing as it exists in the page table");
 
             // Also, set the dirty flag on the page to indicate if the page was modified.
             if is_dirty {
@@ -600,7 +601,99 @@ impl BufferPoolManager {
 
             // If pin count reaches 0, mark as evictable
             if pin_count_before_unpin == 1 {
-                (*inner).replacer.set_evictable(frame_id_ref, true);
+                (*inner).replacer.set_evictable(frame_id, true);
+            }
+
+            true
+        }
+    }
+
+    // Same implementation as unpin page except we are coming with write guard so we have some assumption we can exploit
+    pub fn unpin_page_from_pinned_page(&self, pinned_page: &Page, _access_type: AccessType) -> bool {
+        // TODO - I really hope this is thread safe
+
+        // No need to hold root lock as we only touch 4 things:
+        // 1. page - and we have it
+        // 2. page table - we have pinned page, so nothing should
+        // 3. page map - same as page table
+        // 4. replacer - replacer is thread safe
+        let inner = self.inner.get();
+        let mut underlying_page = pinned_page.write();
+
+
+        unsafe {
+            let frame_id = self.get_frame_id_by_page_id(&underlying_page.get_page_id());
+
+            // If page_id is not in the buffer pool, return false
+            if frame_id.is_none() {
+                eprintln!("Frame is was not found based on the page, this should not be possible for pages that are tracked by the buffer pool, this might mean that we got different page");
+                panic!("No frame match the requested page");
+            }
+
+            let frame_id = frame_id.unwrap();
+
+            // Making sure the page exists
+            (*inner).pages.get_mut(frame_id as usize).expect("Page cannot be missing as it exists in the page table");
+
+            let pin_count_before_unpin = underlying_page.get_pin_count();
+
+            // If page's pin count is already 0, return false
+            if pin_count_before_unpin == 0 {
+                return false;
+            }
+
+            underlying_page.decrement_pin_count();
+
+            // If pin count reaches 0, mark as evictable
+            if pin_count_before_unpin == 1 {
+                (*inner).replacer.set_evictable(frame_id, true);
+            }
+
+            true
+        }
+    }
+
+    // Same implementation as unpin page except we are coming with write guard so we have some assumption we can exploit
+    pub fn unpin_page_from_write_guard(&self, page_write_guard: &mut PageWriteGuard, _access_type: AccessType) -> bool {
+        // TODO - I really hope this is thread safe
+
+        // No need to hold root lock as we only touch 4 things:
+        // 1. page - and we have the write lock
+        // 2. page table - due to us having write lock, nothing can evict it or replace the content
+        // 3. page map - same as page table
+        // 4. replacer - replacer is thread safe
+        let inner = self.inner.get();
+
+        unsafe {
+            // TODO - the hash table is not thread safe
+
+            let frame_id = self.get_frame_id_by_page_id(&page_write_guard.get_page_id());
+
+            // If page_id is not in the buffer pool, return false
+            if frame_id.is_none() {
+                eprintln!("Frame is was not found based on the page, this should not be possible for pages that are tracked by the buffer pool, this might mean that we got different page");
+                panic!("No frame match the requested page");
+            }
+
+            let frame_id = frame_id.unwrap();
+
+            // Making sure the page exists
+            (*inner).pages.get_mut(frame_id as usize).expect("Page cannot be missing as it exists in the page table");
+
+
+            let pin_count_before_unpin = page_write_guard.get_pin_count();
+
+            // If page's pin count is already 0, return false
+            if pin_count_before_unpin == 0 {
+                return false;
+            }
+
+            page_write_guard.decrement_pin_count();
+
+            // If pin count reaches 0, mark as evictable
+            if pin_count_before_unpin == 1 {
+            // TODO - make sure we are still thread safe
+                (*inner).replacer.set_evictable(frame_id, true);
             }
 
             true
@@ -645,13 +738,13 @@ impl BufferPoolManager {
         let inner = self.inner.get();
 
         unsafe {
-            let frame_id = (*inner).page_table.get(&page_id);
+            let frame_id = self.get_frame_id_by_page_id(&page_id);
 
             if frame_id.is_none() {
                 return false;
             }
 
-            let frame_id = *frame_id.unwrap();
+            let frame_id = frame_id.unwrap();
 
             let page = &(*inner).pages[frame_id as usize];
 
@@ -751,12 +844,12 @@ impl BufferPoolManager {
         let inner = self.inner.get();
 
         unsafe {
-            let frame_id = (*inner).page_table.get(&page_id);
+            let frame_id = self.get_frame_id_by_page_id(&page_id);
 
             if frame_id.is_none() {
                 return Ok(true);
             }
-            let frame_id = frame_id.cloned().unwrap();
+            let frame_id = frame_id.unwrap();
 
             let page: &mut Page = (*inner).pages.get_mut(frame_id as usize).expect("page must exists as it is in the page table");
             let mut page_write_guard = page.write();
@@ -814,5 +907,19 @@ impl BufferPoolManager {
 
     pub fn get_stats(&self) -> BufferPoolManagerStats {
         self.stats.clone()
+    }
+
+    /// Get frame ID by page ID
+    ///
+    /// Having this function to avoid holding the page table entry too long as it may lead to a deadlock, so we only get the value and drop the entry
+    fn get_frame_id_by_page_id(&self, page_id: &PageId) -> Option<FrameId> {
+        let inner = self.inner.get();
+
+        unsafe {
+            match (*inner).page_table.get(page_id) {
+                Some(entry) => Some(*entry.value()),
+                None => None
+            }
+        }
     }
 }
