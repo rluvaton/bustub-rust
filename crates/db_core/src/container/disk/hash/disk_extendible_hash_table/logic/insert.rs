@@ -2,7 +2,7 @@ use super::super::type_alias_trait::TypeAliases;
 use super::super::HashTable;
 use crate::buffer;
 use crate::buffer::errors::MapErrorToBufferPoolError;
-use crate::buffer::{PinPageGuard, PinWritePageGuard};
+use crate::buffer::PinWritePageGuard;
 use crate::concurrency::Transaction;
 use crate::container::hash::KeyHasher;
 use crate::storage::Comparator;
@@ -13,7 +13,6 @@ use error_utils::Context;
 use std::fmt::Debug;
 use std::hash::Hash;
 use std::sync::Arc;
-use super::HeaderChangedPageLockComparator;
 
 #[derive(thiserror::Error, Debug, PartialEq, Clone)]
 pub enum InsertionError {
@@ -57,8 +56,6 @@ where
         // TODO - use transaction
         assert!(transaction.is_none(), "transaction is not none, transactions are not supported at the moment");
 
-        // TODO - performance improvement release write latch as soon as can
-
         let mut directory_page_id: PageId;
         let mut bucket_page_id: PageId;
 
@@ -66,7 +63,6 @@ where
         let key_hash = self.hash(key);
 
         // 2. Get the header page
-        // TODO - get the page as read and upgrade if needed as most of the time the header page exists as well as the directory page
         let mut header = self.bpm.fetch_page_write(self.header_page_id).map_err_to_buffer_pool_err().context("Hash Table header page must exists when trying to insert")?;
 
         let header_page = header.cast_mut::<<Self as TypeAliases>::HeaderPage>();
@@ -87,50 +83,49 @@ where
             // 5. Register the directory in the header page
             header_page.set_directory_page_id(directory_index, directory_page_id);
         } else {
-
             // 6. Get the directory page
-            // TODO - get the page as read and upgrade if needed?
             directory = self.bpm.fetch_page_write(directory_page_id).map_err_to_buffer_pool_err().context("Directory page should exists")?;
-            // TODO - should be before or after fetch directory
         }
-            drop(header);
+
+        // 7. Release the header as it is not used anymore
+        drop(header);
 
 
         let directory_page = directory.cast_mut::<<Self as TypeAliases>::DirectoryPage>();
 
-        // 7. Find the bucket page id where the value might be
+        // 8. Find the bucket page id where the value might be
         let bucket_index = directory_page.hash_to_bucket_index(key_hash);
         bucket_page_id = directory_page.get_bucket_page_id(bucket_index);
 
         let mut bucket: PinWritePageGuard;
 
-        // 8. If no bucket exists create it
+        // 9. If no bucket exists create it
         if bucket_page_id == INVALID_PAGE_ID {
             bucket = self.init_new_bucket().context("Failed to initialize new bucket page while trying to insert new entry to the hash table")?;
             bucket_page_id = bucket.get_page_id();
 
-            // 9. Register the bucket in the directory page
+            // 10. Register the bucket in the directory page
             directory_page.set_bucket_page_id(bucket_index, bucket_page_id);
         } else {
-            // 10. Get the bucket page
+            // 11. Get the bucket page
             bucket = self.bpm.fetch_page_write(bucket_page_id).map_err_to_buffer_pool_err().context("Failed to fetch bucket page")?;
         }
 
         let bucket_page = bucket.cast::<<Self as TypeAliases>::BucketPage>();
 
-        // 11. If the bucket already contain the data return error
+        // 12. If the bucket already contain the data return error
         if bucket_page.lookup(&key, &self.cmp).is_some() {
             return Err(InsertionError::KeyAlreadyExists);
         }
 
-        // 12. if bucket page is full, need to split
+        // 13. if bucket page is full, need to split
         if bucket_page.is_full() {
             bucket = self.trigger_split(&mut directory, bucket, bucket_index, key_hash)?;
         }
 
         let bucket_page = bucket.cast_mut::<<Self as TypeAliases>::BucketPage>();
 
-        // 13. try to insert the key
+        // 14. try to insert the key
         // Safety: doing unwrap as it should not happen since we split
         //         and we have a lock - TODO - add a lock
         bucket_page.insert(key, value, &self.cmp).unwrap();
