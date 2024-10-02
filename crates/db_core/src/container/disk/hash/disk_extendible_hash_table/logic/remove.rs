@@ -309,8 +309,6 @@ where
         // Drop the bucket to be able to delete it
         drop(bucket_page_guard);
 
-        println!("Trying to delete bucket with page id: {}", bucket_page_id);
-
         let deleted = self
             .bpm
             .delete_page(bucket_page_id)

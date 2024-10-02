@@ -634,12 +634,12 @@ mod tests {
                         assert!(result.is_ok(), "Thread {} failed to get key {}", thread_id, i + offset);
                     }
 
-                    // if i % 3 == 0 {
-                    //
-                    //     let result = hash_table.remove(&key, None);
-                    //
-                    //     assert!(result.is_ok(), "Thread {} failed to remove key {}", thread_id, i + offset);
-                    // }
+                    if i % 3 == 0 {
+
+                        let result = hash_table.remove(&key, None);
+
+                        assert!(result.is_ok(), "Thread {} failed to remove key {}", thread_id, i + offset);
+                    }
                 }
 
                 println!("Finished");
