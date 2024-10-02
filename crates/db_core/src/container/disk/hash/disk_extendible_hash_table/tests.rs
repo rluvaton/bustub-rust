@@ -17,7 +17,6 @@ mod tests {
     use std::sync::atomic::{AtomicBool, Ordering};
     use std::sync::Barrier;
     use std::thread;
-    use thread_id;
 
     fn create_extendible_hash_table(pool_size: usize) -> DiskExtendibleHashTable<{ hash_table_bucket_array_size::<GenericKey<8>, RID>() }, GenericKey<8>, RID, GenericComparator<8>, DefaultKeyHasher> {
         let disk_manager = Arc::new(Mutex::new(DiskManagerUnlimitedMemory::new()));
@@ -583,7 +582,6 @@ mod tests {
                     thread::sleep(Duration::from_secs(1));
                     let deadlocks = deadlock::check_deadlock();
                     if deadlocks.is_empty() {
-                        println!("No dead lock detected");
                         continue;
                     }
 
@@ -609,7 +607,6 @@ mod tests {
                 let one_percent = total / 100;
 
                 let actual_thread_id = thread::current().id();
-                let actual_thread_id = thread_id::get();
 
                 let offset = thread_id as i64 * total;
                 for i in 0..total {
