@@ -152,7 +152,7 @@ impl Schema {
         let mut type_id: DBTypeId = DBTypeId::INVALID;
 
         // create a copy of the sql query
-        let sql: &str = sql_base.clone();
+        let sql: &str = sql_base;
 
         // Preprocess, transform sql string into lower case
         let sql = sql.to_lowercase();
@@ -171,8 +171,8 @@ impl Schema {
                 column_name = &t[0..n];
                 column_type = &t[n + 1..];
             } else {
-                column_name = t.clone();
-                column_type = t.clone();
+                column_name = t;
+                column_type = t;
             }
 
 

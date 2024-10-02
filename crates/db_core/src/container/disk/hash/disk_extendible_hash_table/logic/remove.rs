@@ -31,8 +31,6 @@ pub enum MergeError {
     Unknown,
 }
 
-const NUMBER_OF_MERGE_RETRIES: usize = 3;
-
 impl<const BUCKET_MAX_SIZE: usize, Key, Value, KeyComparator, KeyHasherImpl>
 HashTable<BUCKET_MAX_SIZE, Key, Value, KeyComparator, KeyHasherImpl>
 where
