@@ -1,16 +1,15 @@
 #[cfg(test)]
 mod tests {
+    use crate::buffer::errors::NoAvailableFrameFound;
     use crate::buffer::{AccessType, BufferPoolManager};
     use crate::storage::{AlignToPageData, DefaultDiskManager};
     use common::config::BUSTUB_PAGE_SIZE;
     use parking_lot::Mutex;
     use rand::Rng;
+    use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
     use std::sync::Arc;
-    use std::{mem, thread};
-    use std::ops::{Deref, DerefMut};
-    use std::sync::atomic::{AtomicUsize, Ordering};
     use std::time::Duration;
-    use crate::buffer::errors::NoAvailableFrameFound;
+    use std::thread;
     use tempdir::TempDir;
 
     fn setup() -> TempDir {
@@ -228,4 +227,55 @@ mod tests {
     }
 
     // TODO - add test that 2 threads request the same page and should only fetch once and they point to the same page
+
+    #[test]
+    fn deadlock_test() {
+
+        // A very basic test.
+        let tmpdir = setup();
+        let db_name = tmpdir.path().join("test.db");
+        let buffer_pool_size = 10;
+        let k = 5;
+
+        let disk_manager = DefaultDiskManager::new(db_name).expect("should create disk manager");
+        let bpm = Arc::new(BufferPoolManager::new(buffer_pool_size, Arc::new(Mutex::new(disk_manager)), Some(k), None));
+
+        let pid0 = bpm.new_page().unwrap().with_read(|u| u.get_page_id());
+        let pid1 = bpm.new_page().unwrap().with_read(|u| u.get_page_id());
+
+        let guard0 = bpm.fetch_page_write(pid0);
+
+        // A crude way of synchronizing threads, but works for this small case.
+        let start = Arc::new(AtomicBool::new(false));
+
+        let bpm_child_thread = Arc::clone(&bpm);
+        let start_child_thread = Arc::clone(&start);
+        let child_thread = thread::spawn(move || {
+            // Acknowledge that we can begin the test.
+            start_child_thread.store(true, Ordering::SeqCst);
+
+            // Attempt to write to page 0.
+            let guard0 = bpm_child_thread.fetch_page_write(pid0);
+        });
+
+        // Wait for the other thread to begin before we start the test.
+        while !start.load(Ordering::SeqCst) {}
+
+        // Make the other thread wait for a bit.
+        // This mimics the main thread doing some work while holding the write latch on page 0.
+        thread::sleep(Duration::from_secs(1));
+
+
+        // If your latching mechanism is incorrect, the next line of code will deadlock.
+        // Think about what might happen if you hold a certain "all-encompassing" latch for too long...
+
+        // While holding page 0, take the latch on page 1.
+        let guard1 = bpm.fetch_page_write(pid1);
+
+        // Let the child thread have the page 0 since we're done with it.
+        drop(guard0);
+
+        child_thread.join().unwrap();
+    }
 }
+
