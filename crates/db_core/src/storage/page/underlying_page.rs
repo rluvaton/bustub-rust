@@ -139,9 +139,7 @@ impl UnderlyingPage {
     }
 
     pub fn partial_reset(&mut self, page_id: PageId) {
-        println!("Updating page id from {} to {}", self.page_id, page_id);
         self.page_id = page_id;
-        println!("page id updated");
         // self.is_dirty = false;
         // self.pin_count = 0;
     }

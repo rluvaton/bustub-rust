@@ -283,14 +283,14 @@ mod tests {
 
         {
             let mut page0_write = bpm.fetch_page_write(page_id_0).expect("Should be able to fetch page");
-            assert_eq!(page0_write.get_data().as_slice(), "page0".align_to_page_data().as_bytes());
+            assert_eq!(page0_write.get_data().as_slice(), "page0".align_to_page_data().as_slice());
             {
                 let data = "page0updated";
                 page0_write.get_data_mut()[..data.len()].copy_from_slice(data.as_bytes());
             }
 
             let mut page1_write = bpm.fetch_page_write(page_id_1).expect("Should be able to fetch page");
-            assert_eq!(page1_write.get_data().as_slice(), "page1".align_to_page_data().as_bytes());
+            assert_eq!(page1_write.get_data().as_slice(), "page1".align_to_page_data().as_slice());
             {
                 let data = "page1updated";
                 page1_write.get_data_mut()[..data.len()].copy_from_slice(data.as_bytes());
@@ -305,10 +305,10 @@ mod tests {
 
         {
             let page0_read = bpm.fetch_page_read(page_id_0).expect("Should be able to fetch page");
-            assert_eq!(page0_read.get_data().as_slice(), "page0updated".align_to_page_data().as_bytes());
+            assert_eq!(page0_read.get_data().as_slice(), "page0updated".align_to_page_data().as_slice());
 
             let page1_read = bpm.fetch_page_read(page_id_1).expect("Should be able to fetch page");
-            assert_eq!(page1_read.get_data().as_slice(), "page1updated".align_to_page_data().as_bytes());
+            assert_eq!(page1_read.get_data().as_slice(), "page1updated".align_to_page_data().as_slice());
 
             assert_eq!(bpm.get_pin_count(page_id_0), Some(1));
             assert_eq!(bpm.get_pin_count(page_id_1), Some(1));

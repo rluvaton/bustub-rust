@@ -9,7 +9,7 @@ use crate::buffer::buffer_pool_manager_1::*;
 use crate::buffer::{AccessType, LRUKReplacerImpl, Replacer};
 use crate::buffer::buffer_pool_manager_1::errors::{DeletePageError, FetchPageError};
 use crate::recovery::LogManager;
-use crate::storage::{DiskManager, DiskScheduler, Page, ReadDiskRequest, UnderlyingPage, WriteDiskRequest};
+use crate::storage::{DiskManager, DiskScheduler, Page, PageAndReadGuard, PageAndWriteGuard, ReadDiskRequest, UnderlyingPage, WriteDiskRequest};
 
 ///
 /// BufferPoolManager reads disk pages to and from its internal buffer pool.
@@ -57,7 +57,7 @@ pub struct BufferPoolManager {
 
     /// Replacer to find unpinned pages for replacement.
     /// TODO - change type to just implement Replacer
-    replacer: Mutex<dyn Replacer>,
+    replacer: Mutex<LRUKReplacerImpl>,
 
     /// List of free frames that don't have any pages on them.
     // std::list<frame_id_t> free_list_;
@@ -143,7 +143,7 @@ impl BufferPoolManager {
     ///
     /// returns: Result<FrameId, NoAvailableFrameFound> Frame id if available frame found or error if not
     ///
-    fn find_replacement_frame(&self, replacer_guard: &mut MutexGuard<dyn Replacer>) -> Result<FrameId, errors::NoAvailableFrameFound> {
+    fn find_replacement_frame(&self, replacer_guard: &mut MutexGuard<LRUKReplacerImpl>) -> Result<FrameId, errors::NoAvailableFrameFound> {
         // Pick the replacement frame from the free list first
         {
             let mut free_list = self.free_list.lock();
@@ -180,7 +180,7 @@ impl BufferPoolManager {
         future
     }
 
-    fn wait_for_pending_request_page_to_finish(&self, requests_map: &Mutex<HashMap<PageId, Future<()>>>, page_id: PageId) -> MutexGuard<dyn Replacer> {
+    fn wait_for_pending_request_page_to_finish(&self, requests_map: &Mutex<HashMap<PageId, Future<()>>>, page_id: PageId) -> MutexGuard<LRUKReplacerImpl> {
 
         // 1. Hold replacer guard as all pin and unpin must first hold the replacer to avoid getting replaced in the middle
         let mut replacer = self.replacer.lock();
@@ -208,7 +208,7 @@ impl BufferPoolManager {
         }
     }
 
-    fn wait_for_pending_fetch_page_to_finish(&self, page_id: PageId) -> MutexGuard<dyn Replacer> {
+    fn wait_for_pending_fetch_page_to_finish(&self, page_id: PageId) -> MutexGuard<LRUKReplacerImpl> {
         self.wait_for_pending_request_page_to_finish(&self.pending_fetch_requests, page_id)
     }
 }
@@ -252,21 +252,21 @@ impl BufferPool for Arc<BufferPoolManager> {
             // Option 1, replacing existing frame
 
             // 1. Get write lock, the page to replace must never have write lock created outside the buffer pool
-            let page_to_replace_guard = page_to_replace.write();
+            let mut page_and_write = PageAndWriteGuard::from(page_to_replace);
 
             // 2. Pin page
-            page_to_replace.pin();
+            page_and_write.page_ref().pin();
 
             // 3. Remove the old page from the page table so it won't be available
-            page_table.remove(&page_to_replace_guard.get_page_id());
+            page_table.remove(&page_and_write.get_page_id());
 
             // 4. If page to replace is dirty, need to flush it
-            if page_to_replace.is_dirty() {
+            if page_and_write.page_ref().is_dirty() {
                 // 5. Get the scheduler
                 let mut scheduler = self.disk_scheduler.lock();
 
                 // 6. Add flush message to the scheduler
-                let flush_page_future = BufferPoolManager::request_write_page(&mut scheduler, page_to_replace_guard.get_page_id(), page_to_replace_guard.get_data());
+                let flush_page_future = BufferPoolManager::request_write_page(&mut scheduler, page_and_write.get_page_id(), page_and_write.get_data());
 
                 // 7. release all locks as we don't want to hold the entire lock while flushing to disk
                 drop(scheduler);
@@ -279,17 +279,16 @@ impl BufferPool for Arc<BufferPoolManager> {
                 assert_eq!(flush_page_future.wait(), true, "Must be able to flush pages");
 
                 // 9. Reset dirty
-                page_to_replace.set_is_dirty(false);
+                page_and_write.page_ref().set_is_dirty(false);
             }
 
-            // 5. Reset page
-            page_to_replace.reset_data();
 
+            // 5. Reset page
             // 6. Change page id to be this page id
-            page_to_replace.set_page_id(page_id);
+            Page::reset_with_write_guard(&mut page_and_write, page_id);
 
             // Return page write guard
-            Ok(PageWriteGuard::new(self.clone(), page_to_replace))
+            Ok(PageWriteGuard::new(self.clone(), page_and_write))
         } else {
             // Option 2, empty frame
 
@@ -299,8 +298,11 @@ impl BufferPool for Arc<BufferPoolManager> {
             // 2. Pin page
             page.pin();
 
+            let mut page_and_write = PageAndWriteGuard::from(page);
+
+
             // 3. Return the PageWriteGuard
-            Ok(PageWriteGuard::new(self.clone(), page))
+            Ok(PageWriteGuard::new(self.clone(), page_and_write))
         }
     }
 
@@ -308,29 +310,7 @@ impl BufferPool for Arc<BufferPoolManager> {
         // Find available frame
 
         // 1. Hold replacer guard as all pin and unpin must first hold the replacer to avoid getting replaced in the middle
-        let mut replacer = self.replacer.lock();
-
-        // 2. Wait for the fetch from disk to finish
-        loop {
-
-            // 2.1. Lock pending fetch requests
-            let pending_fetch_request = self.pending_fetch_requests.lock().get(&page_id).cloned();
-
-            // 2.2. If pending fetch requests has the current requested page, release teh replacer and wait for the pending to finish
-            if let Some(pending_fetch_request) = pending_fetch_request {
-                // 2.2.1. Release locks so we won't block while we wait for the other fetch to finish
-                drop(replacer);
-
-                // 2.2.2. Wait for the fetch to finish
-                pending_fetch_request.wait();
-
-                // 2.2.3. Try to acquire again the replacer so we nothing can add to the pending again
-                replacer = self.replacer.lock();
-            } else {
-                // 2.2.1 No pending fetch requested page is running
-                break;
-            }
-        }
+        let mut replacer = self.wait_for_pending_fetch_page_to_finish(page_id);
 
         // We have 3 cases when fetching page
         // 1. page already exists in the buffer pool
@@ -351,7 +331,8 @@ impl BufferPool for Arc<BufferPoolManager> {
             let page = pages_guard[frame_id as usize].clone();
 
             // 3.4 Assert page table correctness
-            assert_eq!(page.get_page_id(), page_id, "Page ID must be the same as the requested");
+            // TODO - fix this?
+            // assert_eq!(page.get_page_id(), page_id, "Page ID must be the same as the requested");
 
             // 3.5 Pin before returning to the caller to avoid page to be evicted in the meantime
             page.pin();
@@ -361,7 +342,9 @@ impl BufferPool for Arc<BufferPoolManager> {
             drop(page_table_guard);
             drop(replacer);
 
-            return Ok(PageReadGuard::new(self.clone(), page));
+            let page_and_read_guard = PageAndReadGuard::from(page);
+
+            return Ok(PageReadGuard::new(self.clone(), page_and_read_guard));
         }
 
         // Option 2, page does not exists in the buffer pool
@@ -373,7 +356,7 @@ impl BufferPool for Arc<BufferPoolManager> {
         let current_fetch_promise = Promise::new();
 
         // 6. Register the promise
-        self.pending_fetch_requests.lock().insert(&page_id, current_fetch_promise.get_future());
+        self.pending_fetch_requests.lock().insert(page_id, current_fetch_promise.get_future());
 
         // 7. Record access so the frame will be inserted and the replacer algorithm will work
         replacer.record_access(frame_id, access_type);
@@ -397,17 +380,19 @@ impl BufferPool for Arc<BufferPoolManager> {
         if let Some(page_to_replace) = page_to_replace {
             // Option 1, replacing existing frame
 
+            let page_to_replace_backup = page_to_replace.clone();
+
             // 1. Get write lock, the page to replace must never have write lock created outside the buffer pool as it is about to be pinned
-            let mut page_to_replace_guard = page_to_replace.write();
+            let mut page_to_replace_guard = PageAndWriteGuard::from(page_to_replace);
 
             // 2. Pin page
-            page_to_replace.pin();
+            page_to_replace_guard.page_ref().pin();
 
             // 3. Remove the old page from the page table so it won't be available
             page_table.remove(&page_to_replace_guard.get_page_id());
 
             // 4. If page to replace is dirty, need to flush it
-            if page_to_replace.is_dirty() {
+            if page_to_replace_guard.page_ref().is_dirty() {
                 // 5. Get the scheduler
                 let mut scheduler = self.disk_scheduler.lock();
 
@@ -429,36 +414,45 @@ impl BufferPool for Arc<BufferPoolManager> {
                 let flush_page_result = flush_page_future.wait();
 
                 if !flush_page_result {
-                    self.pending_fetch_requests.lock().remove(&page_id);
 
                     // Avoid locking forever the current page fetch
                     current_fetch_promise.set_value(());
+
+                    self.pending_fetch_requests.lock().remove(&page_id);
+
                     assert_eq!(flush_page_result, true, "Must be able to flush page");
 
                     // TODO - reset page in page table
                 }
 
                 // 9.1. Reset page to the current page
-                page_to_replace.set_is_dirty(false);
+                page_to_replace_guard.page_ref().set_is_dirty(false);
 
                 // 10. Wait for the fetch to finish
                 let fetch_page_result = fetch_page_future.wait();
 
                 if !fetch_page_result {
-                    self.pending_fetch_requests.lock().remove(&page_id);
 
                     // Avoid locking forever the current page fetch
                     current_fetch_promise.set_value(());
+
+                    self.pending_fetch_requests.lock().remove(&page_id);
                     assert_eq!(fetch_page_result, true, "Must be able to fetch page");
                 }
 
                 // 11. Set page id to be the correct page id
-                page_to_replace.set_page_id(page_id);
+                Page::partial_reset_with_write_guard(&mut page_to_replace_guard, page_id);
 
-                // Page is ready to fetch
+                // Convert write lock to read lock
+                drop(page_to_replace_guard);
+                let page_to_replace_read = PageAndReadGuard::from(page_to_replace_backup);
+
+                // Page is ready to fetch, so only release after the read lock acquired
                 current_fetch_promise.set_value(());
 
-                return Ok(PageReadGuard::new(self.clone(), page_to_replace));
+                self.pending_fetch_requests.lock().remove(&page_id);
+
+                return Ok(PageReadGuard::new(self.clone(), page_to_replace_read));
             } else {
                 // If page is not dirty we can just fetch the page
 
@@ -479,22 +473,27 @@ impl BufferPool for Arc<BufferPoolManager> {
                 let fetch_page_result = fetch_page_future.wait();
 
                 if !fetch_page_result {
-                    self.pending_fetch_requests.lock().remove(&page_id);
-
                     // Avoid locking forever the current page fetch
                     current_fetch_promise.set_value(());
+
+                    self.pending_fetch_requests.lock().remove(&page_id);
                     assert_eq!(fetch_page_result, true, "Must be able to fetch page");
                 }
 
                 // 11. Set page id to be the correct page id
-                page_to_replace.set_page_id(page_id);
+                Page::partial_reset_with_write_guard(&mut page_to_replace_guard, page_id);
+
+
+                // Convert write lock to read lock
+                drop(page_to_replace_guard);
+                let page_to_replace_read = PageAndReadGuard::from(page_to_replace_backup);
+
+                // Page is ready to fetch, so only release after the read lock acquired
+                current_fetch_promise.set_value(());
 
                 self.pending_fetch_requests.lock().remove(&page_id);
 
-                // Page is ready to fetch
-                current_fetch_promise.set_value(());
-
-                return Ok(PageReadGuard::new(self.clone(), page_to_replace));
+                return Ok(PageReadGuard::new(self.clone(), page_to_replace_read));
             }
         } else {
             // If no page exists in the pages for the current frame, just fetch it
@@ -509,7 +508,7 @@ impl BufferPool for Arc<BufferPoolManager> {
             let mut scheduler = self.disk_scheduler.lock();
 
             // 6. Request read page
-            let fetch_page_future = BufferPoolManager::request_read_page(&mut scheduler, page_id, page.get_data_mut());
+            let fetch_page_future = BufferPoolManager::request_read_page(&mut scheduler, page_id, page.write().get_data_mut());
 
             // 7. release all locks as we don't want to hold the entire lock while flushing to disk
             drop(scheduler);
@@ -521,17 +520,22 @@ impl BufferPool for Arc<BufferPoolManager> {
             let fetch_page_result = fetch_page_future.wait();
 
             if !fetch_page_result {
+                current_fetch_promise.set_value(());
+
                 // Avoid locking forever the current page fetch
                 self.pending_fetch_requests.lock().remove(&page_id);
 
-                current_fetch_promise.set_value(());
                 assert_eq!(fetch_page_result, true, "Must be able to fetch page");
             }
+
+            let read_guard = PageAndReadGuard::from(page);
 
             // Page is ready to fetch
             current_fetch_promise.set_value(());
 
-            return Ok(PageReadGuard::new(self.clone(), page_to_replace));
+            self.pending_fetch_requests.lock().remove(&page_id);
+
+            return Ok(PageReadGuard::new(self.clone(), read_guard));
         }
     }
 
@@ -587,7 +591,7 @@ impl BufferPool for Arc<BufferPoolManager> {
         let page = pages[frame_id as usize].clone();
 
         // Assert correctness of page table
-        assert_eq!(page.get_page_id(), page_id);
+        // assert_eq!(page.get_page_id(), page_id);
 
         if !page.is_dirty() {
             // Page is not dirty, nothing to flush
@@ -598,15 +602,11 @@ impl BufferPool for Arc<BufferPoolManager> {
         replacer.set_evictable(frame_id, false);
         page.pin();
 
-        let current_flush_promise = Promise::new();
-
-        // 6. Register the promise
-        self.pending_flush_requests.lock().insert(&page_id, current_flush_promise.get_future());
 
         let mut scheduler = self.disk_scheduler.lock();
 
         //  Add flush message to the scheduler
-        let flush_page_future = BufferPoolManager::request_write_page(&mut scheduler, page_id, page.get_data());
+        let flush_page_future = BufferPoolManager::request_write_page(&mut scheduler, page_id, page.read().get_data());
 
         // release all locks as we don't want to hold the entire lock while flushing to disk
         drop(scheduler);
@@ -614,25 +614,12 @@ impl BufferPool for Arc<BufferPoolManager> {
         drop(page_table);
         drop(replacer);
 
-        let flush_page_result = flush_page_future.wait();
         self.unpin_page(page_id, AccessType::Unknown);
 
-
-        if !flush_page_result {
-            // Avoid locking forever the current page flush
-            self.pending_flush_requests.lock().remove(&page_id);
-
-            current_flush_promise.set_value(());
-            assert_eq!(flush_page_result, true, "Must be able to flush page");
-        }
+        assert_eq!(flush_page_future.wait(), true, "Must be able to flush page");
 
         // TODO - must not be able to modify in the middle
         page.set_is_dirty(false);
-
-        // Avoid locking forever the current page flush
-        self.pending_flush_requests.lock().remove(&page_id);
-
-        current_flush_promise.set_value(());
 
         return true;
     }

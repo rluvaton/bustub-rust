@@ -1,9 +1,10 @@
-use std::sync::Arc;
-use common::config::PageId;
-use crate::buffer::AccessType;
-use crate::buffer::buffer_pool_manager_1::BufferPool;
 use super::super::BufferPoolManager;
-use crate::storage::Page;
+use crate::buffer::buffer_pool_manager_1::BufferPool;
+use crate::buffer::AccessType;
+use crate::storage::PageAndWriteGuard;
+use common::config::{PageData, PageId};
+use std::mem;
+use std::sync::Arc;
 
 /// Read guard on page that will also unpin on drop
 #[clippy::has_significant_drop]
@@ -11,41 +12,79 @@ use crate::storage::Page;
 pub struct PageWriteGuard<'a> {
     bpm: Arc<BufferPoolManager>,
 
-    page_id: PageId,
-
-    // TODO - this is not write
-    page: Page,
+    page_and_write_guard: Option<PageAndWriteGuard<'a>>
 }
 
 impl<'a> PageWriteGuard<'a> {
-    pub(in super::super) fn new(bpm: Arc<BufferPoolManager>, page: Page) -> Self {
-        todo!();
+    pub(in super::super) fn new(bpm: Arc<BufferPoolManager>, page: PageAndWriteGuard<'a>) -> Self {
+        Self {
+            bpm,
+
+            // The option is done only for the custom drop
+            page_and_write_guard: Some(page),
+        }
     }
 
     pub fn get_page_id(&self) -> PageId {
-        self.page_id
+        match &self.page_and_write_guard {
+            Some(p) => p.get_page_id(),
+            None => unreachable!()
+        }
     }
 
     pub fn cast<T>(&self) -> &T {
-        todo!()
+        match &self.page_and_write_guard {
+            Some(p) => p.cast::<T>(),
+            None => unreachable!()
+        }
     }
 
     pub fn cast_mut<T>(&mut self) -> &mut T {
-        todo!()
+        match &mut self.page_and_write_guard {
+            Some(p) => {
+                p.page_ref().set_is_dirty(true);
+
+                p.cast_mut::<T>()
+            },
+            None => unreachable!()
+        }
+    }
+
+    /// @return the actual data contained within this page
+    pub fn get_data(&self) -> &PageData {
+        match &self.page_and_write_guard {
+            Some(p) => p.get_data(),
+            None => unreachable!()
+        }
+    }
+
+    /// Get Mutable reference to the data and set the dirty flag to true
+    ///
+    /// Returns: the actual data contained within this page
+    pub fn get_data_mut(&mut self) -> &mut PageData {
+
+        match &mut self.page_and_write_guard {
+            Some(p) => {
+                p.page_ref().set_is_dirty(true);
+
+                p.get_data_mut()
+            },
+            None => unreachable!()
+        }
     }
 }
 
 impl<'a> Drop for PageWriteGuard<'a> {
     fn drop(&mut self) {
-        let page_id = self.page_id;
+        // Must always have page and write guard,
+        let page_and_write_guard = mem::take(&mut self.page_and_write_guard).unwrap();
+        let page_id = page_and_write_guard.get_page_id().clone();
+        let bpm = self.bpm.clone();
 
-        // 1. drop write guard
+        // Drop the write guard
+        drop(page_and_write_guard);
 
-        // 2. Unpin page?
-        self.bpm.unpin_page(self.page_id, AccessType::Unknown);
-
-        // let page_id = self.page.;
-        // 2. release lock
-        todo!()
+        // Unpin page
+        bpm.unpin_page(page_id, AccessType::Unknown);
     }
 }
