@@ -18,12 +18,6 @@ use num_format::Locale::en;
 use tracy_client::{non_continuous_frame, secondary_frame_mark, span};
 use super::errors::{NewPageError, FetchPageError, NoAvailableFrameFound, DeletePageError, InvalidPageId};
 
-// While waiting - red-ish (brighter than page lock)
-const ROOT_LOCK_WAITING_COLOR: u32 = 0xEF0107;
-
-// While holding the root lock - green-ish (brighter than page lock)
-const ROOT_LOCK_HOLDING_COLOR: u32 = 0x32DE84;
-
 // TODO - should return result rather than Option in fetch, new and more
 impl BufferPoolManager {
     pub fn new(
@@ -99,23 +93,13 @@ impl BufferPoolManager {
     }
 
     fn new_page_with_write_guard<'a>(&self) -> Result<PageAndWriteGuard<'a>, NewPageError> {
-        let acquiring_root_latch = span!("Acquiring root latch");
-
-        // Red color while waiting
-        acquiring_root_latch.emit_color(ROOT_LOCK_WAITING_COLOR);
 
         // First acquire the lock for thread safety
         let waiting = self.stats.waiting_for_root_latch.create_single();
         let root_latch_guard = self.root_level_latch.lock();
         drop(waiting);
-        drop(acquiring_root_latch);
-        secondary_frame_mark!("new_page");
 
         let holding_root_latch = self.stats.holding_root_latch.create_single();
-        let holding_root_latch_span = span!("Holding root latch");
-
-        // Green color while holding
-        holding_root_latch_span.emit_color(ROOT_LOCK_HOLDING_COLOR);
 
         // Get the inner data
         let inner = self.inner.get();
@@ -157,7 +141,6 @@ impl BufferPoolManager {
                     let mut scheduler = (*inner).disk_scheduler.lock();
 
                     drop(holding_root_latch);
-                    drop(holding_root_latch_span);
 
                     // #############################################################################
                     //                              Root Lock Release
@@ -259,27 +242,12 @@ impl BufferPoolManager {
     fn fetch_page_unchecked(&self, page_id: PageId, access_type: AccessType) -> Result<PageAndWriteGuard, FetchPageError> {
         assert_ne!(page_id, INVALID_PAGE_ID);
 
-        let acquiring_root_latch = span!("Acquiring root latch");
-
-        // Red color while waiting
-        acquiring_root_latch.emit_color(ROOT_LOCK_WAITING_COLOR);
-
         // First acquire the lock for thread safety
         let waiting = self.stats.waiting_for_root_latch.create_single();
         let mut root_latch_guard = self.root_level_latch.lock();
         drop(waiting);
-        drop(acquiring_root_latch);
 
         let holding_root_latch = self.stats.holding_root_latch.create_single();
-
-        // secondary_frame_mark!("fetch_page");
-        let f = non_continuous_frame!("fetch_page");
-
-
-        let holding_root_latch_span = span!("Holding root latch");
-
-        // Green color while holding
-        holding_root_latch_span.emit_color(ROOT_LOCK_HOLDING_COLOR);
 
         unsafe {
             // Get the inner data
@@ -302,8 +270,6 @@ impl BufferPoolManager {
                 page.pin();
 
                 drop(holding_root_latch);
-                drop(holding_root_latch_span);
-                drop(f);
 
                 // #############################################################################
                 //                              Root Lock Release
@@ -319,7 +285,6 @@ impl BufferPoolManager {
             let frame_id = Self::find_replacement_frame(&mut (*inner))?;
 
             {
-                let _span = span!("Update replacement policy");
                 // Add to The Replacement Policy
                 (*inner).replacer.with_lock(|replacer| {
                     // Record access so the frame will be inserted and the LRU-k algorithm will work
@@ -353,8 +318,6 @@ impl BufferPoolManager {
                 // 2. Acquire the scheduler lock
                 let mut scheduler = (*inner).disk_scheduler.lock();
 
-                drop(holding_root_latch_span);
-                drop(f);
                 drop(holding_root_latch);
                 // #############################################################################
                 //                              Root Lock Release
@@ -401,8 +364,6 @@ impl BufferPoolManager {
             // 3. Acquire the scheduler lock
             let mut scheduler = (*inner).disk_scheduler.lock();
 
-            drop(holding_root_latch_span);
-            drop(f);
             drop(holding_root_latch);
             // #############################################################################
             //                              Root Lock Release
@@ -420,11 +381,6 @@ impl BufferPoolManager {
 
     #[inline(always)]
     fn fetch_specific_page_unchecked(disk_scheduler: &mut DiskScheduler, page: &mut UnderlyingPage, requested_page_id: PageId) {
-        if requested_page_id == 31 {
-            println!("Requested page 31");
-        }
-        let _fetch = span!("fetch page");
-
         // SAFETY:
         //
         // UnsafeSingleRefMutData: because this function hold the lock on the page we are certain that the page data reference won't
@@ -529,25 +485,12 @@ impl BufferPoolManager {
     pub fn unpin_page(&self, page_id: PageId, is_dirty: bool, _access_type: AccessType) -> bool {
         // TODO - performance improvement, Unpinning page can bypass some locks as if it was pinned nothing could evict it
 
-        let acquiring_root_latch = span!("Acquiring root latch");
-
-        // Red color while waiting
-        acquiring_root_latch.emit_color(ROOT_LOCK_WAITING_COLOR);
-
         // First acquire the lock for thread safety
         let waiting = self.stats.waiting_for_root_latch.create_single();
         // TODO - Should unpinning page hold the root latch? correctness said it should as everything that touch the `inner`
         //        property should hold a latch
         let _root_latch_guard = self.root_level_latch.lock();
         drop(waiting);
-        drop(acquiring_root_latch);
-        let _f = non_continuous_frame!("unpin_page");
-
-        let holding_root_latch_span = span!("Holding root latch");
-
-
-        // Green color while holding
-        holding_root_latch_span.emit_color(ROOT_LOCK_HOLDING_COLOR);
 
         // let _holding_root_latch = self.stats.holding_root_latch.create_single();
 
@@ -579,11 +522,7 @@ impl BufferPoolManager {
                 return false;
             }
 
-            {
-                let _unpin = span!("Unpin");
-
-                page.unpin();
-            }
+            page.unpin();
 
             // If pin count reaches 0, mark as evictable
             if pin_count_before_unpin == 1 {
@@ -655,24 +594,10 @@ impl BufferPoolManager {
     pub fn flush_page(&self, page_id: PageId) -> bool {
         assert_ne!(page_id, INVALID_PAGE_ID);
 
-        let acquiring_root_latch = span!("Acquiring root latch");
-
-        // Red color while waiting
-        acquiring_root_latch.emit_color(ROOT_LOCK_WAITING_COLOR);
-
         // First acquire the lock for thread safety
         let waiting = self.stats.waiting_for_root_latch.create_single();
         let root_latch_guard = self.root_level_latch.lock();
         drop(waiting);
-        drop(acquiring_root_latch);
-        let f = non_continuous_frame!("flush_page");
-
-        // secondary_frame_mark!("flush_page");
-
-        let holding_root_latch_span = span!("Holding root latch");
-
-        // Green color while holding
-        holding_root_latch_span.emit_color(ROOT_LOCK_HOLDING_COLOR);
         let holding_root_latch = self.stats.holding_root_latch.create_single();
 
         let inner = self.inner.get();
@@ -693,8 +618,6 @@ impl BufferPoolManager {
             // 1. Acquire the scheduler lock
             let mut scheduler = (*inner).disk_scheduler.lock();
 
-            drop(holding_root_latch_span);
-            drop(f);
             drop(holding_root_latch);
             // #############################################################################
             //                              Root Lock Release
@@ -714,8 +637,6 @@ impl BufferPoolManager {
     }
 
     fn flush_specific_page_unchecked(disk_scheduler: &mut DiskScheduler, page: &Page, underlying_page: &mut UnderlyingPage, page_id_to_flush: PageId) {
-        let _flush_page = span!("Flush page");
-
         // SAFETY: because this function hold the lock on the page we are certain that the page data reference won't
         //         drop as we wait here
         let data = unsafe { UnsafeSingleRefData::new(underlying_page.get_data()) };
@@ -764,22 +685,10 @@ impl BufferPoolManager {
             return Err(InvalidPageId.into());
         }
 
-        let acquiring_root_latch = span!("Acquiring root latch");
-
-        // Red color while waiting
-        acquiring_root_latch.emit_color(ROOT_LOCK_WAITING_COLOR);
-
         // First acquire the lock for thread safety
         let waiting = self.stats.waiting_for_root_latch.create_single();
         let _root_latch_guard = self.root_level_latch.lock();
         drop(waiting);
-        drop(acquiring_root_latch);
-        let _f = non_continuous_frame!("delete_page");
-        // secondary_frame_mark!("delete_page");
-        let holding_root_latch_span = span!("Holding root latch");
-
-        // Green color while holding
-        holding_root_latch_span.emit_color(ROOT_LOCK_HOLDING_COLOR);
         let _holding_root_latch = self.stats.holding_root_latch.create_single();
 
         let inner = self.inner.get();
