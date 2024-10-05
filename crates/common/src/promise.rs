@@ -16,7 +16,7 @@ impl<T> Promise<T> {
         let (lock, cvar) = &*self.result;
         let mut result = lock.lock().unwrap();
         *result = (true, Some(value));
-        cvar.notify_one();
+        cvar.notify_all();
     }
 
     pub fn get_future(&self) -> Future<T> {
@@ -26,7 +26,7 @@ impl<T> Promise<T> {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Future<T> {
     result: Arc<(Mutex<(bool, Option<T>)>, Condvar)>,
 }

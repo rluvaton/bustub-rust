@@ -56,7 +56,7 @@ impl LRUKReplacerImpl {
     ///
     /// returns: LRUKReplacerImpl
     ///
-    pub(super) fn new(num_frames: usize, k: usize) -> Self {
+    pub fn new(num_frames: usize, k: usize) -> Self {
         LRUKReplacerImpl {
             node_store: HashMap::with_capacity(num_frames),
             evictable_heap: BinaryHeap::with_capacity_by(num_frames, |a, b| {
