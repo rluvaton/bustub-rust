@@ -32,10 +32,6 @@ pub struct BufferPoolManager {
     /// as it allow for multiple mutable reference at the same time but it's ok as we are managing it
     // inner: UnsafeCell<InnerBufferPoolManager>,
 
-    /** Array of buffer pool pages. */
-    // The index is the frame_id
-    pages: Mutex<Vec<Page>>,
-
     /// Pointer to the disk scheduler.
     /// This is mutex to avoid writing and reading the same page twice
     disk_scheduler: Arc<Mutex<DiskScheduler>>,
@@ -45,6 +41,19 @@ pub struct BufferPoolManager {
     #[allow(unused)]
     log_manager: Option<LogManager>,
 
+    inner: Mutex<InnerBufferPoolManager>,
+
+    /// Pending fetch requests from disk
+    pending_fetch_requests: Mutex<HashMap<PageId, Future<()>>>,
+}
+
+unsafe impl Sync for BufferPoolManager {}
+
+struct InnerBufferPoolManager {
+    /** Array of buffer pool pages. */
+    // The index is the frame_id
+    pages: Vec<Page>,
+
     /// Page table for keeping track of buffer pool pages.
     ///
     /// ## Original type:
@@ -53,23 +62,16 @@ pub struct BufferPoolManager {
     /// ```
     ///
     /// this is a thread safe hashmap
-    page_table: Mutex<HashMap<PageId, FrameId>>,
+    page_table: HashMap<PageId, FrameId>,
 
     /// Replacer to find unpinned pages for replacement.
     /// TODO - change type to just implement Replacer
-    replacer: Mutex<LRUKReplacerImpl>,
+    replacer: LRUKReplacerImpl,
 
     /// List of free frames that don't have any pages on them.
     // std::list<frame_id_t> free_list_;
-    free_list: Mutex<LinkedList<FrameId>>,
-
-    /// Pending fetch requests from disk
-    pending_fetch_requests: Mutex<HashMap<PageId, Future<()>>>,
+    free_list: LinkedList<FrameId>,
 }
-
-unsafe impl Sync for BufferPoolManager {}
-
-struct InnerBufferPoolManager {}
 
 impl BufferPoolManager {
     pub fn new(
@@ -94,19 +96,23 @@ impl BufferPoolManager {
             // inner: UnsafeCell::new(InnerBufferPoolManager {
             log_manager,
 
-            // we allocate a consecutive memory space for the buffer pool
-            // TODO - avoid having lock here as well
-            pages: Mutex::new(Vec::with_capacity(pool_size)),
+            inner: Mutex::new(InnerBufferPoolManager {
 
-            replacer: Mutex::new(LRUKReplacerImpl::new(
-                pool_size,
-                replacer_k.unwrap_or(LRUK_REPLACER_K),
-            )),
+                // we allocate a consecutive memory space for the buffer pool
+                // TODO - avoid having lock here as well
+                pages: Vec::with_capacity(pool_size),
+
+                replacer: LRUKReplacerImpl::new(
+                    pool_size,
+                    replacer_k.unwrap_or(LRUK_REPLACER_K),
+                ),
+
+                // TODO - remove mutex
+                page_table: HashMap::with_capacity(pool_size),
+                free_list,
+            }),
 
             disk_scheduler: Arc::new(Mutex::new(DiskScheduler::new(disk_manager))),
-            // TODO - remove mutex
-            page_table: Mutex::new(HashMap::with_capacity(pool_size)),
-            free_list: Mutex::new(free_list),
 
             pending_fetch_requests: Mutex::new(HashMap::new()),
 
@@ -145,18 +151,14 @@ impl BufferPoolManager {
     ///
     /// returns: Result<FrameId, NoAvailableFrameFound> Frame id if available frame found or error if not
     ///
-    fn find_replacement_frame(&self, replacer_guard: &mut MutexGuard<LRUKReplacerImpl>) -> Result<FrameId, errors::NoAvailableFrameFound> {
+    fn find_replacement_frame(&self, inner: &mut InnerBufferPoolManager) -> Result<FrameId, errors::NoAvailableFrameFound> {
         // Pick the replacement frame from the free list first
-        {
-            let mut free_list = self.free_list.lock();
-
-            if !free_list.is_empty() {
-                return free_list.pop_front().ok_or(errors::NoAvailableFrameFound);
-            }
+        if !inner.free_list.is_empty() {
+            inner.free_list.pop_front().ok_or(errors::NoAvailableFrameFound)
+        } else {
+            // pick replacement from the replacer, can't be empty
+            inner.replacer.evict().ok_or(errors::NoAvailableFrameFound)
         }
-
-        // pick replacement from the replacer, can't be empty
-        replacer_guard.evict().ok_or(errors::NoAvailableFrameFound)
     }
 
     fn request_read_page(disk_scheduler: &mut DiskScheduler, page_id: PageId, page_data: &mut PageData) -> Future<bool> {
@@ -182,10 +184,10 @@ impl BufferPoolManager {
         future
     }
 
-    fn wait_for_pending_request_page_to_finish(&self, requests_map: &Mutex<HashMap<PageId, Future<()>>>, page_id: PageId) -> MutexGuard<LRUKReplacerImpl> {
+    fn wait_for_pending_request_page_to_finish(&self, requests_map: &Mutex<HashMap<PageId, Future<()>>>, page_id: PageId) -> MutexGuard<InnerBufferPoolManager> {
 
         // 1. Hold replacer guard as all pin and unpin must first hold the replacer to avoid getting replaced in the middle
-        let mut replacer = self.replacer.lock();
+        let mut inner = self.inner.lock();
 
         // 2. Wait for the fetch from disk to finish
         loop {
@@ -196,21 +198,21 @@ impl BufferPoolManager {
             // 2.2. If pending fetch requests has the current requested page, release teh replacer and wait for the pending to finish
             if let Some(pending_fetch_request) = pending_fetch_request {
                 // 2.2.1. Release locks so we won't block while we wait for the other fetch to finish
-                drop(replacer);
+                drop(inner);
 
                 // 2.2.2. Wait for the fetch to finish
                 pending_fetch_request.wait();
 
                 // 2.2.3. Try to acquire again the replacer so we nothing can add to the pending again
-                replacer = self.replacer.lock();
+                inner = self.inner.lock();
             } else {
                 // 2.2.1 No pending fetch requested page is running
-                return replacer;
+                return inner;
             }
         }
     }
 
-    fn wait_for_pending_fetch_page_to_finish(&self, page_id: PageId) -> MutexGuard<LRUKReplacerImpl> {
+    fn wait_for_pending_fetch_page_to_finish(&self, page_id: PageId) -> MutexGuard<InnerBufferPoolManager> {
         self.wait_for_pending_request_page_to_finish(&self.pending_fetch_requests, page_id)
     }
 }
@@ -224,30 +226,28 @@ impl BufferPool for Arc<BufferPoolManager> {
         // Find available frame
 
         // 1. Hold replacer guard as all pin and unpin must first hold the replacer to avoid getting replaced in the middle
-        let mut replacer = self.replacer.lock();
-        let mut page_table = self.page_table.lock();
+        let mut inner = self.inner.lock();
 
         // 2. Find replacement frame
-        let frame_id = self.find_replacement_frame(&mut replacer)?;
+        let frame_id = self.find_replacement_frame(&mut inner)?;
 
         // 3. Record access so the frame will be inserted and the replacer algorithm will work
-        replacer.record_access(frame_id, access_type);
+        inner.replacer.record_access(frame_id, access_type);
 
         // 4. Avoid evicting the frame in the meantime
-        replacer.set_evictable(frame_id, false);
+        inner.replacer.set_evictable(frame_id, false);
 
         // 5. Allocate page id
         let page_id = self.allocate_page();
 
         // 6. Register the new page in the page table
-        page_table.insert(page_id, frame_id);
+        inner.page_table.insert(page_id, frame_id);
 
         // We now have 2 options:
         // 1. the frame we got is currently have a page in it that we need to replace (and possibly flush)
         // 2. the frame we got is empty frame (we got it from the free list)
 
-        let mut pages = self.pages.lock();
-        let page_to_replace: Option<Page> = pages.get_mut(frame_id as usize).cloned();
+        let page_to_replace: Option<Page> = inner.pages.get_mut(frame_id as usize).cloned();
 
         // 6. If frame match existing page
         if let Some(page_to_replace) = page_to_replace {
@@ -260,7 +260,7 @@ impl BufferPool for Arc<BufferPoolManager> {
             page_and_write.page_ref().pin();
 
             // 3. Remove the old page from the page table so it won't be available
-            page_table.remove(&page_and_write.get_page_id());
+            inner.page_table.remove(&page_and_write.get_page_id());
 
             // 4. If page to replace is dirty, need to flush it
             if page_and_write.page_ref().is_dirty() {
@@ -272,9 +272,7 @@ impl BufferPool for Arc<BufferPoolManager> {
 
                 // 7. release all locks as we don't want to hold the entire lock while flushing to disk
                 drop(scheduler);
-                drop(pages);
-                drop(page_table);
-                drop(replacer);
+                drop(inner);
 
                 // 8. Wait for the flush to finish
                 // TODO - handle errors in flushing
@@ -283,7 +281,6 @@ impl BufferPool for Arc<BufferPoolManager> {
                 // 9. Reset dirty
                 page_and_write.page_ref().set_is_dirty(false);
             }
-
 
             // 5. Reset page
             // 6. Change page id to be this page id
@@ -299,7 +296,7 @@ impl BufferPool for Arc<BufferPoolManager> {
 
             // 2. Pin page
             page.pin();
-            pages.insert(frame_id as usize, page.clone());
+            inner.pages.insert(frame_id as usize, page.clone());
 
             let page_and_write = PageAndWriteGuard::from(page);
 
@@ -312,25 +309,22 @@ impl BufferPool for Arc<BufferPoolManager> {
         // Find available frame
 
         // 1. Hold replacer guard as all pin and unpin must first hold the replacer to avoid getting replaced in the middle
-        let mut replacer = self.wait_for_pending_fetch_page_to_finish(page_id);
+        let mut inner = self.wait_for_pending_fetch_page_to_finish(page_id);
 
         // We have 3 cases when fetching page
         // 1. page already exists in the buffer pool
         // 2. page does not exist in the buffer pool and we DO NOT NEED to flush existing page
         // 3. page does not exist in the buffer pool and we NEED to flush existing page
-        let page_table_guard = self.page_table.lock();
-
         // 3. Page exists in the buffer pool
-        if let Some(&frame_id) = page_table_guard.get(&page_id) {
+        if let Some(&frame_id) = inner.page_table.get(&page_id) {
             // 3.1. Record access to the frame
-            replacer.record_access(frame_id, access_type);
+            inner.replacer.record_access(frame_id, access_type);
 
             // 3.2. Avoid evicting the frame
-            replacer.set_evictable(frame_id, false);
+            inner.replacer.set_evictable(frame_id, false);
 
             // 3.3 Get page
-            let pages_guard = self.pages.lock();
-            let page = pages_guard[frame_id as usize].clone();
+            let page = inner.pages[frame_id as usize].clone();
 
             // 3.4 Assert page table correctness
             // TODO - fix this?
@@ -340,9 +334,7 @@ impl BufferPool for Arc<BufferPoolManager> {
             page.pin();
 
             // 3.6 Drop all locks before waiting for the page read lock
-            drop(pages_guard);
-            drop(page_table_guard);
-            drop(replacer);
+            drop(inner);
 
             let page_and_read_guard = PageAndReadGuard::from(page);
 
@@ -352,7 +344,7 @@ impl BufferPool for Arc<BufferPoolManager> {
         // Option 2, page does not exists in the buffer pool
 
         // 4. Find replacement frame
-        let frame_id = self.find_replacement_frame(&mut replacer)?;
+        let frame_id = self.find_replacement_frame(&mut inner)?;
 
         // 5. Create promise for when the entire fetch is finished
         let current_fetch_promise = Promise::new();
@@ -361,22 +353,19 @@ impl BufferPool for Arc<BufferPoolManager> {
         self.pending_fetch_requests.lock().insert(page_id, current_fetch_promise.get_future());
 
         // 7. Record access so the frame will be inserted and the replacer algorithm will work
-        replacer.record_access(frame_id, access_type);
+        inner.replacer.record_access(frame_id, access_type);
 
         // 8. Avoid evicting the frame in the meantime
-        replacer.set_evictable(frame_id, false);
-
-        let mut page_table = self.page_table.lock();
+        inner.replacer.set_evictable(frame_id, false);
 
         // 9. Register the requested page in the page table
-        page_table.insert(page_id, frame_id);
+        inner.page_table.insert(page_id, frame_id);
 
         // We now have 2 options:
         // 1. the frame we got is currently have a page in it that we need to replace (and possibly flush)
         // 2. the frame we got is empty frame (we got it from the free list)
 
-        let mut pages = self.pages.lock();
-        let page_to_replace: Option<Page> = pages.get_mut(frame_id as usize).cloned();
+        let page_to_replace: Option<Page> = inner.pages.get_mut(frame_id as usize).cloned();
 
         // 7. If frame match existing page
         if let Some(page_to_replace) = page_to_replace {
@@ -391,7 +380,7 @@ impl BufferPool for Arc<BufferPoolManager> {
             page_to_replace_guard.page_ref().pin();
 
             // 3. Remove the old page from the page table so it won't be available
-            page_table.remove(&page_to_replace_guard.get_page_id());
+            inner.page_table.remove(&page_to_replace_guard.get_page_id());
 
             // 4. If page to replace is dirty, need to flush it
             if page_to_replace_guard.page_ref().is_dirty() {
@@ -407,9 +396,7 @@ impl BufferPool for Arc<BufferPoolManager> {
 
                 // 8. release all locks as we don't want to hold the entire lock while flushing to disk
                 drop(scheduler);
-                drop(pages);
-                drop(page_table);
-                drop(replacer);
+                drop(inner);
 
                 // 9. Wait for the flush to finish
                 // TODO - handle errors in flushing
@@ -466,10 +453,7 @@ impl BufferPool for Arc<BufferPoolManager> {
 
                 // 7. release all locks as we don't want to hold the entire lock while flushing to disk
                 drop(scheduler);
-                drop(pages);
-                drop(page_table);
-                drop(replacer);
-
+                drop(inner);
 
                 // 8. Wait for the fetch to finish
                 let fetch_page_result = fetch_page_future.wait();
@@ -514,9 +498,7 @@ impl BufferPool for Arc<BufferPoolManager> {
 
             // 7. release all locks as we don't want to hold the entire lock while flushing to disk
             drop(scheduler);
-            drop(pages);
-            drop(page_table);
-            drop(replacer);
+            drop(inner);
 
             // 8. Wait for the fetch to finish
             let fetch_page_result = fetch_page_future.wait();
@@ -547,16 +529,13 @@ impl BufferPool for Arc<BufferPoolManager> {
 
     fn unpin_page(&self, page_id: PageId, access_type: AccessType) -> bool {
         // 1. first hold the replacer
-        let mut replacer = self.replacer.lock();
+        let mut inner = self.inner.lock();
 
         // 2. check if the page table the page exists
-        let page_table_guard = self.page_table.lock();
-
-        if let Some(&frame_id) = page_table_guard.get(&page_id) {
+        if let Some(&frame_id) = inner.page_table.get(&page_id) {
 
             // 3. Get the page to unpin
-            let pages_guard = self.pages.lock();
-            let page = pages_guard[frame_id as usize].clone();
+            let page = inner.pages[frame_id as usize].clone();
 
             // 4. If already evictable
             if page.get_pin_count() == 0 {
@@ -568,7 +547,7 @@ impl BufferPool for Arc<BufferPoolManager> {
 
             // 6. If we reached to pin count 0, this means we need to set as evictable
             if page.get_pin_count() == 0 {
-                replacer.set_evictable(frame_id, true);
+                inner.replacer.set_evictable(frame_id, true);
             }
 
             true
@@ -579,18 +558,16 @@ impl BufferPool for Arc<BufferPoolManager> {
 
     fn flush_page(&self, page_id: PageId) -> bool {
         // 1. Hold replacer guard as all pin and unpin must first hold the replacer to avoid getting replaced in the middle
-        let mut replacer = self.replacer.lock();
-        let mut page_table = self.page_table.lock();
-        let mut pages = self.pages.lock();
+        let mut inner = self.inner.lock();
 
-        if !page_table.contains_key(&page_id) {
+        if !inner.page_table.contains_key(&page_id) {
             // Page is missing
             return false;
         }
 
-        let &frame_id = page_table.get(&page_id).unwrap();
+        let &frame_id = inner.page_table.get(&page_id).unwrap();
 
-        let page = pages[frame_id as usize].clone();
+        let page = inner.pages[frame_id as usize].clone();
 
         // Assert correctness of page table
         // assert_eq!(page.get_page_id(), page_id);
@@ -601,7 +578,7 @@ impl BufferPool for Arc<BufferPoolManager> {
         }
 
         // Avoid evicting in the middle
-        replacer.set_evictable(frame_id, false);
+        inner.replacer.set_evictable(frame_id, false);
         page.pin();
 
 
@@ -612,9 +589,7 @@ impl BufferPool for Arc<BufferPoolManager> {
 
         // release all locks as we don't want to hold the entire lock while flushing to disk
         drop(scheduler);
-        drop(pages);
-        drop(page_table);
-        drop(replacer);
+        drop(inner);
 
         self.unpin_page(page_id, AccessType::Unknown);
 
@@ -636,17 +611,14 @@ impl BufferPool for Arc<BufferPoolManager> {
 
     fn get_pin_count(&self, page_id: PageId) -> Option<usize> {
         // 1. first hold the replacer
-        let replacer = self.replacer.lock();
+        let inner = self.inner.lock();
 
         // 2. check if the page table the page exists
-        let page_table_guard = self.page_table.lock();
 
-        if let Some(&frame_id) = page_table_guard.get(&page_id) {
+        if let Some(&frame_id) = inner.page_table.get(&page_id) {
 
             // 3. Get the page to unpin
-            let pages_guard = self.pages.lock();
-
-            Some(pages_guard[frame_id as usize].get_pin_count())
+            Some(inner.pages[frame_id as usize].get_pin_count())
         } else {
             None
         }
