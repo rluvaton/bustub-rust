@@ -1,7 +1,8 @@
 #[cfg(test)]
 mod tests {
-    use crate::buffer::errors::{FetchPageError, NewPageError, NoAvailableFrameFound};
-    use crate::buffer::{AccessType, BufferPoolManager, PinWritePageGuard};
+    use crate::buffer::buffer_pool_manager_1::errors::{FetchPageError, NewPageError, NoAvailableFrameFound};
+    use crate::buffer::{AccessType};
+    use crate::buffer::buffer_pool_manager_1::{BufferPool, BufferPoolManager, PageWriteGuard};
     use crate::storage::{AlignToPageData, DefaultDiskManager};
     use common::config::{PageId, BUSTUB_PAGE_SIZE};
     use parking_lot::{Condvar, Mutex};
@@ -341,11 +342,11 @@ mod tests {
         drop(page0);
 
         // Create a vector of unique pointers to page guards, which prevents the guards from getting destructed.
-        let mut pages: Vec<PinWritePageGuard> = vec![];
+        let mut pages: Vec<PageWriteGuard> = vec![];
 
         // Scenario: We should be able to create new pages until we fill up the buffer pool.
         for _ in 0..buffer_pool_size {
-            pages.push(bpm.new_page_write_guarded().unwrap());
+            pages.push(bpm.new_page(AccessType::Unknown).unwrap());
         }
 
         // Scenario: All the pin counts should be 1.
@@ -357,7 +358,7 @@ mod tests {
 
         // Scenario: Once the buffer pool is full, we should not be able to create any new pages.
         for _ in 0..buffer_pool_size {
-            let attempt_new_page_error = bpm.new_page_write_guarded().expect_err("Should fail to create new page as the buffer pool is full");
+            let attempt_new_page_error = bpm.new_page(AccessType::Unknown).expect_err("Should fail to create new page as the buffer pool is full");
 
             assert_eq!(attempt_new_page_error, NewPageError::NoAvailableFrameFound);
         }
@@ -385,12 +386,12 @@ mod tests {
         // Scenario: After unpinning pages {1, 2, 3, 4, 5}, we should be able to create 4 new pages and bring them into
         // memory. Bringing those 4 pages into memory should evict the first 4 pages {1, 2, 3, 4} because of LRU.
         for i in 0..((buffer_pool_size / 2) - 1) {
-            pages.push(bpm.new_page_write_guarded().unwrap());
+            pages.push(bpm.new_page(AccessType::Unknown).unwrap());
         }
 
         // Scenario: There should be one frame available, and we should be able to fetch the data we wrote a while ago.
         {
-            let original_page = bpm.fetch_page_read(pid0).expect("Should be able to fetch");
+            let original_page = bpm.fetch_page_read(pid0, AccessType::Unknown).expect("Should be able to fetch");
 
             assert_eq!(original_page.get_data().as_slice(), "Hello".align_to_page_data().as_slice());
         }
@@ -398,7 +399,7 @@ mod tests {
 
         // Scenario: Once we unpin page 0 and then make a new page, all the buffer pages should now be pinned. Fetching page 0
         // again should fail.
-        let mut last_page = bpm.new_page_write_guarded().unwrap().downgrade_to_read();
+        let mut last_page = bpm.new_page(AccessType::Unknown).unwrap().downgrade_to_read();
         let last_pid = last_page.get_page_id();
 
         let fail = bpm.fetch_page_read(pid0).expect_err("Should fail to fetch page when buffer pool is full");
@@ -420,7 +421,7 @@ mod tests {
 
         const ROUNDS: usize = 50;
 
-        let pid = bpm.new_page_guarded().unwrap().get_page_id();
+        let pid = bpm.new_page(AccessType::Unknown).unwrap().get_page_id();
 
         let thread = {
             let bpm = Arc::clone(&bpm);

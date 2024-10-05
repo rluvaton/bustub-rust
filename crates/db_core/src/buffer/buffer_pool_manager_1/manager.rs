@@ -179,6 +179,38 @@ impl BufferPoolManager {
 
         future
     }
+
+    fn wait_for_pending_request_page_to_finish(&self, requests_map: &Mutex<HashMap<PageId, Future<()>>>, page_id: PageId) -> MutexGuard<dyn Replacer> {
+
+        // 1. Hold replacer guard as all pin and unpin must first hold the replacer to avoid getting replaced in the middle
+        let mut replacer = self.replacer.lock();
+
+        // 2. Wait for the fetch from disk to finish
+        loop {
+
+            // 2.1. Lock pending fetch requests
+            let pending_fetch_request = requests_map.lock().get(&page_id).cloned();
+
+            // 2.2. If pending fetch requests has the current requested page, release teh replacer and wait for the pending to finish
+            if let Some(pending_fetch_request) = pending_fetch_request {
+                // 2.2.1. Release locks so we won't block while we wait for the other fetch to finish
+                drop(replacer);
+
+                // 2.2.2. Wait for the fetch to finish
+                pending_fetch_request.wait();
+
+                // 2.2.3. Try to acquire again the replacer so we nothing can add to the pending again
+                replacer = self.replacer.lock();
+            } else {
+                // 2.2.1 No pending fetch requested page is running
+                return replacer;
+            }
+        }
+    }
+
+    fn wait_for_pending_fetch_page_to_finish(&self, page_id: PageId) -> MutexGuard<dyn Replacer> {
+        self.wait_for_pending_request_page_to_finish(&self.pending_fetch_requests, page_id)
+    }
 }
 
 impl BufferPool for Arc<BufferPoolManager> {
@@ -397,21 +429,24 @@ impl BufferPool for Arc<BufferPoolManager> {
                 let flush_page_result = flush_page_future.wait();
 
                 if !flush_page_result {
+                    self.pending_fetch_requests.lock().remove(&page_id);
+
                     // Avoid locking forever the current page fetch
                     current_fetch_promise.set_value(());
                     assert_eq!(flush_page_result, true, "Must be able to flush page");
 
-
-                    // 9.1. Reset page to the current page
-                    page_to_replace.set_is_dirty(false);
-
                     // TODO - reset page in page table
                 }
+
+                // 9.1. Reset page to the current page
+                page_to_replace.set_is_dirty(false);
 
                 // 10. Wait for the fetch to finish
                 let fetch_page_result = fetch_page_future.wait();
 
                 if !fetch_page_result {
+                    self.pending_fetch_requests.lock().remove(&page_id);
+
                     // Avoid locking forever the current page fetch
                     current_fetch_promise.set_value(());
                     assert_eq!(fetch_page_result, true, "Must be able to fetch page");
@@ -444,6 +479,8 @@ impl BufferPool for Arc<BufferPoolManager> {
                 let fetch_page_result = fetch_page_future.wait();
 
                 if !fetch_page_result {
+                    self.pending_fetch_requests.lock().remove(&page_id);
+
                     // Avoid locking forever the current page fetch
                     current_fetch_promise.set_value(());
                     assert_eq!(fetch_page_result, true, "Must be able to fetch page");
@@ -451,6 +488,8 @@ impl BufferPool for Arc<BufferPoolManager> {
 
                 // 11. Set page id to be the correct page id
                 page_to_replace.set_page_id(page_id);
+
+                self.pending_fetch_requests.lock().remove(&page_id);
 
                 // Page is ready to fetch
                 current_fetch_promise.set_value(());
@@ -483,6 +522,8 @@ impl BufferPool for Arc<BufferPoolManager> {
 
             if !fetch_page_result {
                 // Avoid locking forever the current page fetch
+                self.pending_fetch_requests.lock().remove(&page_id);
+
                 current_fetch_promise.set_value(());
                 assert_eq!(fetch_page_result, true, "Must be able to fetch page");
             }
@@ -531,7 +572,69 @@ impl BufferPool for Arc<BufferPoolManager> {
     }
 
     fn flush_page(&self, page_id: PageId) -> bool {
-        todo!()
+        // 1. Hold replacer guard as all pin and unpin must first hold the replacer to avoid getting replaced in the middle
+        let mut replacer = self.replacer.lock();
+        let mut page_table = self.page_table.lock();
+        let mut pages = self.pages.lock();
+
+        if !page_table.contains_key(&page_id) {
+            // Page is missing
+            return false;
+        }
+
+        let &frame_id = page_table.get(&page_id).unwrap();
+
+        let page = pages[frame_id as usize].clone();
+
+        // Assert correctness of page table
+        assert_eq!(page.get_page_id(), page_id);
+
+        if !page.is_dirty() {
+            // Page is not dirty, nothing to flush
+            return false;
+        }
+
+        // Avoid evicting in the middle
+        replacer.set_evictable(frame_id, false);
+        page.pin();
+
+        let current_flush_promise = Promise::new();
+
+        // 6. Register the promise
+        self.pending_flush_requests.lock().insert(&page_id, current_flush_promise.get_future());
+
+        let mut scheduler = self.disk_scheduler.lock();
+
+        //  Add flush message to the scheduler
+        let flush_page_future = BufferPoolManager::request_write_page(&mut scheduler, page_id, page.get_data());
+
+        // release all locks as we don't want to hold the entire lock while flushing to disk
+        drop(scheduler);
+        drop(pages);
+        drop(page_table);
+        drop(replacer);
+
+        let flush_page_result = flush_page_future.wait();
+        self.unpin_page(page_id, AccessType::Unknown);
+
+
+        if !flush_page_result {
+            // Avoid locking forever the current page flush
+            self.pending_flush_requests.lock().remove(&page_id);
+
+            current_flush_promise.set_value(());
+            assert_eq!(flush_page_result, true, "Must be able to flush page");
+        }
+
+        // TODO - must not be able to modify in the middle
+        page.set_is_dirty(false);
+
+        // Avoid locking forever the current page flush
+        self.pending_flush_requests.lock().remove(&page_id);
+
+        current_flush_promise.set_value(());
+
+        return true;
     }
 
     fn flush_all_pages(&self) {

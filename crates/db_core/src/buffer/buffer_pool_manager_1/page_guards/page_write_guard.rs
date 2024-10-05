@@ -21,6 +21,18 @@ impl<'a> PageWriteGuard<'a> {
     pub(in super::super) fn new(bpm: Arc<BufferPoolManager>, page: Page) -> Self {
         todo!();
     }
+
+    pub fn get_page_id(&self) -> PageId {
+        self.page_id
+    }
+
+    pub fn cast<T>(&self) -> &T {
+        todo!()
+    }
+
+    pub fn cast_mut<T>(&mut self) -> &mut T {
+        todo!()
+    }
 }
 
 impl<'a> Drop for PageWriteGuard<'a> {
