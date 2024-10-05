@@ -12,27 +12,50 @@ pub(super) struct InvalidPageId;
 #[derive(thiserror::Error, Debug, PartialEq, Clone)]
 pub enum NewPageError {
     #[error("all frames are used and not evictable")]
-    NoAvailableFrameFound(#[from] NoAvailableFrameFound),
+    NoAvailableFrameFound,
 }
 
+impl From<NoAvailableFrameFound> for NewPageError {
+    fn from(_: NoAvailableFrameFound) -> Self {
+        NewPageError::NoAvailableFrameFound
+    }
+}
 
 #[derive(thiserror::Error, Debug, PartialEq, Clone)]
 pub enum FetchPageError {
     #[error("Page id is invalid")]
-    InvalidPageId(#[from] InvalidPageId),
+    InvalidPageId,
 
     #[error("all frames are used and not evictable")]
-    NoAvailableFrameFound(#[from] NoAvailableFrameFound),
+    NoAvailableFrameFound,
+}
+
+impl From<InvalidPageId> for FetchPageError {
+    fn from(_: InvalidPageId) -> Self {
+        FetchPageError::InvalidPageId
+    }
+}
+
+impl From<NoAvailableFrameFound> for FetchPageError {
+    fn from(_: NoAvailableFrameFound) -> Self {
+        FetchPageError::NoAvailableFrameFound
+    }
 }
 
 
 #[derive(thiserror::Error, Debug, PartialEq, Clone)]
 pub enum DeletePageError {
     #[error("Page id is invalid")]
-    InvalidPageId(#[from] InvalidPageId),
+    InvalidPageId,
 
     #[error("Page {0} is not evictable")]
     PageIsNotEvictable(PageId),
+}
+
+impl From<InvalidPageId> for DeletePageError {
+    fn from(_: InvalidPageId) -> Self {
+        DeletePageError::InvalidPageId
+    }
 }
 
 // This is mostly used for consumers that just want to say that there were a problem with

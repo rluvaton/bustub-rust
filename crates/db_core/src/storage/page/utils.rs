@@ -13,3 +13,9 @@ impl AlignToPageData for &[u8] {
         data
     }
 }
+
+impl AlignToPageData for &str {
+    fn align_to_page_data(&self) -> PageData {
+        self.as_bytes().align_to_page_data()
+    }
+}

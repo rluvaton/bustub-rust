@@ -1,4 +1,4 @@
-use std::fmt::Debug;
+use std::fmt::{Debug, Formatter};
 use std::mem;
 use common::config::{PageData, PageId};
 use std::ops::Deref;
@@ -174,6 +174,15 @@ impl<'a> From<PinWritePageGuard<'a>> for PinReadPageGuard<'a> {
             read_guard: Some(read_guard),
             page,
             bpm,
+        }
+    }
+}
+
+impl Debug for PinReadPageGuard<'_> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match &self.read_guard {
+            Some(u) => write!(f, "pin read page guard for page {}", u.get_page_id()),
+            None => write!(f, "pin read page guard for unknown page")
         }
     }
 }

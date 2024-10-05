@@ -1,3 +1,4 @@
+use std::fmt::{Debug, Formatter};
 use std::ops::Deref;
 use std::sync::Arc;
 use parking_lot::lock_api::RawRwLock;
@@ -154,6 +155,12 @@ impl Drop for PinPageGuard {
 
         // Setting is dirty as false as we did not manually change something here, the buffer pool won't set the is dirty to false, but keep current value
         self.bpm.unpin_page(page_id, false, AccessType::default());
+    }
+}
+
+impl Debug for PinPageGuard {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "pin page guard for page")
     }
 }
 

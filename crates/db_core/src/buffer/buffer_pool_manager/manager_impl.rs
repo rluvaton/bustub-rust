@@ -863,4 +863,8 @@ impl BufferPoolManager {
             }
         }
     }
+
+    pub fn get_pin_count(&self, page_id: PageId) -> Option<usize> {
+        todo!();
+    }
 }

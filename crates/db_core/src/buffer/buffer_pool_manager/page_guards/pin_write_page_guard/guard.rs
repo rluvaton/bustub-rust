@@ -1,3 +1,4 @@
+use std::fmt::{Debug, Formatter};
 use std::mem;
 use std::ops::{Deref, DerefMut};
 use std::sync::Arc;
@@ -138,3 +139,12 @@ impl From<PinPageGuard> for PinWritePageGuard<'_> {
 //         PinWritePageGuard::from(new_guard)
 //     }
 // }
+
+impl Debug for PinWritePageGuard<'_> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match &self.write_guard {
+            Some(u) => write!(f, "pin write page guard for page {}", u.get_page_id()),
+            None => write!(f, "pin write page guard for unknown page")
+        }
+    }
+}
