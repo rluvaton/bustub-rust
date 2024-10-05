@@ -120,6 +120,8 @@ mod tests {
 
         let mut page_guards = vec![];
 
+        page_guards.push(page0);
+
         // Scenario: We should be able to create new pages until we fill up the buffer pool.
         for _ in 1..buffer_pool_size {
             page_guards.push(bpm.new_page(AccessType::Unknown).expect("Should be able to create new page"));
@@ -134,7 +136,9 @@ mod tests {
         // there would still be one buffer page left for reading page 0.
         for i in 0..5 {
             // Should drop guard and unpin
-            page_guards.pop();
+            {
+                let _ = page_guards.remove(0);
+            }
         }
 
         for _ in 0..4 {
@@ -405,9 +409,6 @@ mod tests {
 
         let fail = bpm.fetch_page_read(pid0, AccessType::Unknown).expect_err("Should fail to fetch page when buffer pool is full");
         assert_eq!(fail, FetchPageError::NoAvailableFrameFound);
-
-
-
     }
 
     #[test]
@@ -457,7 +458,6 @@ mod tests {
         }
 
         thread.join().unwrap();
-
     }
 
     #[test]
