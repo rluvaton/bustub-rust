@@ -77,7 +77,7 @@ impl BufferPoolManager {
         disk_manager: Arc<Mutex<(impl DiskManager + 'static)>>,
         replacer_k: Option<usize>,
         log_manager: Option<LogManager>,
-    ) -> Self {
+    ) -> Arc<Self> {
         // Initially, every page is in the free list.
         let mut free_list = LinkedList::new();
 
@@ -85,7 +85,7 @@ impl BufferPoolManager {
             free_list.push_back(i as i32)
         }
 
-        BufferPoolManager {
+        let this = BufferPoolManager {
             next_page_id: AtomicPageId::new(0),
             pool_size,
 
@@ -111,7 +111,9 @@ impl BufferPoolManager {
             pending_fetch_requests: Mutex::new(HashMap::new()),
 
             // }),
-        }
+        };
+
+        Arc::new(this)
     }
 
     /// Allocate a page on disk. Caller should acquire the latch before calling this function.
@@ -297,9 +299,9 @@ impl BufferPool for Arc<BufferPoolManager> {
 
             // 2. Pin page
             page.pin();
+            pages.insert(frame_id as usize, page.clone());
 
-            let mut page_and_write = PageAndWriteGuard::from(page);
-
+            let page_and_write = PageAndWriteGuard::from(page);
 
             // 3. Return the PageWriteGuard
             Ok(PageWriteGuard::new(self.clone(), page_and_write))

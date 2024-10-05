@@ -57,11 +57,8 @@ impl Page {
     #[inline]
     pub unsafe fn get_page_id_bypass_lock(&self) -> PageId {
         if self.inner.is_locked_exclusive() {
-            println!("Lock is held");
             let page_id =
                 self.inner.data_ptr().as_ref().expect("Should be able to get data inner page").get_page_id();
-
-            println!("finish getting page id {}", page_id);
 
             return page_id;
         }

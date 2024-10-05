@@ -1,5 +1,6 @@
+use std::fmt::{Debug, Formatter};
 use super::super::BufferPoolManager;
-use crate::buffer::buffer_pool_manager_1::BufferPool;
+use crate::buffer::buffer_pool_manager_1::{BufferPool, PageReadGuard};
 use crate::buffer::AccessType;
 use crate::storage::PageAndWriteGuard;
 use common::config::{PageData, PageId};
@@ -72,6 +73,10 @@ impl<'a> PageWriteGuard<'a> {
             None => unreachable!()
         }
     }
+
+    pub fn downgrade_to_read(self) -> PageReadGuard<'a> {
+        todo!()
+    }
 }
 
 impl<'a> Drop for PageWriteGuard<'a> {
@@ -86,5 +91,11 @@ impl<'a> Drop for PageWriteGuard<'a> {
 
         // Unpin page
         bpm.unpin_page(page_id, AccessType::Unknown);
+    }
+}
+
+impl Debug for PageWriteGuard<'_> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "page write guard for page id {}", self.get_page_id())
     }
 }

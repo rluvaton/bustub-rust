@@ -1,3 +1,4 @@
+use std::fmt::{Debug, Formatter};
 use std::mem;
 use super::super::BufferPoolManager;
 use crate::storage::PageAndReadGuard;
@@ -60,5 +61,12 @@ impl<'a> Drop for PageReadGuard<'a> {
 
         // Unpin page
         bpm.unpin_page(page_id, AccessType::Unknown);
+    }
+}
+
+
+impl Debug for PageReadGuard<'_> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "page read guard for page id {}", self.get_page_id())
     }
 }
