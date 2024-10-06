@@ -39,4 +39,5 @@ zipf = "7"
 parking_lot = { version = "0.12.3", features = ["default", "deadlock_detection"] }
 
 
-
+[profile.bench]
+debug = true

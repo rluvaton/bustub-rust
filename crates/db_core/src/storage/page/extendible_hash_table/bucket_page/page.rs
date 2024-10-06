@@ -57,9 +57,7 @@ pub const fn hash_table_bucket_array_size<Key: PageKey, Value: PageValue>() -> u
 /// use common::RID;
 /// use db_core::storage::{ExtendibleHashTableBucketPage, hash_table_bucket_array_size, U8Comparator};
 ///
-/// const a: usize = hash_table_bucket_array_size::<u8, u8>();
-///
-/// type B = ExtendibleHashTableBucketPage::<a, u8, u8, U8Comparator>;
+/// type B = ExtendibleHashTableBucketPage::<{hash_table_bucket_array_size::<u8, u8>()}, u8, u8, U8Comparator>;
 ///
 /// let _ = B::ARRAY_SIZE_OK;
 /// ```
@@ -70,9 +68,7 @@ pub const fn hash_table_bucket_array_size<Key: PageKey, Value: PageValue>() -> u
 /// use common::RID;
 /// use db_core::storage::{ExtendibleHashTableBucketPage, hash_table_bucket_array_size, U8Comparator};
 ///
-/// const a: usize = hash_table_bucket_array_size::<u8, u8>() - 1;
-///
-/// type B = ExtendibleHashTableBucketPage::<a, u8, u8, U8Comparator>;
+/// type B = ExtendibleHashTableBucketPage::<{hash_table_bucket_array_size::<u8, u8>() - 1}, u8, u8, U8Comparator>;
 ///
 /// let _ = B::ARRAY_SIZE_OK;
 /// ```
