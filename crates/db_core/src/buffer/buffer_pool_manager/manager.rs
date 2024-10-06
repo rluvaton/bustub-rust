@@ -1,4 +1,4 @@
-use common::config::{AtomicPageId, FrameId, PageData, PageId, LRUK_REPLACER_K};
+use common::config::{AtomicPageId, FrameId, PageData, PageId, INVALID_PAGE_ID, LRUK_REPLACER_K};
 use dashmap::DashMap;
 use parking_lot::{Mutex, MutexGuard};
 use std::collections::{HashMap, LinkedList};
@@ -615,7 +615,7 @@ impl BufferPool for Arc<BufferPoolManager> {
 
         self.unpin_page(page_id, AccessType::Unknown);
 
-        return true;
+        true
     }
 
     fn flush_all_pages(&self) {
@@ -623,7 +623,40 @@ impl BufferPool for Arc<BufferPoolManager> {
     }
 
     fn delete_page(&self, page_id: PageId) -> Result<bool, DeletePageError> {
-        todo!()
+        if page_id == INVALID_PAGE_ID {
+            return Err(DeletePageError::InvalidPageId);
+        }
+
+        let mut inner = self.inner.lock();
+
+        if !inner.page_table.contains_key(&page_id) {
+            // Page is missing
+            return Ok(true);
+        }
+
+        let &frame_id = inner.page_table.get(&page_id).unwrap();
+        let page = inner.pages[frame_id as usize].clone();
+
+        if page.is_pinned() {
+            return Err(DeletePageError::PageIsNotEvictable(page_id));
+        }
+
+        // TODO - what about if page is dirty?
+        (*inner).page_table.remove(&page_id);
+        (*inner).free_list.push_front(frame_id);
+
+        (*inner).replacer.remove(frame_id);
+
+        page.with_write(|u| {
+            // Do not remove the item, and instead change it to INVALID_PAGE_ID
+            // so we won't change the frame location
+            u.reset(INVALID_PAGE_ID)
+        });
+        page.set_is_dirty(false);
+
+        BufferPoolManager::deallocate_page(self, page_id);
+
+        Ok(true)
     }
 
     fn get_pin_count(&self, page_id: PageId) -> Option<usize> {
