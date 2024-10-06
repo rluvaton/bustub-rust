@@ -27,6 +27,8 @@ where
     KeyComparator: Comparator<Key>,
     KeyHasherImpl: KeyHasher,
 {
+    const NOTHING_FOUND: Vec<Value> = vec![];
+
     /// TODO(P2): Add implementation
     /// Get the value associated with a given key in the hash table.
     ///
@@ -65,7 +67,7 @@ where
 
         // 4. If we got invalid page than the directory is missing
         if directory_page_id == INVALID_PAGE_ID {
-            return Ok(vec![]);
+            return Ok(Self::NOTHING_FOUND);
         }
 
         {
@@ -81,7 +83,7 @@ where
 
         // 7. If we got invalid page than the bucket is missing
         if bucket_page_id == INVALID_PAGE_ID {
-            return Ok(vec![]);
+            return Ok(Self::NOTHING_FOUND);
         }
 
         let found_value: Option<Value>;
@@ -95,14 +97,14 @@ where
             // 9. Lookup the value for the key in the target bucket
             found_value = bucket_page.lookup(key, &self.cmp)
                 // Clone the value before releasing the page guard as we hold reference to something that will be freed
-                .cloned();
+                .copied();
         } // Drop bucket page guard
 
 
         Ok(found_value.map_or_else(
 
             // In case None, return empty results
-            || vec![],
+            || Self::NOTHING_FOUND,
 
             // In case found return that result
             |v| vec![v],

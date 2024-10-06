@@ -34,16 +34,12 @@ pub(in crate::buffer) struct LRUKNode {
     /// we can use a fixed size array and have index to the start of the data and index to the end of the data
     /// adding new items will set at the end index and increment that index
     /// when reached the end of the array going to the start and moving the first item to be start index + 1
-    #[allow(dead_code)]
     history: LinkedList<HistoryRecord>,
 
-    #[allow(dead_code)]
     k: usize,
 
-    #[allow(dead_code)]
     frame_id: FrameId,
 
-    #[allow(dead_code)]
     is_evictable: bool,
 
     interval: i64,

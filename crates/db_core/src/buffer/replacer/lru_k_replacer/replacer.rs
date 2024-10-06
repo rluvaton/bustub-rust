@@ -3,6 +3,7 @@ use std::cell::UnsafeCell;
 use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::sync::Arc;
+#[cfg(feature = "tracing")]
 use tracy_client::span;
 
 use common::config::FrameId;
@@ -94,6 +95,67 @@ impl LRUKReplacer {
 
         unsafe { Some((*top.get()).get_frame_id()) }
     }
+
+    /// Remove an evictable frame from replacer, along with its access history.
+    /// This function should also decrement replacer's size if removal is successful.
+    ///
+    /// Note that this is different from evicting a frame, which always remove the frame
+    /// with the largest backward k-distance. This function removes specified frame id,
+    /// no matter what its backward k-distance is.
+    ///
+    /// If `remove` is called on a non-evictable frame, throw an exception or abort the
+    /// process.
+    ///
+    /// # Arguments
+    ///
+    /// * `frame_id`: Frame ID to remove, the frame must be evictable
+    ///
+    /// # Unsafe:
+    /// This is unsafe because we are certain that the frame is evictable and exists
+    ///
+    unsafe fn remove_unchecked(&mut self, frame_id: FrameId) {
+        self.node_store.remove(&frame_id);
+
+        // Decrease evictable frames
+        self.evictable_frames -= 1;
+        self.evictable_heap.remove(&frame_id);
+    }
+
+    /// Record the event that the given frame id is accessed at current timestamp.
+    /// Create a new entry for access history if frame id has not been seen before.
+    ///
+    /// If frame id is invalid (i.e. larger than replacer_size_), throw an exception
+    ///
+    /// # Arguments
+    ///
+    /// * `frame_id`: id of frame that received a new access.
+    /// * `access_type`: type of access that was received.
+    ///                  This parameter is only needed for leaderboard tests.
+    ///
+    /// # Unsafe
+    /// unsafe as we are certain that the frame id is valid
+    unsafe fn record_access_unchecked(&mut self, frame_id: FrameId, _access_type: AccessType) {
+        let node = self.node_store.get_mut(&frame_id);
+
+        if node.is_none() {
+            let node = Arc::new(UnsafeCell::new(LRUKNode::new(self.k, frame_id, &self.history_access_counter)));
+            self.node_store.insert(frame_id, node);
+
+            // Not inserting to evictable frames as new frame is not evictable by default
+            return;
+        }
+
+        let node = node.unwrap();
+
+        let inner = node.get();
+        (*inner).marked_accessed(&self.history_access_counter);
+
+        // if evictable, the node should be reinserted as it's location would be updated
+        if (*inner).is_evictable() {
+            // Update the heap with the updated value
+            self.evictable_heap.push(frame_id, Arc::clone(&node));
+        }
+    }
 }
 
 
@@ -112,6 +174,7 @@ impl Replacer for LRUKReplacer {
     ///          got evicted
     ///
     fn evict(&mut self) -> Option<FrameId> {
+        #[cfg(feature = "tracing")]
         let _unpin = span!("Evict");
 
         // No frame is evictable
@@ -150,45 +213,6 @@ impl Replacer for LRUKReplacer {
         }
     }
 
-    /// Record the event that the given frame id is accessed at current timestamp.
-    /// Create a new entry for access history if frame id has not been seen before.
-    ///
-    /// If frame id is invalid (i.e. larger than replacer_size_), throw an exception
-    ///
-    /// # Arguments
-    ///
-    /// * `frame_id`: id of frame that received a new access.
-    /// * `access_type`: type of access that was received.
-    ///                  This parameter is only needed for leaderboard tests.
-    ///
-    /// # Unsafe
-    /// unsafe as we are certain that the frame id is valid
-    unsafe fn record_access_unchecked(&mut self, frame_id: FrameId, _access_type: AccessType) {
-        self.assert_valid_frame_id(frame_id);
-
-        let node = self.node_store.get_mut(&frame_id);
-
-        if node.is_none() {
-            let node = Arc::new(UnsafeCell::new(LRUKNode::new(self.k, frame_id, &self.history_access_counter)));
-            self.node_store.insert(frame_id, node);
-
-            // Not inserting to evictable frames as new frame is not evictable by default
-            return;
-        }
-
-        let node = node.unwrap();
-
-        unsafe {
-            let inner = node.get();
-            (*inner).marked_accessed(&self.history_access_counter);
-
-            // if evictable, the node should be reinserted as it's location would be updated
-            if (*inner).is_evictable() {
-                // Update the heap with the updated value
-                self.evictable_heap.push(frame_id, Arc::clone(&node));
-            }
-        }
-    }
 
     /// Toggle whether a frame is evictable or non-evictable. This function also
     /// controls replacer's size. Note that size is equal to number of evictable entries.
@@ -289,42 +313,6 @@ impl Replacer for LRUKReplacer {
         unsafe {
             self.remove_unchecked(frame_id);
         }
-    }
-
-    /// Remove an evictable frame from replacer, along with its access history.
-    /// This function should also decrement replacer's size if removal is successful.
-    ///
-    /// Note that this is different from evicting a frame, which always remove the frame
-    /// with the largest backward k-distance. This function removes specified frame id,
-    /// no matter what its backward k-distance is.
-    ///
-    /// If `remove` is called on a non-evictable frame, throw an exception or abort the
-    /// process.
-    ///
-    /// # Arguments
-    ///
-    /// * `frame_id`: Frame ID to remove, the frame must be evictable
-    ///
-    /// # Unsafe:
-    /// This is unsafe because we are certain that the frame is evictable
-    ///
-    unsafe fn remove_unchecked(&mut self, frame_id: FrameId) {
-        let frame = self.node_store.get(&frame_id);
-        if frame.is_none() {
-            return;
-        }
-
-        let frame = frame.unwrap();
-
-        assert_eq!((*frame.get()).is_evictable(), true, "Frame must be evictable");
-
-        // If somehow deleted in the middle only decrease in case actually removed
-        if self.node_store.remove(&frame_id).is_some() {
-            // Decrease evictable frames
-            self.evictable_frames -= 1;
-        }
-
-        self.evictable_heap.remove(&frame_id);
     }
 
     /// Replacer's size, which tracks the number of evictable frames.

@@ -15,12 +15,15 @@ use std::thread::JoinHandle;
 #[allow(unused)]
 use db_core::storage::{DefaultDiskManager, DiskManagerUnlimitedMemory};
 use tempdir::TempDir;
+
+#[cfg(feature = "tracing")]
 use tracy_client::*;
 
 // Tracking Memory usage
-// #[global_allocator]
-// static GLOBAL: ProfiledAllocator<std::alloc::System> =
-//     ProfiledAllocator::new(std::alloc::System, 100);
+#[cfg(feature = "tracing")]
+#[global_allocator]
+static GLOBAL: ProfiledAllocator<std::alloc::System> =
+    ProfiledAllocator::new(std::alloc::System, 100);
 
 mod cli;
 mod page_process;
@@ -95,11 +98,10 @@ fn setup() -> TempDir {
 }
 
 fn main() {
+    #[cfg(feature = "tracing")]
     let client = Client::start();
 
     let args = Args::parse();
-
-    client.message("starting", 10);
 
     println!("args: {:?}", args);
 

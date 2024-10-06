@@ -27,21 +27,6 @@ pub(crate) trait Replacer {
     ///
     fn record_access(&mut self, frame_id: FrameId, access_type: AccessType);
 
-    /// Record the event that the given frame id is accessed at current timestamp.
-    /// Create a new entry for access history if frame id has not been seen before.
-    ///
-    /// If frame id is invalid (i.e. larger than replacer_size), throw an exception
-    ///
-    /// # Arguments
-    ///
-    /// * `frame_id`: id of frame that received a new access.
-    /// * `access_type`: type of access that was received.
-    ///                  This parameter is only needed for leaderboard tests.
-    ///
-    /// # Unsafe
-    /// unsafe as we are certain that the frame id is valid
-    unsafe fn record_access_unchecked(&mut self, frame_id: FrameId, access_type: AccessType);
-
     /// Toggle whether a frame is evictable or non-evictable. This function also
     /// controls replacer's size. Note that size is equal to number of evictable entries.
     ///
@@ -91,24 +76,6 @@ pub(crate) trait Replacer {
     /// * `frame_id`: Frame ID to remove, the frame must be evictable
     ///
     fn remove(&mut self, frame_id: FrameId);
-
-    /// Remove an evictable frame from replacer, along with its access history.
-    /// This function should also decrement replacer's size if removal is successful.
-    ///
-    /// Note that this is different from evicting a frame, which always remove the frame matching specific criteria.
-    /// This function removes specified frame id.
-    ///
-    /// If `remove` is called on a non-evictable frame, throw an exception or abort the
-    /// process.
-    ///
-    /// # Arguments
-    ///
-    /// * `frame_id`: Frame ID to remove, the frame must be evictable
-    ///
-    /// # Unsafe:
-    /// This is unsafe because we are certain that the frame is evictable
-    ///
-    unsafe fn remove_unchecked(&mut self, frame_id: FrameId);
 
     /// Replacer's size, which tracks the number of evictable frames.
     ///
