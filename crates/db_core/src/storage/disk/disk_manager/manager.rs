@@ -199,13 +199,13 @@ impl DiskManager for DefaultDiskManager {
         // db_io.seekp(offset);
         let seek_result = db_io.seek(SeekFrom::Start(offset as u64));
         if seek_result.is_err() {
-            println!("I/O error while reading (seek)");
+            eprintln!("I/O error while reading (seek)");
             return;
         }
         let read_res = db_io.read(&mut page_data[0..BUSTUB_PAGE_SIZE]);
 
         if read_res.is_err() {
-            println!("I/O error while reading (read)");
+            eprintln!("I/O error while reading (read)");
             return;
         }
 
@@ -213,7 +213,7 @@ impl DiskManager for DefaultDiskManager {
         // let read_count = db_io_.gcount();
         let read_count = read_res.unwrap();
         if read_count < BUSTUB_PAGE_SIZE {
-            println!("Read less than a page");
+            eprintln!("Read less than a page");
 
             // Set the rest of the to be 0
             page_data[read_count..(BUSTUB_PAGE_SIZE) - read_count].fill(0);

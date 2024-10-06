@@ -35,7 +35,12 @@ impl Page {
     /// returns: Page
     ///
     pub fn new(page_id: PageId) -> Self {
-        Self::create_with_data(page_id, [0u8; BUSTUB_PAGE_SIZE])
+        let page = Self::create_with_data(page_id, [0u8; BUSTUB_PAGE_SIZE]);
+
+        // Creating new page is marked as dirty by default in order for new pages to be flushed to disk
+        page.is_dirty.store(true, Ordering::Relaxed);
+
+        page
     }
 
     pub fn create_with_data(page_id: PageId, data: PageData) -> Self {
