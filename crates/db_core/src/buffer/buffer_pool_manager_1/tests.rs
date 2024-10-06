@@ -403,8 +403,8 @@ mod tests {
 
         // Scenario: Once we unpin page 0 and then make a new page, all the buffer pages should now be pinned. Fetching page 0
         // again should fail.
-        let mut last_page = bpm.new_page(AccessType::Unknown).unwrap().downgrade_to_read();
-        let last_pid = last_page.get_page_id();
+        let last_pid = bpm.new_page(AccessType::Unknown).unwrap().get_page_id();
+        let last_page = bpm.fetch_page_read(last_pid, AccessType::Unknown);
 
         let fail = bpm.fetch_page_read(pid0, AccessType::Unknown).expect_err("Should fail to fetch page when buffer pool is full");
         assert_eq!(fail, FetchPageError::NoAvailableFrameFound);
