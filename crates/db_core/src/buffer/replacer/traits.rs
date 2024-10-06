@@ -116,10 +116,3 @@ pub(crate) trait Replacer {
     ///
     fn size(&self) -> usize;
 }
-
-/// Thread Safe Replacement Policy for the buffer pool
-pub(crate) trait ThreadSafeReplacer: Replacer {
-    /// Run multiple actions while holding a lock
-    /// TODO - change this to use LockGuards
-    fn with_lock<F: FnOnce(&mut dyn Replacer) -> R, R>(&self, with_lock: F) -> R;
-}
