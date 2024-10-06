@@ -1,5 +1,5 @@
-use std::ops::{Deref, DerefMut};
 use crate::storage::{Page, PageAndGuard, PageAndWriteGuard, PageReadGuard, PageWriteGuard, UnderlyingPage};
+use std::ops::Deref;
 
 pub(crate) struct PageAndReadGuard<'a>(
     // First drop the guard and then the page

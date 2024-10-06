@@ -73,10 +73,6 @@ impl<'a> PageWriteGuard<'a> {
             None => unreachable!()
         }
     }
-
-    pub fn downgrade_to_read(self) -> PageReadGuard<'a> {
-        todo!()
-    }
 }
 
 impl<'a> Drop for PageWriteGuard<'a> {
