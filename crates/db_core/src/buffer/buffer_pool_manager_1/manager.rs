@@ -341,7 +341,8 @@ impl BufferPoolManager {
                 }
 
                 // 11. Set page id to be the correct page id
-                Page::partial_reset_with_write_guard(&mut page_to_replace_guard, page_id);
+                page_to_replace_guard.page_ref().set_is_dirty(false);
+                page_to_replace_guard.partial_reset(page_id);
 
                 // Convert write lock to the desired lock
                 drop(page_to_replace_guard);
@@ -378,7 +379,8 @@ impl BufferPoolManager {
                 }
 
                 // 11. Set page id to be the correct page id
-                Page::partial_reset_with_write_guard(&mut page_to_replace_guard, page_id);
+                page_to_replace_guard.page_ref().set_is_dirty(false);
+                page_to_replace_guard.partial_reset(page_id);
 
                 // Convert write lock to the requested guard
                 drop(page_to_replace_guard);
@@ -501,7 +503,8 @@ impl BufferPool for Arc<BufferPoolManager> {
 
             // 5. Reset page
             // 6. Change page id to be this page id
-            Page::reset_with_write_guard(&mut page_and_write, page_id);
+            page_and_write.page_ref().set_is_dirty(false);
+            page_and_write.reset(page_id);
 
             // Return page write guard
             Ok(PageWriteGuard::new(self.clone(), page_and_write))
@@ -576,14 +579,6 @@ impl BufferPool for Arc<BufferPoolManager> {
 
         let page = inner.pages[frame_id as usize].clone();
 
-        // Assert correctness of page table
-        // assert_eq!(page.get_page_id(), page_id);
-
-        if !page.is_dirty() {
-            // Page is not dirty, nothing to flush
-            return false;
-        }
-
         // Avoid evicting in the middle
         inner.replacer.set_evictable(frame_id, false);
         page.pin();
@@ -598,12 +593,12 @@ impl BufferPool for Arc<BufferPoolManager> {
         drop(scheduler);
         drop(inner);
 
-        self.unpin_page(page_id, AccessType::Unknown);
-
         assert_eq!(flush_page_future.wait(), true, "Must be able to flush page");
 
         // TODO - must not be able to modify in the middle
         page.set_is_dirty(false);
+
+        self.unpin_page(page_id, AccessType::Unknown);
 
         return true;
     }

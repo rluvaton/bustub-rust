@@ -54,9 +54,13 @@ mod tests {
         page0.get_data_mut().copy_from_slice(&random_binary_data);
         assert_eq!(page0.get_data(), random_binary_data.as_slice());
 
+        let mut page_guards = vec![];
+
+        page_guards.push(page0);
+
         // Scenario: We should be able to create new pages until we fill up the buffer pool.
         for _ in 1..buffer_pool_size {
-            bpm.new_page(AccessType::Unknown).expect("Should be able to create new page");
+            page_guards.push(bpm.new_page(AccessType::Unknown).expect("Should be able to create new page"));
         }
 
         // Scenario: Once the buffer pool is full, we should not be able to create any new pages.
@@ -65,17 +69,14 @@ mod tests {
         }
 
         // Scenario: After unpinning pages {0, 1, 2, 3, 4}, we should be able to create 5 new pages
-        for i in 0..5 {
-            assert_eq!(bpm.unpin_page(i, AccessType::default()), true, "Failed to unpin page {}", i);
+        for _ in 0..5 {
+            let page_id: PageId = page_guards.remove(0).get_page_id();
 
-            bpm.flush_page(i);
+            assert_eq!(bpm.flush_page(page_id), true, "should be able to flush page {}", page_id)
         }
 
         for _ in 0..5 {
-            let page = bpm.new_page(AccessType::Unknown).expect("Must be able to create a new page");
-
-            // Unpin the page here to allow future fetching
-            bpm.unpin_page(page.get_page_id(), AccessType::default());
+            let _ = bpm.new_page(AccessType::Unknown).expect("Must be able to create a new page");
         }
 
         // Scenario: We should be able to fetch the data we wrote a while ago.

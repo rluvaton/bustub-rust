@@ -162,7 +162,8 @@ impl BufferPoolManager {
                 }
 
                 // 3. Create new page
-                Page::reset_with_write_guard(&mut old_page_with_guard, new_page_id);
+                old_page_with_guard.page_ref().set_is_dirty(false);
+                old_page_with_guard.reset(new_page_id);
 
                 // 4. Pin the old page as it will be our new page
                 old_page_with_guard.page_ref().pin();
@@ -336,7 +337,8 @@ impl BufferPoolManager {
                 }
 
                 // 3. Create new page
-                Page::partial_reset_with_write_guard(&mut old_page_with_guard, page_id);
+                old_page_with_guard.page_ref().set_is_dirty(false);
+                old_page_with_guard.partial_reset(page_id);
 
                 // 4. Pin the old page as it will be our new page
                 old_page.pin();
@@ -719,7 +721,8 @@ impl BufferPoolManager {
 
             // Do not remove the item, and instead change it to INVALID_PAGE_ID
             // so we won't change the frame location
-            Page::reset_with_write_guard(&mut page_write_guard, INVALID_PAGE_ID);
+            page_write_guard.page_ref().set_is_dirty(false);
+            page_write_guard.reset(INVALID_PAGE_ID);
 
             Self::deallocate_page(page_id);
 

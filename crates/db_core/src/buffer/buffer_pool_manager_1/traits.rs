@@ -51,7 +51,7 @@ pub trait BufferPool {
     fn unpin_page(&self, page_id: PageId, access_type: AccessType) -> bool;
 
 
-    /// Flush page to disk
+    /// Flush page to disk REGARDLESS of the dirty flag.
     ///
     /// # Arguments
     ///
@@ -59,11 +59,6 @@ pub trait BufferPool {
     ///
     /// returns: bool whether the flush was successful
     ///
-    /// # Examples
-    ///
-    /// ```
-    ///
-    /// ```
     fn flush_page(&self, page_id: PageId) -> bool;
 
     /// Flush all pages to disk

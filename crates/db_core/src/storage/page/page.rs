@@ -114,17 +114,6 @@ impl Page {
         self.is_dirty.store(is_dirty, Ordering::SeqCst)
     }
 
-    pub fn reset_with_write_guard(page_and_write_guard: &mut PageAndWriteGuard, new_page_id: PageId) {
-        page_and_write_guard.page_ref().set_is_dirty(false);
-        page_and_write_guard.page_ref().pin_count.store(0, Ordering::SeqCst);
-        page_and_write_guard.reset(new_page_id);
-    }
-
-    pub fn partial_reset_with_write_guard(page_and_write_guard: &mut PageAndWriteGuard, new_page_id: PageId) {
-        page_and_write_guard.page_ref().set_is_dirty(false);
-        page_and_write_guard.partial_reset(new_page_id);
-    }
-
     /// Run function with read lock and get the underlying page
     ///
     /// # Arguments
