@@ -4,7 +4,7 @@ mod tests {
 
     #[test]
     fn basic_arithmetics_for_zero() {
-        /// Divided in the tests by 17 as it's prime and it would create floating number
+        // Divided in the tests by 17 as it's prime and it would create floating number
         let numbers_f64: [DecimalUnderlyingType; 201] = std::array::from_fn(|i| (-100.0 + i as DecimalUnderlyingType) / 17.0);
         let numbers: [DecimalType; 201] = std::array::from_fn(|i| ((-100.0 + i as DecimalUnderlyingType) / 17.0).into());
 
@@ -39,7 +39,7 @@ mod tests {
 
     #[test]
     fn basic_arithmetics() {
-        /// Divided in the tests by 17 as it's prime and it would create floating number
+        // Divided in the tests by 17 as it's prime and it would create floating number
         let numbers_1_to_100: [DecimalType; 100] = std::array::from_fn(|i| ((i as DecimalUnderlyingType + 1.0) / 17.0).into());
 
         // Validate all the numbers are correct
@@ -76,7 +76,7 @@ mod tests {
 
     #[test]
     fn basic_arithmetics_negative() {
-        /// Divided in the tests by 17 as it's prime and it would create floating number
+        // Divided in the tests by 17 as it's prime and it would create floating number
         let numbers_minus100_to_1: [DecimalType; 100] = std::array::from_fn(|i| ((-100.0 + i as DecimalUnderlyingType) / 17.0).into());
 
         // Validate all the numbers are correct
@@ -113,7 +113,7 @@ mod tests {
 
     #[test]
     fn basic_cmp() {
-        /// Divided in the tests by 17 as it's prime and it would create floating number
+        // Divided in the tests by 17 as it's prime and it would create floating number
         let numbers_f64: [DecimalUnderlyingType; 201] = std::array::from_fn(|i| (-100.0 + i as DecimalUnderlyingType) / 17.0);
         let numbers: [DecimalType; 201] = std::array::from_fn(|i| ((-100.0 + i as DecimalUnderlyingType) / 17.0).into());
 
@@ -168,7 +168,7 @@ mod tests {
 
     #[test]
     fn basic_ordering_operations() {
-        /// Divided in the tests by 17 as it's prime and it would create floating number
+        // Divided in the tests by 17 as it's prime and it would create floating number
         let numbers_f64: [DecimalUnderlyingType; 201] = std::array::from_fn(|i| (-100.0 + i as DecimalUnderlyingType) / 17.0);
         let numbers: [DecimalType; 201] = std::array::from_fn(|i| ((-100.0 + i as DecimalUnderlyingType) / 17.0).into());
 
@@ -207,7 +207,7 @@ mod tests {
 
     #[test]
     fn basic_serialize_deserialize() {
-        /// Divided in the tests by 17 as it's prime and it would create floating number
+        // Divided in the tests by 17 as it's prime and it would create floating number
         let numbers_f64: [DecimalUnderlyingType; 201] = std::array::from_fn(|i| (-100.0 + i as DecimalUnderlyingType) / 17.0);
         let numbers: [DecimalType; 201] = std::array::from_fn(|i| ((-100.0 + i as DecimalUnderlyingType) / 17.0).into());
 
