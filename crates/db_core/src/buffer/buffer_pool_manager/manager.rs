@@ -5,7 +5,7 @@ use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use common::{Future, Promise, UnsafeSingleRefData, UnsafeSingleRefMutData};
 use crate::buffer::buffer_pool_manager::*;
-use crate::buffer::{AccessType, LRUKReplacerImpl, Replacer};
+use crate::buffer::{AccessType, LRUKReplacer, Replacer};
 use crate::recovery::LogManager;
 use crate::storage::{DiskManager, DiskScheduler, Page, PageAndGuard, PageAndReadGuard, PageAndWriteGuard, ReadDiskRequest, WriteDiskRequest};
 
@@ -58,7 +58,7 @@ struct InnerBufferPoolManager {
 
     /// Replacer to find unpinned pages for replacement.
     /// TODO - change type to just implement Replacer
-    replacer: LRUKReplacerImpl,
+    replacer: LRUKReplacer,
 
     /// List of free frames that don't have any pages on them.
     // std::list<frame_id_t> free_list_;
@@ -91,7 +91,7 @@ impl BufferPoolManager {
                 // TODO - avoid having lock here as well
                 pages: Vec::with_capacity(pool_size),
 
-                replacer: LRUKReplacerImpl::new(
+                replacer: LRUKReplacer::new(
                     pool_size,
                     replacer_k.unwrap_or(LRUK_REPLACER_K),
                 ),

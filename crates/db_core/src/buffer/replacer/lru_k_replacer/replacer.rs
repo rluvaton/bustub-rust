@@ -24,7 +24,7 @@ type LRUKNodeWrapper = Arc<UnsafeCell<LRUKNode>>;
  * classical LRU algorithm is used to choose victim.
  */
 #[derive(Clone, Debug)]
-pub struct LRUKReplacerImpl {
+pub struct LRUKReplacer {
     /// in cpp it was unordered_map
     node_store: HashMap<FrameId, LRUKNodeWrapper>,
 
@@ -43,10 +43,10 @@ pub struct LRUKReplacerImpl {
 }
 
 // TODO - can remove this?
-unsafe impl Send for LRUKReplacerImpl {}
+unsafe impl Send for LRUKReplacer {}
 
 
-impl LRUKReplacerImpl {
+impl LRUKReplacer {
     /// a new `LRUKReplacerImpl`
     ///
     /// # Arguments
@@ -57,7 +57,7 @@ impl LRUKReplacerImpl {
     /// returns: LRUKReplacerImpl
     ///
     pub fn new(num_frames: usize, k: usize) -> Self {
-        LRUKReplacerImpl {
+        LRUKReplacer {
             node_store: HashMap::with_capacity(num_frames),
             evictable_heap: BinaryHeap::with_capacity_by(num_frames, |a, b| {
                 unsafe {
@@ -97,7 +97,7 @@ impl LRUKReplacerImpl {
 }
 
 
-impl Replacer for LRUKReplacerImpl {
+impl Replacer for LRUKReplacer {
     /// Find the frame with the largest backward k-distance and evict that frame. Only frames
     /// that are marked as `evictable` are candidates for eviction.
     ///
