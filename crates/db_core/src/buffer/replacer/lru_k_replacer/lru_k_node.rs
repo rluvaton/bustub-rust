@@ -1,5 +1,4 @@
 use std::cmp::Ordering;
-use std::collections::LinkedList;
 use data_structures::FixedSizeLinkedList;
 use chrono::Utc;
 
@@ -77,7 +76,7 @@ impl LRUKNode {
         }
     }
 
-    #[inline]
+    #[inline(always)]
     fn get_interval(&self) -> i64 {
         if !self.history.is_full() {
             return INF_INTERVAL -

@@ -2,6 +2,7 @@ use std::fmt::{Debug, Formatter};
 
 pub struct FixedSizeLinkedList<T> {
     capacity: usize,
+    is_empty: bool,
     front_index: usize,
     back_index: usize,
     data: Vec<Option<T>>,
@@ -15,6 +16,7 @@ impl<T> FixedSizeLinkedList<T> {
         }
 
         Self {
+            is_empty: true,
             capacity,
             front_index: 0,
             back_index: capacity - 1,
@@ -47,7 +49,8 @@ impl<T> FixedSizeLinkedList<T> {
     #[must_use]
     pub fn is_empty(&self) -> bool {
         // TODO - try to use the indexes only
-        self.data[self.front_index].is_none()
+        // self.data[self.front_index].is_none()
+        self.is_empty
     }
 
     /// Returns `true` if the `FixedSizeLinkedList` is empty.
@@ -266,6 +269,8 @@ impl<T> FixedSizeLinkedList<T> {
             self.data[prev_index].replace(item);
 
             self.front_index = prev_index;
+            self.is_empty = false;
+
             true
         }
     }
@@ -296,6 +301,7 @@ impl<T> FixedSizeLinkedList<T> {
             let next_index = self.front_index;
             self.front_index = (self.front_index + 1) % self.capacity;
 
+            self.is_empty = self.data[self.front_index].is_none();
             self.data[next_index].take()
         }
     }
@@ -323,6 +329,7 @@ impl<T> FixedSizeLinkedList<T> {
             self.data[next_index].replace(item);
 
             self.back_index = next_index;
+            self.is_empty = false;
             true
         }
     }
@@ -356,6 +363,7 @@ impl<T> FixedSizeLinkedList<T> {
             self.data[next_index] = Some(item);
 
             self.back_index = next_index;
+            self.is_empty = false;
 
             None
         }
@@ -384,6 +392,7 @@ impl<T> FixedSizeLinkedList<T> {
             let prev_index = self.back_index;
             self.back_index = (self.back_index + self.capacity - 1) % self.capacity;
 
+            self.is_empty = self.data[self.back_index].is_none();
             self.data[prev_index].take()
         }
     }
@@ -392,6 +401,7 @@ impl<T> FixedSizeLinkedList<T> {
 impl<T: Clone> Clone for FixedSizeLinkedList<T> {
     fn clone(&self) -> Self {
         Self {
+            is_empty: self.is_empty,
             capacity: self.capacity,
             front_index: self.front_index,
             back_index: self.back_index,
