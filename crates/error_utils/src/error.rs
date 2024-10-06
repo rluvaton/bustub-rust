@@ -262,6 +262,7 @@ mod tests {
 
     #[test]
     fn casting_as_before_for_this_error() {
+        #[allow(unused)]
         #[derive(thiserror::Error, Debug)]
         pub enum MyCustomError {
             #[error("something 1")]
