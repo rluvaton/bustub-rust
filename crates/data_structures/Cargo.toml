@@ -1,0 +1,8 @@
+[package]
+name = "data_structures"
+version = "0.1.0"
+edition = "2021"
+
+[dev-dependencies]
+rand = "0.8.5"
+rand_chacha = "0.3.1"
