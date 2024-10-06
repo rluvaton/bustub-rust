@@ -5,6 +5,9 @@ mod page_guards;
 pub mod errors;
 mod traits;
 
+#[cfg(test)]
+mod multi_threads_tests;
+
 pub use manager::BufferPoolManager;
 pub use page_guards::*;
 pub use manager_stats::BufferPoolManagerStats;

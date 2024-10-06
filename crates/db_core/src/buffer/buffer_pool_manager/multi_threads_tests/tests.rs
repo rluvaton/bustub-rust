@@ -1,4 +1,4 @@
-use crate::buffer::{AccessType, BufferPoolManager};
+use crate::buffer::{AccessType, BufferPool, BufferPoolManager, PageReadGuard};
 use common::config::{PageData, PageId};
 use parking_lot::{Mutex, RwLock};
 use std::collections::HashMap;
@@ -7,7 +7,7 @@ use std::thread;
 use std::thread::JoinHandle;
 use crate::storage::{DefaultDiskManager, DiskManager, DiskManagerUnlimitedMemory};
 use tempdir::TempDir;
-
+use crate::buffer::errors::FetchPageError;
 use super::helpers::get_tmp_dir;
 use super::options::{DiskManagerImplementationOptions, Options};
 
@@ -109,26 +109,24 @@ fn run_multi_threads_tests(options: Options) {
 
             while !duration_runner.should_finish() {
                 let page_id = page_ids.read()[page_idx as usize];
-                let page = bpm.fetch_page(page_id, AccessType::Scan);
+                let page = bpm.fetch_page_write(page_id, AccessType::Scan);
                 if page.is_err() {
                     continue;
                 }
 
-                let page = page.unwrap();
+                let mut page = page.unwrap();
 
-                page.with_write(|u| {
-                    if !records.contains_key(&page_idx) {
-                        records.insert(page_idx, 0);
-                    }
+                if !records.contains_key(&page_idx) {
+                    records.insert(page_idx, 0);
+                }
 
-                    let seed = records.get_mut(&page_idx).expect("Must exists");
+                let seed = records.get_mut(&page_idx).expect("Must exists");
 
-                    check_page_consistent(u.get_data(), page_idx, *seed);
-                    *seed = *seed + 1;
-                    modify_page(u.get_data_mut(), page_idx as usize, *seed);
-                });
+                check_page_consistent(page.get_data(), page_idx, *seed);
+                *seed = *seed + 1;
+                modify_page(page.get_data_mut(), page_idx as usize, *seed);
 
-                bpm.unpin_page(page_id, true, AccessType::Scan);
+                drop(page);
                 page_idx += 1;
                 if page_idx >= page_idx_end {
                     page_idx = page_idx_start;
@@ -151,23 +149,17 @@ fn run_multi_threads_tests(options: Options) {
 
             while !duration_runner.should_finish() {
                 let page_idx = page_id_getter.get();
-                let page = bpm.fetch_page(page_ids.read()[page_idx as usize], AccessType::Lookup);
+                let page = bpm.fetch_page_read(page_ids.read()[page_idx as usize], AccessType::Lookup);
 
-                if let Some(err) = page.clone().err() {
-                    eprintln!("cannot fetch page {}", err);
-                    panic!();
+                match page {
+                    Ok(page) => {
+                        check_page_consistent_no_seed(page.get_data(), page_idx);
+                    }
+                    Err(err) => {
+                        eprintln!("cannot fetch page {}", err);
+                        panic!();
+                    }
                 }
-
-                let page = page.unwrap();
-
-                let mut page_id: PageId = 0;
-
-                page.with_read(|u| {
-                    page_id = u.get_page_id();
-                    check_page_consistent_no_seed(u.get_data(), page_idx);
-                });
-
-                bpm.unpin_page(page_id, false, AccessType::Lookup);
             }
         });
         join_handles.push(t);
@@ -180,10 +172,10 @@ fn run_multi_threads_tests(options: Options) {
     println!("[info] finish");
 }
 
-fn init_buffer_pool_manager_for_test(options: &Options, temp_dir: Option<TempDir>) -> (Vec<PageId>, BufferPoolManager) {
+fn init_buffer_pool_manager_for_test(options: &Options, temp_dir: Option<TempDir>) -> (Vec<PageId>, Arc<BufferPoolManager>) {
     let mut page_ids: Vec<PageId> = vec![];
 
-    let mut bpm_raw: BufferPoolManager;
+    let mut bpm_raw: Arc<BufferPoolManager>;
 
     // ############### Setup Buffer pool manager ########################
     // with the different impl of disk manager
@@ -198,7 +190,7 @@ fn init_buffer_pool_manager_for_test(options: &Options, temp_dir: Option<TempDir
                 Arc::new(Mutex::new(DefaultDiskManager::new(file_path).expect("Must be able to create disk manager"))),
             );
 
-            initialize_bpm_pages(&options, &mut page_ids, &mut bpm_raw);
+            initialize_bpm_pages(&options, &mut page_ids, bpm_raw.clone());
         }
         DiskManagerImplementationOptions::UnlimitedMemory(o) => {
             let manager = Arc::new(Mutex::new(DiskManagerUnlimitedMemory::new()));
@@ -206,7 +198,7 @@ fn init_buffer_pool_manager_for_test(options: &Options, temp_dir: Option<TempDir
 
             bpm_raw = create_bpm(&options, manager);
 
-            initialize_bpm_pages(&options, &mut page_ids, &mut bpm_raw);
+            initialize_bpm_pages(&options, &mut page_ids, bpm_raw.clone());
 
             // enable disk latency after creating all pages if enabled and if matching the disk manager implementation
             cloned_manager.lock().enable_latency_simulator(o.enable_latency);
@@ -216,22 +208,17 @@ fn init_buffer_pool_manager_for_test(options: &Options, temp_dir: Option<TempDir
     (page_ids, bpm_raw)
 }
 
-fn initialize_bpm_pages(options: &Options, page_ids: &mut Vec<PageId>, bpm: &mut BufferPoolManager) {
+fn initialize_bpm_pages(options: &Options, page_ids: &mut Vec<PageId>, bpm: Arc<BufferPoolManager>) {
     for i in 0..options.db_size {
-        let page = bpm.new_page().expect("Must be able to create a page");
-        let page_id = page.with_read(|u| u.get_page_id());
+        let mut page = bpm.new_page(AccessType::Unknown).expect("Must be able to create a page");
 
-        page.with_write(|u| {
-            modify_page(u.get_data_mut(), i, 0);
-        });
+        modify_page(page.get_data_mut(), i, 0);
 
-        bpm.unpin_page(page_id, true, AccessType::default());
-
-        page_ids.push(page_id);
+        page_ids.push(page.get_page_id());
     }
 }
 
-fn create_bpm(options: &Options, m: Arc<Mutex<(impl DiskManager + 'static)>>) -> BufferPoolManager {
+fn create_bpm(options: &Options, m: Arc<Mutex<(impl DiskManager + 'static)>>) -> Arc<BufferPoolManager> {
     BufferPoolManager::new(
         options.bpm_size,
         m,
