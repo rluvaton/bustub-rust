@@ -5,7 +5,7 @@ use std::ops::Deref;
 use std::sync::Arc;
 
 use crate::buffer::{AccessType, BufferPoolManager, PinPageGuard, PinWritePageGuard};
-use crate::storage::{Page, PageAndReadGuard, PageAndWriteGuard, PageReadGuard, PageWriteGuard, UnderlyingPage};
+use crate::storage::{Page, PageAndGuard, PageAndReadGuard, PageAndWriteGuard, PageReadGuard, PageWriteGuard, UnderlyingPage};
 
 use super::super::PageLockComparator;
 

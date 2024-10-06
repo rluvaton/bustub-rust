@@ -1,12 +1,22 @@
 use std::ops::{Deref, DerefMut};
 use std::time::Duration;
-use crate::storage::{Page, PageAndReadGuard, PageWriteGuard};
+use crate::storage::{Page, PageAndGuard, PageAndReadGuard, PageWriteGuard, UnderlyingPage};
 
 pub(crate) struct PageAndWriteGuard<'a>(
     // First drop the guard and then the page
     PageWriteGuard<'a>,
     Page,
 );
+
+impl<'a> PageAndGuard for PageAndWriteGuard<'a> {
+    fn page(self) -> Page {
+        self.1
+    }
+
+    fn page_ref(&self) -> &Page {
+        &self.1
+    }
+}
 
 impl<'a> PageAndWriteGuard<'a> {
     pub(crate) fn try_for(page: Page, duration: Duration) -> Option<Self> {
@@ -18,16 +28,6 @@ impl<'a> PageAndWriteGuard<'a> {
         }
 
         None
-    }
-
-    #[inline(always)]
-    pub(crate) fn page(self) -> Page {
-        self.1
-    }
-
-    #[inline(always)]
-    pub(crate) fn page_ref(&self) -> &Page {
-        &self.1
     }
 
     #[inline(always)]
@@ -46,7 +46,7 @@ impl<'a> PageAndWriteGuard<'a> {
 }
 
 impl<'a> Deref for PageAndWriteGuard<'a> {
-    type Target = PageWriteGuard<'a>;
+    type Target = UnderlyingPage;
 
     fn deref(&self) -> &Self::Target {
         &self.0
@@ -64,14 +64,6 @@ impl<'a> From<Page> for PageAndWriteGuard<'a> {
         let write_guard = unsafe { std::mem::transmute::<PageWriteGuard<'_>, PageWriteGuard<'static>>(page.write()) };
 
         PageAndWriteGuard(write_guard, page)
-    }
-}
-
-impl<'a> From<&mut Page> for PageAndWriteGuard<'a> {
-    fn from(page: &mut Page) -> Self {
-        let write_guard = unsafe { std::mem::transmute::<PageWriteGuard<'_>, PageWriteGuard<'static>>(page.write()) };
-
-        PageAndWriteGuard(write_guard, page.clone())
     }
 }
 

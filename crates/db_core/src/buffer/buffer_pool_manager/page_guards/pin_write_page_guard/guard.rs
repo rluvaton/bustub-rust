@@ -6,7 +6,7 @@ use std::sync::Arc;
 use common::config::{PageData, PageId};
 
 use crate::buffer::{AccessType, BufferPoolManager, PinPageGuard, PinReadPageGuard};
-use crate::storage::{Page, PageAndReadGuard, PageAndWriteGuard, PageWriteGuard, UnderlyingPage};
+use crate::storage::{Page, PageAndGuard, PageAndReadGuard, PageAndWriteGuard, PageWriteGuard, UnderlyingPage};
 
 #[clippy::has_significant_drop]
 #[must_use = "if unused the PinWritePageGuard will immediately unpin and unlock"]

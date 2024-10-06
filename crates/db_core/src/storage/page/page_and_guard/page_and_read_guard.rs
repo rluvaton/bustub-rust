@@ -1,5 +1,5 @@
 use std::ops::{Deref, DerefMut};
-use crate::storage::{Page, PageAndWriteGuard, PageReadGuard, PageWriteGuard};
+use crate::storage::{Page, PageAndGuard, PageAndWriteGuard, PageReadGuard, PageWriteGuard, UnderlyingPage};
 
 pub(crate) struct PageAndReadGuard<'a>(
     // First drop the guard and then the page
@@ -7,17 +7,17 @@ pub(crate) struct PageAndReadGuard<'a>(
     Page,
 );
 
-impl<'a> PageAndReadGuard<'a> {
-    #[inline(always)]
-    pub(crate) fn page(self) -> Page {
+impl<'a> PageAndGuard for PageAndReadGuard<'a> {
+    fn page(self) -> Page {
         self.1
     }
 
-    #[inline(always)]
-    pub(crate) fn page_ref(&self) -> &Page {
+    fn page_ref(&self) -> &Page {
         &self.1
     }
+}
 
+impl<'a> PageAndReadGuard<'a> {
     #[inline(always)]
     pub(crate) fn page_mut_ref(&mut self) -> &mut Page {
         &mut self.1
@@ -27,20 +27,13 @@ impl<'a> PageAndReadGuard<'a> {
     pub(crate) fn read_guard(self) -> PageReadGuard<'a> {
         self.0
     }
-
 }
 
 impl<'a> Deref for PageAndReadGuard<'a> {
-    type Target = PageReadGuard<'a>;
+    type Target = UnderlyingPage;
 
     fn deref(&self) -> &Self::Target {
         &self.0
-    }
-}
-
-impl<'a> DerefMut for PageAndReadGuard<'a> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
     }
 }
 

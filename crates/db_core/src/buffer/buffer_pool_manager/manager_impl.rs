@@ -1,7 +1,7 @@
 use super::manager::{BufferPoolManager, InnerBufferPoolManager};
 use crate::buffer::{PinPageGuard, BufferPoolManagerStats, PinReadPageGuard, PinWritePageGuard, ThreadSafeReplacer, Replacer};
 use crate::buffer::{AccessType, LRUKReplacer};
-use crate::storage::{DiskManager, DiskScheduler, Page, PageAndWriteGuard, PageWriteGuard, ReadDiskRequest, UnderlyingPage, WriteDiskRequest};
+use crate::storage::{DiskManager, DiskScheduler, Page, PageAndGuard, PageAndWriteGuard, PageWriteGuard, ReadDiskRequest, UnderlyingPage, WriteDiskRequest};
 use common::config::{AtomicPageId, FrameId, PageId, INVALID_PAGE_ID, LRUK_REPLACER_K};
 use common::{Promise, UnsafeSingleRefData, UnsafeSingleRefMutData};
 use parking_lot::Mutex;

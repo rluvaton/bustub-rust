@@ -6,7 +6,7 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicIsize, Ordering};
 use std::time::Duration;
 use parking_lot::{RwLockReadGuard, RwLockWriteGuard};
-use crate::storage::PageAndWriteGuard;
+use crate::storage::{PageAndGuard, PageAndWriteGuard};
 
 
 pub type PageReadGuard<'a> = RwLockReadGuard<'a, UnderlyingPage>;
