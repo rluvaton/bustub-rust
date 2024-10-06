@@ -85,7 +85,7 @@ impl Transaction {
 
     /// Return the temporary timestamp of this transaction
     pub fn get_transaction_temp_ts(&self) -> Timestamp {
-        /// TODO - check why this is txm id and not timestamp
+        // TODO - check why this is txm id and not timestamp
         self.txn_id
     }
 

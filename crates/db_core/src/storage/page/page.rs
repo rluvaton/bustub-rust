@@ -1,5 +1,4 @@
 use crate::storage::page::underlying_page::UnderlyingPage;
-use crate::storage::PageAndGuard;
 use common::config::{PageData, PageId, BUSTUB_PAGE_SIZE, INVALID_PAGE_ID};
 use common::ReaderWriterLatch;
 use parking_lot::{RwLockReadGuard, RwLockWriteGuard};

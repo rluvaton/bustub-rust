@@ -62,9 +62,9 @@ where
 
         // TODO - performance improvement release write latch as soon as can
 
-        let mut directory_index: u32;
-        let mut directory_page_id: PageId;
-        let mut bucket_page_id: PageId;
+        let directory_index: u32;
+        let directory_page_id: PageId;
+        let bucket_page_id: PageId;
 
         // 1. Hash key
         let key_hash = self.hash(key);
@@ -154,12 +154,12 @@ where
     fn trigger_merge<'a>(
         &self,
         directory_page_guard: &mut PageWriteGuard,
-        mut empty_bucket_page_guard: PageWriteGuard<'a>,
-        mut empty_bucket_index: u32,
+        empty_bucket_page_guard: PageWriteGuard<'a>,
+        empty_bucket_index: u32,
     ) -> Result<(), MergeError> {
-        let mut directory_page =
+        let directory_page =
             directory_page_guard.cast_mut::<<Self as TypeAliases>::DirectoryPage>();
-        let mut bucket_page = empty_bucket_page_guard.cast::<<Self as TypeAliases>::BucketPage>();
+        let bucket_page = empty_bucket_page_guard.cast::<<Self as TypeAliases>::BucketPage>();
 
         // 1. Make sure we need to merge
         assert!(bucket_page.is_empty(), "page must be empty before merging");
@@ -319,8 +319,4 @@ where
 
         Ok(())
     }
-}
-
-fn format_number_in_bits(n: u64, number_of_bits: u32) -> String {
-    format!("{n:#064b}")[64 - number_of_bits as usize..].to_string()
 }

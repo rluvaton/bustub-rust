@@ -8,22 +8,20 @@ pub(crate) struct PageAndReadGuard<'a>(
 );
 
 impl<'a> PageAndGuard for PageAndReadGuard<'a> {
-    fn page(self) -> Page {
-        self.1
-    }
-
-    fn page_ref(&self) -> &Page {
+    fn page(&self) -> &Page {
         &self.1
     }
 }
 
 impl<'a> PageAndReadGuard<'a> {
     #[inline(always)]
+    #[allow(unused)]
     pub(crate) fn page_mut_ref(&mut self) -> &mut Page {
         &mut self.1
     }
 
     #[inline(always)]
+    #[allow(unused)]
     pub(crate) fn read_guard(self) -> PageReadGuard<'a> {
         self.0
     }
@@ -47,7 +45,7 @@ impl<'a> From<Page> for PageAndReadGuard<'a> {
 
 impl<'a> From<PageAndWriteGuard<'a>> for PageAndReadGuard<'a> {
     fn from(page_and_guard: PageAndWriteGuard<'a>) -> Self {
-        let page = page_and_guard.page_ref().clone();
+        let page = page_and_guard.page().clone();
         let read_guard = unsafe { std::mem::transmute::<PageReadGuard<'_>, PageReadGuard<'static>>(PageWriteGuard::downgrade(page_and_guard.write_guard())) };
 
         PageAndReadGuard(read_guard, page)

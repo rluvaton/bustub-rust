@@ -1,8 +1,7 @@
 use crate::error::{Error};
 use crate::std_error_ext::StdErrorExt;
 use std::error::Error as StdError;
-use std::fmt::{Debug, Display};
-use std::ops::Deref;
+use std::fmt::{Display};
 use crate::UnderlyingError;
 
 pub trait Context<T, E: UnderlyingError> {

@@ -8,7 +8,7 @@ use common::{PageKey, PageValue};
 use std::fmt::{Debug, Formatter};
 use std::marker::PhantomData;
 use std::sync::Arc;
-use crate::buffer::errors::{BufferPoolError, MapErrorToBufferPoolError};
+use crate::buffer::errors::{MapErrorToBufferPoolError};
 
 /// Thread safe implementation of extendible hash table that is backed by a buffer pool
 /// manager. Non-unique keys are supported. Supports insert and delete. The
@@ -44,11 +44,11 @@ where
     KeyComparator: Comparator<Key>,
     KeyHasherImpl: KeyHasher,
 {
+    #[allow(unused)]
     pub(super) index_name: String,
     pub(super) bpm: Arc<BufferPoolManager>,
     pub(super) cmp: KeyComparator,
 
-    pub(super) header_max_depth: u32,
     pub(super) directory_max_depth: u32,
     pub(super) bucket_max_size: u32,
 
@@ -99,7 +99,6 @@ where
 
             header_page_id: HEADER_PAGE_ID,
 
-            header_max_depth,
             directory_max_depth: directory_max_depth.unwrap_or(DIRECTORY_MAX_DEPTH),
             bucket_max_size: bucket_max_size.unwrap_or(BUCKET_MAX_SIZE as u32),
 
@@ -140,18 +139,6 @@ where
     // for extendible hashing.
     pub(super) fn hash(&self, key: &Key) -> u32 {
         KeyHasherImpl::hash_key(key) as u32
-    }
-
-    fn insert_to_new_directory(&self, header: &<Self as TypeAliases>::HeaderPage, directory_idx: u32, hash: u32, key: &Key, value: &Value) -> bool {
-        todo!()
-    }
-
-    fn update_directory_mapping(&self, header: &<Self as TypeAliases>::DirectoryPage, new_bucket_idx: u32, new_bucket_page_id: PageId, new_local_depth: u32, local_depth_mask: u32) -> bool {
-        todo!()
-    }
-
-    fn migrate_entries(&self, old_bucket: &<Self as TypeAliases>::BucketPage, new_bucket: &<Self as TypeAliases>::BucketPage, new_bucket_idx: u32, local_depth_mask: u32) -> bool {
-        todo!()
     }
 
     fn init_new_header(bpm: Arc<BufferPoolManager>, header_max_depth: u32) -> Result<(), errors::InitError> {

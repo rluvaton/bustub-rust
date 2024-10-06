@@ -24,7 +24,7 @@ impl Watermark {
         todo!()
     }
 
-    pub fn remove_txn(&mut self, read_ts: Timestamp) {
+    pub fn remove_txn(&mut self, _read_ts: Timestamp) {
         // TODO(fall2023): implement me!
         todo!()
     }

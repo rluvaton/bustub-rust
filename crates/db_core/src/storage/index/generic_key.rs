@@ -1,5 +1,5 @@
 use crate::catalog::Schema;
-use crate::storage::{Comparator, Tuple};
+use crate::storage::{Tuple};
 use data_types::{DBTypeId, Value};
 use std::fmt::{Debug, Display, Formatter};
 use common::PageKey;
@@ -27,6 +27,7 @@ impl<const KEY_SIZE: usize> GenericKey<KEY_SIZE> {
     }
 
     /// NOTE: for test purpose only
+    #[allow(unused)]
     pub(crate) fn set_from_integer(&mut self, key: i64) {
         self.data.fill(0);
 
@@ -34,6 +35,7 @@ impl<const KEY_SIZE: usize> GenericKey<KEY_SIZE> {
     }
 
     /// NOTE: for test purpose only
+    #[allow(unused)]
     pub(crate) fn new_from_integer(key: i64) -> Self {
         let mut generic_key = Self::default();
 

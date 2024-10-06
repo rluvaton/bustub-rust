@@ -1,7 +1,6 @@
 use crate::catalog::Schema;
 use crate::storage::{Comparator, GenericKey};
 use std::cmp::Ordering;
-use std::fmt::{Debug, Display};
 use std::sync::Arc;
 
 #[derive(Clone)]

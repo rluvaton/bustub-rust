@@ -4,7 +4,7 @@ use common::config::BUSTUB_PAGE_SIZE;
 use common::{PageKey, PageValue, RID};
 use prettytable::{row, Table};
 use std::cmp::Ordering;
-use std::fmt::{Debug, Display, Formatter};
+use std::fmt::{Debug, Formatter};
 use std::marker::PhantomData;
 use std::mem::size_of;
 use std::slice::Iter;

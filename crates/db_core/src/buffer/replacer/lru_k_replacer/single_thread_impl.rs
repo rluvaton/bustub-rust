@@ -6,7 +6,7 @@ use std::sync::Arc;
 use tracy_client::span;
 
 use common::config::FrameId;
-use crate::buffer::{AccessType, LRUKReplacer, Replacer};
+use crate::buffer::{AccessType, Replacer};
 use super::counter::AtomicU64Counter;
 use super::lru_k_node::LRUKNode;
 

@@ -2,7 +2,6 @@ use super::errors::{DeletePageError, FetchPageError, NewPageError};
 use super::page_guards::{PageReadGuard, PageWriteGuard};
 use crate::buffer::{AccessType};
 use common::config::PageId;
-use std::sync::Arc;
 
 /// Buffer pool
 /// 1. The buffer pool should never have deadlock

@@ -69,7 +69,7 @@ impl Index {
     /// - `transaction` The transaction context
     ///
     /// returns `bool`: whether insertion is successful
-    pub fn insert_entry(&mut self, key: &Tuple, rid: RID, transaction: &Transaction) -> bool {
+    pub fn insert_entry(&mut self, _key: &Tuple, _rid: RID, _transaction: &Transaction) -> bool {
         unimplemented!()
     }
 
@@ -80,7 +80,7 @@ impl Index {
     /// - `rid` The RID associated with the key (unused)
     /// - `transaction` The transaction context
     ///
-    pub fn delete_entry(&mut self, key: &Tuple, rid: RID, transaction: &Transaction) {
+    pub fn delete_entry(&mut self, _key: &Tuple, _rid: RID, _transaction: &Transaction) {
         unimplemented!()
     }
 
@@ -91,7 +91,7 @@ impl Index {
     /// - `transaction` The transaction context
     ///
     /// returns `Vec<RID>`: The collection of RIDs with the search results
-    pub fn scan_key(&self, key: &Tuple, transaction: &Transaction) -> Vec<RID> {
+    pub fn scan_key(&self, _key: &Tuple, _transaction: &Transaction) -> Vec<RID> {
         unimplemented!()
     }
 }

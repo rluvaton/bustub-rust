@@ -7,18 +7,22 @@ use crate::concurrency::LockRequest;
 pub struct LockRequestQueue {
 
     /// List of lock requests for the same resource (table or row)
+    #[allow(unused)]
     request_queue: LinkedList<Arc<LockRequest>>,
 
     /// For notifying blocked transactions on this RID
     /// TODO - can replace with channel between threads?
+    #[allow(unused)]
     cv: Condvar,
 
     /// txn_id of an upgrading transaction (if any)
     /// Default: `INVALID_TXN_ID`
+    #[allow(unused)]
     upgrading: TxnId,
 
     /// coordination
     /// TODO - on what this coordination?
+    #[allow(unused)]
     latch: Mutex<()>
 }
 

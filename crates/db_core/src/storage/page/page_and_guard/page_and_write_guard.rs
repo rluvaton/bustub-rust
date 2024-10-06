@@ -9,29 +9,15 @@ pub(crate) struct PageAndWriteGuard<'a>(
 );
 
 impl<'a> PageAndGuard for PageAndWriteGuard<'a> {
-    fn page(self) -> Page {
-        self.1
-    }
-
-    fn page_ref(&self) -> &Page {
+    fn page(&self) -> &Page {
         &self.1
     }
 }
 
 impl<'a> PageAndWriteGuard<'a> {
-    pub(crate) fn try_for(page: Page, duration: Duration) -> Option<Self> {
-        if let Some(write_guard) = page.clone().try_write_for(duration) {
-
-            let write_guard = unsafe { std::mem::transmute::<PageWriteGuard<'_>, PageWriteGuard<'static>>(write_guard) };
-
-            return Some(PageAndWriteGuard(write_guard, page));
-        }
-
-        None
-    }
 
     #[inline(always)]
-    pub(crate) fn page_mut_ref(&mut self) -> &mut Page {
+    pub(crate) fn page_mut(&mut self) -> &mut Page {
         &mut self.1
     }
 
@@ -40,6 +26,7 @@ impl<'a> PageAndWriteGuard<'a> {
         self.0
     }
 
+    #[allow(unused)]
     pub(crate) fn downgrade(self) -> PageAndReadGuard<'a> {
         PageAndReadGuard::from(self)
     }

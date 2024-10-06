@@ -1,5 +1,5 @@
 use crate::GetNBits;
-use std::ops::{BitOr, Shl};
+use std::ops::{Shl};
 
 pub trait GetAllNumbersWithPrefixBitsUntilMaxBits {
     fn get_all_numbers_with_prefix_bits_until_max_bits(&self, prefix_bits: u8, max_bits: u8) -> impl Iterator<Item=Self>;

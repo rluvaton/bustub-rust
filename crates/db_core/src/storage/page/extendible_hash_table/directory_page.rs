@@ -4,7 +4,6 @@ use generics::GetOr;
 use prettytable::{row, Table};
 use std::collections::HashMap;
 use std::fmt::{Debug, Formatter};
-use std::hash::Hash;
 use std::mem::size_of;
 
 const _HASH_TABLE_DIRECTORY_PAGE_METADATA_SIZE: usize = size_of::<u32>() * 2;
@@ -23,23 +22,6 @@ const _: () = assert!(size_of::<PageId>() == 4);
 //noinspection RsAssertEqual
 const _: () = assert!(size_of::<DirectoryPage>() == _HASH_TABLE_DIRECTORY_PAGE_METADATA_SIZE + HASH_TABLE_DIRECTORY_ARRAY_SIZE + size_of::<PageId>() * HASH_TABLE_DIRECTORY_ARRAY_SIZE);
 const _: () = assert!(size_of::<DirectoryPage>() <= BUSTUB_PAGE_SIZE);
-
-enum AdditionRequirement {
-    // Can just insert with no problems
-    None,
-
-    // Key already exists
-    AlreadyExists,
-
-    // Need local split of bucket
-    NeedLocalSplit,
-    // Need global split
-    NeedGlobalSplit,
-
-    // If global split is more than max depth
-    NeedGlobalSplitLargerThanSingleDirectory,
-}
-
 
 ///
 /// Directory pages sit at the second level of our disk-based extendible hash table.
@@ -137,7 +119,7 @@ impl DirectoryPage {
     ///
     /// returns: u32 the directory index of the split image
     ///
-    pub fn get_split_image_index(&self, bucket_idx: u32) -> u32 {
+    pub fn get_split_image_index(&self, _bucket_idx: u32) -> u32 {
         unimplemented!()
     }
 

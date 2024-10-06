@@ -5,20 +5,25 @@ use common::config::{Timestamp, INVALID_TIMESTAMP};
 #[derive(Clone)]
 pub struct UndoLog {
     /// Whether this log is a deletion marker
+    #[allow(unused)]
     is_deleted: bool,
 
     /// The fields modified by this undo log
+    #[allow(unused)]
     modified_fields: Vec<bool>,
 
     /// The modified fields
+    #[allow(unused)]
     tuple: Tuple,
 
     /// Timestamp of this undo log
     /// Default: INVALID_TIMESTAMP
+    #[allow(unused)]
     ts: Timestamp,
 
     /// Undo log prev version
     /// Default:
+    #[allow(unused)]
     prev_version: UndoLink,
 }
 

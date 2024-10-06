@@ -8,7 +8,6 @@ use common::config::{PageId, INVALID_PAGE_ID};
 use common::{PageKey, PageValue};
 use error_utils::Context;
 use std::fmt::Debug;
-use std::hash::Hash;
 use std::sync::Arc;
 use crate::buffer::{AccessType, BufferPool};
 use crate::buffer::errors::MapErrorToBufferPoolError;

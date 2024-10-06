@@ -3,7 +3,7 @@ use crate::types::{SmallIntType, DBTypeId, FormatDBTypeTrait};
 
 
 impl Display for SmallIntType {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, _f: &mut Formatter<'_>) -> std::fmt::Result {
         todo!()
     }
 }

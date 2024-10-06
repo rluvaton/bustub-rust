@@ -22,7 +22,7 @@ impl StorageDBTypeTrait for BooleanType {
         unimplemented!()
     }
 
-    fn get_data_from_slice(storage: &[u8]) -> &[u8] {
+    fn get_data_from_slice(_storage: &[u8]) -> &[u8] {
         unimplemented!()
     }
 }

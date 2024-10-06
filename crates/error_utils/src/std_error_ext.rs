@@ -1,4 +1,4 @@
-use std::fmt::{Debug, Display};
+use std::fmt::{Display};
 use std::marker::PhantomData;
 use crate::error::{Error, UnderlyingError};
 

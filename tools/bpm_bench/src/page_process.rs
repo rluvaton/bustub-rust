@@ -71,7 +71,8 @@ mod test {
             super::modify_page(u.get_data_mut(), page_id, seed);
         });
 
-        let data = page.with_read(|u| *u.get_data());
+        let guard = page.read();
+        let data = guard.get_data();
 
         let actual_seed = u64::from_ne_bytes(data[0..8].try_into().unwrap());
         assert_eq!(actual_seed, seed);

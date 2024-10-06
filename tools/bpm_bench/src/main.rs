@@ -245,8 +245,6 @@ fn main() {
 
                 let page = page.unwrap();
 
-                let mut page_id: PageId = 0;
-
                 {
                     let _verify_page = span!("get thread - verify page");
 
@@ -254,7 +252,6 @@ fn main() {
 
                     drop(get_read_lock_page);
 
-                    page_id = page.get_page_id();
                     check_page_consistent_no_seed(page.get_data(), page_idx);
                 }
                 {

@@ -5,12 +5,15 @@ use crate::buffer::BufferPoolManager;
 
 /// TODO - implement more from src/include/storage/table/table_heap.h
 pub struct TableHeap {
+    #[allow(unused)]
     bpm: Arc<BufferPoolManager>,
 
     /// Default: `INVALID_PAGE_ID`
+    #[allow(unused)]
     first_page_id: PageId,
 
     /// Default: `INVALID_PAGE_ID`
+    #[allow(unused)]
     last_page_id: Mutex<PageId>
 }
 

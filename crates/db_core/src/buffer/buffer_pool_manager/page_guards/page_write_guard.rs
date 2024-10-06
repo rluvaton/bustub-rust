@@ -1,6 +1,5 @@
 use std::fmt::{Debug, Formatter};
 use super::super::BufferPoolManager;
-use crate::buffer::buffer_pool_manager::{BufferPool, PageReadGuard};
 use crate::buffer::AccessType;
 use crate::storage::{PageAndGuard, PageAndWriteGuard};
 use common::config::{PageData, PageId};
@@ -43,7 +42,7 @@ impl<'a> PageWriteGuard<'a> {
     pub fn cast_mut<T>(&mut self) -> &mut T {
         match &mut self.page_and_write_guard {
             Some(p) => {
-                p.page_ref().set_is_dirty(true);
+                p.page().set_is_dirty(true);
 
                 p.cast_mut::<T>()
             },
@@ -66,7 +65,7 @@ impl<'a> PageWriteGuard<'a> {
 
         match &mut self.page_and_write_guard {
             Some(p) => {
-                p.page_ref().set_is_dirty(true);
+                p.page().set_is_dirty(true);
 
                 p.get_data_mut()
             },

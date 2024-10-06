@@ -36,6 +36,7 @@ impl Value {
         Ok(Value::new(new))
     }
 
+    #[allow(unused)]
     unsafe fn cast_as_unchecked(&self, db_type_id: DBTypeId) -> Value {
         self.try_cast_as(db_type_id).expect("cannot cast as the requested_type")
     }
@@ -100,12 +101,14 @@ impl Value {
     // }
 
 
+    #[allow(unused)]
     fn to_string_value(&self) -> String {
         run_on_impl!(&self.value, v, {
             v.as_string()
         })
     }
 
+    #[allow(unused)]
     fn serialize_to(&self, storage: &mut [u8]) {
         run_on_impl!(&self.value, v, {
             v.serialize_to(storage)
@@ -113,12 +116,14 @@ impl Value {
     }
 
 
+    #[allow(unused)]
     fn is_inlined(&self) -> bool {
         run_on_impl!(self.value, v, {
             v.is_inlined()
         })
     }
 
+    #[allow(unused)]
     fn get_data(&self) -> &[u8] {
         unimplemented!()
         // run_on_impl!(self.value, v, {
@@ -126,6 +131,7 @@ impl Value {
         // })
     }
 
+    #[allow(unused)]
     fn get_length(&self) -> u32 {
         run_on_impl!(self.value, v, {
             v.get_length()

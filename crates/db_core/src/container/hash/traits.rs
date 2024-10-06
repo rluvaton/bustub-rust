@@ -1,5 +1,5 @@
+use common::{PageKey};
 use std::hash::{DefaultHasher as DefaultRustHasher, Hasher};
-use common::{PageKey, PageValue};
 
 pub trait KeyHasher {
      fn hash_key<Key: PageKey>(key: &Key) -> u64;
@@ -21,8 +21,8 @@ impl KeyHasher for DefaultKeyHasher {
 
 #[cfg(test)]
 pub mod test_util {
-    use common::PageKey;
     use crate::container::KeyHasher;
+    use common::PageKey;
 
     pub struct U64IdentityKeyHasher;
 

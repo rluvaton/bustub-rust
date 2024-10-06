@@ -72,6 +72,7 @@ impl DBTypeId {
                 }
             }
 
+            #[warn(unreachable_patterns)]
             _ => self == from
         }
     }
@@ -91,7 +92,7 @@ impl DBTypeId {
     }
 
     // Deserialize a value of the given type from the given storage space.
-    pub fn deserialize_from(&self, storage: &[u8]) -> Value {
+    pub fn deserialize_from(&self, _storage: &[u8]) -> Value {
         unimplemented!()
     }
 

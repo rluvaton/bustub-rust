@@ -1,5 +1,4 @@
 use common::config::{AtomicPageId, FrameId, PageData, PageId, INVALID_PAGE_ID, LRUK_REPLACER_K};
-use dashmap::DashMap;
 use parking_lot::{Mutex, MutexGuard};
 use std::collections::{HashMap, LinkedList};
 use std::sync::atomic::Ordering;
@@ -7,9 +6,8 @@ use std::sync::Arc;
 use common::{Future, Promise, UnsafeSingleRefData, UnsafeSingleRefMutData};
 use crate::buffer::buffer_pool_manager::*;
 use crate::buffer::{AccessType, LRUKReplacerImpl, Replacer};
-use crate::buffer::buffer_pool_manager::errors::{DeletePageError, FetchPageError};
 use crate::recovery::LogManager;
-use crate::storage::{DiskManager, DiskScheduler, Page, PageAndGuard, PageAndReadGuard, PageAndWriteGuard, ReadDiskRequest, UnderlyingPage, WriteDiskRequest};
+use crate::storage::{DiskManager, DiskScheduler, Page, PageAndGuard, PageAndReadGuard, PageAndWriteGuard, ReadDiskRequest, WriteDiskRequest};
 
 ///
 /// BufferPoolManager reads disk pages to and from its internal buffer pool.
@@ -23,20 +21,11 @@ pub struct BufferPoolManager {
     /// TODO - remove pub(crate) and expose getter to avoid user setting the value
     pool_size: usize,
 
-    // TODO - panic will release the parking lot Mutex lock which can leave undesired state
-    //        replace to original Mutex
-    /// This latch protects the root level data until we get to the actual page instance, this is here to be the gateway in the inner data
-    root_level_latch: Mutex<()>,
-
-    /// This is just container to the inner buffer pool manager, so we can do locking with better granularity
-    /// as it allow for multiple mutable reference at the same time but it's ok as we are managing it
-    // inner: UnsafeCell<InnerBufferPoolManager>,
-
     /// Pointer to the disk scheduler.
     /// This is mutex to avoid writing and reading the same page twice
     disk_scheduler: Arc<Mutex<DiskScheduler>>,
 
-    /** Pointer to the log manager. Please ignore this for P1. */
+    /// Pointer to the log manager. Please ignore this for P1.
     // LogManager *log_manager_ __attribute__((__unused__));
     #[allow(unused)]
     log_manager: Option<LogManager>,
@@ -93,8 +82,6 @@ impl BufferPoolManager {
         let this = BufferPoolManager {
             next_page_id: AtomicPageId::new(0),
             pool_size,
-
-            root_level_latch: Mutex::new(()),
 
             log_manager,
 
@@ -299,13 +286,13 @@ impl BufferPoolManager {
             let mut page_to_replace_guard = PageAndWriteGuard::from(page_to_replace);
 
             // 2. Pin page
-            page_to_replace_guard.page_ref().pin();
+            page_to_replace_guard.page().pin();
 
             // 3. Remove the old page from the page table so it won't be available
             inner.page_table.remove(&page_to_replace_guard.get_page_id());
 
             // 4. If page to replace is dirty, need to flush it
-            if page_to_replace_guard.page_ref().is_dirty() {
+            if page_to_replace_guard.page().is_dirty() {
                 // 5. Get the scheduler
                 let mut scheduler = self.disk_scheduler.lock();
 
@@ -332,7 +319,7 @@ impl BufferPoolManager {
                 }
 
                 // 9.1. Reset page to the current page
-                page_to_replace_guard.page_ref().set_is_dirty(false);
+                page_to_replace_guard.page().set_is_dirty(false);
 
                 // 10. Wait for the fetch to finish
                 let fetch_page_result = fetch_page_future.wait();
@@ -344,7 +331,7 @@ impl BufferPoolManager {
                 }
 
                 // 11. Set page id to be the correct page id
-                page_to_replace_guard.page_ref().set_is_dirty(false);
+                page_to_replace_guard.page().set_is_dirty(false);
                 page_to_replace_guard.partial_reset(page_id);
 
                 // Convert write lock to the desired lock
@@ -377,7 +364,7 @@ impl BufferPoolManager {
                 }
 
                 // 11. Set page id to be the correct page id
-                page_to_replace_guard.page_ref().set_is_dirty(false);
+                page_to_replace_guard.page().set_is_dirty(false);
                 page_to_replace_guard.partial_reset(page_id);
 
                 // Convert write lock to the requested guard
@@ -433,7 +420,7 @@ impl BufferPoolManager {
     ///
     /// returns: bool whether was able to unpin or not
     ///
-    pub(super) fn unpin_page(&self, page_id: PageId, access_type: AccessType) -> bool {
+    pub(super) fn unpin_page(&self, page_id: PageId, _access_type: AccessType) -> bool {
         // 1. first hold the replacer
         let mut inner = self.inner.lock();
 
@@ -507,13 +494,13 @@ impl BufferPool for Arc<BufferPoolManager> {
             let mut page_and_write = PageAndWriteGuard::from(page_to_replace);
 
             // 2. Pin page
-            page_and_write.page_ref().pin();
+            page_and_write.page().pin();
 
             // 3. Remove the old page from the page table so it won't be available
             inner.page_table.remove(&page_and_write.get_page_id());
 
             // 4. If page to replace is dirty, need to flush it
-            if page_and_write.page_ref().is_dirty() {
+            if page_and_write.page().is_dirty() {
                 // 5. Get the scheduler
                 let mut scheduler = self.disk_scheduler.lock();
 
@@ -529,12 +516,12 @@ impl BufferPool for Arc<BufferPoolManager> {
                 assert_eq!(flush_page_future.wait(), true, "Must be able to flush pages");
 
                 // 9. Reset dirty
-                page_and_write.page_ref().set_is_dirty(false);
+                page_and_write.page().set_is_dirty(false);
             }
 
             // 5. Reset page
             // 6. Change page id to be this page id
-            page_and_write.page_ref().set_is_dirty(false);
+            page_and_write.page().set_is_dirty(false);
             page_and_write.reset(page_id);
 
             // Return page write guard
@@ -611,9 +598,9 @@ impl BufferPool for Arc<BufferPoolManager> {
         todo!()
     }
 
-    fn delete_page(&self, page_id: PageId) -> Result<bool, DeletePageError> {
+    fn delete_page(&self, page_id: PageId) -> Result<bool, errors::DeletePageError> {
         if page_id == INVALID_PAGE_ID {
-            return Err(DeletePageError::InvalidPageId);
+            return Err(errors::DeletePageError::InvalidPageId);
         }
 
         let mut inner = self.inner.lock();
@@ -627,7 +614,7 @@ impl BufferPool for Arc<BufferPoolManager> {
         let page = inner.pages[frame_id as usize].clone();
 
         if page.is_pinned() {
-            return Err(DeletePageError::PageIsNotEvictable(page_id));
+            return Err(errors::DeletePageError::PageIsNotEvictable(page_id));
         }
 
         // TODO - what about if page is dirty?

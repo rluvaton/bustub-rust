@@ -83,7 +83,7 @@ impl Rem<Value> for TimestampType {
 }
 
 impl ArithmeticsDBTypeTrait for TimestampType {
-    fn operate_null(&self, rhs: &Value) -> error_utils::anyhow::Result<Value> {
+    fn operate_null(&self, _rhs: &Value) -> error_utils::anyhow::Result<Value> {
         Err(anyhow!("operate null on boolean is not timestamp"))
     }
 }
