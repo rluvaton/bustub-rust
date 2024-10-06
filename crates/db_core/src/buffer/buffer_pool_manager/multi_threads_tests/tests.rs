@@ -1,5 +1,6 @@
+use std::cmp::max;
 use super::helpers::get_tmp_dir;
-use super::options::{DiskManagerImplementationOptions, Options};
+use super::options::{DiskManagerImplementationOptions, DurationType, Options};
 use crate::buffer::{AccessType, BufferPool, BufferPoolManager};
 use crate::storage::{DefaultDiskManager, DiskManager, DiskManagerUnlimitedMemory};
 use common::config::{PageData, PageId};
@@ -8,6 +9,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::thread;
 use std::thread::JoinHandle;
+use std::time::Duration;
 use tempdir::TempDir;
 
 // This is the structure of the page
@@ -65,6 +67,42 @@ fn check_page_consistent(data: &PageData, page_idx: PageId, seed: u64) {
     }
 
     check_page_consistent_no_seed(data, page_idx);
+}
+
+fn run_multi_threaded_tests_with_timeout(options: Options) {
+    let get_thread_duration_type = options.get_thread_duration_type.clone();
+    let scan_thread_duration_type = options.scan_thread_duration_type.clone();
+
+    let one_minute = Duration::from_secs(60).as_millis() as u64;
+
+    let timeout_in_ms = match (get_thread_duration_type, scan_thread_duration_type) {
+        (DurationType::TimeAsMilliseconds(g), DurationType::TimeAsMilliseconds(s)) => max(g, s) + 3_000,
+
+        (DurationType::TimeAsMilliseconds(ms), DurationType::Iteration(_)) |
+        (DurationType::Iteration(_), DurationType::TimeAsMilliseconds(ms)) => max(ms, one_minute) + 3_000,
+        (_, _) => one_minute
+    };
+
+    let lock = Arc::new(Mutex::new(()));
+
+    let guard = lock.lock();
+
+    let lock = Arc::clone(&lock);
+    // This will fail if was unable to finish before the timeout passed
+    let timeout_thread = thread::spawn(move || {
+        let timeout = Duration::from_millis(timeout_in_ms);
+        let res = lock.try_lock_for(timeout);
+
+        if res.is_none() {
+            panic!("Thread reached timeout {:?}", timeout);
+        }
+    });
+
+    run_multi_threads_tests(options);
+
+    drop(guard);
+
+    timeout_thread.join().unwrap();
 }
 
 fn run_multi_threads_tests(options: Options) {
@@ -249,7 +287,7 @@ mod tests {
             .build()
             .unwrap();
 
-        run_multi_threads_tests(options)
+        run_multi_threaded_tests_with_timeout(options)
     }
 
     #[test]
@@ -268,7 +306,7 @@ mod tests {
             .build()
             .unwrap();
 
-        run_multi_threads_tests(options)
+        run_multi_threaded_tests_with_timeout(options)
     }
 
     #[test]
@@ -288,7 +326,7 @@ mod tests {
             .build()
             .unwrap();
 
-        run_multi_threads_tests(options)
+        run_multi_threaded_tests_with_timeout(options)
     }
 
     #[test]
@@ -302,7 +340,7 @@ mod tests {
             .build()
             .unwrap();
 
-        run_multi_threads_tests(options)
+        run_multi_threaded_tests_with_timeout(options)
     }
 
     #[test]
@@ -316,7 +354,7 @@ mod tests {
             .build()
             .unwrap();
 
-        run_multi_threads_tests(options)
+        run_multi_threaded_tests_with_timeout(options)
     }
 
     #[test]
@@ -330,7 +368,7 @@ mod tests {
             .build()
             .unwrap();
 
-        run_multi_threads_tests(options)
+        run_multi_threaded_tests_with_timeout(options)
     }
 
     #[test]
@@ -344,7 +382,7 @@ mod tests {
             .build()
             .unwrap();
 
-        run_multi_threads_tests(options)
+        run_multi_threaded_tests_with_timeout(options)
     }
 
     #[test]
@@ -358,7 +396,7 @@ mod tests {
             .build()
             .unwrap();
 
-        run_multi_threads_tests(options)
+        run_multi_threaded_tests_with_timeout(options)
     }
 
     #[test]
@@ -372,7 +410,7 @@ mod tests {
             .build()
             .unwrap();
 
-        run_multi_threads_tests(options)
+        run_multi_threaded_tests_with_timeout(options)
     }
 
     #[test]
@@ -386,7 +424,7 @@ mod tests {
             .build()
             .unwrap();
 
-        run_multi_threads_tests(options)
+        run_multi_threaded_tests_with_timeout(options)
     }
 
     #[test]
@@ -400,7 +438,7 @@ mod tests {
             .build()
             .unwrap();
 
-        run_multi_threads_tests(options)
+        run_multi_threaded_tests_with_timeout(options)
     }
 
     #[test]
@@ -414,7 +452,7 @@ mod tests {
             .build()
             .unwrap();
 
-        run_multi_threads_tests(options)
+        run_multi_threaded_tests_with_timeout(options)
     }
 
     // ########################
@@ -430,7 +468,7 @@ mod tests {
             .build()
             .unwrap();
 
-        run_multi_threads_tests(options)
+        run_multi_threaded_tests_with_timeout(options)
     }
 
     #[test]
@@ -447,7 +485,7 @@ mod tests {
             .build()
             .unwrap();
 
-        run_multi_threads_tests(options)
+        run_multi_threaded_tests_with_timeout(options)
     }
 
     #[test]
@@ -461,7 +499,7 @@ mod tests {
             .build()
             .unwrap();
 
-        run_multi_threads_tests(options)
+        run_multi_threaded_tests_with_timeout(options)
     }
 
     #[test]
@@ -475,7 +513,7 @@ mod tests {
             .build()
             .unwrap();
 
-        run_multi_threads_tests(options)
+        run_multi_threaded_tests_with_timeout(options)
     }
 
     #[test]
@@ -489,7 +527,7 @@ mod tests {
             .build()
             .unwrap();
 
-        run_multi_threads_tests(options)
+        run_multi_threaded_tests_with_timeout(options)
     }
 
     #[test]
@@ -503,7 +541,7 @@ mod tests {
             .build()
             .unwrap();
 
-        run_multi_threads_tests(options)
+        run_multi_threaded_tests_with_timeout(options)
     }
 
     #[test]
@@ -517,7 +555,7 @@ mod tests {
             .build()
             .unwrap();
 
-        run_multi_threads_tests(options)
+        run_multi_threaded_tests_with_timeout(options)
     }
 
     #[test]
@@ -531,7 +569,7 @@ mod tests {
             .build()
             .unwrap();
 
-        run_multi_threads_tests(options)
+        run_multi_threaded_tests_with_timeout(options)
     }
 
     #[test]
@@ -545,7 +583,7 @@ mod tests {
             .build()
             .unwrap();
 
-        run_multi_threads_tests(options)
+        run_multi_threaded_tests_with_timeout(options)
     }
 
     #[test]
@@ -559,7 +597,7 @@ mod tests {
             .build()
             .unwrap();
 
-        run_multi_threads_tests(options)
+        run_multi_threaded_tests_with_timeout(options)
     }
 
     #[test]
@@ -573,6 +611,6 @@ mod tests {
             .build()
             .unwrap();
 
-        run_multi_threads_tests(options)
+        run_multi_threaded_tests_with_timeout(options)
     }
 }
