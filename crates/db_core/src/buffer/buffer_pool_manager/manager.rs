@@ -3,7 +3,7 @@ use parking_lot::{Mutex, MutexGuard};
 use std::collections::{HashMap, LinkedList};
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
-use common::{Future, Promise, UnsafeSingleRefData, UnsafeSingleRefMutData};
+use common::{Future, Promise, SharedFuture, SharedPromise, UnsafeSingleRefData, UnsafeSingleRefMutData};
 use crate::buffer::buffer_pool_manager::*;
 use crate::buffer::{AccessType, LRUKReplacer, Replacer};
 use crate::recovery::LogManager;
@@ -33,7 +33,7 @@ pub struct BufferPoolManager {
     inner: Mutex<InnerBufferPoolManager>,
 
     /// Pending fetch requests from disk
-    pending_fetch_requests: Mutex<HashMap<PageId, Future<()>>>,
+    pending_fetch_requests: Mutex<HashMap<PageId, SharedFuture<()>>>,
 
     /// Statistics on buffer pool
     stats: BufferPoolManagerStats,
@@ -173,7 +173,7 @@ impl BufferPoolManager {
         future
     }
 
-    fn wait_for_pending_request_page_to_finish(&self, requests_map: &Mutex<HashMap<PageId, Future<()>>>, page_id: PageId) -> MutexGuard<InnerBufferPoolManager> {
+    fn wait_for_pending_request_page_to_finish(&self, requests_map: &Mutex<HashMap<PageId, SharedFuture<()>>>, page_id: PageId) -> MutexGuard<InnerBufferPoolManager> {
         // TODO - wait for condvar to avoid taking cpu time
 
         // 1. Hold replacer guard as all pin and unpin must first hold the replacer to avoid getting replaced in the middle
@@ -206,7 +206,7 @@ impl BufferPoolManager {
         self.wait_for_pending_request_page_to_finish(&self.pending_fetch_requests, page_id)
     }
 
-    fn finish_current_pending_fetch_page_request(&self, page_id: PageId, fetch_promise: Promise<()>) {
+    fn finish_current_pending_fetch_page_request(&self, page_id: PageId, fetch_promise: SharedPromise<()>) {
         // First removing the pending requests
         self.pending_fetch_requests.lock().remove(&page_id);
 
@@ -256,7 +256,7 @@ impl BufferPoolManager {
         let frame_id = self.find_replacement_frame(&mut inner)?;
 
         // 5. Create promise for when the entire fetch is finished
-        let current_fetch_promise = Promise::new();
+        let current_fetch_promise = SharedPromise::new();
 
         // 6. Register the promise
         self.pending_fetch_requests.lock().insert(page_id, current_fetch_promise.get_future());
