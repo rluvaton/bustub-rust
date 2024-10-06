@@ -15,21 +15,21 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4
-    - name: Build
-      run: cargo build --verbose
+      - uses: actions/checkout@v4
+      - name: Build
+        run: cargo build --verbose
 
-    - name: Run tests
-      env:
-        # Running tests in a single thread as we have thread safety tests and we want to have all the threads available for them
-        RUST_TEST_THREADS: 1
+      - name: Run tests
+        env:
+          # Uncomment to run the tests in a single thread
+          # RUST_TEST_THREADS: 1
 
-        # Show backtrace on panic
-        RUST_BACKTRACE: 1
+          # Show backtrace on panic
+          RUST_BACKTRACE: 1
 
-        # Show test print output
-        RUST_TEST_NOCAPTURE: 1
+          # Show test print output
+          RUST_TEST_NOCAPTURE: 1
 
-        # Print --verbose output
-        CARGO_TERM_VERBOSE: true
-      run: cargo test
+          # Print --verbose output
+          CARGO_TERM_VERBOSE: true
+        run: cargo test
