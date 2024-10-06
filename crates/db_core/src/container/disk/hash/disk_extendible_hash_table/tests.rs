@@ -20,7 +20,7 @@ mod tests {
 
     fn create_extendible_hash_table(pool_size: usize) -> DiskExtendibleHashTable<{ hash_table_bucket_array_size::<GenericKey<8>, RID>() }, GenericKey<8>, RID, GenericComparator<8>, DefaultKeyHasher> {
         let disk_manager = Arc::new(Mutex::new(DiskManagerUnlimitedMemory::new()));
-        let bpm = Arc::new(BufferPoolManager::new(4, disk_manager, Some(2), None));
+        let bpm = BufferPoolManager::new(4, disk_manager, Some(2), None);
 
         let key_schema = Schema::parse_create_statement("a bigint").expect("Should be able to create schema");
 
@@ -285,7 +285,7 @@ mod tests {
     #[test]
     fn test_from_example_in_single_directory() {
         let disk_manager = Arc::new(Mutex::new(DiskManagerUnlimitedMemory::new()));
-        let bpm = Arc::new(BufferPoolManager::new(100, disk_manager, Some(100), None));
+        let bpm = BufferPoolManager::new(100, disk_manager, Some(100), None);
 
         type Key = u64;
         type Value = u64;
@@ -506,7 +506,7 @@ mod tests {
     #[test]
     fn lifecycle_small_number_of_keys() {
         let disk_manager = Arc::new(Mutex::new(DiskManagerUnlimitedMemory::new()));
-        let bpm = Arc::new(BufferPoolManager::new(4, disk_manager, Some(2), None));
+        let bpm = BufferPoolManager::new(4, disk_manager, Some(2), None);
 
         type Key = u64;
         type Value = u64;
@@ -538,7 +538,7 @@ mod tests {
     #[test]
     fn thread_safety_test() {
         let disk_manager = Arc::new(Mutex::new(DiskManagerUnlimitedMemory::new()));
-        let bpm = Arc::new(BufferPoolManager::new(100, disk_manager, Some(2), None));
+        let bpm = BufferPoolManager::new(100, disk_manager, Some(2), None);
 
         type Key = u64;
         type Value = u64;

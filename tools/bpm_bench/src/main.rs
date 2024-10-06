@@ -127,7 +127,7 @@ fn main() {
 
     let disk_manager = Arc::new(Mutex::new(disk_manager));
 
-    let bpm: Arc<BufferPoolManager> = Arc::new(BufferPoolManager::new(
+    let bpm: Arc<BufferPoolManager> = BufferPoolManager::new(
         bustub_bpm_size,
         Arc::clone(&disk_manager),
         Some(lru_k_size),

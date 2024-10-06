@@ -1,10 +1,5 @@
-mod pin_page_guard;
-mod pin_read_page_guard;
-mod pin_write_page_guard;
-mod tests;
-mod page_invalidator;
+mod page_write_guard;
+mod page_read_guard;
 
-pub use pin_page_guard::PinPageGuard;
-pub use pin_read_page_guard::PinReadPageGuard;
-pub use pin_write_page_guard::PinWritePageGuard;
-pub use page_invalidator::{PageLockComparator, AlwaysValidPageLockComparator};
+pub use page_read_guard::PageReadGuard;
+pub use page_write_guard::PageWriteGuard;

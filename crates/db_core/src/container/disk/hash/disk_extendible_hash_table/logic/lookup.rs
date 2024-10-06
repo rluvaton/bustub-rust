@@ -10,6 +10,7 @@ use error_utils::Context;
 use std::fmt::Debug;
 use std::hash::Hash;
 use std::sync::Arc;
+use crate::buffer::{AccessType, BufferPool};
 use crate::buffer::errors::MapErrorToBufferPoolError;
 
 
@@ -52,7 +53,7 @@ where
 
         {
             // 2. Get the header page
-            let header = self.bpm.fetch_page_read(self.header_page_id)
+            let header = self.bpm.fetch_page_read(self.header_page_id, AccessType::Unknown)
                 .map_err_to_buffer_pool_err()
                 .context("Failed to fetch header")?;
 
@@ -70,7 +71,7 @@ where
 
         {
             // 5. Get the directory page
-            let directory = self.bpm.fetch_page_read(directory_page_id).map_err_to_buffer_pool_err()?;
+            let directory = self.bpm.fetch_page_read(directory_page_id, AccessType::Unknown).map_err_to_buffer_pool_err()?;
 
             let directory_page = directory.cast::<<Self as TypeAliases>::DirectoryPage>();
 
@@ -88,8 +89,7 @@ where
 
         {
             // 8. Get the bucket page
-            let bucket = self.bpm.fetch_page_read(bucket_page_id).map_err_to_buffer_pool_err()?;
-
+            let bucket = self.bpm.fetch_page_read(bucket_page_id, AccessType::Unknown).map_err_to_buffer_pool_err()?;
 
             let bucket_page = bucket.cast::<<Self as TypeAliases>::BucketPage>();
 

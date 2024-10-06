@@ -2,7 +2,7 @@ use super::super::type_alias_trait::TypeAliases;
 use super::super::HashTable;
 use crate::buffer;
 use crate::buffer::errors::MapErrorToBufferPoolError;
-use crate::buffer::PinWritePageGuard;
+use crate::buffer::{AccessType, BufferPool, PageWriteGuard};
 use crate::concurrency::Transaction;
 use crate::container::hash::KeyHasher;
 use crate::storage::Comparator;
@@ -63,7 +63,7 @@ where
         let key_hash = self.hash(key);
 
         // 2. Get the header page
-        let mut header = self.bpm.fetch_page_write(self.header_page_id).map_err_to_buffer_pool_err().context("Hash Table header page must exists when trying to insert")?;
+        let mut header = self.bpm.fetch_page_write(self.header_page_id, AccessType::Unknown).map_err_to_buffer_pool_err().context("Hash Table header page must exists when trying to insert")?;
 
         let header_page = header.cast_mut::<<Self as TypeAliases>::HeaderPage>();
 
@@ -71,7 +71,7 @@ where
         let directory_index = header_page.hash_to_directory_index(key_hash);
         directory_page_id = header_page.get_directory_page_id(directory_index);
 
-        let mut directory: PinWritePageGuard;
+        let mut directory: PageWriteGuard;
 
         // 4. If no directory exists create it
         if directory_page_id == INVALID_PAGE_ID {
@@ -84,7 +84,7 @@ where
             header_page.set_directory_page_id(directory_index, directory_page_id);
         } else {
             // 6. Get the directory page
-            directory = self.bpm.fetch_page_write(directory_page_id).map_err_to_buffer_pool_err().context("Directory page should exists")?;
+            directory = self.bpm.fetch_page_write(directory_page_id, AccessType::Unknown).map_err_to_buffer_pool_err().context("Directory page should exists")?;
         }
 
         // 7. Release the header as it is not used anymore
@@ -97,7 +97,7 @@ where
         let bucket_index = directory_page.hash_to_bucket_index(key_hash);
         bucket_page_id = directory_page.get_bucket_page_id(bucket_index);
 
-        let mut bucket: PinWritePageGuard;
+        let mut bucket: PageWriteGuard;
 
         // 9. If no bucket exists create it
         if bucket_page_id == INVALID_PAGE_ID {
@@ -108,7 +108,7 @@ where
             directory_page.set_bucket_page_id(bucket_index, bucket_page_id);
         } else {
             // 11. Get the bucket page
-            bucket = self.bpm.fetch_page_write(bucket_page_id).map_err_to_buffer_pool_err().context("Failed to fetch bucket page")?;
+            bucket = self.bpm.fetch_page_write(bucket_page_id, AccessType::Unknown).map_err_to_buffer_pool_err().context("Failed to fetch bucket page")?;
         }
 
         let bucket_page = bucket.cast::<<Self as TypeAliases>::BucketPage>();
@@ -133,12 +133,12 @@ where
         Ok(())
     }
 
-    fn trigger_split<'a>(&'a self, directory_page_guard: &mut PinWritePageGuard, bucket_page_guard: PinWritePageGuard<'a>, bucket_index: u32, key_hash: u32) -> Result<PinWritePageGuard<'a>, InsertionError> {
+    fn trigger_split<'a>(&'a self, directory_page_guard: &mut PageWriteGuard, bucket_page_guard: PageWriteGuard<'a>, bucket_index: u32, key_hash: u32) -> Result<PageWriteGuard<'a>, InsertionError> {
         // Try to split the bucket with 3 iteration (after that it seems like the hash function is not good, or we have a bug)
         self.try_split(directory_page_guard, bucket_page_guard, bucket_index, key_hash, NUMBER_OF_SPLIT_RETRIES)
     }
 
-    fn try_split<'a>(&'a self, directory_page_guard: &mut PinWritePageGuard, mut bucket_page_guard: PinWritePageGuard<'a>, bucket_index: u32, key_hash: u32, tries_left: usize) -> Result<PinWritePageGuard<'a>, InsertionError> {
+    fn try_split<'a>(&'a self, directory_page_guard: &mut PageWriteGuard, mut bucket_page_guard: PageWriteGuard<'a>, bucket_index: u32, key_hash: u32, tries_left: usize) -> Result<PageWriteGuard<'a>, InsertionError> {
         // 1. Check if reached max tries
         if tries_left == 0 {
             eprintln!("Trying to insert key but after split the page is still full, the hash might not evenly distribute the keys");
@@ -188,7 +188,7 @@ where
     }
 
     /// Return the splitted bucket indices
-    fn split_local_bucket(&self, mut bucket_index: u32, directory_page: &mut <Self as TypeAliases>::DirectoryPage, bucket_page_to_split: &mut <Self as TypeAliases>::BucketPage, new_bucket_guard: &mut PinWritePageGuard) {
+    fn split_local_bucket(&self, mut bucket_index: u32, directory_page: &mut <Self as TypeAliases>::DirectoryPage, bucket_page_to_split: &mut <Self as TypeAliases>::BucketPage, new_bucket_guard: &mut PageWriteGuard) {
 
         let new_bucket_page_id = new_bucket_guard.get_page_id();
         let new_bucket_page = new_bucket_guard.cast_mut::<<Self as TypeAliases>::BucketPage>();
@@ -221,8 +221,8 @@ where
         }
     }
 
-    fn init_new_directory(&self) -> Result<PinWritePageGuard, buffer::errors::BufferPoolError> {
-        let mut directory_page = self.bpm.new_page_write_guarded().map_err_to_buffer_pool_err().context("Should be able to create page")?;
+    fn init_new_directory(&self) -> Result<PageWriteGuard, buffer::errors::BufferPoolError> {
+        let mut directory_page = self.bpm.new_page(AccessType::Unknown).map_err_to_buffer_pool_err().context("Should be able to create page")?;
 
         {
             let directory = directory_page.cast_mut::<<Self as TypeAliases>::DirectoryPage>();
@@ -233,8 +233,8 @@ where
         Ok(directory_page)
     }
 
-    fn init_new_bucket(&self) -> Result<PinWritePageGuard, buffer::errors::BufferPoolError> {
-        let mut bucket_page = self.bpm.new_page_write_guarded().map_err_to_buffer_pool_err().context("Should be able to create page")?;
+    fn init_new_bucket(&self) -> Result<PageWriteGuard, buffer::errors::BufferPoolError> {
+        let mut bucket_page = self.bpm.new_page(AccessType::Unknown).map_err_to_buffer_pool_err().context("Should be able to create page")?;
 
         let bucket = bucket_page.cast_mut::<<Self as TypeAliases>::BucketPage>();
 

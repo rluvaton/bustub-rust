@@ -1,6 +1,6 @@
 use super::errors;
 use super::type_alias_trait::TypeAliases;
-use crate::buffer::BufferPoolManager;
+use crate::buffer::{AccessType, BufferPool, BufferPoolManager};
 use crate::container::hash::KeyHasher;
 use crate::storage::{Comparator, HASH_TABLE_DIRECTORY_MAX_DEPTH as DIRECTORY_MAX_DEPTH, HASH_TABLE_HEADER_MAX_DEPTH as HEADER_MAX_DEPTH};
 use common::config::{PageId, HEADER_PAGE_ID, INVALID_PAGE_ID};
@@ -110,8 +110,7 @@ where
     /// Helper function to verify the integrity of the extendible hash table's directory.
     pub fn verify_integrity(&self, print_content_on_failure: bool) {
         assert_ne!(self.header_page_id, INVALID_PAGE_ID, "header page id is invalid");
-        let header_guard = self.bpm.fetch_page_basic(self.header_page_id).expect("Should fetch the header page");
-        let header_guard = header_guard.read();
+        let header_guard = self.bpm.fetch_page_read(self.header_page_id, AccessType::Unknown).expect("Should fetch the header page");
 
         let header = header_guard.cast::<<Self as TypeAliases>::HeaderPage>();
 
@@ -119,8 +118,7 @@ where
         for idx in 0..header.max_size() {
             let directory_page_id = header.get_directory_page_id(idx);
             if directory_page_id != INVALID_PAGE_ID {
-                let directory_guard = self.bpm.fetch_page_basic(directory_page_id).expect("Should fetch directory page");
-                let directory_guard = directory_guard.read();
+                let directory_guard = self.bpm.fetch_page_read(directory_page_id, AccessType::Unknown).expect("Should fetch directory page");
 
                 let directory = directory_guard.cast::<<Self as TypeAliases>::DirectoryPage>();
                 directory.verify_integrity(print_content_on_failure);
@@ -158,10 +156,9 @@ where
 
     fn init_new_header(bpm: Arc<BufferPoolManager>, header_max_depth: u32) -> Result<(), errors::InitError> {
         // TODO - this should be removed, we should not create on each instance and instead it should depend if the hash table exists or not
-        let header_page = bpm.new_page_guarded().map_err_to_buffer_pool_err()?;
+        let mut page_guard = bpm.new_page(AccessType::Unknown).map_err_to_buffer_pool_err()?;
 
-        assert_eq!(header_page.get_page_id(), HEADER_PAGE_ID, "must be uninitialized");
-        let mut page_guard = header_page.upgrade_write();
+        assert_eq!(page_guard.get_page_id(), HEADER_PAGE_ID, "must be uninitialized");
 
         let page = page_guard.cast_mut::<<Self as TypeAliases>::HeaderPage>();
 
@@ -175,8 +172,7 @@ impl<const BUCKET_MAX_SIZE: usize, Key: PageKey, Value: PageValue, KeyComparator
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.write_str("\n================ PRINT! ================\n")?;
 
-        let header_guard = self.bpm.fetch_page_basic(self.header_page_id).expect("Should fetch the header page");
-        let header_guard = header_guard.read();
+        let header_guard = self.bpm.fetch_page_read(self.header_page_id, AccessType::Unknown).expect("Should fetch the header page");
 
         let header = header_guard.cast::<<Self as TypeAliases>::HeaderPage>();
 
@@ -192,8 +188,7 @@ impl<const BUCKET_MAX_SIZE: usize, Key: PageKey, Value: PageValue, KeyComparator
                 continue;
             }
 
-            let directory_guard = self.bpm.fetch_page_basic(directory_page_id).expect("Should fetch directory page");
-            let directory_guard = directory_guard.read();
+            let directory_guard = self.bpm.fetch_page_read(directory_page_id, AccessType::Unknown).expect("Should fetch directory page");
 
             let directory = directory_guard.cast::<<Self as TypeAliases>::DirectoryPage>();
             write!(f, "Directory {}, page_id: {}\n", idx, directory_page_id)?;
@@ -202,8 +197,7 @@ impl<const BUCKET_MAX_SIZE: usize, Key: PageKey, Value: PageValue, KeyComparator
 
             if print_buckets_inside_directory {
                 directory.extended_format(f, |bucket_page_id| {
-                    let bucket_guard = self.bpm.fetch_page_basic(bucket_page_id).expect(format!("Should be able to fetch bucket page with id {}", bucket_page_id).as_str());
-                    let bucket_guard = bucket_guard.read();
+                    let bucket_guard = self.bpm.fetch_page_read(bucket_page_id, AccessType::Unknown).expect(format!("Should be able to fetch bucket page with id {}", bucket_page_id).as_str());
                     let bucket = bucket_guard.cast::<<Self as TypeAliases>::BucketPage>();
 
                     bucket
@@ -216,8 +210,7 @@ impl<const BUCKET_MAX_SIZE: usize, Key: PageKey, Value: PageValue, KeyComparator
 
                 for idx2 in 0..directory.size() {
                     let bucket_page_id = directory.get_bucket_page_id(idx2);
-                    let bucket_guard = self.bpm.fetch_page_basic(bucket_page_id).expect(format!("Should be able to fetch bucket page with id {}", bucket_page_id).as_str());
-                    let bucket_guard = bucket_guard.read();
+                    let bucket_guard = self.bpm.fetch_page_read(bucket_page_id, AccessType::Unknown).expect(format!("Should be able to fetch bucket page with id {}", bucket_page_id).as_str());
 
                     let bucket = bucket_guard.cast::<<Self as TypeAliases>::BucketPage>();
 

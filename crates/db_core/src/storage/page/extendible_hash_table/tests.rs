@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use crate::buffer::BufferPoolManager;
+    use crate::buffer::{AccessType, BufferPool, BufferPoolManager};
     use crate::catalog::Schema;
     use crate::storage::{hash_table_bucket_array_size, DiskManagerUnlimitedMemory, ExtendibleHashBucketPageInsertionErrors, ExtendibleHashTableBucketPage, ExtendibleHashTableDirectoryPage, ExtendibleHashTableHeaderPage, GenericComparator, GenericKey};
     use common::config::{PageId, INVALID_PAGE_ID};
@@ -11,11 +11,10 @@ mod tests {
     #[test]
     fn bucket_page_sample() {
         let disk_mgr = Arc::new(Mutex::new(DiskManagerUnlimitedMemory::new()));
-        let bpm = Arc::new(BufferPoolManager::new(5, disk_mgr, None, None));
+        let bpm = BufferPoolManager::new(5, disk_mgr, None, None);
 
         {
-            let guard = bpm.new_page_guarded().expect("Should be able to create new page");
-            let mut guard = guard.upgrade_write();
+            let mut guard = bpm.new_page(AccessType::Unknown).expect("Should be able to create new page");
 
             const BUCKET_SIZE: usize = hash_table_bucket_array_size::<GenericKey<8>, RID>();
             let bucket_page = guard.cast_mut::<ExtendibleHashTableBucketPage<BUCKET_SIZE, GenericKey<8>, RID, GenericComparator<8>>>();
@@ -71,7 +70,7 @@ mod tests {
     #[test]
     fn header_directory_page_sample() {
         let disk_mgr = Arc::new(Mutex::new(DiskManagerUnlimitedMemory::new()));
-        let bpm = Arc::new(BufferPoolManager::new(5, disk_mgr, None, None));
+        let bpm = BufferPoolManager::new(5, disk_mgr, None, None);
 
         const BUCKET_SIZE: usize = hash_table_bucket_array_size::<GenericKey<8>, RID>();
         type BucketPageType = ExtendibleHashTableBucketPage<BUCKET_SIZE, GenericKey<8>, RID, GenericComparator<8>>;
@@ -84,8 +83,7 @@ mod tests {
         {
             {
                 /************************ HEADER PAGE TEST ************************/
-                let header_guard = bpm.new_page_guarded().expect("Should be able to create new page");
-                let mut header_guard = header_guard.upgrade_write();
+                let mut header_guard = bpm.new_page(AccessType::Unknown).expect("Should be able to create new page");
 
                 let header_page = header_guard.cast_mut::<ExtendibleHashTableHeaderPage>();
                 header_page.init(Some(2));
@@ -108,40 +106,35 @@ mod tests {
             /************************ DIRECTORY PAGE TEST ************************/
 
             // Create directory
-            let directory_guard = bpm.new_page_guarded().expect("Should be able to create new page");
-            let mut directory_guard = directory_guard.upgrade_write();
+            let mut directory_guard = bpm.new_page(AccessType::Unknown).expect("Should be able to create new page");
 
             let directory_page = directory_guard.cast_mut::<ExtendibleHashTableDirectoryPage>();
             directory_page.init(Some(3));
 
             // Create bucket No. 1
-            let bucket_guard_1 = bpm.new_page_guarded().expect("Should be able to create new page");
+            let mut bucket_guard_1 = bpm.new_page(AccessType::Unknown).expect("Should be able to create new page");
             bucket_page_id_1 = bucket_guard_1.get_page_id();
-            let mut bucket_guard_1 = bucket_guard_1.upgrade_write();
 
             let bucket_page_1 = bucket_guard_1.cast_mut::<BucketPageType>();
             bucket_page_1.init(Some(10));
 
             // Create bucket No. 2
-            let bucket_guard_2 = bpm.new_page_guarded().expect("Should be able to create new page");
+            let mut bucket_guard_2 = bpm.new_page(AccessType::Unknown).expect("Should be able to create new page");
             bucket_page_id_2 = bucket_guard_2.get_page_id();
-            let mut bucket_guard_2 = bucket_guard_2.upgrade_write();
 
             let bucket_page_2 = bucket_guard_2.cast_mut::<BucketPageType>();
             bucket_page_2.init(Some(10));
 
             // Create bucket No. 3
-            let bucket_guard_3 = bpm.new_page_guarded().expect("Should be able to create new page");
+            let mut bucket_guard_3 = bpm.new_page(AccessType::Unknown).expect("Should be able to create new page");
             bucket_page_id_3 = bucket_guard_3.get_page_id();
-            let mut bucket_guard_3 = bucket_guard_3.upgrade_write();
 
             let bucket_page_3 = bucket_guard_3.cast_mut::<BucketPageType>();
             bucket_page_3.init(Some(10));
 
             // Create bucket No. 4
-            let bucket_guard_4 = bpm.new_page_guarded().expect("Should be able to create new page");
+            let mut bucket_guard_4 = bpm.new_page(AccessType::Unknown).expect("Should be able to create new page");
             bucket_page_id_4 = bucket_guard_4.get_page_id();
-            let mut bucket_guard_4 = bucket_guard_4.upgrade_write();
 
             let bucket_page_4 = bucket_guard_4.cast_mut::<BucketPageType>();
             bucket_page_4.init(Some(10));

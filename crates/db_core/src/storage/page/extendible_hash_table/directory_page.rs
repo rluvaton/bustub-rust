@@ -431,7 +431,7 @@ fn format_number_in_bits(n: u64, number_of_bits: u32) -> String {
 
 #[cfg(test)]
 mod tests {
-    use crate::buffer::BufferPoolManager;
+    use crate::buffer::{AccessType, BufferPool, BufferPoolManager};
     use crate::storage::{DiskManagerUnlimitedMemory, ExtendibleHashTableDirectoryPage};
     use parking_lot::Mutex;
     use std::sync::Arc;
@@ -439,12 +439,11 @@ mod tests {
     #[test]
     fn global_and_local_depth_mash() {
         let disk_mgr = Arc::new(Mutex::new(DiskManagerUnlimitedMemory::new()));
-        let bpm = Arc::new(BufferPoolManager::new(5, disk_mgr, None, None));
+        let bpm = BufferPoolManager::new(5, disk_mgr, None, None);
 
 
         // Create directory
-        let directory_guard = bpm.new_page_guarded().expect("Should be able to create new page");
-        let mut directory_guard = directory_guard.upgrade_write();
+        let mut directory_guard = bpm.new_page(AccessType::Unknown).expect("Should be able to create new page");
 
         let directory_page = directory_guard.cast_mut::<ExtendibleHashTableDirectoryPage>();
         directory_page.init(Some(3));

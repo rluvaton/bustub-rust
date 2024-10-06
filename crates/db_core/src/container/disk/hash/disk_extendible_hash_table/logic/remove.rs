@@ -2,7 +2,7 @@ use super::super::type_alias_trait::TypeAliases;
 use super::super::HashTable;
 use crate::buffer;
 use crate::buffer::errors::{BufferPoolError, MapErrorToBufferPoolError};
-use crate::buffer::PinWritePageGuard;
+use crate::buffer::{AccessType, BufferPool, PageWriteGuard};
 use crate::concurrency::Transaction;
 use crate::container::hash::KeyHasher;
 use crate::storage::Comparator;
@@ -73,7 +73,7 @@ where
         // TODO - get the page as read and upgrade if needed as most of the time the header page exists as well as the directory page
         let mut header = self
             .bpm
-            .fetch_page_write(self.header_page_id)
+            .fetch_page_write(self.header_page_id, AccessType::Unknown)
             .map_err_to_buffer_pool_err()
             .context("Hash Table header page must exists when trying to insert")?;
 
@@ -94,7 +94,7 @@ where
         // TODO - get the page as read and upgrade if needed?
         let mut directory = self
             .bpm
-            .fetch_page_write(directory_page_id)
+            .fetch_page_write(directory_page_id, AccessType::Unknown)
             .map_err_to_buffer_pool_err()
             .context("Directory page should exists")?;
 
@@ -113,7 +113,7 @@ where
             // 8. Get the bucket page
             let mut bucket = self
                 .bpm
-                .fetch_page_write(bucket_page_id)
+                .fetch_page_write(bucket_page_id, AccessType::Unknown)
                 .map_err_to_buffer_pool_err()
                 .context("Failed to fetch bucket page")?;
             let bucket_page = bucket.cast_mut::<<Self as TypeAliases>::BucketPage>();
@@ -153,8 +153,8 @@ where
 
     fn trigger_merge<'a>(
         &self,
-        directory_page_guard: &mut PinWritePageGuard,
-        mut empty_bucket_page_guard: PinWritePageGuard<'a>,
+        directory_page_guard: &mut PageWriteGuard,
+        mut empty_bucket_page_guard: PageWriteGuard<'a>,
         mut empty_bucket_index: u32,
     ) -> Result<(), MergeError> {
         let mut directory_page =
@@ -188,7 +188,7 @@ where
 
         // 6. Try to fetch the bucket page to merge with
         let new_buckets_page_id = directory_page.get_bucket_page_id(non_empty_bucket_index);
-        let non_empty_bucket_guard = self.bpm.fetch_page_write(new_buckets_page_id);
+        let non_empty_bucket_guard = self.bpm.fetch_page_write(new_buckets_page_id, AccessType::Unknown);
         let non_empty_bucket_guard = match non_empty_bucket_guard {
             Ok(v) => v,
             Err(error) => {
@@ -265,8 +265,8 @@ where
 
     fn remove_directory(
         &self,
-        header_page_guard: &mut PinWritePageGuard,
-        directory_page_guard: PinWritePageGuard,
+        header_page_guard: &mut PageWriteGuard,
+        directory_page_guard: PageWriteGuard,
         directory_index: u32,
     ) -> Result<(), BufferPoolError> {
         header_page_guard
@@ -296,8 +296,8 @@ where
 
     fn remove_bucket(
         &self,
-        directory_page_guard: &mut PinWritePageGuard,
-        bucket_page_guard: PinWritePageGuard,
+        directory_page_guard: &mut PageWriteGuard,
+        bucket_page_guard: PageWriteGuard,
         bucket_index: u32,
     ) -> Result<(), BufferPoolError> {
         directory_page_guard

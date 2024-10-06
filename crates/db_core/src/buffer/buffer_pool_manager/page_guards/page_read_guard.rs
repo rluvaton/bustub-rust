@@ -5,7 +5,7 @@ use crate::storage::PageAndReadGuard;
 use std::sync::Arc;
 use common::config::{PageData, PageId};
 use crate::buffer::AccessType;
-use crate::buffer::buffer_pool_manager_1::BufferPool;
+use crate::buffer::buffer_pool_manager::BufferPool;
 
 /// Read guard on page that will also unpin on drop
 #[clippy::has_significant_drop]
