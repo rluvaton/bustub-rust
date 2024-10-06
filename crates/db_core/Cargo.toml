@@ -10,6 +10,7 @@ generics = {path = "../generics"}
 stats = {path = "../stats"}
 data_types = {path = "../data_types"}
 error_utils = {path = "../error_utils"}
+data_structures = {path = "../data_structures"}
 
 thiserror = "1.0.64"
 prettytable = "0.10.0"

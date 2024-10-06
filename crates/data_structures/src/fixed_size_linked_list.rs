@@ -1,3 +1,5 @@
+use std::fmt::{Debug, Formatter};
+
 pub struct FixedSizeLinkedList<T> {
     capacity: usize,
     front_index: usize,
@@ -395,6 +397,13 @@ impl<T: Clone> Clone for FixedSizeLinkedList<T> {
             back_index: self.back_index,
             data: self.data.clone(),
         }
+    }
+}
+
+impl<T: Debug> Debug for FixedSizeLinkedList<T> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        // TODO - fix this
+        write!(f, "{:?}", self.data)
     }
 }
 

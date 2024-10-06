@@ -367,6 +367,7 @@ dependencies = [
  "chrono",
  "common",
  "dashmap",
+ "data_structures",
  "data_types",
  "derive_builder",
  "error_utils",

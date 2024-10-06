@@ -1,5 +1,6 @@
 use std::cmp::Ordering;
 use std::collections::LinkedList;
+use data_structures::FixedSizeLinkedList;
 use chrono::Utc;
 
 use common::config::FrameId;
@@ -34,7 +35,7 @@ pub(in crate::buffer) struct LRUKNode {
     /// we can use a fixed size array and have index to the start of the data and index to the end of the data
     /// adding new items will set at the end index and increment that index
     /// when reached the end of the array going to the start and moving the first item to be start index + 1
-    history: LinkedList<HistoryRecord>,
+    history: FixedSizeLinkedList<HistoryRecord>,
 
     k: usize,
 
@@ -49,7 +50,7 @@ impl LRUKNode {
     pub(super) fn new(k: usize, frame_id: FrameId, counter: &AtomicU64Counter) -> Self {
         assert!(k > 0, "K > 0");
 
-        let mut history = LinkedList::new();
+        let mut history = FixedSizeLinkedList::with_capacity(k);
 
         let now = Self::get_new_access_record_now(counter);
         let interval = IMAGINARY_NOW - now.1;
@@ -71,15 +72,12 @@ impl LRUKNode {
         // So we only need to calculate
 
         let new_val = Self::get_new_access_record_now(counter);
+        let removed = self.history.push_back_rotate(new_val);
 
         // If reached the size, remove the first item and add to the end
-        if self.history.len() >= self.k {
-            let removed = self.history.pop_front().unwrap();
-
+        if let Some(removed) = removed {
             self.interval += removed.1 - new_val.1;
         }
-
-        self.history.push_back(new_val);
     }
 
     #[inline]
