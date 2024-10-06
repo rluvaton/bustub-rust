@@ -10,9 +10,7 @@ rand = "0.8"
 zipf = "7"
 
 # Profiling
-tracy-client = { version = "0.17.3", default-features = false, features = [
-        "enable"
-] }
+tracy-client = { version = "0.17.3", default-features = false }
 
 db_core = {path = "../../crates/db_core" }
 common = {path = "../../crates/common"}
@@ -20,6 +18,9 @@ common = {path = "../../crates/common"}
 tempdir = "0.3.7"
 
 
-[profile.release]
+[profile.bench]
 debug = true
 
+[features]
+default = []
+tracing = ["tracy-client/enable"]

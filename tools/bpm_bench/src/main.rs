@@ -166,11 +166,15 @@ fn main() {
             let mut page_idx = page_idx_start;
 
             while !metrics.should_finish() {
+                #[cfg(feature = "tracing")]
                 let _scan_iteration = span!("scan thread");
 
-                let fetch_page = span!("scan thread - fetch page");
-                let page = bpm.fetch_page_write(page_ids.read()[page_idx as usize], AccessType::Scan);
-                drop(fetch_page);
+
+                let page = {
+                    #[cfg(feature = "tracing")]
+                    let _fetch_page = span!("scan thread - fetch page");
+                    bpm.fetch_page_write(page_ids.read()[page_idx as usize], AccessType::Scan)
+                };
 
                 if page.is_err() {
                     continue;
@@ -180,11 +184,8 @@ fn main() {
 
 
                 {
+                    #[cfg(feature = "tracing")]
                     let _update_page = span!("scan thread - Updating page");
-
-                    let get_write_lock_page = span!("scan thread - Acquiring write lock");
-
-                    drop(get_write_lock_page);
 
                     if !records.contains_key(&page_idx) {
                         records.insert(page_idx, 0);
@@ -198,6 +199,7 @@ fn main() {
                 }
 
                 {
+                    #[cfg(feature = "tracing")]
                     let _unpin_page_span = span!("scan thread - Unpin page");
                     drop(page);
                 }
@@ -229,14 +231,18 @@ fn main() {
             metrics.begin();
 
             while !metrics.should_finish() {
+                #[cfg(feature = "tracing")]
                 let _span = span!("get thread");
 
                 let page_idx = dist.sample(&mut rng);
 
 
-                let fetch_page_span = span!("get thread - fetch page");
-                let page = bpm.fetch_page_read(page_ids.read()[page_idx], AccessType::Lookup);
-                drop(fetch_page_span);
+
+                let page = {
+                    #[cfg(feature = "tracing")]
+                    let _fetch_page_span = span!("get thread - fetch page");
+                    bpm.fetch_page_read(page_ids.read()[page_idx], AccessType::Lookup)
+                };
 
                 if page.is_err() {
                     eprintln!("cannot fetch page");
@@ -246,15 +252,13 @@ fn main() {
                 let page = page.unwrap();
 
                 {
+                    #[cfg(feature = "tracing")]
                     let _verify_page = span!("get thread - verify page");
-
-                    let get_read_lock_page = span!("get thread - Acquiring read lock");
-
-                    drop(get_read_lock_page);
 
                     check_page_consistent_no_seed(page.get_data(), page_idx);
                 }
                 {
+                    #[cfg(feature = "tracing")]
                     let _unpin_page_span = span!("get thread - Unpin page");
                     drop(page);
                 }
@@ -283,6 +287,7 @@ fn main() {
 }
 
 fn init_pages(bustub_page_cnt: usize, bpm: &Arc<BufferPoolManager>, page_ids: &Arc<RwLock<Vec<PageId>>>) {
+    #[cfg(feature = "tracing")]
     let _span = span!("init pages");
 
     let current_page_index = Arc::new(Mutex::new(0usize));
