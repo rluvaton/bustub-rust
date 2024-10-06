@@ -37,8 +37,6 @@ pub(in crate::buffer) struct LRUKNode {
     /// when reached the end of the array going to the start and moving the first item to be start index + 1
     history: FixedSizeLinkedList<HistoryRecord>,
 
-    k: usize,
-
     frame_id: FrameId,
 
     is_evictable: bool,
@@ -59,7 +57,6 @@ impl LRUKNode {
 
         LRUKNode {
             history,
-            k,
             frame_id,
             is_evictable: false,
             interval,
@@ -82,7 +79,7 @@ impl LRUKNode {
 
     #[inline]
     fn get_interval(&self) -> i64 {
-        if self.history.len() < self.k {
+        if !self.history.is_full() {
             return INF_INTERVAL -
 
                 // Fallback to LRU
