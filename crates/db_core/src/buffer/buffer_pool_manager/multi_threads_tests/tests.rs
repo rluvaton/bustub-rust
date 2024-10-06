@@ -1,15 +1,14 @@
-use crate::buffer::{AccessType, BufferPool, BufferPoolManager, PageReadGuard};
+use super::helpers::get_tmp_dir;
+use super::options::{DiskManagerImplementationOptions, Options};
+use crate::buffer::{AccessType, BufferPool, BufferPoolManager};
+use crate::storage::{DefaultDiskManager, DiskManager, DiskManagerUnlimitedMemory};
 use common::config::{PageData, PageId};
 use parking_lot::{Mutex, RwLock};
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::thread;
 use std::thread::JoinHandle;
-use crate::storage::{DefaultDiskManager, DiskManager, DiskManagerUnlimitedMemory};
 use tempdir::TempDir;
-use crate::buffer::errors::FetchPageError;
-use super::helpers::get_tmp_dir;
-use super::options::{DiskManagerImplementationOptions, Options};
 
 // This is the structure of the page
 #[allow(unused)]
@@ -229,8 +228,8 @@ fn create_bpm(options: &Options, m: Arc<Mutex<(impl DiskManager + 'static)>>) ->
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::super::options::*;
+    use super::*;
 
 
     // ########################
