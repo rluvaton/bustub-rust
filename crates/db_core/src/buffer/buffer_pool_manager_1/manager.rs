@@ -215,6 +215,223 @@ impl BufferPoolManager {
     fn wait_for_pending_fetch_page_to_finish(&self, page_id: PageId) -> MutexGuard<InnerBufferPoolManager> {
         self.wait_for_pending_request_page_to_finish(&self.pending_fetch_requests, page_id)
     }
+
+    fn fetch_page<PageAndGuardImpl: PageAndGuard, R, F: FnOnce(Arc<Self>, PageAndGuardImpl) -> R>(self: &Arc<Self>, page_id: PageId, access_type: AccessType, create_guard: F) -> Result<R, errors::FetchPageError> {
+        // Find available frame
+
+        // 1. Hold replacer guard as all pin and unpin must first hold the replacer to avoid getting replaced in the middle
+        let mut inner = self.wait_for_pending_fetch_page_to_finish(page_id);
+
+        // We have 3 cases when fetching page
+        // 1. page already exists in the buffer pool
+        // 2. page does not exist in the buffer pool and we DO NOT NEED to flush existing page
+        // 3. page does not exist in the buffer pool and we NEED to flush existing page
+        // 3. Page exists in the buffer pool
+        if let Some(&frame_id) = inner.page_table.get(&page_id) {
+            // 3.1. Record access to the frame
+            inner.replacer.record_access(frame_id, access_type);
+
+            // 3.2. Avoid evicting the frame
+            inner.replacer.set_evictable(frame_id, false);
+
+            // 3.3 Get page
+            let page = inner.pages[frame_id as usize].clone();
+
+            // 3.4 Assert page table correctness
+            // TODO - fix this?
+            // assert_eq!(page.get_page_id(), page_id, "Page ID must be the same as the requested");
+
+            // 3.5 Pin before returning to the caller to avoid page to be evicted in the meantime
+            page.pin();
+
+            // 3.6 Drop all locks before waiting for the page read lock
+            drop(inner);
+
+            let page_and_guard = PageAndGuardImpl::from(page);
+
+            return Ok(create_guard(self.clone(), page_and_guard));
+        }
+
+        // Option 2, page does not exists in the buffer pool
+
+        // 4. Find replacement frame
+        let frame_id = self.find_replacement_frame(&mut inner)?;
+
+        // 5. Create promise for when the entire fetch is finished
+        let current_fetch_promise = Promise::new();
+
+        // 6. Register the promise
+        self.pending_fetch_requests.lock().insert(page_id, current_fetch_promise.get_future());
+
+        // 7. Record access so the frame will be inserted and the replacer algorithm will work
+        inner.replacer.record_access(frame_id, access_type);
+
+        // 8. Avoid evicting the frame in the meantime
+        inner.replacer.set_evictable(frame_id, false);
+
+        // 9. Register the requested page in the page table
+        inner.page_table.insert(page_id, frame_id);
+
+        // We now have 2 options:
+        // 1. the frame we got is currently have a page in it that we need to replace (and possibly flush)
+        // 2. the frame we got is empty frame (we got it from the free list)
+
+        let page_to_replace: Option<Page> = inner.pages.get_mut(frame_id as usize).cloned();
+
+        // 7. If frame match existing page
+        if let Some(page_to_replace) = page_to_replace {
+            // Option 1, replacing existing frame
+
+            let page_to_replace_backup = page_to_replace.clone();
+
+            // 1. Get write lock, the page to replace must never have write lock created outside the buffer pool as it is about to be pinned
+            let mut page_to_replace_guard = PageAndWriteGuard::from(page_to_replace);
+
+            // 2. Pin page
+            page_to_replace_guard.page_ref().pin();
+
+            // 3. Remove the old page from the page table so it won't be available
+            inner.page_table.remove(&page_to_replace_guard.get_page_id());
+
+            // 4. If page to replace is dirty, need to flush it
+            if page_to_replace_guard.page_ref().is_dirty() {
+                // 5. Get the scheduler
+                let mut scheduler = self.disk_scheduler.lock();
+
+                // 6. Add flush message to the scheduler
+                let flush_page_future = BufferPoolManager::request_write_page(&mut scheduler, page_to_replace_guard.get_page_id(), page_to_replace_guard.get_data());
+
+                // TODO - only request read if the write page was successful
+                //        as otherwise, if the write failed we will read and lose the data
+                let fetch_page_future = BufferPoolManager::request_read_page(&mut scheduler, page_id, page_to_replace_guard.get_data_mut());
+
+                // 8. release all locks as we don't want to hold the entire lock while flushing to disk
+                drop(scheduler);
+                drop(inner);
+
+                // 9. Wait for the flush to finish
+                // TODO - handle errors in flushing
+                let flush_page_result = flush_page_future.wait();
+
+                if !flush_page_result {
+
+                    // Avoid locking forever the current page fetch
+                    current_fetch_promise.set_value(());
+
+                    self.pending_fetch_requests.lock().remove(&page_id);
+
+                    assert_eq!(flush_page_result, true, "Must be able to flush page");
+
+                    // TODO - reset page in page table
+                }
+
+                // 9.1. Reset page to the current page
+                page_to_replace_guard.page_ref().set_is_dirty(false);
+
+                // 10. Wait for the fetch to finish
+                let fetch_page_result = fetch_page_future.wait();
+
+                if !fetch_page_result {
+
+                    // Avoid locking forever the current page fetch
+                    current_fetch_promise.set_value(());
+
+                    self.pending_fetch_requests.lock().remove(&page_id);
+                    assert_eq!(fetch_page_result, true, "Must be able to fetch page");
+                }
+
+                // 11. Set page id to be the correct page id
+                Page::partial_reset_with_write_guard(&mut page_to_replace_guard, page_id);
+
+                // Convert write lock to the desired lock
+                drop(page_to_replace_guard);
+                let page_to_replace_requested_guard = PageAndGuardImpl::from(page_to_replace_backup);
+
+                // Page is ready to fetch, so only release after the read lock acquired
+                current_fetch_promise.set_value(());
+
+                self.pending_fetch_requests.lock().remove(&page_id);
+
+                Ok(create_guard(self.clone(), page_to_replace_requested_guard))
+            } else {
+                // If page is not dirty we can just fetch the page
+
+                // 5. Get the scheduler
+                let mut scheduler = self.disk_scheduler.lock();
+
+                // 6. Request read page
+                let fetch_page_future = BufferPoolManager::request_read_page(&mut scheduler, page_id, page_to_replace_guard.get_data_mut());
+
+                // 7. release all locks as we don't want to hold the entire lock while flushing to disk
+                drop(scheduler);
+                drop(inner);
+
+                // 8. Wait for the fetch to finish
+                let fetch_page_result = fetch_page_future.wait();
+
+                if !fetch_page_result {
+                    // Avoid locking forever the current page fetch
+                    current_fetch_promise.set_value(());
+
+                    self.pending_fetch_requests.lock().remove(&page_id);
+                    assert_eq!(fetch_page_result, true, "Must be able to fetch page");
+                }
+
+                // 11. Set page id to be the correct page id
+                Page::partial_reset_with_write_guard(&mut page_to_replace_guard, page_id);
+
+                // Convert write lock to the requested guard
+                drop(page_to_replace_guard);
+                let page_to_replace_requested_guard = PageAndGuardImpl::from(page_to_replace_backup);
+
+                // Page is ready to fetch, so only release after the read lock acquired
+                current_fetch_promise.set_value(());
+
+                self.pending_fetch_requests.lock().remove(&page_id);
+
+                Ok(create_guard(self.clone(), page_to_replace_requested_guard))
+            }
+        } else {
+            // If no page exists in the pages for the current frame, just fetch it
+
+            // 1. Create new page
+            let page = Page::new(page_id);
+
+            // 2. Pin page
+            page.pin();
+
+            // 5. Get the scheduler
+            let mut scheduler = self.disk_scheduler.lock();
+
+            // 6. Request read page
+            let fetch_page_future = BufferPoolManager::request_read_page(&mut scheduler, page_id, page.write().get_data_mut());
+
+            // 7. release all locks as we don't want to hold the entire lock while flushing to disk
+            drop(scheduler);
+            drop(inner);
+
+            // 8. Wait for the fetch to finish
+            let fetch_page_result = fetch_page_future.wait();
+
+            if !fetch_page_result {
+                current_fetch_promise.set_value(());
+
+                // Avoid locking forever the current page fetch
+                self.pending_fetch_requests.lock().remove(&page_id);
+
+                assert_eq!(fetch_page_result, true, "Must be able to fetch page");
+            }
+
+            let requested_guard = PageAndGuardImpl::from(page);
+
+            // Page is ready to fetch
+            current_fetch_promise.set_value(());
+
+            self.pending_fetch_requests.lock().remove(&page_id);
+
+            Ok(create_guard(self.clone(), requested_guard))
+        }
+    }
 }
 
 impl BufferPool for Arc<BufferPoolManager> {
@@ -306,439 +523,15 @@ impl BufferPool for Arc<BufferPoolManager> {
     }
 
     fn fetch_page_read(&self, page_id: PageId, access_type: AccessType) -> Result<PageReadGuard, errors::FetchPageError> {
-        // Find available frame
-
-        // 1. Hold replacer guard as all pin and unpin must first hold the replacer to avoid getting replaced in the middle
-        let mut inner = self.wait_for_pending_fetch_page_to_finish(page_id);
-
-        // We have 3 cases when fetching page
-        // 1. page already exists in the buffer pool
-        // 2. page does not exist in the buffer pool and we DO NOT NEED to flush existing page
-        // 3. page does not exist in the buffer pool and we NEED to flush existing page
-        // 3. Page exists in the buffer pool
-        if let Some(&frame_id) = inner.page_table.get(&page_id) {
-            // 3.1. Record access to the frame
-            inner.replacer.record_access(frame_id, access_type);
-
-            // 3.2. Avoid evicting the frame
-            inner.replacer.set_evictable(frame_id, false);
-
-            // 3.3 Get page
-            let page = inner.pages[frame_id as usize].clone();
-
-            // 3.4 Assert page table correctness
-            // TODO - fix this?
-            // assert_eq!(page.get_page_id(), page_id, "Page ID must be the same as the requested");
-
-            // 3.5 Pin before returning to the caller to avoid page to be evicted in the meantime
-            page.pin();
-
-            // 3.6 Drop all locks before waiting for the page read lock
-            drop(inner);
-
-            let page_and_read_guard = PageAndReadGuard::from(page);
-
-            return Ok(PageReadGuard::new(self.clone(), page_and_read_guard));
-        }
-
-        // Option 2, page does not exists in the buffer pool
-
-        // 4. Find replacement frame
-        let frame_id = self.find_replacement_frame(&mut inner)?;
-
-        // 5. Create promise for when the entire fetch is finished
-        let current_fetch_promise = Promise::new();
-
-        // 6. Register the promise
-        self.pending_fetch_requests.lock().insert(page_id, current_fetch_promise.get_future());
-
-        // 7. Record access so the frame will be inserted and the replacer algorithm will work
-        inner.replacer.record_access(frame_id, access_type);
-
-        // 8. Avoid evicting the frame in the meantime
-        inner.replacer.set_evictable(frame_id, false);
-
-        // 9. Register the requested page in the page table
-        inner.page_table.insert(page_id, frame_id);
-
-        // We now have 2 options:
-        // 1. the frame we got is currently have a page in it that we need to replace (and possibly flush)
-        // 2. the frame we got is empty frame (we got it from the free list)
-
-        let page_to_replace: Option<Page> = inner.pages.get_mut(frame_id as usize).cloned();
-
-        // 7. If frame match existing page
-        if let Some(page_to_replace) = page_to_replace {
-            // Option 1, replacing existing frame
-
-            let page_to_replace_backup = page_to_replace.clone();
-
-            // 1. Get write lock, the page to replace must never have write lock created outside the buffer pool as it is about to be pinned
-            let mut page_to_replace_guard = PageAndWriteGuard::from(page_to_replace);
-
-            // 2. Pin page
-            page_to_replace_guard.page_ref().pin();
-
-            // 3. Remove the old page from the page table so it won't be available
-            inner.page_table.remove(&page_to_replace_guard.get_page_id());
-
-            // 4. If page to replace is dirty, need to flush it
-            if page_to_replace_guard.page_ref().is_dirty() {
-                // 5. Get the scheduler
-                let mut scheduler = self.disk_scheduler.lock();
-
-                // 6. Add flush message to the scheduler
-                let flush_page_future = BufferPoolManager::request_write_page(&mut scheduler, page_to_replace_guard.get_page_id(), page_to_replace_guard.get_data());
-
-                // TODO - only request read if the write page was successful
-                //        as otherwise, if the write failed we will read and lose the data
-                let fetch_page_future = BufferPoolManager::request_read_page(&mut scheduler, page_id, page_to_replace_guard.get_data_mut());
-
-                // 8. release all locks as we don't want to hold the entire lock while flushing to disk
-                drop(scheduler);
-                drop(inner);
-
-                // 9. Wait for the flush to finish
-                // TODO - handle errors in flushing
-                let flush_page_result = flush_page_future.wait();
-
-                if !flush_page_result {
-
-                    // Avoid locking forever the current page fetch
-                    current_fetch_promise.set_value(());
-
-                    self.pending_fetch_requests.lock().remove(&page_id);
-
-                    assert_eq!(flush_page_result, true, "Must be able to flush page");
-
-                    // TODO - reset page in page table
-                }
-
-                // 9.1. Reset page to the current page
-                page_to_replace_guard.page_ref().set_is_dirty(false);
-
-                // 10. Wait for the fetch to finish
-                let fetch_page_result = fetch_page_future.wait();
-
-                if !fetch_page_result {
-
-                    // Avoid locking forever the current page fetch
-                    current_fetch_promise.set_value(());
-
-                    self.pending_fetch_requests.lock().remove(&page_id);
-                    assert_eq!(fetch_page_result, true, "Must be able to fetch page");
-                }
-
-                // 11. Set page id to be the correct page id
-                Page::partial_reset_with_write_guard(&mut page_to_replace_guard, page_id);
-
-                // Convert write lock to read lock
-                drop(page_to_replace_guard);
-                let page_to_replace_read = PageAndReadGuard::from(page_to_replace_backup);
-
-                // Page is ready to fetch, so only release after the read lock acquired
-                current_fetch_promise.set_value(());
-
-                self.pending_fetch_requests.lock().remove(&page_id);
-
-                return Ok(PageReadGuard::new(self.clone(), page_to_replace_read));
-            } else {
-                // If page is not dirty we can just fetch the page
-
-                // 5. Get the scheduler
-                let mut scheduler = self.disk_scheduler.lock();
-
-                // 6. Request read page
-                let fetch_page_future = BufferPoolManager::request_read_page(&mut scheduler, page_id, page_to_replace_guard.get_data_mut());
-
-                // 7. release all locks as we don't want to hold the entire lock while flushing to disk
-                drop(scheduler);
-                drop(inner);
-
-                // 8. Wait for the fetch to finish
-                let fetch_page_result = fetch_page_future.wait();
-
-                if !fetch_page_result {
-                    // Avoid locking forever the current page fetch
-                    current_fetch_promise.set_value(());
-
-                    self.pending_fetch_requests.lock().remove(&page_id);
-                    assert_eq!(fetch_page_result, true, "Must be able to fetch page");
-                }
-
-                // 11. Set page id to be the correct page id
-                Page::partial_reset_with_write_guard(&mut page_to_replace_guard, page_id);
-
-
-                // Convert write lock to read lock
-                drop(page_to_replace_guard);
-                let page_to_replace_read = PageAndReadGuard::from(page_to_replace_backup);
-
-                // Page is ready to fetch, so only release after the read lock acquired
-                current_fetch_promise.set_value(());
-
-                self.pending_fetch_requests.lock().remove(&page_id);
-
-                return Ok(PageReadGuard::new(self.clone(), page_to_replace_read));
-            }
-        } else {
-            // If no page exists in the pages for the current frame, just fetch it
-
-            // 1. Create new page
-            let page = Page::new(page_id);
-
-            // 2. Pin page
-            page.pin();
-
-            // 5. Get the scheduler
-            let mut scheduler = self.disk_scheduler.lock();
-
-            // 6. Request read page
-            let fetch_page_future = BufferPoolManager::request_read_page(&mut scheduler, page_id, page.write().get_data_mut());
-
-            // 7. release all locks as we don't want to hold the entire lock while flushing to disk
-            drop(scheduler);
-            drop(inner);
-
-            // 8. Wait for the fetch to finish
-            let fetch_page_result = fetch_page_future.wait();
-
-            if !fetch_page_result {
-                current_fetch_promise.set_value(());
-
-                // Avoid locking forever the current page fetch
-                self.pending_fetch_requests.lock().remove(&page_id);
-
-                assert_eq!(fetch_page_result, true, "Must be able to fetch page");
-            }
-
-            let read_guard = PageAndReadGuard::from(page);
-
-            // Page is ready to fetch
-            current_fetch_promise.set_value(());
-
-            self.pending_fetch_requests.lock().remove(&page_id);
-
-            return Ok(PageReadGuard::new(self.clone(), read_guard));
-        }
+        BufferPoolManager::fetch_page(self, page_id, access_type, |bpm, guard: PageAndReadGuard| {
+            PageReadGuard::new(bpm, guard)
+        })
     }
 
     fn fetch_page_write(&self, page_id: PageId, access_type: AccessType) -> Result<PageWriteGuard, errors::FetchPageError> {
-        // Find available frame
-
-        // 1. Hold replacer guard as all pin and unpin must first hold the replacer to avoid getting replaced in the middle
-        let mut inner = self.wait_for_pending_fetch_page_to_finish(page_id);
-
-        // We have 3 cases when fetching page
-        // 1. page already exists in the buffer pool
-        // 2. page does not exist in the buffer pool and we DO NOT NEED to flush existing page
-        // 3. page does not exist in the buffer pool and we NEED to flush existing page
-        // 3. Page exists in the buffer pool
-        if let Some(&frame_id) = inner.page_table.get(&page_id) {
-            // 3.1. Record access to the frame
-            inner.replacer.record_access(frame_id, access_type);
-
-            // 3.2. Avoid evicting the frame
-            inner.replacer.set_evictable(frame_id, false);
-
-            // 3.3 Get page
-            let page = inner.pages[frame_id as usize].clone();
-
-            // 3.4 Assert page table correctness
-            // TODO - fix this?
-            // assert_eq!(page.get_page_id(), page_id, "Page ID must be the same as the requested");
-
-            // 3.5 Pin before returning to the caller to avoid page to be evicted in the meantime
-            page.pin();
-
-            // 3.6 Drop all locks before waiting for the page read lock
-            drop(inner);
-
-            let page_and_read_guard = PageAndWriteGuard::from(page);
-
-            return Ok(PageWriteGuard::new(self.clone(), page_and_read_guard));
-        }
-
-        // Option 2, page does not exists in the buffer pool
-
-        // 4. Find replacement frame
-        let frame_id = self.find_replacement_frame(&mut inner)?;
-
-        // 5. Create promise for when the entire fetch is finished
-        let current_fetch_promise = Promise::new();
-
-        // 6. Register the promise
-        self.pending_fetch_requests.lock().insert(page_id, current_fetch_promise.get_future());
-
-        // 7. Record access so the frame will be inserted and the replacer algorithm will work
-        inner.replacer.record_access(frame_id, access_type);
-
-        // 8. Avoid evicting the frame in the meantime
-        inner.replacer.set_evictable(frame_id, false);
-
-        // 9. Register the requested page in the page table
-        inner.page_table.insert(page_id, frame_id);
-
-        // We now have 2 options:
-        // 1. the frame we got is currently have a page in it that we need to replace (and possibly flush)
-        // 2. the frame we got is empty frame (we got it from the free list)
-
-        let page_to_replace: Option<Page> = inner.pages.get_mut(frame_id as usize).cloned();
-
-        // 7. If frame match existing page
-        if let Some(page_to_replace) = page_to_replace {
-            // Option 1, replacing existing frame
-
-            let page_to_replace_backup = page_to_replace.clone();
-
-            // 1. Get write lock, the page to replace must never have write lock created outside the buffer pool as it is about to be pinned
-            let mut page_to_replace_guard = PageAndWriteGuard::from(page_to_replace);
-
-            // 2. Pin page
-            page_to_replace_guard.page_ref().pin();
-
-            // 3. Remove the old page from the page table so it won't be available
-            inner.page_table.remove(&page_to_replace_guard.get_page_id());
-
-            // 4. If page to replace is dirty, need to flush it
-            if page_to_replace_guard.page_ref().is_dirty() {
-                // 5. Get the scheduler
-                let mut scheduler = self.disk_scheduler.lock();
-
-                // 6. Add flush message to the scheduler
-                let flush_page_future = BufferPoolManager::request_write_page(&mut scheduler, page_to_replace_guard.get_page_id(), page_to_replace_guard.get_data());
-
-                // TODO - only request read if the write page was successful
-                //        as otherwise, if the write failed we will read and lose the data
-                let fetch_page_future = BufferPoolManager::request_read_page(&mut scheduler, page_id, page_to_replace_guard.get_data_mut());
-
-                // 8. release all locks as we don't want to hold the entire lock while flushing to disk
-                drop(scheduler);
-                drop(inner);
-
-                // 9. Wait for the flush to finish
-                // TODO - handle errors in flushing
-                let flush_page_result = flush_page_future.wait();
-
-                if !flush_page_result {
-
-                    // Avoid locking forever the current page fetch
-                    current_fetch_promise.set_value(());
-
-                    self.pending_fetch_requests.lock().remove(&page_id);
-
-                    assert_eq!(flush_page_result, true, "Must be able to flush page");
-
-                    // TODO - reset page in page table
-                }
-
-                // 9.1. Reset page to the current page
-                page_to_replace_guard.page_ref().set_is_dirty(false);
-
-                // 10. Wait for the fetch to finish
-                let fetch_page_result = fetch_page_future.wait();
-
-                if !fetch_page_result {
-
-                    // Avoid locking forever the current page fetch
-                    current_fetch_promise.set_value(());
-
-                    self.pending_fetch_requests.lock().remove(&page_id);
-                    assert_eq!(fetch_page_result, true, "Must be able to fetch page");
-                }
-
-                // 11. Set page id to be the correct page id
-                Page::partial_reset_with_write_guard(&mut page_to_replace_guard, page_id);
-
-                // Convert write lock to read lock
-                drop(page_to_replace_guard);
-                let page_to_replace_read = PageAndWriteGuard::from(page_to_replace_backup);
-
-                // Page is ready to fetch, so only release after the read lock acquired
-                current_fetch_promise.set_value(());
-
-                self.pending_fetch_requests.lock().remove(&page_id);
-
-                return Ok(PageWriteGuard::new(self.clone(), page_to_replace_read));
-            } else {
-                // If page is not dirty we can just fetch the page
-
-                // 5. Get the scheduler
-                let mut scheduler = self.disk_scheduler.lock();
-
-                // 6. Request read page
-                let fetch_page_future = BufferPoolManager::request_read_page(&mut scheduler, page_id, page_to_replace_guard.get_data_mut());
-
-                // 7. release all locks as we don't want to hold the entire lock while flushing to disk
-                drop(scheduler);
-                drop(inner);
-
-                // 8. Wait for the fetch to finish
-                let fetch_page_result = fetch_page_future.wait();
-
-                if !fetch_page_result {
-                    // Avoid locking forever the current page fetch
-                    current_fetch_promise.set_value(());
-
-                    self.pending_fetch_requests.lock().remove(&page_id);
-                    assert_eq!(fetch_page_result, true, "Must be able to fetch page");
-                }
-
-                // 11. Set page id to be the correct page id
-                Page::partial_reset_with_write_guard(&mut page_to_replace_guard, page_id);
-
-
-                // Convert write lock to read lock
-                drop(page_to_replace_guard);
-                let page_to_replace_write = PageAndWriteGuard::from(page_to_replace_backup);
-
-                // Page is ready to fetch, so only release after the read lock acquired
-                current_fetch_promise.set_value(());
-
-                self.pending_fetch_requests.lock().remove(&page_id);
-
-                return Ok(PageWriteGuard::new(self.clone(), page_to_replace_write));
-            }
-        } else {
-            // If no page exists in the pages for the current frame, just fetch it
-
-            // 1. Create new page
-            let page = Page::new(page_id);
-
-            // 2. Pin page
-            page.pin();
-
-            // 5. Get the scheduler
-            let mut scheduler = self.disk_scheduler.lock();
-
-            // 6. Request read page
-            let fetch_page_future = BufferPoolManager::request_read_page(&mut scheduler, page_id, page.write().get_data_mut());
-
-            // 7. release all locks as we don't want to hold the entire lock while flushing to disk
-            drop(scheduler);
-            drop(inner);
-
-            // 8. Wait for the fetch to finish
-            let fetch_page_result = fetch_page_future.wait();
-
-            if !fetch_page_result {
-                current_fetch_promise.set_value(());
-
-                // Avoid locking forever the current page fetch
-                self.pending_fetch_requests.lock().remove(&page_id);
-
-                assert_eq!(fetch_page_result, true, "Must be able to fetch page");
-            }
-
-            let write_guard = PageAndWriteGuard::from(page);
-
-            // Page is ready to fetch
-            current_fetch_promise.set_value(());
-
-            self.pending_fetch_requests.lock().remove(&page_id);
-
-            return Ok(PageWriteGuard::new(self.clone(), write_guard));
-        }
+        BufferPoolManager::fetch_page(self, page_id, access_type, |bpm, guard: PageAndWriteGuard| {
+            PageWriteGuard::new(bpm, guard)
+        })
     }
 
     fn unpin_page(&self, page_id: PageId, access_type: AccessType) -> bool {
