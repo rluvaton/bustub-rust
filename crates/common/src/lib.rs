@@ -8,8 +8,10 @@ mod unsafe_single_reference_data;
 mod rid;
 mod page_traits;
 mod on_panic_hooks;
+mod shared_promise;
 
 pub use promise::{Promise, Future};
+pub use shared_promise::{SharedPromise, SharedFuture};
 pub use channel::Channel;
 pub use reader_writer_latch::ReaderWriterLatch;
 pub use string_helpers::*;
