@@ -1,7 +1,7 @@
 use crate::cli::Args;
 use crate::metrics::bpm_metrics::BpmMetrics;
 use crate::page_process::{check_page_consistent, check_page_consistent_no_seed, modify_page};
-use db_core::buffer::{AccessType, BufferPoolManager};
+use db_core::buffer::{AccessType, BufferPool, BufferPoolManager};
 use clap::Parser;
 use common::config::PageId;
 use metrics::bpm_total_metrics::BpmTotalMetrics;
@@ -132,7 +132,7 @@ fn main() {
         Arc::clone(&disk_manager),
         Some(lru_k_size),
         None, /* log manager */
-    ));
+    );
     let page_ids: Arc<RwLock<Vec<PageId>>> = Arc::new(RwLock::new(vec![]));
 
     init_pages(bustub_page_cnt, &bpm, &page_ids);
@@ -169,14 +169,14 @@ fn main() {
                 let _scan_iteration = span!("scan thread");
 
                 let fetch_page = span!("scan thread - fetch page");
-                let page = bpm.fetch_page(page_ids.read()[page_idx as usize], AccessType::Scan);
+                let page = bpm.fetch_page_write(page_ids.read()[page_idx as usize], AccessType::Scan);
                 drop(fetch_page);
 
                 if page.is_err() {
                     continue;
                 }
 
-                let page = page.unwrap();
+                let mut page = page.unwrap();
 
 
                 {
@@ -184,24 +184,22 @@ fn main() {
 
                     let get_write_lock_page = span!("scan thread - Acquiring write lock");
 
-                    page.with_write(|u| {
-                        drop(get_write_lock_page);
+                    drop(get_write_lock_page);
 
-                        if !records.contains_key(&page_idx) {
-                            records.insert(page_idx, 0);
-                        }
+                    if !records.contains_key(&page_idx) {
+                        records.insert(page_idx, 0);
+                    }
 
-                        let seed = records.get_mut(&page_idx).expect("Must exists");
+                    let seed = records.get_mut(&page_idx).expect("Must exists");
 
-                        check_page_consistent(u.get_data(), page_idx as usize, *seed);
-                        *seed = *seed + 1;
-                        modify_page(u.get_data_mut(), page_idx as usize, *seed);
-                    });
+                    check_page_consistent(page.get_data(), page_idx as usize, *seed);
+                    *seed = *seed + 1;
+                    modify_page(page.get_data_mut(), page_idx as usize, *seed);
                 }
 
                 {
                     let _unpin_page_span = span!("scan thread - Unpin page");
-                    bpm.unpin_page(page.with_read(|u| u.get_page_id()), true, AccessType::Scan);
+                    drop(page);
                 }
 
                 page_idx += 1;
@@ -237,7 +235,7 @@ fn main() {
 
 
                 let fetch_page_span = span!("get thread - fetch page");
-                let page = bpm.fetch_page(page_ids.read()[page_idx], AccessType::Lookup);
+                let page = bpm.fetch_page_read(page_ids.read()[page_idx], AccessType::Lookup);
                 drop(fetch_page_span);
 
                 if page.is_err() {
@@ -254,16 +252,14 @@ fn main() {
 
                     let get_read_lock_page = span!("get thread - Acquiring read lock");
 
-                    page.with_read(|u| {
-                        drop(get_read_lock_page);
+                    drop(get_read_lock_page);
 
-                        page_id = u.get_page_id();
-                        check_page_consistent_no_seed(u.get_data(), page_idx);
-                    });
+                    page_id = page.get_page_id();
+                    check_page_consistent_no_seed(page.get_data(), page_idx);
                 }
                 {
                     let _unpin_page_span = span!("get thread - Unpin page");
-                    bpm.unpin_page(page_id, false, AccessType::Lookup);
+                    drop(page);
                 }
 
                 metrics.tick();
@@ -310,17 +306,15 @@ fn init_pages(bustub_page_cnt: usize, bpm: &Arc<BufferPoolManager>, page_ids: &A
             while i < bustub_page_cnt {
                 *guard += 1;
 
-                let page = bpm.new_page().expect("Must be able to create a page");
-                let page_id = page.with_read(|u| u.get_page_id());
+                let mut page = bpm.new_page(AccessType::Unknown).expect("Must be able to create a page");
+                let page_id = page.get_page_id();
                 page_ids.write().push(page_id);
 
-                page.with_write(|u| {
-                    modify_page(u.get_data_mut(), i, 0);
-                });
+                modify_page(page.get_data_mut(), i, 0);
 
                 drop(guard);
 
-                bpm.unpin_page(page_id, true, AccessType::default());
+                drop(page);
 
                 guard = current_page_index.lock();
 
@@ -346,7 +340,7 @@ fn validate_initialized_pages(bustub_page_cnt: usize, bpm: &Arc<BufferPoolManage
             println!("{}/{}", page_idx, bustub_page_cnt);
         }
 
-        let page = bpm.fetch_page(page_ids.read()[page_idx], AccessType::Lookup);
+        let page = bpm.fetch_page_read(page_ids.read()[page_idx], AccessType::Lookup);
 
         if page.is_err() {
             eprintln!("cannot fetch page");
@@ -355,14 +349,7 @@ fn validate_initialized_pages(bustub_page_cnt: usize, bpm: &Arc<BufferPoolManage
 
         let page = page.unwrap();
 
-        let mut page_id: PageId = 0;
-
-        page.with_read(|u| {
-            page_id = u.get_page_id();
-            check_page_consistent_no_seed(u.get_data(), page_idx);
-        });
-
-        bpm.unpin_page(page_id, false, AccessType::Lookup);
+        check_page_consistent_no_seed(page.get_data(), page_idx);
     }
 
     println!("Validation finish");

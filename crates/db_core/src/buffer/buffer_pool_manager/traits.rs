@@ -39,17 +39,6 @@ pub trait BufferPool {
     ///
     fn fetch_page_write(&self, page_id: PageId, access_type: AccessType) -> Result<PageWriteGuard, FetchPageError>;
 
-    /// Unpin page
-    ///
-    /// # Arguments
-    ///
-    /// * `page_id`: Page id to unpin
-    /// * `access_type`: for leaderboard
-    ///
-    /// returns: bool whether was able to unpin or not
-    ///
-    fn unpin_page(&self, page_id: PageId, access_type: AccessType) -> bool;
-
 
     /// Flush page to disk REGARDLESS of the dirty flag.
     ///

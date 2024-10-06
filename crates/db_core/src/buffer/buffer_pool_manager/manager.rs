@@ -45,6 +45,9 @@ pub struct BufferPoolManager {
 
     /// Pending fetch requests from disk
     pending_fetch_requests: Mutex<HashMap<PageId, Future<()>>>,
+
+    /// Statistics on buffer pool
+    stats: BufferPoolManagerStats,
 }
 
 unsafe impl Sync for BufferPoolManager {}
@@ -93,7 +96,6 @@ impl BufferPoolManager {
 
             root_level_latch: Mutex::new(()),
 
-            // inner: UnsafeCell::new(InnerBufferPoolManager {
             log_manager,
 
             inner: Mutex::new(InnerBufferPoolManager {
@@ -116,7 +118,7 @@ impl BufferPoolManager {
 
             pending_fetch_requests: Mutex::new(HashMap::new()),
 
-            // }),
+            stats: BufferPoolManagerStats::default(),
         };
 
         Arc::new(this)
@@ -434,6 +436,48 @@ impl BufferPoolManager {
             Ok(create_guard(self.clone(), requested_guard))
         }
     }
+
+    /// Unpin page, must only be used by page guards
+    ///
+    /// # Arguments
+    ///
+    /// * `page_id`: Page id to unpin
+    /// * `access_type`: for leaderboard
+    ///
+    /// returns: bool whether was able to unpin or not
+    ///
+    pub(super) fn unpin_page(&self, page_id: PageId, access_type: AccessType) -> bool {
+        // 1. first hold the replacer
+        let mut inner = self.inner.lock();
+
+        // 2. check if the page table the page exists
+        if let Some(&frame_id) = inner.page_table.get(&page_id) {
+
+            // 3. Get the page to unpin
+            let page = inner.pages[frame_id as usize].clone();
+
+            // 4. If already evictable
+            if page.get_pin_count() == 0 {
+                return false;
+            }
+
+            // 5. unpin
+            page.unpin();
+
+            // 6. If we reached to pin count 0, this means we need to set as evictable
+            if page.get_pin_count() == 0 {
+                inner.replacer.set_evictable(frame_id, true);
+            }
+
+            true
+        } else {
+            false
+        }
+    }
+
+    pub fn get_stats(&self) -> &BufferPoolManagerStats {
+        &self.stats
+    }
 }
 
 impl BufferPool for Arc<BufferPoolManager> {
@@ -535,35 +579,6 @@ impl BufferPool for Arc<BufferPoolManager> {
         BufferPoolManager::fetch_page(self, page_id, access_type, |bpm, guard: PageAndWriteGuard| {
             PageWriteGuard::new(bpm, guard)
         })
-    }
-
-    fn unpin_page(&self, page_id: PageId, access_type: AccessType) -> bool {
-        // 1. first hold the replacer
-        let mut inner = self.inner.lock();
-
-        // 2. check if the page table the page exists
-        if let Some(&frame_id) = inner.page_table.get(&page_id) {
-
-            // 3. Get the page to unpin
-            let page = inner.pages[frame_id as usize].clone();
-
-            // 4. If already evictable
-            if page.get_pin_count() == 0 {
-                return false;
-            }
-
-            // 5. unpin
-            page.unpin();
-
-            // 6. If we reached to pin count 0, this means we need to set as evictable
-            if page.get_pin_count() == 0 {
-                inner.replacer.set_evictable(frame_id, true);
-            }
-
-            true
-        } else {
-            false
-        }
     }
 
     fn flush_page(&self, page_id: PageId) -> bool {

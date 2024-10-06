@@ -8,6 +8,7 @@ const INDENTATION_STEP: usize = 2;
 
 #[derive(Clone)]
 pub struct BufferPoolManagerStats {
+    // TODO - change this
     pub(in crate::buffer) holding_root_latch: RunningTimeStats,
     pub(in crate::buffer) waiting_for_root_latch: RunningTimeStats,
 }
