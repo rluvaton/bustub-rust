@@ -642,7 +642,13 @@ mod tests {
                     if i % 3 == 0 {
                         let result = hash_table.remove(&key, None);
 
-                        assert!(result.is_ok(), "Thread {} failed to remove key {}", thread_id, i + offset);
+                        match result {
+                            Ok(_) => {}
+                            Err(err) => {
+                                // Force failure
+                                assert_eq!(Some(err), None, "Thread {} failed to remove key {}", thread_id, i + offset);
+                            }
+                        }
                     }
                 }
 

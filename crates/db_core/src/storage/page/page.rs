@@ -184,7 +184,7 @@ mod tests {
     use common::config::INVALID_PAGE_ID;
 
     #[test]
-    #[should_panic]
+    #[should_panic(expected = "Pin count can never be below 0, and pin count is currently -1")]
     fn should_panic_when_trying_to_unpin_more_than_there_are_pins() {
         let page = Page::new(INVALID_PAGE_ID);
 

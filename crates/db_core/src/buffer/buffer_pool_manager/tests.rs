@@ -548,8 +548,8 @@ mod tests {
         child_thread.join().unwrap();
     }
 
-    #[ignore]
     #[test]
+    #[ignore]
     fn evictable_test() {
         // Test if the evictable status of a frame is always correct.
         let tmpdir = setup();
