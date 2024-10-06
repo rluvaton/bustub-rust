@@ -93,6 +93,20 @@ mod metrics;
 // >>> END
 
 
+// Fine granularity lock with updated lru-k
+// Debug:
+// <<< BEGIN
+// scan: 31941.968601046632
+// get: 33355.45481817272
+// >>> END
+//
+// Release:
+// <<< BEGIN
+// scan: 134585.84713842874
+// get: 149108.7963734542
+// >>> END
+
+
 fn setup() -> TempDir {
     TempDir::new("bpm_bench").expect("Should create tmp directory")
 }
