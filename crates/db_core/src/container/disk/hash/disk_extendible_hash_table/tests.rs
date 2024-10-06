@@ -521,7 +521,6 @@ mod tests {
             "temp".to_string(),
             bpm,
             OrdComparator::<Key>::default(),
-
             None,
             None,
             None,
@@ -553,7 +552,6 @@ mod tests {
             "temp".to_string(),
             bpm,
             OrdComparator::<Key>::default(),
-
             None,
             None,
             None,
@@ -635,7 +633,6 @@ mod tests {
                     }
 
                     if i % 3 == 0 {
-
                         let result = hash_table.remove(&key, None);
 
                         assert!(result.is_ok(), "Thread {} failed to remove key {}", thread_id, i + offset);
@@ -744,7 +741,7 @@ mod tests {
         println!("Asserting all inserted entries exists");
         {
             let mut counter = 0;
-        // TODO - run with concurrency
+            // TODO - run with concurrency
             for i in (0..total).shuffle_with_seed(&mut rng) {
                 let (key, value) = get_entry_for_index(i);
                 if counter % (10 * one_percent) == 0 {
@@ -776,7 +773,7 @@ mod tests {
             let removed_keys = HashSet::<i64>::from_iter(random_key_index_to_remove.iter().cloned());
 
             let mut counter = 0;
-        // TODO - run with concurrency
+            // TODO - run with concurrency
             for i in (0..total).shuffle_with_seed(&mut rng) {
                 if counter % (10 * one_percent) == 0 {
                     println!("Fetched {}%", counter / one_percent);
