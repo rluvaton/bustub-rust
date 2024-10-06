@@ -18,5 +18,7 @@ jobs:
     - uses: actions/checkout@v4
     - name: Build
       run: cargo build --verbose
+
+    # Running tests in a single thread as we have thread safety tests and we want to have all the threads available for them
     - name: Run tests
-      run: cargo test --verbose
+      run: cargo test --verbose --test-threads=1
