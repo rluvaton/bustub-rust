@@ -75,13 +75,24 @@ fn run_multi_threaded_tests_with_timeout(options: Options) {
 
     let one_minute = Duration::from_secs(60).as_millis() as u64;
 
-    let timeout_in_ms = match (get_thread_duration_type, scan_thread_duration_type) {
+    let mut timeout_in_ms = match (get_thread_duration_type, scan_thread_duration_type) {
         (DurationType::TimeAsMilliseconds(g), DurationType::TimeAsMilliseconds(s)) => max(g, s) + 3_000,
 
         (DurationType::TimeAsMilliseconds(ms), DurationType::Iteration(_)) |
         (DurationType::Iteration(_), DurationType::TimeAsMilliseconds(ms)) => max(ms, one_minute) + 3_000,
         (_, _) => one_minute
     };
+
+
+    // if using file system, increase timeout to 1m
+    match options.disk_manager_specific {
+        DiskManagerImplementationOptions::Default(_) => {
+            if timeout_in_ms < one_minute {
+                timeout_in_ms = one_minute;
+            }
+        }
+        _ => {}
+    }
 
     let lock = Arc::new(Mutex::new(()));
 
