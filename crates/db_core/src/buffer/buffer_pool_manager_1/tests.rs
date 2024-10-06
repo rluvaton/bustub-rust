@@ -136,9 +136,7 @@ mod tests {
         // there would still be one buffer page left for reading page 0.
         for i in 0..5 {
             // Should drop guard and unpin
-            {
-                let _ = page_guards.remove(0);
-            }
+            let _ = page_guards.remove(0);
         }
 
         for _ in 0..4 {
