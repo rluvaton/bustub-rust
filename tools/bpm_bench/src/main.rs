@@ -106,6 +106,14 @@ mod metrics;
 // get: 149108.7963734542
 // >>> END
 
+// Before try to clean up 9d5cd7377f0efa2152f51bf8417db1e61f0eef59
+// Release:
+// <<< BEGIN
+// scan: 147529.04903169896
+// get: 163663.34455518148
+// >>> END
+
+
 
 fn setup() -> TempDir {
     TempDir::new("bpm_bench").expect("Should create tmp directory")
