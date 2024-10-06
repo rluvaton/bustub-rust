@@ -1,7 +1,6 @@
 use parking_lot::Mutex;
 use std::sync::Arc;
-use std::thread::JoinHandle;
-use std::thread;
+use std::thread::{Builder, JoinHandle};
 
 use crate::storage::{DiskManager, DiskRequestType};
 use common::{abort_process_on_panic, Channel, Promise};
@@ -18,14 +17,14 @@ pub struct DiskScheduler {
     worker: DiskSchedulerWorker,
 
     /** A shared queue to concurrently schedule and process requests. When the DiskScheduler's destructor is called,
-           * `std::nullopt` is put into the queue to signal to the background thread to stop execution. */
+                 * `std::nullopt` is put into the queue to signal to the background thread to stop execution. */
     sender: Arc<Channel<DiskSchedulerWorkerMessage>>,
 }
 
 
 enum DiskSchedulerWorkerMessage {
     Terminate,
-    NewJob(DiskRequestType)
+    NewJob(DiskRequestType),
 }
 
 
@@ -100,36 +99,38 @@ impl DiskSchedulerWorker {
      * return until ~DiskScheduler() is called. At that point you need to make sure that the function does return.
      */
     fn new(disk_manager: Arc<Mutex<dyn DiskManager + Send + Sync>>, receiver: Arc<Channel<DiskSchedulerWorkerMessage>>) -> DiskSchedulerWorker {
-        let thread = thread::spawn(move || {
-            abort_process_on_panic();
+        let thread = Builder::new()
+            .name("Disk Scheduler".to_string())
+            .spawn(move || {
+                abort_process_on_panic();
 
-            loop {
+                loop {
+                    let job = receiver.get();
 
-                let job = receiver.get();
+                    let req: DiskRequestType;
 
-                let req: DiskRequestType;
-
-                match job {
-                    DiskSchedulerWorkerMessage::Terminate => {
-                        break
+                    match job {
+                        DiskSchedulerWorkerMessage::Terminate => {
+                            break
+                        }
+                        DiskSchedulerWorkerMessage::NewJob(job) => {
+                            req = job;
+                        }
                     }
-                    DiskSchedulerWorkerMessage::NewJob(job) => {
-                        req = job;
+
+                    match req {
+                        DiskRequestType::Read(req) => unsafe {
+                            disk_manager.lock().read_page(req.page_id, req.data.clone().get_mut().as_mut_slice());
+                            req.callback.set_value(true);
+                        }
+                        DiskRequestType::Write(req) => unsafe {
+                            disk_manager.lock().write_page(req.page_id, req.data.get().as_slice());
+                            req.callback.set_value(true);
+                        }
                     }
                 }
-
-                match req {
-                    DiskRequestType::Read(req) => unsafe {
-                        disk_manager.lock().read_page(req.page_id, req.data.clone().get_mut().as_mut_slice());
-                        req.callback.set_value(true);
-                    }
-                    DiskRequestType::Write(req) => unsafe {
-                        disk_manager.lock().write_page(req.page_id, req.data.get().as_slice());
-                        req.callback.set_value(true);
-                    }
-                }
-            }
-        });
+            })
+            .expect("failed to spawn disk scheduler thread");
 
         DiskSchedulerWorker {
             thread: Some(thread),

@@ -19,8 +19,17 @@ jobs:
     - name: Build
       run: cargo build --verbose
 
-    # Running tests in a single thread as we have thread safety tests and we want to have all the threads available for them
     - name: Run tests
       env:
+        # Running tests in a single thread as we have thread safety tests and we want to have all the threads available for them
         RUST_TEST_THREADS: 1
-      run: cargo test --verbose -- --nocapture
+
+        # Show backtrace on panic
+        RUST_BACKTRACE: 1
+
+        # Show test print output
+        RUST_TEST_NOCAPTURE: 1
+
+        # Print --verbose output
+        CARGO_TERM_VERBOSE: true
+      run: cargo test
