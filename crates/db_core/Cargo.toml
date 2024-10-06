@@ -21,8 +21,8 @@ dashmap = "6.1.0"
 chrono = "0.4.38"
 rand = "0.8"
 
-# TODO - only enable deadlock detection in testing
-parking_lot = { version = "0.12.3", features = ["default", "deadlock_detection"] }
+# Make sure to sync this version with the one in the dev-dependencies
+parking_lot = { version = "0.12.3", features = ["default"] }
 derive_builder = "0.20.0"
 num-format = "0.4.4"
 mut-binary-heap = "0.1.0"
@@ -32,7 +32,11 @@ tracy-client = { version = "0.17.3", default-features = false, features = [
         #    "enable"
 ] }
 rand_chacha = "0.3.1"
+
 [dev-dependencies]
 tempdir = "0.3.7"
 zipf = "7"
+parking_lot = { version = "0.12.3", features = ["default", "deadlock_detection"] }
+
+
 

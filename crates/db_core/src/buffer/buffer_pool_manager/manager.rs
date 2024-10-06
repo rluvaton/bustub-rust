@@ -219,6 +219,14 @@ impl BufferPoolManager {
         self.wait_for_pending_request_page_to_finish(&self.pending_fetch_requests, page_id)
     }
 
+    fn finish_current_pending_fetch_page_request(&self, page_id: PageId, fetch_promise: Promise<()>) {
+        // First removing the pending requests
+        self.pending_fetch_requests.lock().remove(&page_id);
+
+        // Then release the lock
+        fetch_promise.set_value(());
+    }
+
     fn fetch_page<PageAndGuardImpl: PageAndGuard, R, F: FnOnce(Arc<Self>, PageAndGuardImpl) -> R>(self: &Arc<Self>, page_id: PageId, access_type: AccessType, create_guard: F) -> Result<R, errors::FetchPageError> {
         // Find available frame
 
@@ -317,15 +325,10 @@ impl BufferPoolManager {
                 let flush_page_result = flush_page_future.wait();
 
                 if !flush_page_result {
-
-                    // Avoid locking forever the current page fetch
-                    current_fetch_promise.set_value(());
-
-                    self.pending_fetch_requests.lock().remove(&page_id);
-
-                    assert_eq!(flush_page_result, true, "Must be able to flush page");
+                    self.finish_current_pending_fetch_page_request(page_id, current_fetch_promise);
 
                     // TODO - reset page in page table
+                    panic!("Must be able to flush page");
                 }
 
                 // 9.1. Reset page to the current page
@@ -335,12 +338,9 @@ impl BufferPoolManager {
                 let fetch_page_result = fetch_page_future.wait();
 
                 if !fetch_page_result {
+                    self.finish_current_pending_fetch_page_request(page_id, current_fetch_promise);
 
-                    // Avoid locking forever the current page fetch
-                    current_fetch_promise.set_value(());
-
-                    self.pending_fetch_requests.lock().remove(&page_id);
-                    assert_eq!(fetch_page_result, true, "Must be able to fetch page");
+                    panic!("Must be able to fetch page");
                 }
 
                 // 11. Set page id to be the correct page id
@@ -351,10 +351,7 @@ impl BufferPoolManager {
                 drop(page_to_replace_guard);
                 let page_to_replace_requested_guard = PageAndGuardImpl::from(page_to_replace_backup);
 
-                // Page is ready to fetch, so only release after the read lock acquired
-                current_fetch_promise.set_value(());
-
-                self.pending_fetch_requests.lock().remove(&page_id);
+                self.finish_current_pending_fetch_page_request(page_id, current_fetch_promise);
 
                 Ok(create_guard(self.clone(), page_to_replace_requested_guard))
             } else {
@@ -374,11 +371,9 @@ impl BufferPoolManager {
                 let fetch_page_result = fetch_page_future.wait();
 
                 if !fetch_page_result {
-                    // Avoid locking forever the current page fetch
-                    current_fetch_promise.set_value(());
+                    self.finish_current_pending_fetch_page_request(page_id, current_fetch_promise);
 
-                    self.pending_fetch_requests.lock().remove(&page_id);
-                    assert_eq!(fetch_page_result, true, "Must be able to fetch page");
+                    panic!("Must be able to fetch page");
                 }
 
                 // 11. Set page id to be the correct page id
@@ -389,10 +384,7 @@ impl BufferPoolManager {
                 drop(page_to_replace_guard);
                 let page_to_replace_requested_guard = PageAndGuardImpl::from(page_to_replace_backup);
 
-                // Page is ready to fetch, so only release after the read lock acquired
-                current_fetch_promise.set_value(());
-
-                self.pending_fetch_requests.lock().remove(&page_id);
+                self.finish_current_pending_fetch_page_request(page_id, current_fetch_promise);
 
                 Ok(create_guard(self.clone(), page_to_replace_requested_guard))
             }
@@ -419,20 +411,14 @@ impl BufferPoolManager {
             let fetch_page_result = fetch_page_future.wait();
 
             if !fetch_page_result {
-                current_fetch_promise.set_value(());
+                self.finish_current_pending_fetch_page_request(page_id, current_fetch_promise);
 
-                // Avoid locking forever the current page fetch
-                self.pending_fetch_requests.lock().remove(&page_id);
-
-                assert_eq!(fetch_page_result, true, "Must be able to fetch page");
+                panic!("Must be able to fetch page");
             }
 
             let requested_guard = PageAndGuardImpl::from(page);
 
-            // Page is ready to fetch
-            current_fetch_promise.set_value(());
-
-            self.pending_fetch_requests.lock().remove(&page_id);
+            self.finish_current_pending_fetch_page_request(page_id, current_fetch_promise);
 
             Ok(create_guard(self.clone(), requested_guard))
         }
