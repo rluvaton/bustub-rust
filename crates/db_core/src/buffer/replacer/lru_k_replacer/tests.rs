@@ -9,6 +9,7 @@ mod tests {
     use std::thread;
     use std::thread::{sleep, JoinHandle};
     use std::time::Duration;
+    use parking_lot::Mutex;
 
     #[test]
     fn sample() {
@@ -97,7 +98,7 @@ mod tests {
         // This does not check any correctness, it just checks that we can use the LRU with threads
 
         const FRAMES: usize = 50;
-        let lru_replacer = LRUKReplacer::new(FRAMES, 10);
+        let lru_replacer = Arc::new(Mutex::new(LRUKReplacer::new(FRAMES, 10)));
 
         let mut threads: Vec<JoinHandle<()>> = vec![];
 
@@ -109,8 +110,8 @@ mod tests {
 
                 // In each one record access to every frame
                 for i in 0..FRAMES {
-                    lru_replacer.record_access(i as FrameId, AccessType::default());
-                    lru_replacer.set_evictable(i as FrameId, true);
+                    lru_replacer.lock().record_access(i as FrameId, AccessType::default());
+                    lru_replacer.lock().set_evictable(i as FrameId, true);
                 }
             });
 
@@ -122,14 +123,14 @@ mod tests {
             t.join().expect("join must work");
         }
 
-        assert_eq!(lru_replacer.size(), FRAMES);
+        assert_eq!(lru_replacer.lock().size(), FRAMES);
     }
 
     #[test]
     fn many_threads() {
         // This does not check any correctness, it just check that we can use the lru with threads
         const FRAMES: usize = 1000;
-        let lru_replacer = LRUKReplacer::new(FRAMES, 10);
+        let lru_replacer = Arc::new(Mutex::new(LRUKReplacer::new(FRAMES, 10)));
 
         let mut threads: Vec<JoinHandle<()>> = vec![];
 
@@ -141,7 +142,7 @@ mod tests {
                 for _ in 0..FRAMES * 10 {
                     let frame_id: FrameId = rand::thread_rng().gen_range(1..FRAMES) as FrameId;
 
-                    lru_replacer.record_access(frame_id, AccessType::default());
+                    lru_replacer.lock().record_access(frame_id, AccessType::default());
                 }
             });
 
@@ -155,7 +156,7 @@ mod tests {
                 for _ in 0..FRAMES * 10 {
                     let frame_id: FrameId = rand::thread_rng().gen_range(1..FRAMES) as FrameId;
                     let evictable = rand::thread_rng().gen_range(1..=2) == 1;
-                    lru_replacer.set_evictable(frame_id, evictable);
+                    lru_replacer.lock().set_evictable(frame_id, evictable);
                 }
             });
 
@@ -171,7 +172,7 @@ mod tests {
             let t = thread::spawn(move || {
 
                 while !stop.load(SeqCst) {
-                    lru_replacer.evict();
+                    lru_replacer.lock().evict();
 
                     let sleep_microseconds = rand::thread_rng().gen_range(1..1000);
 
@@ -198,22 +199,21 @@ mod tests {
     fn concurrent_set_evictable() {
         // This does not check any correctness, it just check that we can use the lru with threads
         const FRAMES: usize = 10;
-        let mut lru_replacer = LRUKReplacer::new(FRAMES, 10);
+        let mut lru_replacer = Arc::new(Mutex::new(LRUKReplacer::new(FRAMES, 10)));
 
         for i in 0..FRAMES {
-            lru_replacer.record_access(i as FrameId, AccessType::default());
+            lru_replacer.lock().record_access(i as FrameId, AccessType::default());
         }
 
         let mut threads: Vec<JoinHandle<()>> = vec![];
 
         for _ in 0..1000 {
             let mut lru_replacer = lru_replacer.clone();
-
             let t = thread::spawn(move || {
 
                 for i in 0..FRAMES {
-                    lru_replacer.set_evictable(i as FrameId, false);
-                    lru_replacer.set_evictable(i as FrameId, true);
+                    lru_replacer.lock().set_evictable(i as FrameId, false);
+                    lru_replacer.lock().set_evictable(i as FrameId, true);
                 }
 
             });
@@ -226,30 +226,28 @@ mod tests {
             t.join().expect("join must work");
         }
 
-        assert_eq!(lru_replacer.size(), FRAMES);
+        assert_eq!(lru_replacer.lock().size(), FRAMES);
     }
 
     #[test]
     fn concurrent_evict_and_access() {
-        let mut lru_replacer = LRUKReplacer::new(7, 2);
-        lru_replacer.record_access(1, AccessType::default());
-        lru_replacer.set_evictable(1, true);
+        let mut lru_replacer = Arc::new(Mutex::new(LRUKReplacer::new(7, 2)));
+        lru_replacer.lock().record_access(1, AccessType::default());
+        lru_replacer.lock().set_evictable(1, true);
 
         let mut evict_replacer = lru_replacer.clone();
         let evict_handle = thread::spawn(move || {
-            evict_replacer.evict();
+            evict_replacer.lock().evict();
         });
 
         let mut access_replacer = lru_replacer.clone();
         let access_handle = thread::spawn(move || {
-            access_replacer.record_access(1, AccessType::default());
+            access_replacer.lock().record_access(1, AccessType::default());
         });
 
         evict_handle.join().unwrap();
         access_handle.join().unwrap();
 
-        assert!(lru_replacer.size() <= 1); // Either evicted or recorded
+        assert!(lru_replacer.lock().size() <= 1); // Either evicted or recorded
     }
-
-    // TODO - add tests for thread safety
 }
