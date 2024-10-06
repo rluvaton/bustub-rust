@@ -1,5 +1,3 @@
-use std::mem;
-
 pub struct FixedSizeLinkedList<T> {
     capacity: usize,
     front_index: usize,
@@ -129,7 +127,16 @@ impl<T> FixedSizeLinkedList<T> {
     /// ```
     #[inline]
     pub fn clear(&mut self) {
-        todo!()
+        for i in self.front_index..self.capacity {
+            self.data[i] = None
+        }
+
+        for i in 0..=self.back_index {
+            self.data[i] = None
+        }
+
+        self.front_index = 0;
+        self.back_index = self.capacity - 1;
     }
 
     /// Provides a reference to the front element, or `None` if the list is
