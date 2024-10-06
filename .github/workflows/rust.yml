@@ -21,4 +21,6 @@ jobs:
 
     # Running tests in a single thread as we have thread safety tests and we want to have all the threads available for them
     - name: Run tests
-      run: cargo test --verbose --test-threads=1
+      env:
+        RUST_TEST_THREADS: 1
+      run: cargo test --verbose
