@@ -187,6 +187,7 @@ impl BufferPoolManager {
     }
 
     fn wait_for_pending_request_page_to_finish(&self, requests_map: &Mutex<HashMap<PageId, Future<()>>>, page_id: PageId) -> MutexGuard<InnerBufferPoolManager> {
+        // TODO - wait for condvar to avoid taking cpu time
 
         // 1. Hold replacer guard as all pin and unpin must first hold the replacer to avoid getting replaced in the middle
         let mut inner = self.inner.lock();
@@ -594,14 +595,17 @@ impl BufferPool for Arc<BufferPoolManager> {
 
         let page = inner.pages[frame_id as usize].clone();
 
+        if page.is_locked_exclusive() {
+            panic!("Possible deadlock detected when trying to flush page {} when the page has already exclusive lock", page_id);
+        }
+
         // Avoid evicting in the middle
         inner.replacer.set_evictable(frame_id, false);
         page.pin();
 
-
         let mut scheduler = self.disk_scheduler.lock();
 
-        //  Add flush message to the scheduler
+        // Add flush message to the scheduler
         let flush_page_future = BufferPoolManager::request_write_page(&mut scheduler, page_id, page.read().get_data());
 
         // release all locks as we don't want to hold the entire lock while flushing to disk
@@ -610,7 +614,6 @@ impl BufferPool for Arc<BufferPoolManager> {
 
         assert_eq!(flush_page_future.wait(), true, "Must be able to flush page");
 
-        // TODO - must not be able to modify in the middle
         page.set_is_dirty(false);
 
         self.unpin_page(page_id, AccessType::Unknown);
