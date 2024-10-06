@@ -642,7 +642,7 @@ mod tests {
                     }
                 }
 
-                println!("Finished");
+                println!("Thread {} Finished", thread_id);
 
                 hash_table.verify_integrity(false);
             });
@@ -657,7 +657,7 @@ mod tests {
 
         finished.store(true, Ordering::Relaxed);
 
-        println!("Finished");
+        println!("All threads finished");
 
         // Final integrity check
         hash_table.verify_integrity(false);
