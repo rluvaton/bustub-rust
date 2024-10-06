@@ -447,7 +447,7 @@ mod tests {
             let guard = bpm.fetch_page_read(pid, AccessType::Unknown).expect("Should be able to fetch page as read");
 
             // Save the data we observe.
-            let buf = guard.get_data().as_slice().clone();
+            let buf = guard.get_data().as_slice();
 
             // Sleep for a bit. If latching is working properly, nothing should be writing to the page.
             thread::sleep(Duration::from_millis(10));
