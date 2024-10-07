@@ -43,4 +43,5 @@ debug = true
 
 [features]
 default = []
+statistics = []
 tracing = ["tracy-client/enable"]

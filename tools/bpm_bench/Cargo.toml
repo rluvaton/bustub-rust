@@ -23,4 +23,6 @@ debug = true
 
 [features]
 default = []
-tracing = ["tracy-client/enable"]
+statistics = ["db_core/statistics"]
+tracing = ["tracy-client/enable", "db_core/tracing"]
+tracing-memory-allocation = ["tracing"]

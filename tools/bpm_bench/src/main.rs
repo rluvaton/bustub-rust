@@ -20,7 +20,7 @@ use tempdir::TempDir;
 use tracy_client::*;
 
 // Tracking Memory usage
-#[cfg(feature = "tracing")]
+#[cfg(feature = "tracing-memory-allocation")]
 #[global_allocator]
 static GLOBAL: ProfiledAllocator<std::alloc::System> =
     ProfiledAllocator::new(std::alloc::System, 100);
@@ -344,12 +344,13 @@ fn main() {
 
     total_metrics.lock().report();
 
-    // println!("\n\n");
-    // println!("###################");
-    // println!("       Stats       ");
-    // println!("###################");
-    // println!();
-    // println!("{}", bpm.clone().get_stats());
+    println!("\n\n");
+    println!("###################");
+    println!("       Stats       ");
+    println!("###################");
+    println!();
+    #[cfg(feature = "statistics")]
+    println!("{}", bpm.clone().get_stats());
 }
 
 fn init_pages(bustub_page_cnt: usize, bpm: &Arc<BufferPoolManager>, page_ids: &Arc<RwLock<Vec<PageId>>>) {

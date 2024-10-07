@@ -8,9 +8,8 @@ const INDENTATION_STEP: usize = 2;
 
 #[derive(Clone)]
 pub struct BufferPoolManagerStats {
-    // TODO - change this
-    pub(in crate::buffer) holding_root_latch: RunningTimeStats,
-    pub(in crate::buffer) waiting_for_root_latch: RunningTimeStats,
+    pub(in crate::buffer) holding_inner_latch: RunningTimeStats,
+    pub(in crate::buffer) waiting_for_inner_latch: RunningTimeStats,
 }
 
 impl BufferPoolManagerStats {
@@ -25,8 +24,8 @@ impl BufferPoolManagerStats {
 impl Default for BufferPoolManagerStats {
     fn default() -> Self {
         Self {
-            holding_root_latch: RunningTimeStats::new("Holding root latch"),
-            waiting_for_root_latch: RunningTimeStats::new("Waiting for root latch"),
+            holding_inner_latch: RunningTimeStats::new("Holding inner latch"),
+            waiting_for_inner_latch: RunningTimeStats::new("Waiting for inner latch"),
         }
     }
 }
@@ -35,8 +34,8 @@ impl Display for BufferPoolManagerStats {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "BufferPoolManagerStats:\n\n")?;
 
-        BufferPoolManagerStats::format_single_running_time_stats(&self.holding_root_latch, f, INDENTATION_STEP)?;
+        BufferPoolManagerStats::format_single_running_time_stats(&self.holding_inner_latch, f, INDENTATION_STEP)?;
         write!(f, "\n\n")?;
-        BufferPoolManagerStats::format_single_running_time_stats(&self.waiting_for_root_latch, f, INDENTATION_STEP)
+        BufferPoolManagerStats::format_single_running_time_stats(&self.waiting_for_inner_latch, f, INDENTATION_STEP)
     }
 }

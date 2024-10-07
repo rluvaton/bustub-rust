@@ -9,6 +9,9 @@ use crate::buffer::{AccessType, LRUKReplacer, Replacer};
 use crate::recovery::LogManager;
 use crate::storage::{DiskManager, DiskScheduler, Page, PageAndGuard, PageAndReadGuard, PageAndWriteGuard, ReadDiskRequest, WriteDiskRequest};
 
+#[cfg(feature = "tracing")]
+use tracy_client::span;
+
 ///
 /// BufferPoolManager reads disk pages to and from its internal buffer pool.
 ///
@@ -35,6 +38,7 @@ pub struct BufferPoolManager {
     /// Pending fetch requests from disk
     pending_fetch_requests: Mutex<HashMap<PageId, SharedFuture<()>>>,
 
+    #[cfg(feature = "statistics")]
     /// Statistics on buffer pool
     stats: BufferPoolManagerStats,
 }
@@ -61,7 +65,6 @@ struct InnerBufferPoolManager {
     replacer: LRUKReplacer,
 
     /// List of free frames that don't have any pages on them.
-    // std::list<frame_id_t> free_list_;
     free_list: LinkedList<FrameId>,
 }
 
@@ -88,7 +91,6 @@ impl BufferPoolManager {
             inner: Mutex::new(InnerBufferPoolManager {
 
                 // we allocate a consecutive memory space for the buffer pool
-                // TODO - avoid having lock here as well
                 pages: Vec::with_capacity(pool_size),
 
                 replacer: LRUKReplacer::new(
@@ -96,7 +98,6 @@ impl BufferPoolManager {
                     replacer_k.unwrap_or(LRUK_REPLACER_K),
                 ),
 
-                // TODO - remove mutex
                 page_table: HashMap::with_capacity(pool_size),
                 free_list,
             }),
@@ -105,6 +106,7 @@ impl BufferPoolManager {
 
             pending_fetch_requests: Mutex::new(HashMap::new()),
 
+            #[cfg(feature = "statistics")]
             stats: BufferPoolManagerStats::default(),
         };
 
@@ -220,6 +222,14 @@ impl BufferPoolManager {
         // 1. Hold replacer guard as all pin and unpin must first hold the replacer to avoid getting replaced in the middle
         let mut inner = self.wait_for_pending_fetch_page_to_finish(page_id);
 
+        let holding_inner_latch = (
+            #[cfg(feature = "tracing")]
+            span!("[fetch_page] Holding root lock"),
+
+            #[cfg(feature = "statistics")]
+            self.stats.holding_inner_latch.create_single(),
+        );
+
         // We have 3 cases when fetching page
         // 1. page already exists in the buffer pool
         // 2. page does not exist in the buffer pool and we DO NOT NEED to flush existing page
@@ -240,6 +250,7 @@ impl BufferPoolManager {
             page.pin();
 
             // 3.5 Drop all locks before waiting for the page read lock
+            drop(holding_inner_latch);
             drop(inner);
 
             let page_and_guard = PageAndGuardImpl::from(page);
@@ -299,6 +310,7 @@ impl BufferPoolManager {
 
                 // 8. release all locks as we don't want to hold the entire lock while flushing to disk
                 drop(scheduler);
+                drop(holding_inner_latch);
                 drop(inner);
 
                 // 9. Wait for the flush to finish
@@ -346,6 +358,7 @@ impl BufferPoolManager {
 
                 // 7. release all locks as we don't want to hold the entire lock while flushing to disk
                 drop(scheduler);
+                drop(holding_inner_latch);
                 drop(inner);
 
                 // 8. Wait for the fetch to finish
@@ -386,6 +399,7 @@ impl BufferPoolManager {
 
             // 7. release all locks as we don't want to hold the entire lock while flushing to disk
             drop(scheduler);
+            drop(holding_inner_latch);
             drop(inner);
 
             // 8. Wait for the fetch to finish
@@ -415,8 +429,24 @@ impl BufferPoolManager {
     /// returns: bool whether was able to unpin or not
     ///
     pub(super) fn unpin_page(&self, page_id: PageId, _access_type: AccessType) -> bool {
+
         // 1. first hold the replacer
-        let mut inner = self.inner.lock();
+        let mut inner = {
+            let _stat = (
+                #[cfg(feature = "tracing")]
+                span!("[unpin_page] waiting for root lock"),
+                #[cfg(feature = "statistics")]
+                self.stats.waiting_for_inner_latch.create_single(),
+            );
+            self.inner.lock()
+        };
+
+        let _holding_inner_latch = (
+            #[cfg(feature = "tracing")]
+            span!("[unpin_page] holding root lock"),
+            #[cfg(feature = "statistics")]
+            self.stats.holding_inner_latch.create_single(),
+        );
 
         // 2. check if the page table the page exists
         if let Some(&frame_id) = inner.page_table.get(&page_id) {
@@ -443,13 +473,13 @@ impl BufferPoolManager {
         }
     }
 
+    #[cfg(feature = "statistics")]
     pub fn get_stats(&self) -> &BufferPoolManagerStats {
         &self.stats
     }
 }
 
 impl InnerBufferPoolManager {
-
     #[inline(always)]
     fn record_access_and_avoid_eviction(&mut self, frame_id: FrameId, access_type: AccessType) {
 
@@ -472,7 +502,22 @@ impl BufferPool for Arc<BufferPoolManager> {
         // Find available frame
 
         // 1. Hold replacer guard as all pin and unpin must first hold the replacer to avoid getting replaced in the middle
-        let mut inner = self.inner.lock();
+        let mut inner = {
+            let _stat = (
+                #[cfg(feature = "tracing")]
+                span!("[new_page] waiting for root lock"),
+                #[cfg(feature = "statistics")]
+                self.stats.waiting_for_inner_latch.create_single(),
+            );
+            self.inner.lock()
+        };
+
+        let holding_root_lock = (
+            #[cfg(feature = "tracing")]
+            span!("[new_page] holding root lock"),
+            #[cfg(feature = "statistics")]
+            self.stats.holding_inner_latch.create_single(),
+        );
 
         // 2. Find replacement frame
         let frame_id = self.find_replacement_frame(&mut inner)?;
@@ -515,6 +560,7 @@ impl BufferPool for Arc<BufferPoolManager> {
 
                 // 7. release all locks as we don't want to hold the entire lock while flushing to disk
                 drop(scheduler);
+                drop(holding_root_lock);
                 drop(inner);
 
                 // 8. Wait for the flush to finish
@@ -562,8 +608,25 @@ impl BufferPool for Arc<BufferPoolManager> {
     }
 
     fn flush_page(&self, page_id: PageId) -> bool {
+
         // 1. Hold replacer guard as all pin and unpin must first hold the replacer to avoid getting replaced in the middle
-        let mut inner = self.inner.lock();
+        let mut inner = {
+            let _stat = (
+                #[cfg(feature = "tracing")]
+                span!("[flush_page] waiting for root lock"),
+                #[cfg(feature = "statistics")]
+                self.stats.waiting_for_inner_latch.create_single(),
+            );
+            self.inner.lock()
+        };
+
+        let holding_root_lock = (
+            #[cfg(feature = "tracing")]
+            span!("[flush_page] holding root lock"),
+            #[cfg(feature = "statistics")]
+            self.stats.holding_inner_latch.create_single(),
+        );
+
 
         if !inner.page_table.contains_key(&page_id) {
             // Page is missing
@@ -589,6 +652,7 @@ impl BufferPool for Arc<BufferPoolManager> {
 
         // release all locks as we don't want to hold the entire lock while flushing to disk
         drop(scheduler);
+        drop(holding_root_lock);
         drop(inner);
 
         assert_eq!(flush_page_future.wait(), true, "Must be able to flush page");
@@ -609,7 +673,23 @@ impl BufferPool for Arc<BufferPoolManager> {
             return Err(errors::DeletePageError::InvalidPageId);
         }
 
-        let mut inner = self.inner.lock();
+        let mut inner = {
+            let _stat = (
+                #[cfg(feature = "tracing")]
+                span!("[delete_page] waiting for root lock"),
+                #[cfg(feature = "statistics")]
+                self.stats.waiting_for_inner_latch.create_single(),
+            );
+            self.inner.lock()
+        };
+
+        let _holding_root_lock = (
+            #[cfg(feature = "tracing")]
+            span!("[delete_page] holding root lock"),
+            #[cfg(feature = "statistics")]
+            self.stats.holding_inner_latch.create_single(),
+        );
+
 
         if !inner.page_table.contains_key(&page_id) {
             // Page is missing
@@ -642,8 +722,23 @@ impl BufferPool for Arc<BufferPoolManager> {
     }
 
     fn get_pin_count(&self, page_id: PageId) -> Option<usize> {
-        // 1. first hold the replacer
-        let inner = self.inner.lock();
+        // 1. first hold the inner lock
+        let inner = {
+            let _stat = (
+                #[cfg(feature = "tracing")]
+                span!("[get_pin_count] waiting for root lock"),
+                #[cfg(feature = "statistics")]
+                self.stats.waiting_for_inner_latch.create_single(),
+            );
+            self.inner.lock()
+        };
+
+        let _holding_root_lock = (
+            #[cfg(feature = "tracing")]
+            span!("[get_pin_count] holding root lock"),
+            #[cfg(feature = "statistics")]
+            self.stats.holding_inner_latch.create_single(),
+        );
 
         // 2. check if the page table the page exists
 
