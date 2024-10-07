@@ -1,6 +1,6 @@
 use std::cell::UnsafeCell;
 use std::sync::Arc;
-use data_structures::FixedSizeLinkedList;
+use data_structures::{DoubleEndedList, FixedSizeLinkedList};
 
 use super::counter::AtomicI64Counter;
 
