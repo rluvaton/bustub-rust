@@ -2,7 +2,7 @@ use std::fmt::{Debug, Formatter};
 
 pub struct FixedSizeLinkedList<T> {
     capacity: usize,
-    is_empty: bool,
+    length: usize,
     front_index: usize,
     back_index: usize,
     data: Vec<Option<T>>,
@@ -16,7 +16,7 @@ impl<T> FixedSizeLinkedList<T> {
         }
 
         Self {
-            is_empty: true,
+            length: 0,
             capacity,
             front_index: 0,
             back_index: capacity - 1,
@@ -48,9 +48,7 @@ impl<T> FixedSizeLinkedList<T> {
     #[inline]
     #[must_use]
     pub fn is_empty(&self) -> bool {
-        // TODO - try to use the indexes only
-        // self.data[self.front_index].is_none()
-        self.is_empty
+        self.length == 0
     }
 
     /// Returns `true` if the `FixedSizeLinkedList` is empty.
@@ -71,11 +69,7 @@ impl<T> FixedSizeLinkedList<T> {
     #[inline]
     #[must_use]
     pub fn is_full(&self) -> bool {
-        if self.is_empty() {
-            false
-        } else {
-            (self.back_index + 1) % self.capacity == self.front_index
-        }
+        self.length == self.capacity
     }
 
     /// Returns the length of the `FixedSizeLinkedList`.
@@ -101,13 +95,41 @@ impl<T> FixedSizeLinkedList<T> {
     #[inline]
     #[must_use]
     pub fn len(&self) -> usize {
+        self.length
+    }
+
+    /// Keep all elements in `FixedSizeLinkedList` but start over (don't drop values but the values won't be found)
+    ///
+    /// this is useful for reusing memory with items that do not have custom drop logic
+    ///
+    /// This operation should compute in *O*(*1*) time.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use data_structures::FixedSizeLinkedList;
+    ///
+    /// let mut dl = FixedSizeLinkedList::with_capacity(10);
+    ///
+    /// dl.push_front(2);
+    /// dl.push_front(1);
+    /// assert_eq!(dl.len(), 2);
+    /// assert_eq!(dl.front(), Some(&1));
+    ///
+    /// dl.start_over();
+    /// assert_eq!(dl.len(), 0);
+    /// assert_eq!(dl.front(), None);
+    /// ```
+    #[inline]
+    pub fn start_over(&mut self) {
+        // If already empty nothing to do
         if self.is_empty() {
-            0
-        } else if self.back_index < self.front_index {
-            self.capacity - self.front_index + self.back_index + 1
-        } else {
-            self.back_index - self.front_index + 1
+            return;
         }
+
+        self.front_index = 0;
+        self.back_index = self.capacity - 1;
+        self.length = 0;
     }
 
     /// Removes all elements from the `FixedSizeLinkedList`.
@@ -131,17 +153,23 @@ impl<T> FixedSizeLinkedList<T> {
     /// assert_eq!(dl.front(), None);
     /// ```
     #[inline]
-    pub fn clear(&mut self) {
-        for i in self.front_index..self.capacity {
-            self.data[i] = None
+    pub fn clear(&mut self) where T: Clone {
+        // If already empty nothing to do
+        if self.is_empty() {
+            return;
         }
 
-        for i in 0..=self.back_index {
-            self.data[i] = None
+        if self.front_index <= self.back_index {
+            self.data[self.front_index..=self.back_index].fill(None);
+        } else {
+            // If back index is before front (we had a circle)
+            self.data[0..=self.back_index].fill(None);
+            self.data[self.front_index..].fill(None);
         }
 
         self.front_index = 0;
         self.back_index = self.capacity - 1;
+        self.length = 0;
     }
 
     /// Provides a reference to the front element, or `None` if the list is
@@ -163,7 +191,11 @@ impl<T> FixedSizeLinkedList<T> {
     #[inline]
     #[must_use]
     pub fn front(&self) -> Option<&T> {
-        self.data[self.front_index].as_ref()
+        if self.is_empty() {
+            None
+        } else {
+            self.data[self.front_index].as_ref()
+        }
     }
 
     /// Provides a mutable reference to the front element, or `None` if the list
@@ -191,7 +223,11 @@ impl<T> FixedSizeLinkedList<T> {
     #[inline]
     #[must_use]
     pub fn front_mut(&mut self) -> Option<&mut T> {
-        self.data[self.front_index].as_mut()
+        if self.is_empty() {
+            None
+        } else {
+            self.data[self.front_index].as_mut()
+        }
     }
 
     /// Provides a reference to the back element, or `None` if the list is
@@ -213,7 +249,11 @@ impl<T> FixedSizeLinkedList<T> {
     #[inline]
     #[must_use]
     pub fn back(&self) -> Option<&T> {
-        self.data[self.back_index].as_ref()
+        if self.is_empty() {
+            None
+        } else {
+            self.data[self.back_index].as_ref()
+        }
     }
 
     /// Provides a mutable reference to the back element, or `None` if the list
@@ -240,7 +280,11 @@ impl<T> FixedSizeLinkedList<T> {
     /// ```
     #[inline]
     pub fn back_mut(&mut self) -> Option<&mut T> {
-        self.data[self.back_index].as_mut()
+        if self.is_empty() {
+            None
+        } else {
+            self.data[self.back_index].as_mut()
+        }
     }
 
     /// Adds an element first in the list. return true if was successful
@@ -264,12 +308,13 @@ impl<T> FixedSizeLinkedList<T> {
         if self.is_full() {
             false
         } else {
+            // Going 1 index back and rotate if reached 0
             let prev_index = (self.front_index + self.capacity - 1) % self.capacity;
 
             self.data[prev_index].replace(item);
 
             self.front_index = prev_index;
-            self.is_empty = false;
+            self.length += 1;
 
             true
         }
@@ -301,7 +346,7 @@ impl<T> FixedSizeLinkedList<T> {
             let next_index = self.front_index;
             self.front_index = (self.front_index + 1) % self.capacity;
 
-            self.is_empty = self.data[self.front_index].is_none();
+            self.length -= 1;
             self.data[next_index].take()
         }
     }
@@ -329,7 +374,8 @@ impl<T> FixedSizeLinkedList<T> {
             self.data[next_index].replace(item);
 
             self.back_index = next_index;
-            self.is_empty = false;
+            self.length += 1;
+
             true
         }
     }
@@ -363,7 +409,8 @@ impl<T> FixedSizeLinkedList<T> {
             self.data[next_index] = Some(item);
 
             self.back_index = next_index;
-            self.is_empty = false;
+            self.length += 1;
+
 
             None
         }
@@ -392,7 +439,7 @@ impl<T> FixedSizeLinkedList<T> {
             let prev_index = self.back_index;
             self.back_index = (self.back_index + self.capacity - 1) % self.capacity;
 
-            self.is_empty = self.data[self.back_index].is_none();
+            self.length -= 1;
             self.data[prev_index].take()
         }
     }
@@ -401,7 +448,7 @@ impl<T> FixedSizeLinkedList<T> {
 impl<T: Clone> Clone for FixedSizeLinkedList<T> {
     fn clone(&self) -> Self {
         Self {
-            is_empty: self.is_empty,
+            length: self.length,
             capacity: self.capacity,
             front_index: self.front_index,
             back_index: self.back_index,
@@ -423,11 +470,50 @@ impl<T: Debug> Debug for FixedSizeLinkedList<T> {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::LinkedList;
+    use std::collections::{HashMap, LinkedList};
+    use std::time::Duration;
     use rand::{thread_rng, Rng, SeedableRng};
+    use rand::distributions::{Distribution, Standard};
     use crate::FixedSizeLinkedList;
     use rand_chacha::ChaChaRng;
 
+
+    // All list operation
+    #[derive(Debug, Copy, Clone, Hash, Eq, PartialEq, PartialOrd, Ord)]
+    enum Operation {
+        PushFront,
+        PushBack,
+        PushRotate,
+        PopFront,
+        PopBack,
+        PushFrontUntilFull,
+        PushBackUntilFull,
+        PushRotateUntilFullCircle,
+        PopFrontUntilEmpty,
+        PopBackUntilEmpty,
+        StartOver,
+        Clear,
+    }
+
+    impl Distribution<Operation> for Standard {
+        fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> Operation {
+            match rng.gen_range(0..=26) {
+                00 | 01 | 02 => Operation::PushFront,
+                03 | 04 | 05 => Operation::PushBack,
+                06 | 07 | 08 => Operation::PushRotate,
+                09 | 10 | 11 => Operation::PopFront,
+                12 | 13 | 14 => Operation::PopBack,
+                15 | 16 => Operation::PushFrontUntilFull,
+                17 | 18 => Operation::PushBackUntilFull,
+                19 | 20 => Operation::PushRotateUntilFullCircle,
+                21 | 22 => Operation::PopFrontUntilEmpty,
+                23 | 24 => Operation::PopBackUntilEmpty,
+                25 => Operation::StartOver,
+                26 => Operation::Clear,
+                _ => unreachable!()
+            }
+        }
+    }
 
     fn rotate_in_actual_linked_list<T>(list: &mut LinkedList<T>, item: T, expected_length: usize) -> Option<T> {
         assert!(list.len() <= expected_length, "List cannot have more than expected length");
@@ -814,33 +900,6 @@ mod tests {
 
         const CAPACITY: usize = 13;
 
-        #[derive(Debug, Copy, Clone)]
-        enum Operation {
-            PushFront,
-            PushBack,
-            PushRotate,
-            PopFront,
-            PopBack,
-            PushFrontUntilFull,
-            PushBackUntilFull,
-            PushRotateUntilFullCircle,
-            PopFrontUntilEmpty,
-            PopBackUntilEmpty,
-        }
-
-        let operation_as_array = [
-            Operation::PushFront,
-            Operation::PushBack,
-            Operation::PushRotate,
-            Operation::PopFront,
-            Operation::PopBack,
-            Operation::PushFrontUntilFull,
-            Operation::PushBackUntilFull,
-            Operation::PushRotateUntilFullCircle,
-            Operation::PopFrontUntilEmpty,
-            Operation::PopBackUntilEmpty
-        ];
-
         let mut list = FixedSizeLinkedList::<isize>::with_capacity(CAPACITY);
         let mut helper_list = LinkedList::<isize>::new();
 
@@ -849,8 +908,8 @@ mod tests {
         assert_eq!(list.len(), 0, "List is empty after init");
         assert_eq!(list.capacity(), CAPACITY);
 
-        for _ in 0..CAPACITY * 1000 {
-            let op = operation_as_array[rng.gen_range(0..operation_as_array.len())];
+        for _ in 0..CAPACITY * 10000 {
+            let op = rng.sample(Standard);
 
             match op {
                 Operation::PushFront => {
@@ -934,6 +993,16 @@ mod tests {
                         let front = helper_list.pop_back();
                         assert_eq!(list.pop_back(), front);
                     }
+                },
+
+                Operation::Clear => {
+                    list.clear();
+                    helper_list.clear();
+                }
+
+                Operation::StartOver => {
+                    list.start_over();
+                    helper_list.clear();
                 }
             }
 
