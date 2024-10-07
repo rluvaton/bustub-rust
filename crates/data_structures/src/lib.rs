@@ -1,3 +1,3 @@
-mod fixed_size_linked_list;
+mod double_ended_list;
 
-pub use fixed_size_linked_list::FixedSizeLinkedList;
+pub use double_ended_list::*;

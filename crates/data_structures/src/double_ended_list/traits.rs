@@ -1,34 +1,10 @@
 use std::fmt::{Debug, Formatter};
 
-pub struct FixedSizeLinkedList<T> {
-    capacity: usize,
-    length: usize,
-    front_index: usize,
-    back_index: usize,
-    data: Vec<Option<T>>,
-}
 
-impl<T> FixedSizeLinkedList<T> {
-    pub fn with_capacity(capacity: usize) -> Self {
-        let mut data = Vec::with_capacity(capacity);
-        for i in 0..capacity {
-            data.insert(i, None);
-        }
-
-        Self {
-            length: 0,
-            capacity,
-            front_index: 0,
-            back_index: capacity - 1,
-            data,
-        }
-    }
-
+pub trait DoubleEndedList<T> {
     #[inline]
     #[must_use]
-    pub fn capacity(&self) -> usize {
-        self.capacity
-    }
+    fn capacity(&self) -> usize;
 
     /// Returns `true` if the `FixedSizeLinkedList` is empty.
     ///
@@ -37,7 +13,7 @@ impl<T> FixedSizeLinkedList<T> {
     /// # Examples
     ///
     /// ```
-    /// use data_structures::FixedSizeLinkedList;
+    /// use data_structures::{DoubleEndedList, FixedSizeLinkedList};
     ///
     /// let mut dl = FixedSizeLinkedList::with_capacity(10);
     /// assert!(dl.is_empty());
@@ -47,9 +23,7 @@ impl<T> FixedSizeLinkedList<T> {
     /// ```
     #[inline]
     #[must_use]
-    pub fn is_empty(&self) -> bool {
-        self.length == 0
-    }
+    fn is_empty(&self) -> bool;
 
     /// Returns `true` if the `FixedSizeLinkedList` is empty.
     ///
@@ -58,7 +32,7 @@ impl<T> FixedSizeLinkedList<T> {
     /// # Examples
     ///
     /// ```
-    /// use data_structures::FixedSizeLinkedList;
+    /// use data_structures::{DoubleEndedList, FixedSizeLinkedList};
     ///
     /// let mut dl = FixedSizeLinkedList::with_capacity(10);
     /// assert!(dl.is_empty());
@@ -68,9 +42,7 @@ impl<T> FixedSizeLinkedList<T> {
     /// ```
     #[inline]
     #[must_use]
-    pub fn is_full(&self) -> bool {
-        self.length == self.capacity
-    }
+    fn is_full(&self) -> bool;
 
     /// Returns the length of the `FixedSizeLinkedList`.
     ///
@@ -79,7 +51,7 @@ impl<T> FixedSizeLinkedList<T> {
     /// # Examples
     ///
     /// ```
-    /// use data_structures::FixedSizeLinkedList;
+    /// use data_structures::{DoubleEndedList, FixedSizeLinkedList};
     ///
     /// let mut dl = FixedSizeLinkedList::with_capacity(10);
     ///
@@ -94,9 +66,7 @@ impl<T> FixedSizeLinkedList<T> {
     /// ```
     #[inline]
     #[must_use]
-    pub fn len(&self) -> usize {
-        self.length
-    }
+    fn len(&self) -> usize;
 
     /// Keep all elements in `FixedSizeLinkedList` but start over (don't drop values but the values won't be found)
     ///
@@ -107,7 +77,7 @@ impl<T> FixedSizeLinkedList<T> {
     /// # Examples
     ///
     /// ```
-    /// use data_structures::FixedSizeLinkedList;
+    /// use data_structures::{DoubleEndedList, FixedSizeLinkedList};
     ///
     /// let mut dl = FixedSizeLinkedList::with_capacity(10);
     ///
@@ -121,16 +91,7 @@ impl<T> FixedSizeLinkedList<T> {
     /// assert_eq!(dl.front(), None);
     /// ```
     #[inline]
-    pub fn start_over(&mut self) {
-        // If already empty nothing to do
-        if self.is_empty() {
-            return;
-        }
-
-        self.front_index = 0;
-        self.back_index = self.capacity - 1;
-        self.length = 0;
-    }
+    fn start_over(&mut self);
 
     /// Removes all elements from the `FixedSizeLinkedList`.
     ///
@@ -139,7 +100,7 @@ impl<T> FixedSizeLinkedList<T> {
     /// # Examples
     ///
     /// ```
-    /// use data_structures::FixedSizeLinkedList;
+    /// use data_structures::{DoubleEndedList, FixedSizeLinkedList};
     ///
     /// let mut dl = FixedSizeLinkedList::with_capacity(10);
     ///
@@ -153,24 +114,7 @@ impl<T> FixedSizeLinkedList<T> {
     /// assert_eq!(dl.front(), None);
     /// ```
     #[inline]
-    pub fn clear(&mut self) where T: Clone {
-        // If already empty nothing to do
-        if self.is_empty() {
-            return;
-        }
-
-        if self.front_index <= self.back_index {
-            self.data[self.front_index..=self.back_index].fill(None);
-        } else {
-            // If back index is before front (we had a circle)
-            self.data[0..=self.back_index].fill(None);
-            self.data[self.front_index..].fill(None);
-        }
-
-        self.front_index = 0;
-        self.back_index = self.capacity - 1;
-        self.length = 0;
-    }
+    fn clear(&mut self) where T: Clone;
 
     /// Provides a reference to the front element, or `None` if the list is
     /// empty.
@@ -180,7 +124,7 @@ impl<T> FixedSizeLinkedList<T> {
     /// # Examples
     ///
     /// ```
-    /// use data_structures::FixedSizeLinkedList;
+    /// use data_structures::{DoubleEndedList, FixedSizeLinkedList};
     ///
     /// let mut dl = FixedSizeLinkedList::with_capacity(10);
     /// assert_eq!(dl.front(), None);
@@ -190,13 +134,7 @@ impl<T> FixedSizeLinkedList<T> {
     /// ```
     #[inline]
     #[must_use]
-    pub fn front(&self) -> Option<&T> {
-        if self.is_empty() {
-            None
-        } else {
-            self.data[self.front_index].as_ref()
-        }
-    }
+    fn front(&self) -> Option<&T>;
 
     /// Provides a mutable reference to the front element, or `None` if the list
     /// is empty.
@@ -206,7 +144,7 @@ impl<T> FixedSizeLinkedList<T> {
     /// # Examples
     ///
     /// ```
-    /// use data_structures::FixedSizeLinkedList;
+    /// use data_structures::{DoubleEndedList, FixedSizeLinkedList};
     ///
     /// let mut dl = FixedSizeLinkedList::with_capacity(10);
     /// assert_eq!(dl.front(), None);
@@ -222,13 +160,7 @@ impl<T> FixedSizeLinkedList<T> {
     /// ```
     #[inline]
     #[must_use]
-    pub fn front_mut(&mut self) -> Option<&mut T> {
-        if self.is_empty() {
-            None
-        } else {
-            self.data[self.front_index].as_mut()
-        }
-    }
+    fn front_mut(&mut self) -> Option<&mut T>;
 
     /// Provides a reference to the back element, or `None` if the list is
     /// empty.
@@ -238,7 +170,7 @@ impl<T> FixedSizeLinkedList<T> {
     /// # Examples
     ///
     /// ```
-    /// use data_structures::FixedSizeLinkedList;
+    /// use data_structures::{DoubleEndedList, FixedSizeLinkedList};
     ///
     /// let mut dl = FixedSizeLinkedList::with_capacity(10);
     /// assert_eq!(dl.back(), None);
@@ -248,13 +180,7 @@ impl<T> FixedSizeLinkedList<T> {
     /// ```
     #[inline]
     #[must_use]
-    pub fn back(&self) -> Option<&T> {
-        if self.is_empty() {
-            None
-        } else {
-            self.data[self.back_index].as_ref()
-        }
-    }
+    fn back(&self) -> Option<&T>;
 
     /// Provides a mutable reference to the back element, or `None` if the list
     /// is empty.
@@ -264,7 +190,7 @@ impl<T> FixedSizeLinkedList<T> {
     /// # Examples
     ///
     /// ```
-    /// use data_structures::FixedSizeLinkedList;
+    /// use data_structures::{DoubleEndedList, FixedSizeLinkedList};
     ///
     /// let mut dl = FixedSizeLinkedList::with_capacity(10);
     /// assert_eq!(dl.back(), None);
@@ -279,13 +205,7 @@ impl<T> FixedSizeLinkedList<T> {
     /// assert_eq!(dl.back(), Some(&5));
     /// ```
     #[inline]
-    pub fn back_mut(&mut self) -> Option<&mut T> {
-        if self.is_empty() {
-            None
-        } else {
-            self.data[self.back_index].as_mut()
-        }
-    }
+    fn back_mut(&mut self) -> Option<&mut T>;
 
     /// Adds an element first in the list. return true if was successful
     ///
@@ -294,7 +214,7 @@ impl<T> FixedSizeLinkedList<T> {
     /// # Examples
     ///
     /// ```
-    /// use data_structures::FixedSizeLinkedList;
+    /// use data_structures::{DoubleEndedList, FixedSizeLinkedList};
     ///
     /// let mut dl = FixedSizeLinkedList::with_capacity(10);
     ///
@@ -304,21 +224,7 @@ impl<T> FixedSizeLinkedList<T> {
     /// dl.push_front(1);
     /// assert_eq!(dl.front().unwrap(), &1);
     /// ```
-    pub fn push_front(&mut self, item: T) -> bool {
-        if self.is_full() {
-            false
-        } else {
-            // Going 1 index back and rotate if reached 0
-            let prev_index = (self.front_index + self.capacity - 1) % self.capacity;
-
-            self.data[prev_index].replace(item);
-
-            self.front_index = prev_index;
-            self.length += 1;
-
-            true
-        }
-    }
+    fn push_front(&mut self, item: T) -> bool;
 
     /// Removes the first element and returns it, or `None` if the list is
     /// empty.
@@ -328,7 +234,7 @@ impl<T> FixedSizeLinkedList<T> {
     /// # Examples
     ///
     /// ```
-    /// use data_structures::FixedSizeLinkedList;
+    /// use data_structures::{DoubleEndedList, FixedSizeLinkedList};
     ///
     /// let mut d = FixedSizeLinkedList::with_capacity(10);
     /// assert_eq!(d.pop_front(), None);
@@ -339,17 +245,7 @@ impl<T> FixedSizeLinkedList<T> {
     /// assert_eq!(d.pop_front(), Some(1));
     /// assert_eq!(d.pop_front(), None);
     /// ```
-    pub fn pop_front(&mut self) -> Option<T> {
-        if self.is_empty() {
-            None
-        } else {
-            let next_index = self.front_index;
-            self.front_index = (self.front_index + 1) % self.capacity;
-
-            self.length -= 1;
-            self.data[next_index].take()
-        }
-    }
+    fn pop_front(&mut self) -> Option<T>;
 
     /// Appends an element to the back of a list, return true if was successful
     ///
@@ -358,27 +254,14 @@ impl<T> FixedSizeLinkedList<T> {
     /// # Examples
     ///
     /// ```
-    /// use data_structures::FixedSizeLinkedList;
+    /// use data_structures::{DoubleEndedList, FixedSizeLinkedList};
     ///
     /// let mut d = FixedSizeLinkedList::with_capacity(10);
     /// d.push_back(1);
     /// d.push_back(3);
     /// assert_eq!(3, *d.back().unwrap());
     /// ```
-    pub fn push_back(&mut self, item: T) -> bool {
-        if self.is_full() {
-            false
-        } else {
-            let next_index = (self.back_index + 1) % self.capacity;
-
-            self.data[next_index].replace(item);
-
-            self.back_index = next_index;
-            self.length += 1;
-
-            true
-        }
-    }
+    fn push_back(&mut self, item: T) -> bool;
 
     /// Appends an element to the back of a list. and if the list is full remove the first item and return it
     ///
@@ -387,34 +270,14 @@ impl<T> FixedSizeLinkedList<T> {
     /// # Examples
     ///
     /// ```
-    /// use data_structures::FixedSizeLinkedList;
+    /// use data_structures::{DoubleEndedList, FixedSizeLinkedList};
     ///
     /// let mut d = FixedSizeLinkedList::with_capacity(10);
     /// d.push_back(1);
     /// d.push_back(3);
     /// assert_eq!(3, *d.back().unwrap());
     /// ```
-    pub fn push_back_rotate(&mut self, item: T) -> Option<T> {
-        if self.is_full() {
-            let front = self.data[self.front_index].replace(item);
-
-            self.back_index = self.front_index;
-            self.front_index = (self.front_index + 1) % self.capacity;
-
-            front
-        } else {
-            // No need for rotate, same as push_back
-            let next_index = (self.back_index + 1) % self.capacity;
-
-            self.data[next_index] = Some(item);
-
-            self.back_index = next_index;
-            self.length += 1;
-
-
-            None
-        }
-    }
+    fn push_back_rotate(&mut self, item: T) -> Option<T>;
 
     /// Removes the last element from a list and returns it, or `None` if
     /// it is empty.
@@ -424,7 +287,7 @@ impl<T> FixedSizeLinkedList<T> {
     /// # Examples
     ///
     /// ```
-    /// use data_structures::FixedSizeLinkedList;
+    /// use data_structures::{DoubleEndedList, FixedSizeLinkedList};
     ///
     /// let mut d = FixedSizeLinkedList::with_capacity(10);
     /// assert_eq!(d.pop_back(), None);
@@ -432,55 +295,22 @@ impl<T> FixedSizeLinkedList<T> {
     /// d.push_back(3);
     /// assert_eq!(d.pop_back(), Some(3));
     /// ```
-    pub fn pop_back(&mut self) -> Option<T> {
-        if self.is_empty() {
-            None
-        } else {
-            let prev_index = self.back_index;
-            self.back_index = (self.back_index + self.capacity - 1) % self.capacity;
-
-            self.length -= 1;
-            self.data[prev_index].take()
-        }
-    }
+    fn pop_back(&mut self) -> Option<T>;
 }
 
-impl<T: Clone> Clone for FixedSizeLinkedList<T> {
-    fn clone(&self) -> Self {
-        Self {
-            length: self.length,
-            capacity: self.capacity,
-            front_index: self.front_index,
-            back_index: self.back_index,
-            data: self.data.clone(),
-        }
-    }
-}
-
-// Implementing send if the item is implementing send
-unsafe impl<T: Send> Send for FixedSizeLinkedList<T> {
-}
-
-impl<T: Debug> Debug for FixedSizeLinkedList<T> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        // TODO - fix this
-        write!(f, "{:?}", self.data)
-    }
-}
 
 #[cfg(test)]
-mod tests {
+pub(super) mod tests_utils {
     use std::collections::{HashMap, LinkedList};
     use std::time::Duration;
     use rand::{thread_rng, Rng, SeedableRng};
     use rand::distributions::{Distribution, Standard};
-    use crate::FixedSizeLinkedList;
+    use crate::{DoubleEndedList, FixedSizeLinkedList};
     use rand_chacha::ChaChaRng;
-
 
     // All list operation
     #[derive(Debug, Copy, Clone, Hash, Eq, PartialEq, PartialOrd, Ord)]
-    enum Operation {
+    pub(super) enum Operation {
         PushFront,
         PushBack,
         PushRotate,
@@ -530,9 +360,7 @@ mod tests {
         front
     }
 
-    #[test]
-    fn all() {
-        const CAPACITY: usize = 5;
+    pub fn all<T>(capacity: usize, list: impl DoubleEndedList<T>) {
 
         let mut rng = rand::thread_rng();
 
@@ -542,9 +370,9 @@ mod tests {
         assert_eq!(list.is_full(), false, "List should not be full after init");
         assert_eq!(list.is_empty(), true, "List should be empty after init");
         assert_eq!(list.len(), 0, "List is empty after init");
-        assert_eq!(list.capacity(), CAPACITY);
+        assert_eq!(list.capacity(), capacity);
 
-        for i in 0..CAPACITY {
+        for i in 0..capacity {
             let item  = rng.gen();
 
             helper_list.push_back(item);
@@ -552,10 +380,10 @@ mod tests {
 
             assert_eq!(list.front(), helper_list.front(), "should be the same for iteration {}", i);
             assert_eq!(list.back(), helper_list.back(), "should be the same for iteration {}", i);
-            assert_eq!(list.is_full(), helper_list.len() == CAPACITY, "should be the same for iteration {}", i);
+            assert_eq!(list.is_full(), helper_list.len() == capacity, "should be the same for iteration {}", i);
             assert_eq!(list.is_empty(), helper_list.is_empty(), "should be the same for iteration {}", i);
             assert_eq!(list.len(), helper_list.len(), "should be the same for iteration {}", i);
-            assert_eq!(list.capacity(), CAPACITY, "should be the same for iteration {}", i);
+            assert_eq!(list.capacity(), capacity, "should be the same for iteration {}", i);
         }
 
         {
@@ -567,8 +395,8 @@ mod tests {
             assert_eq!(list.back(), helper_list.back());
             assert_eq!(list.is_full(), true);
             assert_eq!(list.is_empty(), false);
-            assert_eq!(list.len(), CAPACITY);
-            assert_eq!(list.capacity(), CAPACITY);
+            assert_eq!(list.len(), capacity);
+            assert_eq!(list.capacity(), capacity);
         }
 
         {
@@ -580,20 +408,20 @@ mod tests {
             assert_eq!(list.back(), helper_list.back());
             assert_eq!(list.is_full(), true);
             assert_eq!(list.is_empty(), false);
-            assert_eq!(list.len(), CAPACITY);
-            assert_eq!(list.capacity(), CAPACITY);
+            assert_eq!(list.len(), capacity);
+            assert_eq!(list.capacity(), capacity);
         }
 
-        for _ in 0..CAPACITY {
+        for _ in 0..capacity {
             let front = helper_list.pop_front();
             assert_eq!(list.pop_front(), front, "should pop front");
 
             assert_eq!(list.front(), helper_list.front());
             assert_eq!(list.back(), helper_list.back());
-            assert_eq!(list.is_full(), helper_list.len() == CAPACITY);
+            assert_eq!(list.is_full(), helper_list.len() == capacity);
             assert_eq!(list.is_empty(), helper_list.is_empty());
             assert_eq!(list.len(), helper_list.len());
-            assert_eq!(list.capacity(), CAPACITY);
+            assert_eq!(list.capacity(), capacity);
         }
         {
             assert_eq!(list.pop_front(), None, "should not pop");
@@ -603,7 +431,7 @@ mod tests {
             assert_eq!(list.is_full(), false);
             assert_eq!(list.is_empty(), true);
             assert_eq!(list.len(), 0);
-            assert_eq!(list.capacity(), CAPACITY);
+            assert_eq!(list.capacity(), capacity);
         }
 
         {
@@ -614,10 +442,10 @@ mod tests {
             assert_eq!(list.is_full(), false);
             assert_eq!(list.is_empty(), true);
             assert_eq!(list.len(), 0);
-            assert_eq!(list.capacity(), CAPACITY);
+            assert_eq!(list.capacity(), capacity);
         }
 
-        for _ in 0..CAPACITY {
+        for _ in 0..capacity {
             let item = rng.gen();
 
             helper_list.push_front(item);
@@ -625,10 +453,10 @@ mod tests {
 
             assert_eq!(list.front(), helper_list.front());
             assert_eq!(list.back(), helper_list.back());
-            assert_eq!(list.is_full(), helper_list.len() == CAPACITY);
+            assert_eq!(list.is_full(), helper_list.len() == capacity);
             assert_eq!(list.is_empty(), helper_list.is_empty());
             assert_eq!(list.len(), helper_list.len());
-            assert_eq!(list.capacity(), CAPACITY);
+            assert_eq!(list.capacity(), capacity);
         }
 
         {
@@ -640,8 +468,8 @@ mod tests {
             assert_eq!(list.back(), helper_list.back());
             assert_eq!(list.is_full(), true);
             assert_eq!(list.is_empty(), false);
-            assert_eq!(list.len(), CAPACITY);
-            assert_eq!(list.capacity(), CAPACITY);
+            assert_eq!(list.len(), capacity);
+            assert_eq!(list.capacity(), capacity);
         }
 
         {
@@ -653,20 +481,20 @@ mod tests {
             assert_eq!(list.back(), helper_list.back());
             assert_eq!(list.is_full(), true);
             assert_eq!(list.is_empty(), false);
-            assert_eq!(list.len(), CAPACITY);
-            assert_eq!(list.capacity(), CAPACITY);
+            assert_eq!(list.len(), capacity);
+            assert_eq!(list.capacity(), capacity);
         }
 
-        for _ in 0..CAPACITY {
+        for _ in 0..capacity {
             let back = helper_list.pop_back();
             assert_eq!(list.pop_back(), back, "should pop back");
 
             assert_eq!(list.front(), helper_list.front());
             assert_eq!(list.back(), helper_list.back());
-            assert_eq!(list.is_full(), helper_list.len() == CAPACITY);
+            assert_eq!(list.is_full(), helper_list.len() == capacity);
             assert_eq!(list.is_empty(), helper_list.is_empty());
             assert_eq!(list.len(), helper_list.len());
-            assert_eq!(list.capacity(), CAPACITY);
+            assert_eq!(list.capacity(), capacity);
         }
 
         {
@@ -677,7 +505,7 @@ mod tests {
             assert_eq!(list.is_full(), false);
             assert_eq!(list.is_empty(), true);
             assert_eq!(list.len(), 0);
-            assert_eq!(list.capacity(), CAPACITY);
+            assert_eq!(list.capacity(), capacity);
         }
         {
             assert_eq!(list.pop_back(), None, "should not pop");
@@ -687,11 +515,11 @@ mod tests {
             assert_eq!(list.is_full(), false);
             assert_eq!(list.is_empty(), true);
             assert_eq!(list.len(), 0);
-            assert_eq!(list.capacity(), CAPACITY);
+            assert_eq!(list.capacity(), capacity);
         }
 
 
-        for i in 0..CAPACITY {
+        for i in 0..capacity {
             let item = rng.gen();
 
             if i % 2 == 0 {
@@ -704,13 +532,13 @@ mod tests {
 
             assert_eq!(list.front(), helper_list.front());
             assert_eq!(list.back(), helper_list.back());
-            assert_eq!(list.is_full(), helper_list.len() == CAPACITY);
+            assert_eq!(list.is_full(), helper_list.len() == capacity);
             assert_eq!(list.is_empty(), helper_list.is_empty());
             assert_eq!(list.len(), helper_list.len());
-            assert_eq!(list.capacity(), CAPACITY);
+            assert_eq!(list.capacity(), capacity);
         }
 
-        for i in 0..CAPACITY {
+        for i in 0..capacity {
             if i % 2 == 0 {
                 let back = helper_list.pop_back();
                 assert_eq!(list.pop_back(), back, "should pop back");
@@ -721,14 +549,14 @@ mod tests {
 
             assert_eq!(list.front(), helper_list.front());
             assert_eq!(list.back(), helper_list.back());
-            assert_eq!(list.is_full(), helper_list.len() == CAPACITY);
+            assert_eq!(list.is_full(), helper_list.len() == capacity);
             assert_eq!(list.is_empty(), helper_list.is_empty());
             assert_eq!(list.len(), helper_list.len());
-            assert_eq!(list.capacity(), CAPACITY);
+            assert_eq!(list.capacity(), capacity);
         }
 
 
-        for i in 0..CAPACITY {
+        for i in 0..capacity {
             let item = rng.gen();
 
             helper_list.push_back(item);
@@ -736,179 +564,44 @@ mod tests {
 
             assert_eq!(list.front(), helper_list.front());
             assert_eq!(list.back(), helper_list.back());
-            assert_eq!(list.is_full(), helper_list.len() == CAPACITY);
+            assert_eq!(list.is_full(), helper_list.len() == capacity);
             assert_eq!(list.is_empty(), helper_list.is_empty());
             assert_eq!(list.len(), helper_list.len());
-            assert_eq!(list.capacity(), CAPACITY);
+            assert_eq!(list.capacity(), capacity);
         }
 
 
-        for _ in 0..(CAPACITY * 5) {
+        for _ in 0..(capacity * 5) {
             let item = rng.gen();
 
 
             // Manual rotate in the helper list
-            let front = rotate_in_actual_linked_list(&mut helper_list, item, CAPACITY);
+            let front = rotate_in_actual_linked_list(&mut helper_list, item, capacity);
             assert_eq!(list.push_back_rotate(item), front, "should push back and rotate");
 
             assert_eq!(list.front(), helper_list.front());
             assert_eq!(list.back(), helper_list.back());
-            assert_eq!(list.is_full(), helper_list.len() == CAPACITY);
+            assert_eq!(list.is_full(), helper_list.len() == capacity);
             assert_eq!(list.is_empty(), helper_list.is_empty());
             assert_eq!(list.len(), helper_list.len());
-            assert_eq!(list.capacity(), CAPACITY);
+            assert_eq!(list.capacity(), capacity);
         }
     }
 
-    #[test]
-    fn rotate() {
-        const CAPACITY: usize = 5;
-
-        let mut list = FixedSizeLinkedList::with_capacity(5);
-        let mut helper_list = LinkedList::new();
-
-        assert_eq!(list.is_full(), false, "List is not full after init");
-        assert_eq!(list.is_empty(), true, "List is empty after init");
-        assert_eq!(list.len(), 0, "List is empty after init");
-        assert_eq!(list.capacity(), 5);
-
-        for i in 0..CAPACITY {
-            helper_list.push_back(i);
-            assert_eq!(list.push_back(i), true, "should insert");
-
-            assert_eq!(list.front(), helper_list.front());
-            assert_eq!(list.back(), helper_list.back());
-            assert_eq!(list.is_full(), helper_list.len() == CAPACITY);
-            assert_eq!(list.is_empty(), helper_list.is_empty());
-            assert_eq!(list.len(), helper_list.len());
-            assert_eq!(list.capacity(), CAPACITY);
-        }
-
-        assert_eq!(list.front_index, 0);
-        assert_eq!(list.back_index, CAPACITY - 1);
-
-        {
-            let item = 5;
-            let front = rotate_in_actual_linked_list(&mut helper_list, item, CAPACITY);
-            assert_eq!(list.push_back_rotate(item), front, "should insert");
-
-            assert_eq!(list.front_index, 1);
-            assert_eq!(list.back_index, 0);
-
-            assert_eq!(list.front(), helper_list.front());
-            assert_eq!(list.back(), helper_list.back());
-            assert_eq!(list.is_full(), helper_list.len() == CAPACITY);
-            assert_eq!(list.is_empty(), helper_list.is_empty());
-            assert_eq!(list.len(), helper_list.len());
-            assert_eq!(list.capacity(), CAPACITY);
-        }
-
-        {
-            let item = 6;
-            let front = rotate_in_actual_linked_list(&mut helper_list, item, CAPACITY);
-            assert_eq!(list.push_back_rotate(item), front, "should insert");
-
-            assert_eq!(list.front_index, 2);
-            assert_eq!(list.back_index, 1);
-
-            assert_eq!(list.front(), helper_list.front());
-            assert_eq!(list.back(), helper_list.back());
-            assert_eq!(list.is_full(), helper_list.len() == CAPACITY);
-            assert_eq!(list.is_empty(), helper_list.is_empty());
-            assert_eq!(list.len(), helper_list.len());
-            assert_eq!(list.capacity(), CAPACITY);
-        }
-
-        {
-            let item = 7;
-            let front = rotate_in_actual_linked_list(&mut helper_list, item, CAPACITY);
-            assert_eq!(list.push_back_rotate(item), front, "should insert");
-
-            assert_eq!(list.front_index, 3);
-            assert_eq!(list.back_index, 2);
-
-            assert_eq!(list.front(), helper_list.front());
-            assert_eq!(list.back(), helper_list.back());
-            assert_eq!(list.is_full(), helper_list.len() == CAPACITY);
-            assert_eq!(list.is_empty(), helper_list.is_empty());
-            assert_eq!(list.len(), helper_list.len());
-            assert_eq!(list.capacity(), CAPACITY);
-        }
-
-        {
-            assert_eq!(list.pop_back(), helper_list.pop_back(), "should pop_back");
-
-            assert_eq!(list.front_index, 3);
-            assert_eq!(list.back_index, 1);
-
-            assert_eq!(list.front(), helper_list.front());
-            assert_eq!(list.back(), helper_list.back());
-            assert_eq!(list.is_full(), helper_list.len() == CAPACITY);
-            assert_eq!(list.is_empty(), helper_list.is_empty());
-            assert_eq!(list.len(), helper_list.len());
-            assert_eq!(list.capacity(), CAPACITY);
-        }
-
-        {
-            assert_eq!(list.pop_back(), helper_list.pop_back(), "should pop_back");
-
-            assert_eq!(list.front_index, 3);
-            assert_eq!(list.back_index, 0);
-
-            assert_eq!(list.front(), helper_list.front());
-            assert_eq!(list.back(), helper_list.back());
-            assert_eq!(list.is_full(), helper_list.len() == CAPACITY);
-            assert_eq!(list.is_empty(), helper_list.is_empty());
-            assert_eq!(list.len(), helper_list.len());
-            assert_eq!(list.capacity(), CAPACITY);
-        }
-
-        {
-            assert_eq!(list.pop_back(), helper_list.pop_back(), "should pop_back");
-
-            assert_eq!(list.front_index, 3);
-            assert_eq!(list.back_index, CAPACITY - 1);
-
-            assert_eq!(list.front(), helper_list.front());
-            assert_eq!(list.back(), helper_list.back());
-            assert_eq!(list.is_full(), helper_list.len() == CAPACITY);
-            assert_eq!(list.is_empty(), helper_list.is_empty());
-            assert_eq!(list.len(), helper_list.len());
-            assert_eq!(list.capacity(), CAPACITY);
-        }
-
-        {
-            assert_eq!(list.pop_back(), helper_list.pop_back(), "should pop_back");
-
-            assert_eq!(list.front_index, 3);
-            assert_eq!(list.back_index, CAPACITY - 2);
-
-            assert_eq!(list.front(), helper_list.front());
-            assert_eq!(list.back(), helper_list.back());
-            assert_eq!(list.is_full(), helper_list.len() == CAPACITY);
-            assert_eq!(list.is_empty(), helper_list.is_empty());
-            assert_eq!(list.len(), helper_list.len());
-            assert_eq!(list.capacity(), CAPACITY);
-        }
-    }
-
-    #[test]
-    fn random() {
+    pub fn random<T>(capacity: usize, mut list: impl DoubleEndedList<T>) {
         let shuffle_seed: u64 = thread_rng().gen();
         println!("Seed used: {}", shuffle_seed);
         let mut rng = ChaChaRng::seed_from_u64(shuffle_seed);
 
-        const CAPACITY: usize = 13;
-
-        let mut list = FixedSizeLinkedList::<isize>::with_capacity(CAPACITY);
+        let mut list = FixedSizeLinkedList::<isize>::with_capacity(capacity);
         let mut helper_list = LinkedList::<isize>::new();
 
         assert_eq!(list.is_full(), false, "List is not full after init");
         assert_eq!(list.is_empty(), true, "List is empty after init");
         assert_eq!(list.len(), 0, "List is empty after init");
-        assert_eq!(list.capacity(), CAPACITY);
+        assert_eq!(list.capacity(), capacity);
 
-        for _ in 0..CAPACITY * 10000 {
+        for _ in 0..capacity * 10000 {
             let op = rng.sample(Standard);
 
             match op {
@@ -916,7 +609,7 @@ mod tests {
                     let item = rng.gen();
 
                     let pushed = list.push_front(item);
-                    assert_eq!(pushed, helper_list.len() != CAPACITY);
+                    assert_eq!(pushed, helper_list.len() != capacity);
                     if pushed {
                         helper_list.push_front(item);
                     }
@@ -925,7 +618,7 @@ mod tests {
                     let item = rng.gen();
 
                     let pushed = list.push_back(item);
-                    assert_eq!(pushed, helper_list.len() != CAPACITY);
+                    assert_eq!(pushed, helper_list.len() != capacity);
                     if pushed {
                         helper_list.push_back(item);
                     }
@@ -933,7 +626,7 @@ mod tests {
                 Operation::PushRotate => {
                     let item = rng.gen();
 
-                    let front = rotate_in_actual_linked_list(&mut helper_list, item, CAPACITY);
+                    let front = rotate_in_actual_linked_list(&mut helper_list, item, capacity);
                     assert_eq!(list.push_back_rotate(item), front);
                 }
                 Operation::PopFront => {
@@ -945,7 +638,7 @@ mod tests {
                     assert_eq!(list.pop_back(), back);
                 }
                 Operation::PushFrontUntilFull => {
-                    for _ in 0..CAPACITY {
+                    for _ in 0..capacity {
                         if list.is_full() {
                             break;
                         }
@@ -956,7 +649,7 @@ mod tests {
                     }
                 }
                 Operation::PushBackUntilFull => {
-                    for _ in 0..CAPACITY {
+                    for _ in 0..capacity {
                         if list.is_full() {
                             break;
                         }
@@ -967,15 +660,15 @@ mod tests {
                     }
                 }
                 Operation::PushRotateUntilFullCircle => {
-                    for _ in 0..CAPACITY {
+                    for _ in 0..capacity {
                         let item = rng.gen();
 
-                        let front = rotate_in_actual_linked_list(&mut helper_list, item, CAPACITY);
+                        let front = rotate_in_actual_linked_list(&mut helper_list, item, capacity);
                         assert_eq!(list.push_back_rotate(item), front);
                     }
                 }
                 Operation::PopFrontUntilEmpty => {
-                    for _ in 0..CAPACITY {
+                    for _ in 0..capacity {
                         if list.is_empty() {
                             break;
                         }
@@ -985,7 +678,7 @@ mod tests {
                     }
                 }
                 Operation::PopBackUntilEmpty => {
-                    for _ in 0..CAPACITY {
+                    for _ in 0..capacity {
                         if list.is_empty() {
                             break;
                         }
@@ -1008,10 +701,10 @@ mod tests {
 
             assert_eq!(list.front(), helper_list.front());
             assert_eq!(list.back(), helper_list.back());
-            assert_eq!(list.is_full(), helper_list.len() == CAPACITY);
+            assert_eq!(list.is_full(), helper_list.len() == capacity);
             assert_eq!(list.is_empty(), helper_list.is_empty());
             assert_eq!(list.len(), helper_list.len());
-            assert_eq!(list.capacity(), CAPACITY);
+            assert_eq!(list.capacity(), capacity);
         }
     }
 }
