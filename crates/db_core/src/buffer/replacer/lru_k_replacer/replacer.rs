@@ -1,6 +1,3 @@
-use mut_binary_heap_index_keys::{BinaryHeapIndexKeys, FnComparator};
-use std::cell::UnsafeCell;
-use std::cmp::Ordering;
 use std::hash::Hash;
 use std::sync::Arc;
 #[cfg(feature = "tracing")]
@@ -8,10 +5,9 @@ use tracy_client::span;
 
 use super::counter::AtomicI64Counter;
 use super::lru_k_node::LRUKNode;
+use super::lru_k_replacer_store::LRUKReplacerStore;
 use crate::buffer::{AccessType, Replacer};
 use common::config::FrameId;
-
-type LRUKNodeWrapper = Arc<UnsafeCell<LRUKNode>>;
 
 /**
  * LRUKReplacer implements the LRU-k replacement policy.
@@ -26,14 +22,7 @@ type LRUKNodeWrapper = Arc<UnsafeCell<LRUKNode>>;
  */
 #[derive(Clone, Debug)]
 pub struct LRUKReplacer {
-    /// in cpp it was unordered_map
-    /// The key for the node store is the frame_id which is also the index
-    /// We are not using HashMap for performance as we can avoid the hashing by simple index lookup
-    node_store: Vec<Option<LRUKNodeWrapper>>,
-
-    /// Heap for evictable LRU-K nodes for best performance for finding evictable frames
-    /// This is mutable Heap to allow for updating LRU-K Node without removing and reinserting
-    evictable_heap: BinaryHeapIndexKeys<FrameId, LRUKNodeWrapper, FnComparator<fn(&LRUKNodeWrapper, &LRUKNodeWrapper) -> Ordering>>,
+    store: LRUKReplacerStore,
 
     replacer_size: usize,
 
@@ -61,14 +50,7 @@ impl LRUKReplacer {
     ///
     pub fn new(num_frames: usize, k: usize) -> Self {
         LRUKReplacer {
-            node_store: vec![None; num_frames],
-
-            // TODO - once https://github.com/Wasabi375/mut-binary-heap/issues/12 is supported, we should use Identity hasher
-            evictable_heap: BinaryHeapIndexKeys::with_capacity_by(num_frames, |a, b| {
-                unsafe {
-                    (*a.get()).cmp(&*b.get())
-                }
-            }),
+            store: LRUKReplacerStore::with_capacity(num_frames),
             k,
 
             replacer_size: num_frames,
@@ -91,10 +73,10 @@ impl LRUKReplacer {
     pub(in crate::buffer) fn get_order_of_eviction(&self) -> Vec<FrameId> {
         let mut frames = Vec::with_capacity(self.evictable_frames);
 
-        let mut evictable_heap = self.evictable_heap.clone();
+        let mut evictable_heap = self.store.clone();
 
         while !evictable_heap.is_empty() {
-            let (frame_id, _) = evictable_heap.pop_with_key().unwrap();
+            let (frame_id, _) = evictable_heap.pop_evictable_with_key().unwrap();
 
             frames.push(frame_id)
         }
@@ -116,13 +98,18 @@ impl LRUKReplacer {
     /// # Unsafe
     /// unsafe as we are certain that the frame id is valid
     unsafe fn record_access_unchecked(&mut self, frame_id: FrameId, _access_type: AccessType) {
-        let node = self.node_store[frame_id as usize].as_mut();
+        let mut node = self.store.get_node(frame_id);
+        let node = node.as_mut();
 
         if node.is_none() {
-            let node = Arc::new(UnsafeCell::new(LRUKNode::new(self.k, &self.history_access_counter)));
-            self.node_store[frame_id as usize].replace(node);
+            let node = LRUKNode::new(self.k, &self.history_access_counter);
+            self.store.add_node(
+                frame_id,
+                node,
+                // Not inserting to evictable frames as new frame is not evictable by default
+                false,
+            );
 
-            // Not inserting to evictable frames as new frame is not evictable by default
             return;
         }
 
@@ -134,7 +121,7 @@ impl LRUKReplacer {
         // if evictable, the node should be reinserted as it's location would be updated
         if (*inner).is_evictable() {
             // Update the heap with the updated value
-            self.evictable_heap.push(frame_id, Arc::clone(&node));
+            self.store.push_evictable(frame_id);
         }
     }
 }
@@ -156,15 +143,12 @@ impl Replacer for LRUKReplacer {
     ///
     fn evict(&mut self) -> Option<FrameId> {
         #[cfg(feature = "tracing")]
-        let _unpin = span!("Evict");
+        let _evict = span!("Evict");
 
-        let (frame_id, _) = self.evictable_heap.pop_with_key()?;
+        let (frame_id, _) = self.store.pop_node()?;
 
         // Decrease evictable frames
         self.evictable_frames -= 1;
-
-        // Remove frame
-        self.node_store[frame_id as usize].take();
 
         Some(frame_id)
     }
@@ -235,7 +219,8 @@ impl Replacer for LRUKReplacer {
         // We are certain that the frame id is valid
         self.assert_valid_frame_id(frame_id);
 
-        let node = self.node_store[frame_id as usize].as_mut();
+        let mut node = self.store.get_node(frame_id);
+        let node = node.as_mut();
 
         // Nothing to do
         if node.is_none() {
@@ -254,12 +239,10 @@ impl Replacer for LRUKReplacer {
         // If evictable, mark as no longer evictable or vice versa
         if (*node_inner).is_evictable() {
             self.evictable_frames -= 1;
-
-            self.evictable_heap.remove(&frame_id);
+            self.store.remove_evictable(&frame_id);
         } else {
             self.evictable_frames += 1;
-
-            self.evictable_heap.push(frame_id, Arc::clone(&node));
+            self.store.push_evictable(frame_id);
         }
 
         (*node_inner).set_evictable(set_evictable);
@@ -280,21 +263,20 @@ impl Replacer for LRUKReplacer {
     ///
     fn remove(&mut self, frame_id: FrameId) {
         // Optimistic, to first take and if not evictable or
-        let frame = self.node_store[frame_id as usize].take();
+        let frame = self.store.remove_node(frame_id);
 
         if let Some(frame) = frame {
 
             // If not evictable add the frame back (this is the slow case but most probably never happen
             unsafe {
                 if !(*frame.get()).is_evictable() {
-                    self.node_store[frame_id as usize].replace(frame);
+                    self.store.add_node(frame_id, frame, false);
                     return;
                 }
             }
 
             // Decrease evictable frames
             self.evictable_frames -= 1;
-            self.evictable_heap.remove(&frame_id);
         }
     }
 

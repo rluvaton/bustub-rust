@@ -1,4 +1,6 @@
+use std::cell::UnsafeCell;
 use std::cmp::Ordering;
+use std::sync::Arc;
 use data_structures::FixedSizeLinkedList;
 
 use common::config::FrameId;
@@ -15,6 +17,9 @@ const INF_COUNTER: i64 = i64::MAX;
 // we will use this large number that we will never reach and consider it as current value
 const IMAGINARY_NOW: i64 = i64::MAX / 2;
 
+pub(super) type LRUKNodeWrapper = Arc<UnsafeCell<LRUKNode>>;
+
+// TODO - make it possible to reuse easily
 #[derive(Clone, Debug)]
 pub(in crate::buffer) struct LRUKNode {
 
@@ -28,11 +33,11 @@ pub(in crate::buffer) struct LRUKNode {
 
     is_evictable: bool,
 
-    interval: i64,
+    pub(super) interval: i64,
 }
 
 impl LRUKNode {
-    pub(super) fn new(k: usize, counter: &AtomicI64Counter) -> Self {
+    pub(super) fn new(k: usize, counter: &AtomicI64Counter) -> LRUKNodeWrapper {
         assert!(k > 0, "K > 0");
 
         let mut history = FixedSizeLinkedList::with_capacity(k);
@@ -41,12 +46,12 @@ impl LRUKNode {
         let interval = if k != 1 { LRUKNode::calculate_interval_for_less_than_k(now) } else { LRUKNode::calculate_interval_full_access_history(&now) };
 
         history.push_back(now);
-
+        Arc::new(UnsafeCell::new(
         LRUKNode {
             history,
             is_evictable: false,
             interval,
-        }
+        }))
     }
 
     pub(super) fn marked_accessed(&mut self, counter: &AtomicI64Counter) {

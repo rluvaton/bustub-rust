@@ -141,6 +141,13 @@ mod metrics;
 // get: 187041.3319556015
 // >>> END
 
+// After cloning mut_binary_heap and modifying
+// Release:
+// <<< BEGIN
+// scan: 179341.45528482384
+// get: 199197.69341021968
+// >>> END
+
 
 
 fn setup() -> TempDir {
@@ -330,12 +337,12 @@ fn main() {
 
     total_metrics.lock().report();
 
-    println!("\n\n");
-    println!("###################");
-    println!("       Stats       ");
-    println!("###################");
-    println!();
-    println!("{}", bpm.clone().get_stats());
+    // println!("\n\n");
+    // println!("###################");
+    // println!("       Stats       ");
+    // println!("###################");
+    // println!();
+    // println!("{}", bpm.clone().get_stats());
 }
 
 fn init_pages(bustub_page_cnt: usize, bpm: &Arc<BufferPoolManager>, page_ids: &Arc<RwLock<Vec<PageId>>>) {
