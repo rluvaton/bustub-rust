@@ -1,6 +1,7 @@
+use super::lru_k_node::{LRUKNode, LRUKNodeWrapper};
+use crate::buffer::replacer::lru_k_replacer::counter::AtomicI64Counter;
 use common::config::FrameId;
-use core::mem::{swap, ManuallyDrop};
-use core::ptr;
+use core::mem::swap;
 use std::collections::HashMap;
 use std::hash::Hash;
 use std::marker::PhantomData;
@@ -8,8 +9,6 @@ use std::ops::Deref;
 use std::ops::DerefMut;
 use std::sync::Arc;
 use std::vec;
-use crate::buffer::replacer::lru_k_replacer::counter::AtomicI64Counter;
-use super::lru_k_node::{LRUKNode, LRUKNodeWrapper};
 
 // ###################################################################################
 // Copied from https://github.com/Wasabi375/mut-binary-heap and modified to our needs
@@ -34,7 +33,6 @@ pub(super) struct LRUKReplacerStore {
 unsafe impl Send for LRUKReplacerStore {}
 
 impl LRUKReplacerStore {
-
     #[must_use]
     pub fn with_capacity(capacity: usize) -> Self {
         LRUKReplacerStore {
@@ -85,7 +83,7 @@ impl LRUKReplacerStore {
     }
 
     /// Pop from top of the heap and remove the node as well
-    pub fn pop_node(&mut self) -> Option<(FrameId, LRUKNodeWrapper)>  {
+    pub fn pop_node(&mut self) -> Option<(FrameId, LRUKNodeWrapper)> {
         let frame_id = self.pop_evictable_key()?;
 
         // Remove frame
@@ -93,7 +91,7 @@ impl LRUKReplacerStore {
     }
 
     /// inactivate top node from top of the heap
-    pub fn inactivate_top_node(&mut self) -> Option<FrameId>  {
+    pub fn inactivate_top_node(&mut self) -> Option<FrameId> {
         let frame_id = self.pop_evictable_key()?;
 
         LRUKNode::inactive(self.all[frame_id as usize].0.as_ref()?);
@@ -128,14 +126,8 @@ impl LRUKReplacerStore {
     has been amortized in the previous figures.
     */
     pub fn push_evictable(&mut self, frame_id: FrameId) {
-        if let Some(pos) = self.all[frame_id as usize].1 {
-            let mut old = std::mem::replace(&mut self.data[pos], frame_id);
-            // NOTE: the swap is required in order to keep the guarantee
-            // that the key is not replaced by a second push.
-            // I would prefer replacing the key, but that is not supported by
-            // [HashMap]
-            std::mem::swap(&mut old, &mut self.data[pos]);
-            self.update_after_evictable(&old);
+        if self.all[frame_id as usize].1.is_some() {
+            self.update_after_evictable(frame_id);
         } else {
             let old_len = self.len();
             self.data.push(frame_id);
@@ -144,46 +136,6 @@ impl LRUKReplacerStore {
             //  old_len = self.len() - 1 < self.len()
             unsafe { self.sift_up(0, old_len) };
         }
-    }
-
-    /// Removes the greatest item from the binary heap and returns it, or `None` if it
-    /// is empty.
-    ///
-    /// # Examples
-    ///
-    /// Basic usage:
-    ///
-    /// # Time complexity
-    ///
-    /// The worst case cost of `pop` on a heap containing *n* elements is *O*(log(*n*)).
-    pub fn pop_evictable(&mut self) -> Option<LRUKNodeWrapper> {
-        self.pop_evictable_with_key().map(|kv| kv.1)
-    }
-
-    /// Removes the greatest item from the binary heap and returns it as a key-value pair,
-    /// or `None` if it is empty.
-    ///
-    /// # Examples
-    ///
-    /// Basic usage:
-    ///
-    /// # Time complexity
-    ///
-    /// The worst case cost of `pop` on a heap containing *n* elements is *O*(log(*n*)).
-    pub fn pop_evictable_with_key(&mut self) -> Option<(FrameId, LRUKNodeWrapper)> {
-        let item = self.data.pop().map(|mut item| {
-            // NOTE: we can't just use self.is_empty here, because that will
-            //  trigger a debug_assert that keys and data are equal lenght.
-            if !self.data.is_empty() {
-                swap(&mut item, &mut self.data[0]);
-                // SAFETY: !self.is_empty() means that self.len() > 0
-                unsafe { self.sift_down_to_bottom(0) };
-            }
-            item
-        });
-
-        item.as_ref().and_then(|&kv| self.all[kv as usize].1.take());
-        item.map(|frame_id| (frame_id, self.all[frame_id as usize].0.clone().unwrap()))
     }
 
     /// Removes the greatest item from the binary heap and returns it as a key-value pair,
@@ -253,8 +205,8 @@ impl LRUKReplacerStore {
     /// # Time complexity
     ///
     /// This function runs in *O*(*log* n) time.
-    fn update_after_evictable(&mut self, key: &FrameId) {
-        let pos = self.all[*key as usize].1.unwrap();
+    fn update_after_evictable(&mut self, key: FrameId) {
+        let pos = self.all[key as usize].1.unwrap();
         let pos_after_sift_up = unsafe { self.sift_up(0, pos) };
         if pos_after_sift_up != pos {
             return;
@@ -279,25 +231,29 @@ impl LRUKReplacerStore {
     unsafe fn sift_up(&mut self, start: usize, pos: usize) -> usize {
         // Take out the value at `pos` and create a hole.
         // SAFETY: The caller guarantees that pos < self.data.len()
-        let mut hole = unsafe { Hole::new(&mut self.data, &mut self.all, pos) };
+        let frame_id = self.data[pos];
 
-        while hole.pos() > start {
-            let parent = (hole.pos() - 1) / 2;
+        let mut pos = pos;
+        while pos > start {
+            let parent = (pos - 1) / 2;
 
             // SAFETY: hole.pos() > start >= 0, which means hole.pos() > 0
             //  and so hole.pos() - 1 can't underflow.
             //  This guarantees that parent < hole.pos() so
             //  it's a valid index and also != hole.pos().
-            if LRUKReplacerStore::compares_le(hole.element(), unsafe { hole.get(parent) })
+
+            if LRUKReplacerStore::compares_le(self.get_node_wrapper_from_frame_id(frame_id).unwrap(), self.get_node_wrapper_from_data_index(parent).unwrap())
             {
                 break;
             }
 
             // SAFETY: Same as above
-            unsafe { hole.move_to(parent) };
+            self.move_hole_to_new_position(&mut pos, parent);
         }
 
-        hole.pos()
+        self.fill_hole(pos, frame_id);
+
+        pos
     }
 
     /// Take an element at `pos` and move it down the heap,
@@ -307,9 +263,10 @@ impl LRUKReplacerStore {
     ///
     /// The caller must guarantee that `pos < end <= self.data.len()`.
     unsafe fn sift_down_range(&mut self, pos: usize, end: usize) {
-        // SAFETY: The caller guarantees that pos < end <= self.data.len().
-        let mut hole = unsafe { Hole::new(&mut self.data, &mut self.all, pos) };
-        let mut child = 2 * hole.pos() + 1;
+        let frame_id = self.data[pos];
+
+        let mut pos = pos;
+        let mut child = 2 * pos + 1;
 
         // Loop invariant: child == 2 * hole.pos() + 1.
         while child <= end.saturating_sub(2) {
@@ -320,30 +277,31 @@ impl LRUKReplacerStore {
             //  child + 1 == 2 * hole.pos() + 2 != hole.pos().
             // FIXME: 2 * hole.pos() + 1 or 2 * hole.pos() + 2 could overflow
             //  if T is a ZST
-            child += unsafe { LRUKReplacerStore::compares_le(hole.get(child), hole.get(child + 1)) } as usize;
+            child += LRUKReplacerStore::compares_le(self.get_node_wrapper_from_data_index(child).unwrap(), self.get_node_wrapper_from_data_index(child + 1).unwrap()) as usize;
 
             // if we are already in order, stop.
             // SAFETY: child is now either the old child or the old child+1
             //  We already proven that both are < self.data.len() and != hole.pos()
-            if LRUKReplacerStore::compares_ge(hole.element(), unsafe { hole.get(child) })
+            if LRUKReplacerStore::compares_ge(self.get_node_wrapper_from_frame_id(frame_id).unwrap(), self.get_node_wrapper_from_data_index(child).unwrap())
             {
                 return;
             }
 
-            // SAFETY: same as above.
-            unsafe { hole.move_to(child) };
-            child = 2 * hole.pos() + 1;
+            self.move_hole_to_new_position(&mut pos, child);
+            child = 2 * pos + 1;
         }
 
         // SAFETY: && short circuit, which means that in the
         //  second condition it's already true that child == end - 1 < self.data.len().
         if child == end - 1
-            && LRUKReplacerStore::compares_lt(hole.element(), unsafe { hole.get(child) })
+            && LRUKReplacerStore::compares_lt(self.get_node_wrapper_from_frame_id(frame_id).unwrap(), self.get_node_wrapper_from_data_index(child).unwrap())
         {
             // SAFETY: child is already proven to be a valid index and
             //  child == 2 * hole.pos() + 1 != hole.pos().
-            unsafe { hole.move_to(child) };
+            self.move_hole_to_new_position(&mut pos, child);
         }
+
+        self.fill_hole(pos, frame_id);
     }
 
     /// # Safety
@@ -369,9 +327,10 @@ impl LRUKReplacerStore {
         let end = self.data.len();
         let start = pos;
 
-        // SAFETY: The caller guarantees that pos < self.data.len().
-        let mut hole = unsafe { Hole::new(&mut self.data, &mut self.all, pos) };
-        let mut child = 2 * hole.pos() + 1;
+        let frame_id = self.data[pos];
+
+        let mut pos = pos;
+        let mut child = 2 * pos + 1;
 
         // Loop invariant: child == 2 * hole.pos() + 1.
         while child <= end.saturating_sub(2) {
@@ -381,20 +340,20 @@ impl LRUKReplacerStore {
             //  child + 1 == 2 * hole.pos() + 2 != hole.pos().
             // FIXME: 2 * hole.pos() + 1 or 2 * hole.pos() + 2 could overflow
             //  if T is a ZST
-            child += unsafe { LRUKReplacerStore::compares_le(hole.get(child), hole.get(child + 1)) } as usize;
+            child += unsafe { LRUKReplacerStore::compares_le(self.get_node_wrapper_from_data_index(child).unwrap(), self.get_node_wrapper_from_data_index(child + 1).unwrap()) } as usize;
 
-            // SAFETY: Same as above
-            unsafe { hole.move_to(child) };
-            child = 2 * hole.pos() + 1;
+            self.move_hole_to_new_position(&mut pos, child);
+            child = 2 * pos + 1;
         }
 
         if child == end - 1 {
             // SAFETY: child == end - 1 < self.data.len(), so it's a valid index
             //  and child == 2 * hole.pos() + 1 != hole.pos().
-            unsafe { hole.move_to(child) };
+            self.move_hole_to_new_position(&mut pos, child);
         }
-        pos = hole.pos();
-        drop(hole);
+        pos = pos;
+        self.fill_hole(pos, frame_id);
+
 
         // SAFETY: pos is the position in the hole and was already proven
         //  to be a valid index.
@@ -430,62 +389,7 @@ impl LRUKReplacerStore {
     pub fn is_empty(&self) -> bool {
         self.len() == 0
     }
-}
 
-
-/// Hole represents a hole in a slice i.e., an index without valid value
-/// (because it was moved from or duplicated).
-/// In drop, `Hole` will restore the slice by filling the hole
-/// position with the value that was originally removed.
-struct Hole<'a> {
-    data: &'a mut [FrameId],
-    all: &'a mut [(Option<LRUKNodeWrapper>, Option<usize>)],
-    elt: ManuallyDrop<FrameId>,
-    pos: usize,
-}
-
-impl<'a> Hole<'a> {
-    /// Create a new `Hole` at index `pos`.
-    ///
-    /// Unsafe because pos must be within the data slice.
-    #[inline]
-    unsafe fn new(data: &'a mut [FrameId], all: &'a mut [(Option<LRUKNodeWrapper>, Option<usize>)], pos: usize) -> Self {
-        debug_assert!(pos < data.len());
-        // SAFE: pos should be inside the slice
-        let frame_id = unsafe { ptr::read(data.get_unchecked(pos)) };
-        debug_assert!(all[frame_id as usize].1.is_some());
-        Hole {
-            data,
-            all,
-            elt: ManuallyDrop::new(frame_id),
-            pos,
-        }
-    }
-
-    /// Returns the position of the hole.
-    #[inline]
-    fn pos(&self) -> usize {
-        self.pos
-    }
-
-    /// Returns a reference to the element removed.
-    #[inline]
-    fn element(&self) -> &LRUKNodeWrapper {
-        self.all[*self.elt.deref() as usize].0.as_ref().unwrap()
-    }
-
-    /// Returns a reference to the element at `index`.
-    ///
-    /// # Safety
-    ///
-    /// Index must be within the data slice and not equal to pos.
-    #[inline]
-    unsafe fn get(&self, index: usize) -> &LRUKNodeWrapper {
-        debug_assert!(index != self.pos);
-        debug_assert!(index < self.data.len());
-        let frame_id = unsafe { self.data.get_unchecked(index) };
-        self.all[*frame_id as usize].0.as_ref().unwrap()
-    }
 
     /// Move hole to new location
     ///
@@ -493,54 +397,54 @@ impl<'a> Hole<'a> {
     ///
     /// target_position must be within the data slice and not equal to pos.
     #[inline]
-    unsafe fn move_to(&mut self, target_position: usize) {
-        debug_assert!(target_position != self.pos);
+    fn move_hole_to_new_position(&mut self, hole_pos: &mut usize, target_position: usize) {
+        debug_assert!(target_position != *hole_pos);
         debug_assert!(target_position < self.data.len());
-        unsafe {
-            let ptr = self.data.as_mut_ptr();
-            let target_ptr: *const _ = ptr.add(target_position);
+        // update target index in key map
+        let target_frame = self.data[target_position];
 
-            // update target index in key map
-            let target_element = &*target_ptr;
-            let old = self.all[*target_element as usize].1.replace(self.pos);
+        // Update the position of the node to point to the new location
+        self.all[target_frame as usize].1.replace(*hole_pos).expect(
+            "Hole can only exist for key values pairs, that are already part of the heap.",
+        );
 
-            old.expect(
-                "Hole can only exist for key values pairs, that are already part of the heap.",
-            );
+        // move target into hole
+        self.data.swap(target_position, *hole_pos);
 
-            // move target into hole
-            let hole_ptr = ptr.add(self.pos);
-            ptr::copy_nonoverlapping(target_ptr, hole_ptr, 1);
-        }
         // update hole position
-        self.pos = target_position;
+        *hole_pos = target_position;
     }
-}
 
-impl Drop for Hole<'_> {
-    #[inline]
-    fn drop(&mut self) {
+    /// restore the slice by filling the hole
+    /// position with the value that was originally removed.
+    fn fill_hole(&mut self, pos: usize, frame_id: FrameId) {
         // fill the hole again
-        unsafe {
-            let pos = self.pos;
-            ptr::copy_nonoverlapping(&*self.elt, self.data.get_unchecked_mut(pos), 1);
-        }
-        let key = *self.elt.deref();
-        let old = self.all[key as usize].1.replace(self.pos);
+        self.data[pos] = frame_id;
 
-        old.expect(
+        // Update the position
+        self.all[frame_id as usize].1.replace(pos).expect(
             "Hole can only exist for key values pairs, that are already part of the heap.",
         );
     }
+
+    fn get_node_wrapper_from_frame_id(&self, frame_id: FrameId) -> Option<&LRUKNodeWrapper> {
+        self.all[frame_id as usize].0.as_ref()
+    }
+
+    fn get_node_wrapper_from_data_index(&self, index: usize) -> Option<&LRUKNodeWrapper> {
+        let &frame_id = self.data.get(index)?;
+        self.all[frame_id as usize].0.as_ref()
+    }
+
 }
+
+
 
 #[cfg(test)]
 mod test {
     use super::*;
     use std::collections::HashMap;
     use std::hash::Hash;
-    use crate::buffer::replacer::lru_k_replacer::counter::AtomicI64Counter;
-    use crate::buffer::replacer::lru_k_replacer::lru_k_node::LRUKNode;
 
     fn is_normal<T: Send + Unpin>() {}
 

@@ -76,7 +76,7 @@ impl LRUKReplacer {
         let mut evictable_heap = self.store.clone();
 
         while !evictable_heap.is_empty() {
-            let (frame_id, _) = evictable_heap.pop_evictable_with_key().unwrap();
+            let frame_id = evictable_heap.pop_evictable_key().unwrap();
 
             frames.push(frame_id)
         }
