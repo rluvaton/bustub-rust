@@ -19,6 +19,7 @@ pub(super) type LRUKNodeWrapper = Arc<UnsafeCell<LRUKNode>>;
 // TODO - make it possible to reuse easily
 #[derive(Clone, Debug)]
 pub(in crate::buffer) struct LRUKNode {
+    can_use: bool,
 
     /// History of last seen K timestamps of this page. Least recent timestamp stored in front
     /// in cpp it was std::list<size_t>
@@ -40,11 +41,35 @@ impl LRUKNode {
 
         history.push_back(now);
         Arc::new(UnsafeCell::new(
-        LRUKNode {
-            history,
-            is_evictable: false,
-            interval,
-        }))
+            LRUKNode {
+                can_use: true,
+                history,
+                is_evictable: false,
+                interval,
+            }))
+    }
+
+    pub(super) fn reuse(&mut self, k: usize, counter: &AtomicI64Counter) {
+        self.history.start_over();
+
+        let now = Self::get_new_access_record(counter);
+        self.interval = if k != 1 { LRUKNode::calculate_interval_for_less_than_k(now) } else { LRUKNode::calculate_interval_full_access_history(&now) };
+
+        self.history.push_back(now);
+        self.can_use = true;
+        self.is_evictable = false;
+    }
+
+    pub(super) fn reuse_wrapper(node_wrapper: &LRUKNodeWrapper, k: usize, counter: &AtomicI64Counter) {
+        unsafe { (*node_wrapper.get()).reuse(k, counter) }
+    }
+
+    pub(super) fn inactive(node_wrapper: &LRUKNodeWrapper) {
+        unsafe { (*node_wrapper.get()).can_use = false }
+    }
+
+    pub(super) fn is_usable(node_wrapper: &LRUKNodeWrapper) -> bool {
+        unsafe { (*node_wrapper.get()).can_use }
     }
 
     pub(super) fn marked_accessed(&mut self, counter: &AtomicI64Counter) {
@@ -94,4 +119,3 @@ impl LRUKNode {
         self.is_evictable = evictable;
     }
 }
-

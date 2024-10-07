@@ -6,8 +6,10 @@ use std::hash::Hash;
 use std::marker::PhantomData;
 use std::ops::Deref;
 use std::ops::DerefMut;
+use std::sync::Arc;
 use std::vec;
-use super::lru_k_node::LRUKNodeWrapper;
+use crate::buffer::replacer::lru_k_replacer::counter::AtomicI64Counter;
+use super::lru_k_node::{LRUKNode, LRUKNodeWrapper};
 
 // ###################################################################################
 // Copied from https://github.com/Wasabi375/mut-binary-heap and modified to our needs
@@ -43,7 +45,23 @@ impl LRUKReplacerStore {
     }
 
     // This is for when the item is missing
-    pub fn add_node(&mut self, frame_id: FrameId, item: LRUKNodeWrapper, evictable: bool) {
+    pub fn add_node(&mut self, frame_id: FrameId, k: usize, history_access_counter: &Arc<AtomicI64Counter>, evictable: bool) {
+        let node = self.all[frame_id as usize].0.as_ref();
+
+        // Reuse
+        if let Some(node) = node {
+            LRUKNode::reuse_wrapper(node, k, history_access_counter);
+        } else {
+            self.all[frame_id as usize].0.replace(LRUKNode::new(k, history_access_counter));
+        }
+
+        if evictable {
+            self.push_evictable(frame_id);
+        }
+    }
+
+    // This is for when the item is missing
+    pub fn add_node_without_reuse(&mut self, frame_id: FrameId, item: LRUKNodeWrapper, evictable: bool) {
         self.all[frame_id as usize].0.replace(item);
 
         if evictable {
@@ -61,15 +79,26 @@ impl LRUKReplacerStore {
     }
 
     pub fn get_node(&self, frame_id: FrameId) -> Option<LRUKNodeWrapper> {
-        self.all[frame_id as usize].0.clone()
+        let node = self.all[frame_id as usize].0.clone()?;
+
+        if LRUKNode::is_usable(&node) { Some(node) } else { None }
     }
 
     /// Pop from top of the heap and remove the node as well
     pub fn pop_node(&mut self) -> Option<(FrameId, LRUKNodeWrapper)>  {
-        let (frame_id, _) = self.pop_evictable_with_key()?;
+        let frame_id = self.pop_evictable_key()?;
 
         // Remove frame
         self.all[frame_id as usize].0.take().map(|node| (frame_id, node))
+    }
+
+    /// inactivate top node from top of the heap
+    pub fn inactivate_top_node(&mut self) -> Option<FrameId>  {
+        let frame_id = self.pop_evictable_key()?;
+
+        LRUKNode::inactive(self.all[frame_id as usize].0.as_ref()?);
+
+        Some(frame_id)
     }
 
     /**
@@ -155,6 +184,33 @@ impl LRUKReplacerStore {
 
         item.as_ref().and_then(|&kv| self.all[kv as usize].1.take());
         item.map(|frame_id| (frame_id, self.all[frame_id as usize].0.clone().unwrap()))
+    }
+
+    /// Removes the greatest item from the binary heap and returns it as a key-value pair,
+    /// or `None` if it is empty.
+    ///
+    /// # Examples
+    ///
+    /// Basic usage:
+    ///
+    /// # Time complexity
+    ///
+    /// The worst case cost of `pop` on a heap containing *n* elements is *O*(log(*n*)).
+    pub fn pop_evictable_key(&mut self) -> Option<FrameId> {
+        let item = self.data.pop().map(|mut item| {
+            // NOTE: we can't just use self.is_empty here, because that will
+            //  trigger a debug_assert that keys and data are equal lenght.
+            if !self.data.is_empty() {
+                swap(&mut item, &mut self.data[0]);
+                // SAFETY: !self.is_empty() means that self.len() > 0
+                unsafe { self.sift_down_to_bottom(0) };
+            }
+            item
+        });
+
+        item.as_ref().and_then(|&kv| self.all[kv as usize].1.take());
+
+        item
     }
 
     /// Returns `true` if the heap contains a value for the given key.

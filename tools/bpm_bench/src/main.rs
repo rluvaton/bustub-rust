@@ -148,6 +148,13 @@ mod metrics;
 // get: 199197.69341021968
 // >>> END
 
+// After reusing LRU-K nodes
+// Release:
+// <<< BEGIN
+// scan: 199292.02359921337
+// get: 221965.43448551712
+// >>> END
+
 
 
 fn setup() -> TempDir {

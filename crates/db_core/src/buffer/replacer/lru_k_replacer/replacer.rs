@@ -102,10 +102,10 @@ impl LRUKReplacer {
         let node = node.as_mut();
 
         if node.is_none() {
-            let node = LRUKNode::new(self.k, &self.history_access_counter);
             self.store.add_node(
                 frame_id,
-                node,
+                self.k,
+                &self.history_access_counter,
                 // Not inserting to evictable frames as new frame is not evictable by default
                 false,
             );
@@ -145,7 +145,7 @@ impl Replacer for LRUKReplacer {
         #[cfg(feature = "tracing")]
         let _evict = span!("Evict");
 
-        let (frame_id, _) = self.store.pop_node()?;
+        let frame_id = self.store.inactivate_top_node()?;
 
         // Decrease evictable frames
         self.evictable_frames -= 1;
@@ -270,7 +270,7 @@ impl Replacer for LRUKReplacer {
             // If not evictable add the frame back (this is the slow case but most probably never happen
             unsafe {
                 if !(*frame.get()).is_evictable() {
-                    self.store.add_node(frame_id, frame, false);
+                    self.store.add_node_without_reuse(frame_id, frame, false);
                     return;
                 }
             }
