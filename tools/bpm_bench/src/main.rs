@@ -113,6 +113,13 @@ mod metrics;
 // get: 163663.34455518148
 // >>> END
 
+// After avoid using timestamp in LRU-K
+// Release
+// <<< BEGIN
+// scan: 160378.7207093097
+// get: 177758.30805639812
+// >>> END
+
 
 
 fn setup() -> TempDir {
