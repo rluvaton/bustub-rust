@@ -1,4 +1,4 @@
-use std::fmt::{Debug, Formatter};
+use std::fmt::Debug;
 
 
 pub trait DoubleEndedList<T> {
@@ -301,12 +301,12 @@ pub trait DoubleEndedList<T> {
 
 #[cfg(test)]
 pub(super) mod tests_utils {
-    use std::collections::{HashMap, LinkedList};
-    use std::time::Duration;
-    use rand::{thread_rng, Rng, SeedableRng};
+    use crate::DoubleEndedList;
     use rand::distributions::{Distribution, Standard};
-    use crate::{DoubleEndedList, FixedSizeLinkedList};
+    use rand::{thread_rng, Rng, SeedableRng};
     use rand_chacha::ChaChaRng;
+    use std::collections::LinkedList;
+    use std::fmt::Debug;
 
     // All list operation
     #[derive(Debug, Copy, Clone, Hash, Eq, PartialEq, PartialOrd, Ord)]
@@ -360,12 +360,11 @@ pub(super) mod tests_utils {
         front
     }
 
-    pub fn all<T>(capacity: usize, list: impl DoubleEndedList<T>) {
+    pub fn all<T: Copy + PartialEq + Debug>(capacity: usize, mut list: impl DoubleEndedList<T>) where Standard: Distribution<T> {
 
         let mut rng = rand::thread_rng();
 
-        let mut list = FixedSizeLinkedList::<i16>::with_capacity(5);
-        let mut helper_list = LinkedList::<i16>::new();
+        let mut helper_list = LinkedList::<T>::new();
 
         assert_eq!(list.is_full(), false, "List should not be full after init");
         assert_eq!(list.is_empty(), true, "List should be empty after init");
@@ -588,21 +587,23 @@ pub(super) mod tests_utils {
         }
     }
 
-    pub fn random<T>(capacity: usize, mut list: impl DoubleEndedList<T>) {
-        let shuffle_seed: u64 = thread_rng().gen();
+    pub fn random<T: Copy + PartialEq + Debug, List: DoubleEndedList<T>, CustomValidationFn: Fn(&List)>(capacity: usize, mut list: List, custom_validation_after_each_op: CustomValidationFn) where Standard: Distribution<T> {
+        let shuffle_seed: u64 = thread_rng().gen::<u64>();
         println!("Seed used: {}", shuffle_seed);
         let mut rng = ChaChaRng::seed_from_u64(shuffle_seed);
 
-        let mut list = FixedSizeLinkedList::<isize>::with_capacity(capacity);
-        let mut helper_list = LinkedList::<isize>::new();
+
+        let mut helper_list = LinkedList::<T>::new();
 
         assert_eq!(list.is_full(), false, "List is not full after init");
         assert_eq!(list.is_empty(), true, "List is empty after init");
         assert_eq!(list.len(), 0, "List is empty after init");
         assert_eq!(list.capacity(), capacity);
 
+        custom_validation_after_each_op(&list);
+
         for _ in 0..capacity * 10000 {
-            let op = rng.sample(Standard);
+            let op = rng.sample::<Operation, _>(Standard);
 
             match op {
                 Operation::PushFront => {
@@ -705,6 +706,8 @@ pub(super) mod tests_utils {
             assert_eq!(list.is_empty(), helper_list.is_empty());
             assert_eq!(list.len(), helper_list.len());
             assert_eq!(list.capacity(), capacity);
+
+            custom_validation_after_each_op(&list);
         }
     }
 }

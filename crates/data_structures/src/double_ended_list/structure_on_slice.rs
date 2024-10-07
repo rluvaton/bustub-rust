@@ -1,37 +1,34 @@
 use crate::double_ended_list::traits::DoubleEndedList;
 use std::fmt::{Debug, Formatter};
 
-pub struct FixedSizeLinkedList<T> {
-    capacity: usize,
+pub struct FixedSizeLinkedListSlice<'a, T> {
     length: usize,
     front_index: usize,
     back_index: usize,
-    data: Vec<Option<T>>,
+    data: &'a mut [Option<T>]
 }
 
-impl<T> FixedSizeLinkedList<T> {
-    pub fn with_capacity(capacity: usize) -> Self {
-        let mut data = Vec::with_capacity(capacity);
-        for i in 0..capacity {
-            data.insert(i, None);
+impl<'a, T> FixedSizeLinkedListSlice<'a, T> {
+    pub fn new(data: &'a mut [Option<T>]) -> Self {
+        for item in &mut *data {
+            item.take();
         }
 
         Self {
             length: 0,
-            capacity,
             front_index: 0,
-            back_index: capacity - 1,
-            data,
+            back_index: data.len() - 1,
+            data
         }
     }
 }
 
-impl<T> DoubleEndedList<T> for FixedSizeLinkedList<T> {
+impl<'a, T> DoubleEndedList<T> for FixedSizeLinkedListSlice<'a, T> {
 
     #[inline]
     #[must_use]
     fn capacity(&self) -> usize {
-        self.capacity
+        self.data.len()
     }
 
     /// Returns `true` if the `FixedSizeLinkedList` is empty.
@@ -73,7 +70,7 @@ impl<T> DoubleEndedList<T> for FixedSizeLinkedList<T> {
     #[inline]
     #[must_use]
     fn is_full(&self) -> bool {
-        self.length == self.capacity
+        self.length == self.capacity()
     }
 
     /// Returns the length of the `FixedSizeLinkedList`.
@@ -132,7 +129,7 @@ impl<T> DoubleEndedList<T> for FixedSizeLinkedList<T> {
         }
 
         self.front_index = 0;
-        self.back_index = self.capacity - 1;
+        self.back_index = self.capacity() - 1;
         self.length = 0;
     }
 
@@ -172,7 +169,7 @@ impl<T> DoubleEndedList<T> for FixedSizeLinkedList<T> {
         }
 
         self.front_index = 0;
-        self.back_index = self.capacity - 1;
+        self.back_index = self.capacity() - 1;
         self.length = 0;
     }
 
@@ -313,7 +310,7 @@ impl<T> DoubleEndedList<T> for FixedSizeLinkedList<T> {
             false
         } else {
             // Going 1 index back and rotate if reached 0
-            let prev_index = (self.front_index + self.capacity - 1) % self.capacity;
+            let prev_index = (self.front_index + self.capacity() - 1) % self.capacity();
 
             self.data[prev_index].replace(item);
 
@@ -348,7 +345,7 @@ impl<T> DoubleEndedList<T> for FixedSizeLinkedList<T> {
             None
         } else {
             let next_index = self.front_index;
-            self.front_index = (self.front_index + 1) % self.capacity;
+            self.front_index = (self.front_index + 1) % self.capacity();
 
             self.length -= 1;
             self.data[next_index].take()
@@ -373,7 +370,7 @@ impl<T> DoubleEndedList<T> for FixedSizeLinkedList<T> {
         if self.is_full() {
             false
         } else {
-            let next_index = (self.back_index + 1) % self.capacity;
+            let next_index = (self.back_index + 1) % self.capacity();
 
             self.data[next_index].replace(item);
 
@@ -403,12 +400,12 @@ impl<T> DoubleEndedList<T> for FixedSizeLinkedList<T> {
             let front = self.data[self.front_index].replace(item);
 
             self.back_index = self.front_index;
-            self.front_index = (self.front_index + 1) % self.capacity;
+            self.front_index = (self.front_index + 1) % self.capacity();
 
             front
         } else {
             // No need for rotate, same as push_back
-            let next_index = (self.back_index + 1) % self.capacity;
+            let next_index = (self.back_index + 1) % self.capacity();
 
             self.data[next_index] = Some(item);
 
@@ -441,7 +438,7 @@ impl<T> DoubleEndedList<T> for FixedSizeLinkedList<T> {
             None
         } else {
             let prev_index = self.back_index;
-            self.back_index = (self.back_index + self.capacity - 1) % self.capacity;
+            self.back_index = (self.back_index + self.capacity() - 1) % self.capacity();
 
             self.length -= 1;
             self.data[prev_index].take()
@@ -449,23 +446,11 @@ impl<T> DoubleEndedList<T> for FixedSizeLinkedList<T> {
     }
 }
 
-impl<T: Clone> Clone for FixedSizeLinkedList<T> {
-    fn clone(&self) -> Self {
-        Self {
-            length: self.length,
-            capacity: self.capacity,
-            front_index: self.front_index,
-            back_index: self.back_index,
-            data: self.data.clone(),
-        }
-    }
-}
-
 // Implementing send if the item is implementing send
-unsafe impl<T: Send> Send for FixedSizeLinkedList<T> {
+unsafe impl<T: Send> Send for FixedSizeLinkedListSlice<'_, T> {
 }
 
-impl<T: Debug> Debug for FixedSizeLinkedList<T> {
+impl<T: Debug> Debug for FixedSizeLinkedListSlice<'_, T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         // TODO - fix this
         write!(f, "{:?}", self.data)
@@ -474,20 +459,31 @@ impl<T: Debug> Debug for FixedSizeLinkedList<T> {
 
 #[cfg(test)]
 mod tests {
+    use crate::double_ended_list::structure_on_slice::FixedSizeLinkedListSlice;
     use crate::double_ended_list::traits::tests_utils;
-    use crate::FixedSizeLinkedList;
 
     #[test]
     fn all() {
         let capacity = 5;
 
-        tests_utils::all(capacity, FixedSizeLinkedList::<isize>::with_capacity(capacity))
+        let mut underlying = [None; 100];
+
+        tests_utils::all(capacity, FixedSizeLinkedListSlice::<isize>::new(&mut underlying[5..10]))
     }
 
     #[test]
     fn random() {
-        let capacity = 13;
+        const CAPACITY: usize = 13;
 
-        tests_utils::random(capacity, FixedSizeLinkedList::<isize>::with_capacity(capacity), |list: &FixedSizeLinkedList<isize>| {})
+        let mut underlying = [None; 100];
+
+        let (before, after) = underlying.as_mut_slice().split_at_mut(11);
+        let (part, after) = after.as_mut().split_at_mut(CAPACITY);
+
+        tests_utils::random(CAPACITY, FixedSizeLinkedListSlice::<isize>::new(part), |list: &FixedSizeLinkedListSlice<isize>| {
+            assert_eq!(before, [None; 11]);
+            assert_eq!(after, [None; 100 - 11 - CAPACITY]);
+        });
+
     }
 }
