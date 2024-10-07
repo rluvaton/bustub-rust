@@ -4,18 +4,12 @@ use chrono::Utc;
 
 use common::config::FrameId;
 
-use super::counter::AtomicU64Counter;
+use super::counter::AtomicI64Counter;
 
-type HistoryRecord = (
-    // Global counter
-    u64,
+// Global counter
+type HistoryRecord = i64;
 
-    // Timestamp
-    i64
-);
-
-
-const INF_INTERVAL: i64 = i64::MAX;
+const INF_COUNTER: i64 = i64::MAX;
 
 // In order to avoid getting the current time when wanting to calculate the interval,
 // we will use this large number that we will never reach and consider it as current time
@@ -44,13 +38,13 @@ pub(in crate::buffer) struct LRUKNode {
 }
 
 impl LRUKNode {
-    pub(super) fn new(k: usize, frame_id: FrameId, counter: &AtomicU64Counter) -> Self {
+    pub(super) fn new(k: usize, frame_id: FrameId, counter: &AtomicI64Counter) -> Self {
         assert!(k > 0, "K > 0");
 
         let mut history = FixedSizeLinkedList::with_capacity(k);
 
         let now = Self::get_new_access_record_now(counter);
-        let interval = IMAGINARY_NOW - now.1;
+        let interval = IMAGINARY_NOW - now;
 
         history.push_back(now);
 
@@ -62,7 +56,7 @@ impl LRUKNode {
         }
     }
 
-    pub(super) fn marked_accessed(&mut self, counter: &AtomicU64Counter) {
+    pub(super) fn marked_accessed(&mut self, counter: &AtomicI64Counter) {
 
         // LRU-K evicts the page whose K-th most recent access is furthest in the past.
         // So we only need to calculate
@@ -72,43 +66,39 @@ impl LRUKNode {
 
         // If reached the size, remove the first item and add to the end
         if let Some(removed) = removed {
-            self.interval += removed.1 - new_val.1;
+            self.interval += removed - new_val;
         }
     }
 
     #[inline(always)]
     fn get_interval(&self) -> i64 {
         if !self.history.is_full() {
-            return INF_INTERVAL -
+            return INF_COUNTER -
 
                 // Fallback to LRU
                 // Not using timestamp as counter will not depend on the machine clock precision
 
                 // Subtracting the current message id to make sure most recent (largest message id) will have smaller value than the least recent node (smallest message id)
-                self.get_current_message_id() as i64;
+                self.get_current_message_id();
         }
 
         self.interval
     }
 
-    fn get_current_message_id(&self) -> u64 {
-        self.history.back().expect("History can never be empty").0
+    #[inline(always)]
+    fn get_current_message_id(&self) -> i64 {
+        *self.history.back().expect("History can never be empty")
     }
 
-    fn get_new_access_record_now(counter: &AtomicU64Counter) -> HistoryRecord {
-        (
-            // Counter,
-            counter.get_next(),
-
-            // Timestamp
-            Self::get_current_time(),
-        )
+    fn get_new_access_record_now(counter: &AtomicI64Counter) -> HistoryRecord {
+        counter.get_next()
     }
 
     fn get_current_time() -> i64 {
         Utc::now().timestamp_micros()
     }
 
+    #[inline(always)]
     pub(super) fn cmp(&self, other: &Self) -> Ordering {
         self.get_interval().cmp(&other.get_interval())
     }
@@ -150,7 +140,7 @@ mod tests {
 
     #[test]
     fn should_order_by_record_access() {
-        let counter = AtomicU64Counter::default();
+        let counter = AtomicI64Counter::default();
         let mut original_nodes = {
             let mut nodes = vec![];
             for i in 0..5 {

@@ -1,20 +1,21 @@
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::atomic::{AtomicI64, Ordering};
 
 #[derive(Debug)]
-pub(in crate::buffer) struct AtomicU64Counter(AtomicU64);
+pub(in crate::buffer) struct AtomicI64Counter(AtomicI64);
 
-impl AtomicU64Counter {
-    pub(in crate::buffer) fn new(initial_value: u64) -> Self {
-        AtomicU64Counter(AtomicU64::new(initial_value))
+impl AtomicI64Counter {
+    pub(in crate::buffer) fn new(initial_value: i64) -> Self {
+        AtomicI64Counter(AtomicI64::new(initial_value))
     }
 
-    pub(in crate::buffer) fn get_next(&self) -> u64 {
+    #[inline]
+    pub(in crate::buffer) fn get_next(&self) -> i64 {
         // Take the current value and increment
         self.0.fetch_add(1, Ordering::SeqCst)
     }
 }
 
-impl Default for AtomicU64Counter {
+impl Default for AtomicI64Counter {
     fn default() -> Self {
         Self::new(0)
     }

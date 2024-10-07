@@ -8,7 +8,7 @@ use tracy_client::span;
 
 use common::config::FrameId;
 use crate::buffer::{AccessType, Replacer};
-use super::counter::AtomicU64Counter;
+use super::counter::AtomicI64Counter;
 use super::lru_k_node::LRUKNode;
 
 type LRUKNodeWrapper = Arc<UnsafeCell<LRUKNode>>;
@@ -40,7 +40,7 @@ pub struct LRUKReplacer {
     // Tracks the number of evictable frames
     evictable_frames: usize,
 
-    history_access_counter: Arc<AtomicU64Counter>,
+    history_access_counter: Arc<AtomicI64Counter>,
 }
 
 // TODO - can remove this?
@@ -71,7 +71,7 @@ impl LRUKReplacer {
 
             evictable_frames: 0,
 
-            history_access_counter: Arc::new(AtomicU64Counter::default()),
+            history_access_counter: Arc::new(AtomicI64Counter::default()),
         }
     }
 
