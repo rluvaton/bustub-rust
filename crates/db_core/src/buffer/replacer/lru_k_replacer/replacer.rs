@@ -27,7 +27,9 @@ type LRUKNodeWrapper = Arc<UnsafeCell<LRUKNode>>;
 #[derive(Clone, Debug)]
 pub struct LRUKReplacer {
     /// in cpp it was unordered_map
-    node_store: HashMap<FrameId, LRUKNodeWrapper>,
+    /// The key for the node store is the frame_id which is also the index
+    /// We are not using HashMap for performance as we can avoid the hashing by simple index lookup
+    node_store: Vec<Option<LRUKNodeWrapper>>,
 
     /// Heap for evictable LRU-K nodes for best performance for finding evictable frames
     /// This is mutable Heap to allow for updating LRU-K Node without removing and reinserting
@@ -59,7 +61,7 @@ impl LRUKReplacer {
     ///
     pub fn new(num_frames: usize, k: usize) -> Self {
         LRUKReplacer {
-            node_store: HashMap::with_capacity(num_frames),
+            node_store: vec![None; num_frames],
             evictable_heap: BinaryHeap::with_capacity_by(num_frames, |a, b| {
                 unsafe {
                     (*a.get()).cmp(&*b.get())
@@ -96,31 +98,6 @@ impl LRUKReplacer {
         unsafe { Some((*top.get()).get_frame_id()) }
     }
 
-    /// Remove an evictable frame from replacer, along with its access history.
-    /// This function should also decrement replacer's size if removal is successful.
-    ///
-    /// Note that this is different from evicting a frame, which always remove the frame
-    /// with the largest backward k-distance. This function removes specified frame id,
-    /// no matter what its backward k-distance is.
-    ///
-    /// If `remove` is called on a non-evictable frame, throw an exception or abort the
-    /// process.
-    ///
-    /// # Arguments
-    ///
-    /// * `frame_id`: Frame ID to remove, the frame must be evictable
-    ///
-    /// # Unsafe:
-    /// This is unsafe because we are certain that the frame is evictable and exists
-    ///
-    unsafe fn remove_unchecked(&mut self, frame_id: FrameId) {
-        self.node_store.remove(&frame_id);
-
-        // Decrease evictable frames
-        self.evictable_frames -= 1;
-        self.evictable_heap.remove(&frame_id);
-    }
-
     /// Record the event that the given frame id is accessed at current timestamp.
     /// Create a new entry for access history if frame id has not been seen before.
     ///
@@ -135,11 +112,11 @@ impl LRUKReplacer {
     /// # Unsafe
     /// unsafe as we are certain that the frame id is valid
     unsafe fn record_access_unchecked(&mut self, frame_id: FrameId, _access_type: AccessType) {
-        let node = self.node_store.get_mut(&frame_id);
+        let node = self.node_store[frame_id as usize].as_mut();
 
         if node.is_none() {
             let node = Arc::new(UnsafeCell::new(LRUKNode::new(self.k, frame_id, &self.history_access_counter)));
-            self.node_store.insert(frame_id, node);
+            self.node_store[frame_id as usize].replace(node);
 
             // Not inserting to evictable frames as new frame is not evictable by default
             return;
@@ -177,19 +154,17 @@ impl Replacer for LRUKReplacer {
         #[cfg(feature = "tracing")]
         let _unpin = span!("Evict");
 
-        // No frame is evictable
-        if self.size() == 0 {
-            return None;
-        }
+        let evicted_frame = self.evictable_heap.pop()?;
 
-        let evictable_frame = self
-            .get_next_to_evict()
-            .expect("Cant have missing evictable frame");
+        // Decrease evictable frames
+        self.evictable_frames -= 1;
 
-        // We know for sure that the frame is evictable
-        unsafe { self.remove_unchecked(evictable_frame) }
+        let frame_id = unsafe {(*evicted_frame.get()).get_frame_id()};
 
-        Some(evictable_frame)
+        // Remove frame
+        self.node_store[frame_id as usize].take();
+
+        Some(frame_id)
     }
 
     /// Record the event that the given frame id is accessed at current timestamp.
@@ -258,7 +233,7 @@ impl Replacer for LRUKReplacer {
         // We are certain that the frame id is valid
         self.assert_valid_frame_id(frame_id);
 
-        let node = self.node_store.get_mut(&frame_id);
+        let node = self.node_store[frame_id as usize].as_mut();
 
         // Nothing to do
         if node.is_none() {
@@ -302,16 +277,22 @@ impl Replacer for LRUKReplacer {
     /// * `frame_id`: Frame ID to remove, the frame must be evictable
     ///
     fn remove(&mut self, frame_id: FrameId) {
-        let frame = self.node_store.get(&frame_id);
+        // Optimistic, to first take and if not evictable or
+        let frame = self.node_store[frame_id as usize].take();
 
-        unsafe {
-            if frame.is_none() || !(*frame.unwrap().get()).is_evictable() {
-                return;
+        if let Some(frame) = frame {
+
+            // If not evictable add the frame back (this is the slow case but most probably never happen
+            unsafe {
+                if !(*frame.get()).is_evictable() {
+                    self.node_store[frame_id as usize].replace(frame);
+                    return;
+                }
             }
-        }
 
-        unsafe {
-            self.remove_unchecked(frame_id);
+            // Decrease evictable frames
+            self.evictable_frames -= 1;
+            self.evictable_heap.remove(&frame_id);
         }
     }
 

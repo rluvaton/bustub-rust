@@ -127,6 +127,13 @@ mod metrics;
 // get: 180701.67661077963
 // >>> END
 
+// After replacing map store in LRU-K with simple array
+// Release
+// <<< BEGIN
+// scan: 166284.39052031597
+// get: 184767.807739742
+// >>> END
+
 
 
 fn setup() -> TempDir {
