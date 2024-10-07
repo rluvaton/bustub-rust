@@ -351,7 +351,6 @@ impl LRUKReplacerStore {
             //  and child == 2 * hole.pos() + 1 != hole.pos().
             self.move_hole_to_new_position(&mut pos, child);
         }
-        pos = pos;
         self.fill_hole(pos, frame_id);
 
 
