@@ -1,6 +1,3 @@
-
-// #![stable(feature = "rust1", since = "1.0.0")]
-
 use common::config::FrameId;
 use core::mem::{swap, ManuallyDrop};
 use core::ptr;
@@ -11,6 +8,10 @@ use std::ops::Deref;
 use std::ops::DerefMut;
 use std::vec;
 use super::lru_k_node::LRUKNodeWrapper;
+
+// ###################################################################################
+// Copied from https://github.com/Wasabi375/mut-binary-heap and modified to our needs
+// ###################################################################################
 
 /// This max heap for LRU-K + node store
 ///
@@ -29,7 +30,6 @@ pub(super) struct LRUKReplacerStore {
 }
 
 unsafe impl Send for LRUKReplacerStore {}
-
 
 impl LRUKReplacerStore {
 
@@ -82,21 +82,6 @@ impl LRUKReplacerStore {
     types that can be `==` without being identical. For more information see
     the documentation of [HashMap::insert].
 
-    # Examples
-
-    Basic usage:
-
-    ```
-    use mut_binary_heap_index_keys::BinaryHeapIndexKeys;
-    let mut heap: BinaryHeapIndexKeys<i32, i32> = BinaryHeapIndexKeys::new();
-    heap.push(0, 3);
-    heap.push(1, 5);
-    heap.push(2, 1);
-
-    assert_eq!(heap.len(), 3);
-    assert_eq!(heap.peek(), Some(&5));
-    ```
-
     # Time complexity
 
     The expected cost of `push`, averaged over every possible ordering of
@@ -139,15 +124,6 @@ impl LRUKReplacerStore {
     ///
     /// Basic usage:
     ///
-    /// ```
-    /// use mut_binary_heap_index_keys::BinaryHeapIndexKeys;
-    /// let mut heap = BinaryHeapIndexKeys::<_, _>::from([1, 3], |v| v.clone());
-    ///
-    /// assert_eq!(heap.pop(), Some(3));
-    /// assert_eq!(heap.pop(), Some(1));
-    /// assert_eq!(heap.pop(), None);
-    /// ```
-    ///
     /// # Time complexity
     ///
     /// The worst case cost of `pop` on a heap containing *n* elements is *O*(log(*n*)).
@@ -161,15 +137,6 @@ impl LRUKReplacerStore {
     /// # Examples
     ///
     /// Basic usage:
-    ///
-    /// ```
-    /// use mut_binary_heap_index_keys::BinaryHeapIndexKeys;
-    /// let mut heap = BinaryHeapIndexKeys::<_,_>::from(vec![1, 3], |v| v.clone());
-    ///
-    /// assert_eq!(heap.pop_with_key(), Some((3, 3)));
-    /// assert_eq!(heap.pop_with_key(), Some((1, 1)));
-    /// assert_eq!(heap.pop_with_key(), None);
-    /// ```
     ///
     /// # Time complexity
     ///
@@ -192,16 +159,6 @@ impl LRUKReplacerStore {
 
     /// Returns `true` if the heap contains a value for the given key.
     ///
-    /// # Examples
-    /// ```
-    /// use mut_binary_heap_index_keys::BinaryHeapIndexKeys;
-    /// let mut heap = BinaryHeapIndexKeys::<_,_>::from([1, 3], |v| v.clone());
-    ///
-    /// assert!(heap.contains_key(&1));
-    /// assert!(heap.contains_key(&3));
-    /// assert!(!heap.contains_key(&2));
-    /// ```
-    ///
     /// # Time complexity
     ///
     /// This method runs in *O*(1) time.
@@ -213,26 +170,6 @@ impl LRUKReplacerStore {
     /// Removes a key from the heap, returning the `(key, value)` if the key
     /// was previously in the heap.
     ///
-    /// The key may be any borrowed form of the map's key type, but
-    /// [Hash] and [Eq] on the borrowed form *must* match those for
-    /// the key type.
-    ///
-    /// # Example
-    /// ```
-    /// use mut_binary_heap_index_keys::BinaryHeapIndexKeys;
-    ///
-    /// let mut heap: BinaryHeapIndexKeys<_, _> = BinaryHeapIndexKeys::new();
-    /// heap.push(0, 5);
-    /// heap.push(1, 3);
-    /// heap.push(2, 6);
-    ///
-    /// assert_eq!(heap.remove(&0), Some((0, 5)));
-    /// assert_eq!(heap.remove(&3), None);
-    /// assert_eq!(heap.len(), 2);
-    /// assert_eq!(heap.pop(), Some(6));
-    /// assert_eq!(heap.pop(), Some(3));
-    ///
-    /// ```
     pub fn remove_evictable(&mut self, key: &FrameId) {
         if let Some(pos) = self.all[*key as usize].1 {
             let item = self.data.pop().map(|mut item| {
@@ -260,7 +197,7 @@ impl LRUKReplacerStore {
     /// # Time complexity
     ///
     /// This function runs in *O*(*log* n) time.
-    pub fn update_after_evictable(&mut self, key: &FrameId) {
+    fn update_after_evictable(&mut self, key: &FrameId) {
         let pos = self.all[*key as usize].1.unwrap();
         let pos_after_sift_up = unsafe { self.sift_up(0, pos) };
         if pos_after_sift_up != pos {
@@ -425,18 +362,7 @@ impl LRUKReplacerStore {
 
     /// Returns the length of the binary heap.
     ///
-    /// # Examples
-    ///
-    /// Basic usage:
-    ///
-    /// ```
-    /// use mut_binary_heap_index_keys::BinaryHeapIndexKeys;
-    /// let heap = BinaryHeapIndexKeys::<_,_>::from([1, 3].iter(), |v| *v.clone());
-    ///
-    /// assert_eq!(heap.len(), 2);
-    /// ```
     #[must_use]
-    // #[stable(feature = "rust1", since = "1.0.0")]
     pub fn len(&self) -> usize {
         debug_assert!(self.data.len() == self.data.len());
         self.data.len()
@@ -444,24 +370,7 @@ impl LRUKReplacerStore {
 
     /// Checks if the binary heap is empty.
     ///
-    /// # Examples
-    ///
-    /// Basic usage:
-    ///
-    /// ```
-    /// use mut_binary_heap_index_keys::BinaryHeapIndexKeys;
-    /// let mut heap: BinaryHeapIndexKeys<_, _> = BinaryHeapIndexKeys::new();
-    ///
-    /// assert!(heap.is_empty());
-    ///
-    /// heap.push(0, 3);
-    /// heap.push(1, 5);
-    /// heap.push(2, 1);
-    ///
-    /// assert!(!heap.is_empty());
-    /// ```
     #[must_use]
-    // #[stable(feature = "rust1", since = "1.0.0")]
     pub fn is_empty(&self) -> bool {
         self.len() == 0
     }
