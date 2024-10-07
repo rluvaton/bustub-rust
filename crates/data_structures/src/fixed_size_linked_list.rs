@@ -410,6 +410,10 @@ impl<T: Clone> Clone for FixedSizeLinkedList<T> {
     }
 }
 
+// Implementing send if the item is implementing send
+unsafe impl<T: Send> Send for FixedSizeLinkedList<T> {
+}
+
 impl<T: Debug> Debug for FixedSizeLinkedList<T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         // TODO - fix this

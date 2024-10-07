@@ -87,15 +87,17 @@ impl LRUKReplacer {
 
     /// Helper for debugging in tests
     pub(in crate::buffer) fn get_order_of_eviction(&self) -> Vec<FrameId> {
-        unsafe {
-            self.evictable_heap.clone().into_iter_sorted().map(|item| (*item.get()).get_frame_id()).collect()
+        let mut frames = Vec::with_capacity(self.evictable_frames);
+
+        let mut evictable_heap = self.evictable_heap.clone();
+
+        while !evictable_heap.is_empty() {
+            let (frame_id, _) = evictable_heap.pop_with_key().unwrap();
+
+            frames.push(frame_id)
         }
-    }
 
-    fn get_next_to_evict(&mut self) -> Option<FrameId> {
-        let top = self.evictable_heap.peek()?;
-
-        unsafe { Some((*top.get()).get_frame_id()) }
+        frames
     }
 
     /// Record the event that the given frame id is accessed at current timestamp.
@@ -115,7 +117,7 @@ impl LRUKReplacer {
         let node = self.node_store[frame_id as usize].as_mut();
 
         if node.is_none() {
-            let node = Arc::new(UnsafeCell::new(LRUKNode::new(self.k, frame_id, &self.history_access_counter)));
+            let node = Arc::new(UnsafeCell::new(LRUKNode::new(self.k, &self.history_access_counter)));
             self.node_store[frame_id as usize].replace(node);
 
             // Not inserting to evictable frames as new frame is not evictable by default
@@ -154,12 +156,10 @@ impl Replacer for LRUKReplacer {
         #[cfg(feature = "tracing")]
         let _unpin = span!("Evict");
 
-        let evicted_frame = self.evictable_heap.pop()?;
+        let (frame_id, _) = self.evictable_heap.pop_with_key()?;
 
         // Decrease evictable frames
         self.evictable_frames -= 1;
-
-        let frame_id = unsafe {(*evicted_frame.get()).get_frame_id()};
 
         // Remove frame
         self.node_store[frame_id as usize].take();
