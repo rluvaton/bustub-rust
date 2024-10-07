@@ -1,5 +1,5 @@
 [package]
-name = "mut-binary-heap-index-keys"
+name = "mut_binary_heap_index_keys"
 version = "0.1.0"
 authors = ["Burkhard Mittelbach <burkhard@mittelbach-online.de>", "Raz Luvaton"]
 description = "Enhanced version of std::collections::BinaryHeap that supports increase and decrease key, max, min, and custom-order heaps."

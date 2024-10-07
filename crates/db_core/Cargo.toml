@@ -11,6 +11,7 @@ stats = {path = "../stats"}
 data_types = {path = "../data_types"}
 error_utils = {path = "../error_utils"}
 data_structures = {path = "../data_structures"}
+mut_binary_heap_index_keys = {path = "../mut_binary_heap_index_keys"}
 
 thiserror = "1.0.64"
 prettytable = "0.10.0"
@@ -21,6 +22,7 @@ dashmap = "6.1.0"
 # TODO - remove unused features
 chrono = "0.4.38"
 rand = "0.8"
+rand_chacha = "0.3.1"
 
 # Make sure to sync this version with the one in the dev-dependencies
 parking_lot = { version = "0.12.3", features = ["default"] }
@@ -30,7 +32,6 @@ mut-binary-heap = "0.1.0"
 
 # Profiling
 tracy-client = { version = "0.17.3", default-features = false}
-rand_chacha = "0.3.1"
 
 [dev-dependencies]
 tempdir = "0.3.7"

@@ -1,15 +1,15 @@
-use mut_binary_heap::{BinaryHeap, FnComparator};
+use mut_binary_heap_index_keys::{BinaryHeapIndexKeys, FnComparator};
 use std::cell::UnsafeCell;
 use std::cmp::Ordering;
-use std::collections::HashMap;
+use std::hash::Hash;
 use std::sync::Arc;
 #[cfg(feature = "tracing")]
 use tracy_client::span;
 
-use common::config::FrameId;
-use crate::buffer::{AccessType, Replacer};
 use super::counter::AtomicI64Counter;
 use super::lru_k_node::LRUKNode;
+use crate::buffer::{AccessType, Replacer};
+use common::config::FrameId;
 
 type LRUKNodeWrapper = Arc<UnsafeCell<LRUKNode>>;
 
@@ -33,7 +33,7 @@ pub struct LRUKReplacer {
 
     /// Heap for evictable LRU-K nodes for best performance for finding evictable frames
     /// This is mutable Heap to allow for updating LRU-K Node without removing and reinserting
-    evictable_heap: BinaryHeap<FrameId, LRUKNodeWrapper, FnComparator<fn(&LRUKNodeWrapper, &LRUKNodeWrapper) -> Ordering>>,
+    evictable_heap: BinaryHeapIndexKeys<FrameId, LRUKNodeWrapper, FnComparator<fn(&LRUKNodeWrapper, &LRUKNodeWrapper) -> Ordering>>,
 
     replacer_size: usize,
 
@@ -62,7 +62,9 @@ impl LRUKReplacer {
     pub fn new(num_frames: usize, k: usize) -> Self {
         LRUKReplacer {
             node_store: vec![None; num_frames],
-            evictable_heap: BinaryHeap::with_capacity_by(num_frames, |a, b| {
+
+            // TODO - once https://github.com/Wasabi375/mut-binary-heap/issues/12 is supported, we should use Identity hasher
+            evictable_heap: BinaryHeapIndexKeys::with_capacity_by(num_frames, |a, b| {
                 unsafe {
                     (*a.get()).cmp(&*b.get())
                 }

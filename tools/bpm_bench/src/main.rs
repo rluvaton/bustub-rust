@@ -134,6 +134,13 @@ mod metrics;
 // get: 184767.807739742
 // >>> END
 
+// After Creating mut binary heap with identity hash function
+// Release
+// <<< BEGIN
+// scan: 167936.7687743742
+// get: 187041.3319556015
+// >>> END
+
 
 
 fn setup() -> TempDir {

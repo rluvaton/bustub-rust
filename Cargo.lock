@@ -372,8 +372,8 @@ dependencies = [
  "derive_builder",
  "error_utils",
  "generics",
- "identity-hash",
  "mut-binary-heap",
+ "mut_binary_heap_index_keys",
  "num-format",
  "parking_lot",
  "prettytable",
@@ -700,7 +700,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "mut-binary-heap-index-keys"
+name = "mut_binary_heap_index_keys"
 version = "0.1.0"
 dependencies = [
  "compare",
