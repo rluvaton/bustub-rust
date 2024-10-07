@@ -294,6 +294,24 @@ mod tests {
     }
 
     #[test]
+    fn should_not_find_anything_before_insertion() {
+        let hash_table = create_extendible_hash_table(4);
+
+        // Having enough keys so a split would happen
+        let total = (BUSTUB_PAGE_SIZE * 100) as i64;
+
+        let mut key = GenericKey::<8>::default();
+        let mut value = RID::default();
+
+        for i in 0..total {
+            key.set_from_integer(i);
+            value.set(i as PageId, i as u32);
+
+            assert_eq!(hash_table.get_value(&key, None), Ok(vec![]), "should not find values for key {}", i);
+        }
+    }
+
+    #[test]
     fn lifecycle_small_pool_size() {
         let hash_table = create_extendible_hash_table(4);
 
