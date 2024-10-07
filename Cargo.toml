@@ -10,7 +10,6 @@ members = [
     "crates/generics",
     "crates/error_utils",
     "crates/data_structures",
-    "crates/mut_binary_heap_index_keys",
 ]
 
 [profile.bench]
