@@ -120,6 +120,13 @@ mod metrics;
 // get: 177758.30805639812
 // >>> END
 
+// After avoiding updating tree twice
+// Release
+// <<< BEGIN
+// scan: 162523.1825605813
+// get: 180701.67661077963
+// >>> END
+
 
 
 fn setup() -> TempDir {

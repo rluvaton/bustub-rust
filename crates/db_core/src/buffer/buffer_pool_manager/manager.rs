@@ -226,23 +226,20 @@ impl BufferPoolManager {
         // 3. page does not exist in the buffer pool and we NEED to flush existing page
         // 3. Page exists in the buffer pool
         if let Some(&frame_id) = inner.page_table.get(&page_id) {
-            // 3.1. Record access to the frame
-            inner.replacer.record_access(frame_id, access_type);
+            // 3.1. Record access so the frame will be inserted and the replacer algorithm will work and avoid eviction in the meantime
+            inner.record_access_and_avoid_eviction(frame_id, access_type);
 
-            // 3.2. Avoid evicting the frame
-            inner.replacer.set_evictable(frame_id, false);
-
-            // 3.3 Get page
+            // 3.2 Get page
             let page = inner.pages[frame_id as usize].clone();
 
-            // 3.4 Assert page table correctness
+            // 3.3 Assert page table correctness
             // TODO - fix this?
             // assert_eq!(page.get_page_id(), page_id, "Page ID must be the same as the requested");
 
-            // 3.5 Pin before returning to the caller to avoid page to be evicted in the meantime
+            // 3.4 Pin before returning to the caller to avoid page to be evicted in the meantime
             page.pin();
 
-            // 3.6 Drop all locks before waiting for the page read lock
+            // 3.5 Drop all locks before waiting for the page read lock
             drop(inner);
 
             let page_and_guard = PageAndGuardImpl::from(page);
@@ -261,13 +258,10 @@ impl BufferPoolManager {
         // 6. Register the promise
         self.pending_fetch_requests.lock().insert(page_id, current_fetch_promise.get_future());
 
-        // 7. Record access so the frame will be inserted and the replacer algorithm will work
-        inner.replacer.record_access(frame_id, access_type);
+        // 7. Record access so the frame will be inserted and the replacer algorithm will work and avoid eviction in the meantime
+        inner.record_access_and_avoid_eviction(frame_id, access_type);
 
-        // 8. Avoid evicting the frame in the meantime
-        inner.replacer.set_evictable(frame_id, false);
-
-        // 9. Register the requested page in the page table
+        // 8. Register the requested page in the page table
         inner.page_table.insert(page_id, frame_id);
 
         // We now have 2 options:
@@ -276,7 +270,7 @@ impl BufferPoolManager {
 
         let page_to_replace: Option<Page> = inner.pages.get_mut(frame_id as usize).cloned();
 
-        // 7. If frame match existing page
+        // 9. If frame match existing page
         if let Some(page_to_replace) = page_to_replace {
             // Option 1, replacing existing frame
 
@@ -454,6 +448,21 @@ impl BufferPoolManager {
     }
 }
 
+impl InnerBufferPoolManager {
+
+    #[inline(always)]
+    fn record_access_and_avoid_eviction(&mut self, frame_id: FrameId, access_type: AccessType) {
+
+        // Avoid evicting the frame
+        self.replacer.set_evictable(frame_id, false);
+
+
+        // Record access to the frame so the LRU-K would work
+        // this is done after the set evictable for performance reasons (avoiding updating the evictable heap twice)
+        self.replacer.record_access(frame_id, access_type);
+    }
+}
+
 impl BufferPool for Arc<BufferPoolManager> {
     fn get_pool_size(&self) -> usize {
         self.pool_size
@@ -468,16 +477,13 @@ impl BufferPool for Arc<BufferPoolManager> {
         // 2. Find replacement frame
         let frame_id = self.find_replacement_frame(&mut inner)?;
 
-        // 3. Record access so the frame will be inserted and the replacer algorithm will work
-        inner.replacer.record_access(frame_id, access_type);
+        // 3. Record access so the frame will be inserted and the replacer algorithm will work and avoid eviction in the meantime
+        inner.record_access_and_avoid_eviction(frame_id, access_type);
 
-        // 4. Avoid evicting the frame in the meantime
-        inner.replacer.set_evictable(frame_id, false);
-
-        // 5. Allocate page id
+        // 4. Allocate page id
         let page_id = self.allocate_page();
 
-        // 6. Register the new page in the page table
+        // 5. Register the new page in the page table
         inner.page_table.insert(page_id, frame_id);
 
         // We now have 2 options:
