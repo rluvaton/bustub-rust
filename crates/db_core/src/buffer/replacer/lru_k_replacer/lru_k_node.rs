@@ -128,3 +128,86 @@ impl LRUKNode {
         self.is_evictable = evictable;
     }
 }
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn get_frame_ids(nodes: &Vec<LRUKNode>) -> Vec<FrameId> {
+        nodes.iter().map(|node| node.frame_id).collect()
+    }
+
+    /// Get frame ids of vector of nodes so that the first node is the next to be evicted and last node is the last node to be evicted
+    fn get_frame_ids_sorted_by_evictable(nodes: &Vec<LRUKNode>) -> Vec<FrameId> {
+        let mut nodes = nodes.clone();
+
+        // Sort in reverse order
+        nodes.sort_by(|a, b| b.cmp(a));
+
+        nodes.iter().map(|node| node.frame_id).collect()
+    }
+
+    #[test]
+    fn should_order_by_record_access() {
+        let counter = AtomicU64Counter::default();
+        let mut original_nodes = {
+            let mut nodes = vec![];
+            for i in 0..5 {
+                nodes.push(LRUKNode::new(3, i, &counter))
+            }
+
+            nodes
+        };
+
+        assert_eq!(get_frame_ids(&original_nodes), vec![0, 1, 2, 3, 4]);
+        assert_eq!(get_frame_ids_sorted_by_evictable(&original_nodes), vec![0, 1, 2, 3, 4]);
+
+        // node 2 should now be the least evicted
+        original_nodes[2].marked_accessed(&counter);
+        assert_eq!(get_frame_ids_sorted_by_evictable(&original_nodes), vec![0, 1, 3, 4, 2]);
+
+        // node 4 should now be the least evicted
+        original_nodes[4].marked_accessed(&counter);
+        assert_eq!(get_frame_ids_sorted_by_evictable(&original_nodes), vec![0, 1, 3, 2, 4]);
+
+        original_nodes[0].marked_accessed(&counter);
+        assert_eq!(get_frame_ids_sorted_by_evictable(&original_nodes), vec![1, 3, 2, 4, 0]);
+
+        // Reaching K access history
+        original_nodes[2].marked_accessed(&counter);
+        assert_eq!(get_frame_ids_sorted_by_evictable(&original_nodes), vec![1, 3, 4, 0, 2]);
+
+        original_nodes[3].marked_accessed(&counter);
+        assert_eq!(get_frame_ids_sorted_by_evictable(&original_nodes), vec![1, 4, 0, 3, 2]);
+
+        // Reaching K access history, 3 is after 2 as it was created after 2
+        original_nodes[3].marked_accessed(&counter);
+        assert_eq!(get_frame_ids_sorted_by_evictable(&original_nodes), vec![1, 4, 0, 2, 3]);
+
+        original_nodes[2].marked_accessed(&counter);
+        assert_eq!(get_frame_ids_sorted_by_evictable(&original_nodes), vec![1, 4, 0, 3, 2]);
+
+        original_nodes[3].marked_accessed(&counter);
+        assert_eq!(get_frame_ids_sorted_by_evictable(&original_nodes), vec![1, 4, 0, 2, 3]);
+
+        original_nodes[2].marked_accessed(&counter);
+        assert_eq!(get_frame_ids_sorted_by_evictable(&original_nodes), vec![1, 4, 0, 3, 2]);
+
+        original_nodes[2].marked_accessed(&counter);
+        assert_eq!(get_frame_ids_sorted_by_evictable(&original_nodes), vec![1, 4, 0, 3, 2]);
+
+        original_nodes[2].marked_accessed(&counter);
+        assert_eq!(get_frame_ids_sorted_by_evictable(&original_nodes), vec![1, 4, 0, 3, 2]);
+
+        original_nodes[3].marked_accessed(&counter);
+        assert_eq!(get_frame_ids_sorted_by_evictable(&original_nodes), vec![1, 4, 0, 3, 2]);
+
+        original_nodes[3].marked_accessed(&counter);
+        assert_eq!(get_frame_ids_sorted_by_evictable(&original_nodes), vec![1, 4, 0, 3, 2]);
+
+        // First access is after first access of 2
+        original_nodes[3].marked_accessed(&counter);
+        assert_eq!(get_frame_ids_sorted_by_evictable(&original_nodes), vec![1, 4, 0, 2, 3]);
+    }
+}
