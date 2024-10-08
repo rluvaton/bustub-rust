@@ -1,12 +1,12 @@
-use crate::double_ended_list::traits::DoubleEndedList;
 use std::fmt::{Debug, Formatter};
+use crate::{DoubleEndedList, FixedSizeLinkedListIter};
 
 pub struct FixedSizeLinkedList<T> {
-    capacity: usize,
-    length: usize,
-    front_index: usize,
-    back_index: usize,
-    data: Vec<Option<T>>,
+    pub(super) capacity: usize,
+    pub(super) length: usize,
+    pub(super) front_index: usize,
+    pub(super) back_index: usize,
+    pub(super) data: Vec<Option<T>>,
 }
 
 impl<T> FixedSizeLinkedList<T> {
@@ -27,6 +27,7 @@ impl<T> FixedSizeLinkedList<T> {
 }
 
 impl<T> DoubleEndedList<T> for FixedSizeLinkedList<T> {
+    type Iter<'a> = FixedSizeLinkedListIter<'a, T> where T: 'a;
 
     #[inline]
     #[must_use]
@@ -447,7 +448,12 @@ impl<T> DoubleEndedList<T> for FixedSizeLinkedList<T> {
             self.data[prev_index].take()
         }
     }
+
+    fn iter<'a>(&'a self) -> FixedSizeLinkedListIter<'a, T> {
+        FixedSizeLinkedListIter::<'a, T>::new(&self)
+    }
 }
+
 
 impl<T: Clone> Clone for FixedSizeLinkedList<T> {
     fn clone(&self) -> Self {
@@ -467,27 +473,10 @@ unsafe impl<T: Send> Send for FixedSizeLinkedList<T> {
 
 impl<T: Debug> Debug for FixedSizeLinkedList<T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        if self.is_empty() {
+            return f.debug_list().entries(self.iter()).finish()
+        }
         // TODO - fix this
         write!(f, "{:?}", self.data)
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use crate::double_ended_list::traits::tests_utils;
-    use crate::FixedSizeLinkedList;
-
-    #[test]
-    fn all() {
-        let capacity = 5;
-
-        tests_utils::all(capacity, FixedSizeLinkedList::<isize>::with_capacity(capacity))
-    }
-
-    #[test]
-    fn random() {
-        let capacity = 13;
-
-        tests_utils::random(capacity, FixedSizeLinkedList::<isize>::with_capacity(capacity), |list: &FixedSizeLinkedList<isize>| {})
     }
 }

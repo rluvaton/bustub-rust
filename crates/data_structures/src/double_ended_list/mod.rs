@@ -1,7 +1,7 @@
-mod structure;
 mod traits;
-mod structure_on_slice;
+mod own;
+mod slice;
 
-pub use structure::FixedSizeLinkedList;
 pub use traits::DoubleEndedList;
-pub use structure_on_slice::FixedSizeLinkedListSlice;
+pub use own::*;
+pub use slice::*;

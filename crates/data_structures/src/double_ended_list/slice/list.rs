@@ -1,11 +1,12 @@
 use crate::double_ended_list::traits::DoubleEndedList;
 use std::fmt::{Debug, Formatter};
+use crate::FixedSizeLinkedListSliceIter;
 
 pub struct FixedSizeLinkedListSlice<'a, T> {
-    length: usize,
-    front_index: usize,
-    back_index: usize,
-    data: &'a mut [Option<T>]
+    pub(super) length: usize,
+    pub(super) front_index: usize,
+    pub(super) back_index: usize,
+    pub(super) data: &'a mut [Option<T>]
 }
 
 impl<'a, T> FixedSizeLinkedListSlice<'a, T> {
@@ -24,6 +25,7 @@ impl<'a, T> FixedSizeLinkedListSlice<'a, T> {
 }
 
 impl<'a, T> DoubleEndedList<T> for FixedSizeLinkedListSlice<'a, T> {
+    type Iter<'b> = FixedSizeLinkedListSliceIter<'b, T> where Self: 'b, T: 'b;
 
     #[inline]
     #[must_use]
@@ -444,6 +446,10 @@ impl<'a, T> DoubleEndedList<T> for FixedSizeLinkedListSlice<'a, T> {
             self.data[prev_index].take()
         }
     }
+
+    fn iter(&self) -> Self::Iter<'_> {
+        FixedSizeLinkedListSliceIter::new(&self)
+    }
 }
 
 // Implementing send if the item is implementing send
@@ -457,33 +463,3 @@ impl<T: Debug> Debug for FixedSizeLinkedListSlice<'_, T> {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use crate::double_ended_list::structure_on_slice::FixedSizeLinkedListSlice;
-    use crate::double_ended_list::traits::tests_utils;
-
-    #[test]
-    fn all() {
-        let capacity = 5;
-
-        let mut underlying = [None; 100];
-
-        tests_utils::all(capacity, FixedSizeLinkedListSlice::<isize>::new(&mut underlying[5..10]))
-    }
-
-    #[test]
-    fn random() {
-        const CAPACITY: usize = 13;
-
-        let mut underlying = [None; 100];
-
-        let (before, after) = underlying.as_mut_slice().split_at_mut(11);
-        let (part, after) = after.as_mut().split_at_mut(CAPACITY);
-
-        tests_utils::random(CAPACITY, FixedSizeLinkedListSlice::<isize>::new(part), |list: &FixedSizeLinkedListSlice<isize>| {
-            assert_eq!(before, [None; 11]);
-            assert_eq!(after, [None; 100 - 11 - CAPACITY]);
-        });
-
-    }
-}

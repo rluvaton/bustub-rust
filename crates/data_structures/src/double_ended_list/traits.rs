@@ -2,6 +2,8 @@ use std::fmt::Debug;
 
 
 pub trait DoubleEndedList<T> {
+    type Iter<'a>: Iterator<Item=&'a T> where Self: 'a, T: 'a;
+
     #[inline]
     #[must_use]
     fn capacity(&self) -> usize;
@@ -296,7 +298,10 @@ pub trait DoubleEndedList<T> {
     /// assert_eq!(d.pop_back(), Some(3));
     /// ```
     fn pop_back(&mut self) -> Option<T>;
+
+    fn iter<'a>(&'a self) -> Self::Iter<'a>;
 }
+
 
 
 #[cfg(test)]
@@ -706,6 +711,8 @@ pub(super) mod tests_utils {
             assert_eq!(list.is_empty(), helper_list.is_empty());
             assert_eq!(list.len(), helper_list.len());
             assert_eq!(list.capacity(), capacity);
+
+            assert_eq!(list.iter().cloned().collect::<Vec<_>>(), helper_list.iter().cloned().collect::<Vec<T>>());
 
             custom_validation_after_each_op(&list);
         }
