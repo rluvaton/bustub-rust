@@ -219,14 +219,17 @@ impl Replacer for LRUKReplacer {
             return;
         }
 
+        node.set_evictable(set_evictable);
+
         // If about to be evictable, mark it and update the count
         if set_evictable {
             self.evictable_frames += 1;
             self.store.push_evictable(frame_id);
         } else {
             self.evictable_frames -= 1;
-            self.store.remove_evictable(frame_id);
+            self.store.remove_evictable(&frame_id);
         }
+
     }
 
     /// Remove an evictable frame from replacer, along with its access history.
@@ -256,19 +259,6 @@ impl Replacer for LRUKReplacer {
             // Decrease evictable frames
             self.evictable_frames -= 1;
         }
-
-
-        // If missing frame or non-evictable, do nothing
-        // unsafe {
-        //     if !self.store.has_frame(frame_id) || !self.store.get_node_unchecked(frame_id).is_evictable() {
-        //         return;
-        //     }
-        //     self.store.remove_evictable_node_unchecked(frame_id);
-        // }
-        //
-        //
-        // // Decrease evictable frames
-        // self.evictable_frames -= 1;
     }
 
     /// Replacer's size, which tracks the number of evictable frames.

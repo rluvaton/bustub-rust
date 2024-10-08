@@ -1,4 +1,3 @@
-use std::mem;
 use super::{
     AtomicI64Counter,
     LRUNode,
@@ -24,6 +23,8 @@ pub(in crate::buffer) struct LRUKNode {
     /// in cpp it was std::list<size_t>
     history: FixedSizeLinkedList<HistoryRecord>,
 
+    is_evictable: bool,
+
     pub(super) interval: i64,
     heap_pos: usize,
 }
@@ -34,6 +35,7 @@ impl LRUKNode {
         assert!(k > 0, "K > 0");
 
         LRUKNode {
+            is_evictable: false,
             history: FixedSizeLinkedList::with_capacity(k),
             interval: 0,
             heap_pos: NO_HEAP_POS,
@@ -51,8 +53,9 @@ impl LRUKNode {
         history.push_back(now);
         LRUKNode {
             history,
+            is_evictable: false,
             interval,
-            heap_pos: NO_HEAP_POS,
+            heap_pos: NO_HEAP_POS
         }
     }
 
@@ -76,7 +79,7 @@ impl LRUKNode {
     #[must_use]
     #[inline(always)]
     pub(super) fn has_heap_pos(&self) -> bool {
-        self.heap_pos == NO_HEAP_POS
+        self.heap_pos != NO_HEAP_POS
     }
 
     #[inline(always)]
@@ -93,7 +96,7 @@ impl LRUKNode {
     }
 
     pub(super) fn set_heap_pos(&mut self, mut heap_pos: usize) -> Option<usize> {
-        mem::swap(&mut self.heap_pos, &mut heap_pos);
+        std::mem::swap(&mut self.heap_pos, &mut heap_pos);
 
         if heap_pos == NO_HEAP_POS {
             None
@@ -115,14 +118,13 @@ impl LRUKNode {
 
 impl LRUNode for LRUKNode {
     fn reuse(&mut self, counter: &AtomicI64Counter) {
-
         self.history.start_over();
 
         let now = Self::get_new_access_record(counter);
         self.interval = if self.history.capacity() != 1 { LRUKNode::calculate_interval_for_less_than_k(now) } else { LRUKNode::calculate_interval_full_access_history(&now) };
 
         self.history.push_back(now);
-        self.heap_pos = NO_HEAP_POS;
+        self.is_evictable = false;
     }
 
     fn marked_accessed(&mut self, counter: &AtomicI64Counter) {
@@ -147,11 +149,11 @@ impl LRUNode for LRUKNode {
 
     #[inline]
     fn is_evictable(&self) -> bool {
-        self.heap_pos != NO_HEAP_POS
+        self.is_evictable
     }
 
     #[inline]
     fn set_evictable(&mut self, evictable: bool) {
-        unreachable!()
+        self.is_evictable = evictable;
     }
 }

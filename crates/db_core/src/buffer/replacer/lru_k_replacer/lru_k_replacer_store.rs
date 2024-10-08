@@ -30,7 +30,6 @@ pub(super) struct LRUKReplacerStore {
     next_frame_to_evict_heap: Vec<FrameId>,
 
     all: Vec<LRUKNode>,
-
     _not_sync: PhantomData<std::cell::Cell<()>>,
 }
 
@@ -79,12 +78,8 @@ impl LRUKReplacerStore {
         if evictable {
             self.push_evictable(frame_id);
         }
-
     }
 
-    pub fn has_frame(&self, frame_id: FrameId) -> bool {
-        self.can_use[frame_id as usize]
-    }
     // This is for when the item is missing
     pub fn remove_node(&mut self, frame_id: FrameId) -> Option<LRUKNode> {
         if !self.can_use[frame_id as usize] {
@@ -92,32 +87,21 @@ impl LRUKReplacerStore {
         }
 
         let removed = self.all[frame_id as usize].clone();
-
-        self.remove_evictable(frame_id);
-
-        self.all[frame_id as usize].remove_heap_pos();
         self.can_use.set(frame_id as usize, false);
+
+        self.remove_evictable(&frame_id);
 
         Some(removed)
     }
 
-    pub unsafe fn remove_evictable_node_unchecked(&mut self, frame_id: FrameId) {
-        // Reset evictable state
-        self.can_use.set(frame_id as usize, false);
-
-        self.remove_evictable(frame_id);
-    }
-
     pub fn get_node(&mut self, frame_id: FrameId) -> Option<&mut LRUKNode> {
         if !self.can_use[frame_id as usize] {
-            None
-        } else {
-            Some(&mut self.all[frame_id as usize])
+            return None;
         }
-    }
 
-    pub unsafe fn get_node_unchecked(&mut self, frame_id: FrameId) -> &LRUKNode {
-        &self.all[frame_id as usize]
+        let node = &mut self.all[frame_id as usize];
+
+       Some(node)
     }
 
     /// inactivate top node from top of the heap
@@ -190,7 +174,11 @@ impl LRUKReplacerStore {
             item
         });
 
-        item.as_ref().and_then(|&kv| self.all[kv as usize].take_heap_pos());
+        item.as_ref().and_then(|&kv| {
+            let heap_pos = self.all[kv as usize].take_heap_pos();
+            self.can_use.set(kv as usize, false);
+            heap_pos
+        });
 
         item
     }
@@ -198,8 +186,8 @@ impl LRUKReplacerStore {
     /// Removes a key from the heap, returning the `(key, value)` if the key
     /// was previously in the heap.
     ///
-    pub fn remove_evictable(&mut self, key: FrameId) {
-        if let Some(pos) = self.all[key as usize].get_heap_pos() {
+    pub fn remove_evictable(&mut self, key: &FrameId) {
+        if let Some(pos) = self.all[*key as usize].get_heap_pos() {
             let item = self.next_frame_to_evict_heap.pop().map(|mut item| {
                 if !self.next_frame_to_evict_heap.is_empty() && pos < self.next_frame_to_evict_heap.len() {
                     swap(&mut item, &mut self.next_frame_to_evict_heap[pos]);
@@ -422,6 +410,7 @@ impl LRUKReplacerStore {
         // update target index in key map
         let target_frame = self.next_frame_to_evict_heap[target_position];
 
+
         // Update the position of the node to point to the new location
         self.all[target_frame as usize].set_heap_pos(hole_pos).expect(
             "Hole can only exist for key values pairs, that are already part of the heap.",
@@ -473,7 +462,7 @@ mod test {
             let index = *key_index.1;
             assert_eq!(bh.all[*key as usize].get_heap_pos(), Some(index));
         }
-        let keys_len = bh.all.iter().filter(|node| node.has_heap_pos()).count();
+        let keys_len = bh.all.iter().filter(|item| item.has_heap_pos()).count();
         assert_eq!(keys_len, expected_keys.len());
     }
 
