@@ -4,7 +4,6 @@ use std::sync::Arc;
 use tracy_client::span;
 
 use super::counter::AtomicI64Counter;
-use super::lru_k_node::LRUKNode;
 use super::lru_k_replacer_store::LRUKReplacerStore;
 use crate::buffer::{AccessType, Replacer};
 use common::config::FrameId;
@@ -250,12 +249,11 @@ impl Replacer for LRUKReplacer {
     /// * `frame_id`: Frame ID to remove, the frame must be evictable
     ///
     fn remove(&mut self, frame_id: FrameId) {
-        // Optimistic, to first take and if not evictable or
+        // To improve performance we are inferring that the node is evictable (most common) and if not we correct ourselves
         let frame = self.store.remove_node(frame_id);
 
         if let Some(frame) = frame {
-
-            // If not evictable add the frame back (this is the slow case but most probably never happen
+            // Correct ourselves if the frame is not evictable
             unsafe {
                 if !(*frame.get()).is_evictable() {
                     self.store.add_node_without_reuse(frame_id, frame, false);
