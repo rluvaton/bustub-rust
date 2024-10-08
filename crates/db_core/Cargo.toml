@@ -31,6 +31,7 @@ mut-binary-heap = "0.1.0"
 
 # Profiling
 tracy-client = { version = "0.17.3", default-features = false}
+bit-vec = "0.8.0"
 
 [dev-dependencies]
 tempdir = "0.3.7"

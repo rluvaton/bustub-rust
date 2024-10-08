@@ -7,7 +7,6 @@ pub trait DoubleEndedList<T> {
         Self: 'a,
         T: 'a;
 
-    #[inline]
     #[must_use]
     fn capacity(&self) -> usize;
 
@@ -26,7 +25,6 @@ pub trait DoubleEndedList<T> {
     /// dl.push_front("foo");
     /// assert!(!dl.is_empty());
     /// ```
-    #[inline]
     #[must_use]
     fn is_empty(&self) -> bool;
 
@@ -45,7 +43,6 @@ pub trait DoubleEndedList<T> {
     /// dl.push_front("foo");
     /// assert!(!dl.is_empty());
     /// ```
-    #[inline]
     #[must_use]
     fn is_full(&self) -> bool;
 
@@ -95,7 +92,6 @@ pub trait DoubleEndedList<T> {
     /// assert_eq!(dl.len(), 0);
     /// assert_eq!(dl.front(), None);
     /// ```
-    #[inline]
     fn start_over(&mut self);
 
     /// Removes all elements from the `FixedSizeLinkedList`.
@@ -118,7 +114,6 @@ pub trait DoubleEndedList<T> {
     /// assert_eq!(dl.len(), 0);
     /// assert_eq!(dl.front(), None);
     /// ```
-    #[inline]
     fn clear(&mut self)
     where
         T: Clone;
@@ -139,7 +134,6 @@ pub trait DoubleEndedList<T> {
     /// dl.push_front(1);
     /// assert_eq!(dl.front(), Some(&1));
     /// ```
-    #[inline]
     #[must_use]
     fn front(&self) -> Option<&T>;
 
@@ -165,7 +159,6 @@ pub trait DoubleEndedList<T> {
     /// }
     /// assert_eq!(dl.front(), Some(&5));
     /// ```
-    #[inline]
     #[must_use]
     fn front_mut(&mut self) -> Option<&mut T>;
 
@@ -185,7 +178,6 @@ pub trait DoubleEndedList<T> {
     /// dl.push_back(1);
     /// assert_eq!(dl.back(), Some(&1));
     /// ```
-    #[inline]
     #[must_use]
     fn back(&self) -> Option<&T>;
 
@@ -211,7 +203,6 @@ pub trait DoubleEndedList<T> {
     /// }
     /// assert_eq!(dl.back(), Some(&5));
     /// ```
-    #[inline]
     fn back_mut(&mut self) -> Option<&mut T>;
 
     /// Adds an element first in the list. return true if was successful
