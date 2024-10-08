@@ -232,10 +232,7 @@ impl LRUKReplacerStore {
             //  This guarantees that parent < hole.pos() so
             //  it's a valid index and also != hole.pos().
 
-            if LRUKReplacerStore::compares_le(
-                self.get_node_wrapper_from_frame_id(frame_id).unwrap(),
-                self.get_node_wrapper_from_data_index(parent).unwrap(),
-            ) {
+            if self.compares_le(frame_id, self.data[parent]) {
                 break;
             }
 
@@ -269,18 +266,12 @@ impl LRUKReplacerStore {
             //  child + 1 == 2 * hole.pos() + 2 != hole.pos().
             // FIXME: 2 * hole.pos() + 1 or 2 * hole.pos() + 2 could overflow
             //  if T is a ZST
-            child += LRUKReplacerStore::compares_le(
-                self.get_node_wrapper_from_data_index(child).unwrap(),
-                self.get_node_wrapper_from_data_index(child + 1).unwrap()
-            ) as usize;
+            child += self.compares_le(self.data[child], self.data[child + 1]) as usize;
 
             // if we are already in order, stop.
             // SAFETY: child is now either the old child or the old child+1
             //  We already proven that both are < self.data.len() and != hole.pos()
-            if LRUKReplacerStore::compares_ge(
-                self.get_node_wrapper_from_frame_id(frame_id).unwrap(),
-                self.get_node_wrapper_from_data_index(child).unwrap()
-            ) {
+            if self.compares_ge(frame_id, self.data[child]) {
                 return;
             }
 
@@ -290,10 +281,7 @@ impl LRUKReplacerStore {
 
         // SAFETY: && short circuit, which means that in the
         //  second condition it's already true that child == end - 1 < self.data.len().
-        if child == end - 1 && LRUKReplacerStore::compares_lt(
-            self.get_node_wrapper_from_frame_id(frame_id).unwrap(),
-            self.get_node_wrapper_from_data_index(child).unwrap()
-        ) {
+        if child == end - 1 && self.compares_lt(frame_id, self.data[child]) {
             // SAFETY: child is already proven to be a valid index and
             //  child == 2 * hole.pos() + 1 != hole.pos().
             pos = self.move_hole_to_new_position(pos, child);
@@ -338,10 +326,7 @@ impl LRUKReplacerStore {
             //  child + 1 == 2 * hole.pos() + 2 != hole.pos().
             // FIXME: 2 * hole.pos() + 1 or 2 * hole.pos() + 2 could overflow
             //  if T is a ZST
-            child += unsafe { LRUKReplacerStore::compares_le(
-                self.get_node_wrapper_from_data_index(child).unwrap(),
-                self.get_node_wrapper_from_data_index(child + 1).unwrap()
-            ) } as usize;
+            child += unsafe { self.compares_le(self.data[child], self.data[child + 1]) } as usize;
 
             pos = self.move_hole_to_new_position(pos, child);
             child = 2 * pos + 1;
@@ -361,18 +346,22 @@ impl LRUKReplacerStore {
     }
 
     // Check if less than or equal to
-    fn compares_le(a: &LRUKNodeWrapper, b: &LRUKNodeWrapper) -> bool {
-        unsafe { (*a.get()).interval <= (&*b.get()).interval }
+    fn compares_le(&self, a: FrameId, b: FrameId) -> bool {
+        unsafe { self.get_node_by_frame_unchecked(a).interval <= self.get_node_by_frame_unchecked(b).interval }
     }
 
     // Check if less than
-    fn compares_lt(a: &LRUKNodeWrapper, b: &LRUKNodeWrapper) -> bool {
-        unsafe { (*a.get()).interval < (&*b.get()).interval }
+    fn compares_lt(&self, a: FrameId, b: FrameId) -> bool {
+        unsafe { self.get_node_by_frame_unchecked(a).interval < self.get_node_by_frame_unchecked(b).interval }
     }
 
     // Check if greater than or equal to
-    fn compares_ge(a: &LRUKNodeWrapper, b: &LRUKNodeWrapper) -> bool {
-        unsafe { (*a.get()).interval >= (&*b.get()).interval }
+    fn compares_ge(&self, a: FrameId, b: FrameId) -> bool {
+        unsafe { self.get_node_by_frame_unchecked(a).interval >= self.get_node_by_frame_unchecked(b).interval }
+    }
+
+    unsafe fn get_node_by_frame_unchecked(&self, frame_id: FrameId) -> &LRUKNode {
+        &*self.all[frame_id as usize].0.as_ref().unwrap().get()
     }
 
     /// Returns the length of the binary heap.
@@ -425,15 +414,6 @@ impl LRUKReplacerStore {
         self.all[frame_id as usize].1.replace(pos).expect(
             "Hole can only exist for key values pairs, that are already part of the heap.",
         );
-    }
-
-    fn get_node_wrapper_from_frame_id(&self, frame_id: FrameId) -> Option<&LRUKNodeWrapper> {
-        self.all[frame_id as usize].0.as_ref()
-    }
-
-    fn get_node_wrapper_from_data_index(&self, index: usize) -> Option<&LRUKNodeWrapper> {
-        let &frame_id = self.data.get(index)?;
-        self.all[frame_id as usize].0.as_ref()
     }
 }
 
