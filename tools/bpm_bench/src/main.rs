@@ -155,6 +155,13 @@ mod metrics;
 // get: 221965.43448551712
 // >>> END
 
+// After avoiding saving option in lru and always reuse + avoid is_evictable memory
+// Release:
+// <<< BEGIN
+// scan: 211548.6634224385
+// get: 236335.41097260182
+// >>> END
+
 
 
 fn setup() -> TempDir {
