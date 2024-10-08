@@ -162,6 +162,13 @@ mod metrics;
 // get: 236335.41097260182
 // >>> END
 
+// Improve LRU-K functions by having assumption about the data
+// Release:
+// <<< BEGIN
+// scan: 213030.19899336688
+// get: 237713.67621079297
+// >>> END
+
 
 
 fn setup() -> TempDir {

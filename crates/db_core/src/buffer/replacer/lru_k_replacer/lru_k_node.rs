@@ -67,32 +67,14 @@ impl LRUKNode {
         self.heap_pos = NO_HEAP_POS;
     }
 
-    pub(super) fn get_heap_pos(&self) -> Option<usize> {
-        if self.heap_pos == NO_HEAP_POS {
-            None
-        } else {
-            Some(self.heap_pos)
-        }
+    #[inline(always)]
+    pub(super) unsafe fn get_heap_pos_unchecked(&self) -> usize {
+        self.heap_pos
     }
 
-    pub(super) fn set_heap_pos(&mut self, mut heap_pos: usize) -> Option<usize> {
-        std::mem::swap(&mut self.heap_pos, &mut heap_pos);
-
-        if heap_pos == NO_HEAP_POS {
-            None
-        } else {
-            Some(heap_pos)
-        }
-    }
-
-    pub(super) fn take_heap_pos(&mut self) -> Option<usize> {
-        let old = self.heap_pos;
-        self.heap_pos = NO_HEAP_POS;
-        if old == NO_HEAP_POS {
-            None
-        } else {
-            Some(old)
-        }
+    #[inline(always)]
+    pub(super) fn set_heap_pos(&mut self, heap_pos: usize) {
+        self.heap_pos = heap_pos;
     }
 }
 

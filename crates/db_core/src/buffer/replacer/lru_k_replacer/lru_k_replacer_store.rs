@@ -1,3 +1,4 @@
+// Heap implementation greatly influenced by https://github.com/Wasabi375/mut-binary-heap
 use super::{LRUKNode, AtomicI64Counter};
 use common::config::FrameId;
 use core::mem::swap;
@@ -10,9 +11,7 @@ use std::sync::Arc;
 use std::vec;
 use super::LRUNode;
 use bit_vec::BitVec;
-// ###################################################################################
-// Copied from https://github.com/Wasabi375/mut-binary-heap and modified to our needs
-// ###################################################################################
+
 
 /// This max heap for LRU-K + node store
 ///
@@ -22,10 +21,13 @@ use bit_vec::BitVec;
 /// TODO - implement proper debug
 #[derive(Clone, Debug)]
 pub(super) struct LRUKReplacerStore {
-    // TODO - because they are accessed together, we can improve locality by having two bits bitvec that we can get both bits at the same time and set both at the same time
+    /// Bit vector for whether a frame exists or not
+    ///
+    /// TODO - maybe remove this and add it to the lru-k node for locality?
     can_use: BitVec,
 
-    /// The key for the node store is the frame_id which is also the index
+    /// Heap of frame ids where in the top of the heap, the frame that are about to be evicted
+    ///
     /// We are not using HashMap for performance as we can avoid the hashing by simple index lookup
     next_frame_to_evict_heap: Vec<FrameId>,
 
@@ -50,14 +52,13 @@ impl LRUKReplacerStore {
     pub fn get_order_of_eviction(mut self) -> Vec<FrameId> {
         let mut frames = vec![];
 
-        while let Some(frame_id) = self.pop_evictable_key() {
+        while let Some(frame_id) = self.remove_next_evictable_frame() {
             frames.push(frame_id)
         }
 
         frames
     }
 
-    // This is for when the item is missing
     pub fn add_non_evictable_node(&mut self, frame_id: FrameId, history_access_counter: &Arc<AtomicI64Counter>) {
         let node = &mut self.all[frame_id as usize];
         node.reuse(history_access_counter);
@@ -66,40 +67,32 @@ impl LRUKReplacerStore {
         debug_assert_eq!(node.is_evictable(), false);
     }
 
-    // This is for when the item is missing
-    pub fn add_node_without_reuse(&mut self, frame_id: FrameId, item: LRUKNode, evictable: bool) {
-        self.all[frame_id as usize] = item;
-
-        self.can_use.set(frame_id as usize, true);
-
-        if evictable {
-            self.push_evictable(frame_id);
-        }
-    }
-
-    // This is for when the item is missing
     pub fn remove_node_if_evictable(&mut self, frame_id: FrameId) -> bool {
-        if !self.can_use[frame_id as usize] || !self.all[frame_id as usize].is_evictable() {
+        // No need to check if item exists because when we remove frame we also mark it as non evictable
+        if !self.all[frame_id as usize].is_evictable() {
             return false;
         }
 
         self.can_use.set(frame_id as usize, false);
 
-        self.remove_evictable(&frame_id);
+        self.mark_frame_as_not_evictable(&frame_id);
 
         true
     }
 
+    #[inline(always)]
     pub fn has_node(&self, frame_id: FrameId) -> bool {
         self.can_use[frame_id as usize]
     }
 
     /// # Safety
     /// node must exists
+    #[inline(always)]
     pub unsafe fn is_existing_node_evictable_unchecked(&self, frame_id: FrameId) -> bool {
         self.all[frame_id as usize].is_evictable()
     }
 
+    #[inline(always)]
     pub fn get_node(&mut self, frame_id: FrameId) -> Option<&mut LRUKNode> {
         if !self.can_use[frame_id as usize] {
             return None;
@@ -107,65 +100,44 @@ impl LRUKReplacerStore {
 
         let node = &mut self.all[frame_id as usize];
 
-       Some(node)
+        Some(node)
     }
 
-    /// inactivate top node from top of the heap
-    pub fn inactivate_top_node(&mut self) -> Option<FrameId> {
-        self.pop_evictable_key()
-    }
-
-    /**
-    Pushes an item onto the binary heap.
-
-    If the heap did not have this key present, [None] is returned.
-
-    If the heap did have this key present, the value is updated, and the old
-    value is returned. The key is not updated, though; this matters for
-    types that can be `==` without being identical. For more information see
-    the documentation of [HashMap::insert].
-
-    # Time complexity
-
-    The expected cost of `push`, averaged over every possible ordering of
-    the elements being pushed, and over a sufficiently large number of
-    pushes, is *O*(1). This is the most meaningful cost metric when pushing
-    elements that are *not* already in any sorted pattern.
-
-    The time complexity degrades if elements are pushed in predominantly
-    ascending order. In the worst case, elements are pushed in ascending
-    sorted order and the amortized cost per push is *O*(log(*n*)) against a heap
-    containing *n* elements.
-
-    The worst case cost of a *single* call to `push` is *O*(*n*). The worst case
-    occurs when capacity is exhausted and needs a resize. The resize cost
-    has been amortized in the previous figures.
-    */
-    pub fn push_evictable(&mut self, frame_id: FrameId) {
-        if self.all[frame_id as usize].has_heap_pos() {
-            self.update_after_evictable(frame_id);
-        } else {
-            let old_len = self.len();
-            self.next_frame_to_evict_heap.push(frame_id);
-            self.all[frame_id as usize].set_heap_pos(old_len);
-            // SAFETY: Since we pushed a new item it means that
-            //  old_len = self.len() - 1 < self.len()
-            unsafe { self.sift_up(0, old_len) };
-        }
-    }
-
-    /// Removes the greatest item from the binary heap and returns it as a key-value pair,
-    /// or `None` if it is empty.
+    /// mark existing frame as newly evictable, the frame must not already be evictable
     ///
-    /// # Examples
+    /// This will push to the evictable binary heap
     ///
-    /// Basic usage:
+    /// # Time complexity
+    ///
+    /// The expected cost of `push`, averaged over every possible ordering of
+    /// the elements being pushed, and over a sufficiently large number of
+    /// pushes, is *O*(1). This is the most meaningful cost metric when pushing
+    /// elements that are *not* already in any sorted pattern.
+    ///
+    /// The time complexity degrades if elements are pushed in predominantly
+    /// ascending order. In the worst case, elements are pushed in ascending
+    /// sorted order and the amortized cost per push is *O*(log(*n*)) against a heap
+    /// containing *n* elements.
+    #[inline(always)]
+    pub fn mark_frame_as_evictable(&mut self, frame_id: FrameId) {
+        debug_assert_eq!(self.all[frame_id as usize].is_evictable(), false, "Frame must be evictable");
+
+        let old_len = self.len();
+        self.next_frame_to_evict_heap.push(frame_id);
+        self.all[frame_id as usize].set_heap_pos(old_len);
+        // SAFETY: Since we pushed a new item it means that
+        //  old_len = self.len() - 1 < self.len()
+        unsafe { self.sift_up(0, old_len) };
+    }
+
+    /// Remove the next evictable frame and return it or `None` if no frame is evictable
     ///
     /// # Time complexity
     ///
     /// The worst case cost of `pop` on a heap containing *n* elements is *O*(log(*n*)).
-    pub fn pop_evictable_key(&mut self) -> Option<FrameId> {
-        let item = self.next_frame_to_evict_heap.pop().map(|mut item| {
+    #[inline(always)]
+    pub fn remove_next_evictable_frame(&mut self) -> Option<FrameId> {
+        self.next_frame_to_evict_heap.pop().map(|mut item| {
             // NOTE: we can't just use self.is_empty here, because that will
             //  trigger a debug_assert that keys and data are equal lenght.
             if !self.next_frame_to_evict_heap.is_empty() {
@@ -173,50 +145,36 @@ impl LRUKReplacerStore {
                 // SAFETY: !self.is_empty() means that self.len() > 0
                 unsafe { self.sift_down_to_bottom(0) };
             }
+            self.can_use.set(item as usize, false);
+
             item
-        });
-
-        item.as_ref().and_then(|&kv| {
-            let heap_pos = self.all[kv as usize].take_heap_pos();
-            self.can_use.set(kv as usize, false);
-            heap_pos
-        });
-
-        item
+        })
     }
 
-    /// Removes a key from the heap, returning the `(key, value)` if the key
-    /// was previously in the heap.
+    /// Removes evictable frame from the evictable heap
     ///
-    pub fn remove_evictable(&mut self, key: &FrameId) {
-        if let Some(pos) = self.all[*key as usize].get_heap_pos() {
-            let item = self.next_frame_to_evict_heap.pop().map(|mut item| {
-                if !self.next_frame_to_evict_heap.is_empty() && pos < self.next_frame_to_evict_heap.len() {
-                    swap(&mut item, &mut self.next_frame_to_evict_heap[pos]);
-                    // SAFETY: !self.is_empty && pos < self.data.len()
-                    unsafe { self.sift_down_to_bottom(pos) };
-                }
-                item
-            });
+    /// The frame must be evictable for performance reasons (to avoid the extra check)
+    #[inline(always)]
+    pub fn mark_frame_as_not_evictable(&mut self, key: &FrameId) {
+        debug_assert_eq!(self.all[*key as usize].is_evictable(), true);
 
-            // Remove the usize as well
-            item.as_ref().and_then(|&kv| self.all[kv as usize].take_heap_pos());
+        let pos = unsafe { self.all[*key as usize].get_heap_pos_unchecked() };
+        let mut item = self.next_frame_to_evict_heap.pop().unwrap();
+        if !self.next_frame_to_evict_heap.is_empty() && pos < self.next_frame_to_evict_heap.len() {
+            swap(&mut item, &mut self.next_frame_to_evict_heap[pos]);
+            // SAFETY: !self.is_empty && pos < self.data.len()
+            unsafe { self.sift_down_to_bottom(pos) };
         }
+        self.all[item as usize].remove_heap_pos();
     }
 
-    /// Updates the binary heap after the value behind this key was modified.
-    ///
-    /// This is called by [push] if the key already existed and also by [RefMut].
-    ///
-    /// This function will panic if the key is not part of the binary heap.
-    /// A none panicing alternative is to check with [BinaryHeapIndexKeys::contains_key]
-    /// or using [BinaryHeapIndexKeys::get_mut] instead.
+    /// Updates the binary heap after frame_id interval updates
     ///
     /// # Time complexity
     ///
     /// This function runs in *O*(*log* n) time.
     pub fn update_after_evictable(&mut self, key: FrameId) {
-        let pos = self.all[key as usize].get_heap_pos().unwrap();
+        let pos = unsafe { self.all[key as usize].get_heap_pos_unchecked() };
         let pos_after_sift_up = unsafe { self.sift_up(0, pos) };
         if pos_after_sift_up != pos {
             return;
@@ -412,11 +370,9 @@ impl LRUKReplacerStore {
         // update target index in key map
         let target_frame = self.next_frame_to_evict_heap[target_position];
 
-
+        debug_assert!(self.all[target_frame as usize].has_heap_pos(), "Hole can only exist for key values pairs, that are already part of the heap.");
         // Update the position of the node to point to the new location
-        self.all[target_frame as usize].set_heap_pos(hole_pos).expect(
-            "Hole can only exist for key values pairs, that are already part of the heap.",
-        );
+        self.all[target_frame as usize].set_heap_pos(hole_pos);
 
         // move target into hole
         self.next_frame_to_evict_heap.swap(target_position, hole_pos);
@@ -431,10 +387,10 @@ impl LRUKReplacerStore {
         // fill the hole again
         self.next_frame_to_evict_heap[pos] = frame_id;
 
+        debug_assert!(self.all[frame_id as usize].has_heap_pos(), "Hole can only exist for key values pairs, that are already part of the heap.");
+
         // Update the position
-        self.all[frame_id as usize].set_heap_pos(pos).expect(
-            "Hole can only exist for key values pairs, that are already part of the heap.",
-        );
+        self.all[frame_id as usize].set_heap_pos(pos);
     }
 }
 
@@ -462,7 +418,7 @@ mod test {
         for key_index in &expected_keys {
             let key = key_index.0;
             let index = *key_index.1;
-            assert_eq!(bh.all[*key as usize].get_heap_pos(), Some(index));
+            unsafe { assert_eq!(bh.all[*key as usize].get_heap_pos_unchecked(), index); }
         }
         let keys_len = bh.all.iter().filter(|item| item.has_heap_pos()).count();
         assert_eq!(keys_len, expected_keys.len());

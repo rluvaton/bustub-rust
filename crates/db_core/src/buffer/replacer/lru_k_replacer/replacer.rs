@@ -127,7 +127,7 @@ impl Replacer for LRUKReplacer {
         #[cfg(feature = "tracing")]
         let _evict = span!("Evict");
 
-        let frame_id = self.store.inactivate_top_node()?;
+        let frame_id = self.store.remove_next_evictable_frame()?;
 
         // Decrease evictable frames
         self.evictable_frames -= 1;
@@ -209,10 +209,10 @@ impl Replacer for LRUKReplacer {
         // If about to be evictable, mark it and update the count
         if set_evictable {
             self.evictable_frames += 1;
-            self.store.push_evictable(frame_id);
+            self.store.mark_frame_as_evictable(frame_id);
         } else {
             self.evictable_frames -= 1;
-            self.store.remove_evictable(&frame_id);
+            self.store.mark_frame_as_not_evictable(&frame_id);
         }
     }
 
@@ -230,13 +230,10 @@ impl Replacer for LRUKReplacer {
     /// * `frame_id`: Frame ID to remove, the frame must be evictable
     ///
     fn remove(&mut self, frame_id: FrameId) {
-        // To improve performance we are inferring that the node is evictable (most common) and if not we correct ourselves
         let removed = self.store.remove_node_if_evictable(frame_id);
 
         // Decrease evictable frames
-        if removed {
-            self.evictable_frames -= 1;
-        }
+        self.evictable_frames -= removed as usize;
     }
 
     /// Replacer's size, which tracks the number of evictable frames.
