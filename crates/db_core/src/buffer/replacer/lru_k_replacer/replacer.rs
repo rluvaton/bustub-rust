@@ -7,6 +7,7 @@ use super::counter::AtomicI64Counter;
 use super::lru_k_replacer_store::LRUKReplacerStore;
 use crate::buffer::{AccessType, Replacer};
 use common::config::FrameId;
+use crate::buffer::replacer::lru_k_replacer::lru_node_trait::LRUNode;
 
 /**
  * LRUKReplacer implements the LRU-k replacement policy.
@@ -99,11 +100,10 @@ impl LRUKReplacer {
 
         let node = node.unwrap();
 
-        let inner = node.get();
-        (*inner).marked_accessed(&self.history_access_counter);
+        node.marked_accessed(&self.history_access_counter);
 
         // if evictable, the node should be reinserted as it's location would be updated
-        if (*inner).is_evictable() {
+        if node.is_evictable() {
             // Update the heap with the updated value
             self.store.push_evictable(frame_id);
         }
@@ -213,23 +213,23 @@ impl Replacer for LRUKReplacer {
 
         let node = node.unwrap();
 
-        let node_inner = node.get();
 
         // Nothing to change
-        if (*node_inner).is_evictable() == set_evictable {
+        if node.is_evictable() == set_evictable {
             return;
         }
 
-        // If evictable, mark as no longer evictable or vice versa
-        if (*node_inner).is_evictable() {
-            self.evictable_frames -= 1;
-            self.store.remove_evictable(&frame_id);
-        } else {
+        node.set_evictable(set_evictable);
+
+        // If about to be evictable, mark it and update the count
+        if set_evictable {
             self.evictable_frames += 1;
             self.store.push_evictable(frame_id);
+        } else {
+            self.evictable_frames -= 1;
+            self.store.remove_evictable(&frame_id);
         }
 
-        (*node_inner).set_evictable(set_evictable);
     }
 
     /// Remove an evictable frame from replacer, along with its access history.
@@ -251,12 +251,10 @@ impl Replacer for LRUKReplacer {
 
         if let Some(frame) = frame {
             // Correct ourselves if the frame is not evictable
-            unsafe {
-                if !(*frame.get()).is_evictable() {
+                if frame.is_evictable() {
                     self.store.add_node_without_reuse(frame_id, frame, false);
                     return;
                 }
-            }
 
             // Decrease evictable frames
             self.evictable_frames -= 1;

@@ -1,5 +1,4 @@
-use super::lru_k_node::{LRUKNode, LRUKNodeWrapper};
-use crate::buffer::replacer::lru_k_replacer::counter::AtomicI64Counter;
+use super::{LRUKNode, AtomicI64Counter};
 use common::config::FrameId;
 use core::mem::swap;
 use std::collections::HashMap;
@@ -9,7 +8,7 @@ use std::ops::Deref;
 use std::ops::DerefMut;
 use std::sync::Arc;
 use std::vec;
-
+use super::LRUNode;
 // ###################################################################################
 // Copied from https://github.com/Wasabi375/mut-binary-heap and modified to our needs
 // ###################################################################################
@@ -26,7 +25,7 @@ pub(super) struct LRUKReplacerStore {
     /// We are not using HashMap for performance as we can avoid the hashing by simple index lookup
     next_frame_to_evict_heap: Vec<FrameId>,
 
-    all: Vec<(Option<LRUKNodeWrapper>, Option<usize>)>,
+    all: Vec<(Option<LRUKNode>, Option<usize>)>,
     _not_sync: PhantomData<std::cell::Cell<()>>,
 }
 
@@ -45,9 +44,7 @@ impl LRUKReplacerStore {
     pub fn get_order_of_eviction(mut self) -> Vec<FrameId> {
         let mut frames = vec![];
 
-        while !self.is_empty() {
-            let frame_id = self.pop_evictable_key().unwrap();
-
+        while let Some(frame_id) = self.pop_evictable_key() {
             frames.push(frame_id)
         }
 
@@ -56,11 +53,9 @@ impl LRUKReplacerStore {
 
     // This is for when the item is missing
     pub fn add_node(&mut self, frame_id: FrameId, k: usize, history_access_counter: &Arc<AtomicI64Counter>, evictable: bool) {
-        let node = self.all[frame_id as usize].0.as_ref();
-
         // Reuse
-        if let Some(node) = node {
-            LRUKNode::reuse_wrapper(node, k, history_access_counter);
+        if let Some(node) = self.all[frame_id as usize].0.as_mut() {
+            node.reuse(history_access_counter);
         } else {
             self.all[frame_id as usize].0.replace(LRUKNode::new(k, history_access_counter));
         }
@@ -71,7 +66,7 @@ impl LRUKReplacerStore {
     }
 
     // This is for when the item is missing
-    pub fn add_node_without_reuse(&mut self, frame_id: FrameId, item: LRUKNodeWrapper, evictable: bool) {
+    pub fn add_node_without_reuse(&mut self, frame_id: FrameId, item: LRUKNode, evictable: bool) {
         self.all[frame_id as usize].0.replace(item);
 
         if evictable {
@@ -80,7 +75,7 @@ impl LRUKReplacerStore {
     }
 
     // This is for when the item is missing
-    pub fn remove_node(&mut self, frame_id: FrameId) -> Option<LRUKNodeWrapper> {
+    pub fn remove_node(&mut self, frame_id: FrameId) -> Option<LRUKNode> {
         let removed = self.all[frame_id as usize].0.take()?;
 
         self.remove_evictable(&frame_id);
@@ -88,14 +83,14 @@ impl LRUKReplacerStore {
         Some(removed)
     }
 
-    pub fn get_node(&self, frame_id: FrameId) -> Option<LRUKNodeWrapper> {
-        let node = self.all[frame_id as usize].0.clone()?;
+    pub fn get_node(&mut self, frame_id: FrameId) -> Option<&mut LRUKNode> {
+        let node = self.all[frame_id as usize].0.as_mut()?;
 
-        if LRUKNode::is_usable(&node) { Some(node) } else { None }
+        if node.is_usable() { Some(node) } else { None }
     }
 
     /// Pop from top of the heap and remove the node as well
-    pub fn pop_node(&mut self) -> Option<(FrameId, LRUKNodeWrapper)> {
+    pub fn pop_node(&mut self) -> Option<(FrameId, LRUKNode)> {
         let frame_id = self.pop_evictable_key()?;
 
         // Remove frame
@@ -106,7 +101,7 @@ impl LRUKReplacerStore {
     pub fn inactivate_top_node(&mut self) -> Option<FrameId> {
         let frame_id = self.pop_evictable_key()?;
 
-        LRUKNode::inactive(self.all[frame_id as usize].0.as_ref()?);
+        self.all[frame_id as usize].0.as_mut()?.inactive();
 
         Some(frame_id)
     }
@@ -373,22 +368,21 @@ impl LRUKReplacerStore {
     }
 
     unsafe fn get_node_by_frame_unchecked(&self, frame_id: FrameId) -> &LRUKNode {
-        &*self.all[frame_id as usize].0.as_ref().unwrap().get()
+        self.all[frame_id as usize].0.as_ref().unwrap()
     }
 
     /// Returns the length of the binary heap.
     ///
     #[must_use]
-    pub fn len(&self) -> usize {
-        debug_assert!(self.next_frame_to_evict_heap.len() == self.next_frame_to_evict_heap.len());
+    fn len(&self) -> usize {
         self.next_frame_to_evict_heap.len()
     }
 
     /// Checks if the binary heap is empty.
     ///
     #[must_use]
-    pub fn is_empty(&self) -> bool {
-        self.len() == 0
+    fn is_empty(&self) -> bool {
+        self.next_frame_to_evict_heap.is_empty()
     }
 
 

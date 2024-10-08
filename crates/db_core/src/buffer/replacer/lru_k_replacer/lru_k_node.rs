@@ -1,8 +1,8 @@
-use std::cell::UnsafeCell;
-use std::sync::Arc;
+use super::{
+    AtomicI64Counter,
+    LRUNode,
+};
 use data_structures::{DoubleEndedList, FixedSizeLinkedList};
-
-use super::counter::AtomicI64Counter;
 
 // Global counter
 // Not using timestamp as it is slower
@@ -14,7 +14,6 @@ const INF_COUNTER: i64 = i64::MAX;
 // we will use this large number that we will never reach and consider it as current value
 const IMAGINARY_NOW: i64 = i64::MAX / 2;
 
-pub(super) type LRUKNodeWrapper = Arc<UnsafeCell<LRUKNode>>;
 
 // TODO - make it possible to reuse easily
 #[derive(Clone, Debug)]
@@ -31,7 +30,7 @@ pub(in crate::buffer) struct LRUKNode {
 }
 
 impl LRUKNode {
-    pub(super) fn new(k: usize, counter: &AtomicI64Counter) -> LRUKNodeWrapper {
+    pub(super) fn new(k: usize, counter: &AtomicI64Counter) -> Self {
         assert!(k > 0, "K > 0");
 
         let mut history = FixedSizeLinkedList::with_capacity(k);
@@ -40,55 +39,11 @@ impl LRUKNode {
         let interval = if k != 1 { LRUKNode::calculate_interval_for_less_than_k(now) } else { LRUKNode::calculate_interval_full_access_history(&now) };
 
         history.push_back(now);
-        Arc::new(UnsafeCell::new(
-            LRUKNode {
-                can_use: true,
-                history,
-                is_evictable: false,
-                interval,
-            }))
-    }
-
-    pub(super) fn reuse(&mut self, k: usize, counter: &AtomicI64Counter) {
-        self.history.start_over();
-
-        let now = Self::get_new_access_record(counter);
-        self.interval = if k != 1 { LRUKNode::calculate_interval_for_less_than_k(now) } else { LRUKNode::calculate_interval_full_access_history(&now) };
-
-        self.history.push_back(now);
-        self.can_use = true;
-        self.is_evictable = false;
-    }
-
-    pub(super) fn reuse_wrapper(node_wrapper: &LRUKNodeWrapper, k: usize, counter: &AtomicI64Counter) {
-        unsafe { (*node_wrapper.get()).reuse(k, counter) }
-    }
-
-    pub(super) fn inactive(node_wrapper: &LRUKNodeWrapper) {
-        unsafe { (*node_wrapper.get()).can_use = false }
-    }
-
-    pub(super) fn is_usable(node_wrapper: &LRUKNodeWrapper) -> bool {
-        unsafe { (*node_wrapper.get()).can_use }
-    }
-
-    pub(super) fn marked_accessed(&mut self, counter: &AtomicI64Counter) {
-        // LRU-K evicts the page whose K-th most recent access is furthest in the past.
-        // So we only need to calculate
-
-        let new_val = Self::get_new_access_record(counter);
-        let removed = self.history.push_back_rotate(new_val);
-
-        // If reached the size, remove the first item and add to the end
-        if let Some(removed) = removed {
-            self.interval += removed - new_val;
-        } else {
-            // If now full set the interval value to be the correct K-distance so the next calls to mark as accessed are faster
-            if self.history.is_full() {
-                self.interval = LRUKNode::calculate_interval_full_access_history(self.history.front().unwrap());
-            } else {
-                self.interval = LRUKNode::calculate_interval_for_less_than_k(new_val)
-            }
+        LRUKNode {
+            can_use: true,
+            history,
+            is_evictable: false,
+            interval,
         }
     }
 
@@ -108,14 +63,55 @@ impl LRUKNode {
     fn get_new_access_record(counter: &AtomicI64Counter) -> HistoryRecord {
         counter.get_next()
     }
+}
+
+impl LRUNode for LRUKNode {
+    fn reuse(&mut self, counter: &AtomicI64Counter) {
+        self.history.start_over();
+
+        let now = Self::get_new_access_record(counter);
+        self.interval = if self.history.capacity() != 1 { LRUKNode::calculate_interval_for_less_than_k(now) } else { LRUKNode::calculate_interval_full_access_history(&now) };
+
+        self.history.push_back(now);
+        self.can_use = true;
+        self.is_evictable = false;
+    }
+
+    fn inactive(&mut self) {
+        self.can_use = false;
+    }
+
+    fn is_usable(&self) -> bool {
+        self.can_use
+    }
+
+    fn marked_accessed(&mut self, counter: &AtomicI64Counter) {
+        // LRU-K evicts the page whose K-th most recent access is furthest in the past.
+        // So we only need to calculate
+
+        let new_val = Self::get_new_access_record(counter);
+        let removed = self.history.push_back_rotate(new_val);
+
+        // If reached the size, remove the first item and add to the end
+        if let Some(removed) = removed {
+            self.interval += removed - new_val;
+        } else {
+            // If now full set the interval value to be the correct K-distance so the next calls to mark as accessed are faster
+            if self.history.is_full() {
+                self.interval = Self::calculate_interval_full_access_history(self.history.front().unwrap());
+            } else {
+                self.interval = Self::calculate_interval_for_less_than_k(new_val)
+            }
+        }
+    }
 
     #[inline]
-    pub(super) fn is_evictable(&self) -> bool {
+    fn is_evictable(&self) -> bool {
         self.is_evictable
     }
 
     #[inline]
-    pub(super) fn set_evictable(&mut self, evictable: bool) {
+    fn set_evictable(&mut self, evictable: bool) {
         self.is_evictable = evictable;
     }
 }
