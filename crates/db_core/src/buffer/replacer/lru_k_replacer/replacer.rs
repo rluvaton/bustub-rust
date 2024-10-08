@@ -23,9 +23,7 @@ use common::config::FrameId;
 #[derive(Clone, Debug)]
 pub struct LRUKReplacer {
     store: LRUKReplacerStore,
-
     replacer_size: usize,
-
     k: usize,
 
     // Tracks the number of evictable frames
@@ -71,17 +69,7 @@ impl LRUKReplacer {
 
     /// Helper for debugging in tests
     pub(in crate::buffer) fn get_order_of_eviction(&self) -> Vec<FrameId> {
-        let mut frames = Vec::with_capacity(self.evictable_frames);
-
-        let mut evictable_heap = self.store.clone();
-
-        while !evictable_heap.is_empty() {
-            let frame_id = evictable_heap.pop_evictable_key().unwrap();
-
-            frames.push(frame_id)
-        }
-
-        frames
+        self.store.clone().get_order_of_eviction()
     }
 
     /// Record the event that the given frame id is accessed at current timestamp.

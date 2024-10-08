@@ -42,6 +42,18 @@ impl LRUKReplacerStore {
         }
     }
 
+    pub fn get_order_of_eviction(mut self) -> Vec<FrameId> {
+        let mut frames = vec![];
+
+        while !self.is_empty() {
+            let frame_id = self.pop_evictable_key().unwrap();
+
+            frames.push(frame_id)
+        }
+
+        frames
+    }
+
     // This is for when the item is missing
     pub fn add_node(&mut self, frame_id: FrameId, k: usize, history_access_counter: &Arc<AtomicI64Counter>, evictable: bool) {
         let node = self.all[frame_id as usize].0.as_ref();
