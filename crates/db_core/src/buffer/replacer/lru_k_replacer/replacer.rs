@@ -46,14 +46,11 @@ impl LRUKReplacer {
     /// returns: LRUKReplacerImpl
     ///
     pub fn new(num_frames: usize, k: usize) -> Self {
-        LRUKReplacer {
+        Self {
             store: LRUKReplacerStore::with_capacity(num_frames),
             k,
-
             replacer_size: num_frames,
-
             evictable_frames: 0,
-
             history_access_counter: Arc::new(AtomicI64Counter::default()),
         }
     }
