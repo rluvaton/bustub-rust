@@ -24,7 +24,7 @@ use std::vec;
 pub(super) struct LRUKReplacerStore {
     /// The key for the node store is the frame_id which is also the index
     /// We are not using HashMap for performance as we can avoid the hashing by simple index lookup
-    data: Vec<FrameId>,
+    next_frame_to_evict_heap: Vec<FrameId>,
 
     all: Vec<(Option<LRUKNodeWrapper>, Option<usize>)>,
     _not_sync: PhantomData<std::cell::Cell<()>>,
@@ -36,7 +36,7 @@ impl LRUKReplacerStore {
     #[must_use]
     pub fn with_capacity(capacity: usize) -> Self {
         LRUKReplacerStore {
-            data: Vec::with_capacity(capacity),
+            next_frame_to_evict_heap: Vec::with_capacity(capacity),
             all: vec![(None, None); capacity],
             _not_sync: PhantomData::default(),
         }
@@ -142,7 +142,7 @@ impl LRUKReplacerStore {
             self.update_after_evictable(frame_id);
         } else {
             let old_len = self.len();
-            self.data.push(frame_id);
+            self.next_frame_to_evict_heap.push(frame_id);
             self.all[frame_id as usize].1.replace(old_len);
             // SAFETY: Since we pushed a new item it means that
             //  old_len = self.len() - 1 < self.len()
@@ -161,11 +161,11 @@ impl LRUKReplacerStore {
     ///
     /// The worst case cost of `pop` on a heap containing *n* elements is *O*(log(*n*)).
     pub fn pop_evictable_key(&mut self) -> Option<FrameId> {
-        let item = self.data.pop().map(|mut item| {
+        let item = self.next_frame_to_evict_heap.pop().map(|mut item| {
             // NOTE: we can't just use self.is_empty here, because that will
             //  trigger a debug_assert that keys and data are equal lenght.
-            if !self.data.is_empty() {
-                swap(&mut item, &mut self.data[0]);
+            if !self.next_frame_to_evict_heap.is_empty() {
+                swap(&mut item, &mut self.next_frame_to_evict_heap[0]);
                 // SAFETY: !self.is_empty() means that self.len() > 0
                 unsafe { self.sift_down_to_bottom(0) };
             }
@@ -182,9 +182,9 @@ impl LRUKReplacerStore {
     ///
     pub fn remove_evictable(&mut self, key: &FrameId) {
         if let Some(pos) = self.all[*key as usize].1 {
-            let item = self.data.pop().map(|mut item| {
-                if !self.data.is_empty() && pos < self.data.len() {
-                    swap(&mut item, &mut self.data[pos]);
+            let item = self.next_frame_to_evict_heap.pop().map(|mut item| {
+                if !self.next_frame_to_evict_heap.is_empty() && pos < self.next_frame_to_evict_heap.len() {
+                    swap(&mut item, &mut self.next_frame_to_evict_heap[pos]);
                     // SAFETY: !self.is_empty && pos < self.data.len()
                     unsafe { self.sift_down_to_bottom(pos) };
                 }
@@ -233,7 +233,7 @@ impl LRUKReplacerStore {
     fn sift_up(&mut self, start: usize, pos: usize) -> usize {
         // Take out the value at `pos` and create a hole.
         // SAFETY: The caller guarantees that pos < self.data.len()
-        let frame_id = self.data[pos];
+        let frame_id = self.next_frame_to_evict_heap[pos];
 
         let mut pos = pos;
         while pos > start {
@@ -244,7 +244,7 @@ impl LRUKReplacerStore {
             //  This guarantees that parent < hole.pos() so
             //  it's a valid index and also != hole.pos().
 
-            if self.compares_le(frame_id, self.data[parent]) {
+            if self.compares_le(frame_id, self.next_frame_to_evict_heap[parent]) {
                 break;
             }
 
@@ -264,7 +264,7 @@ impl LRUKReplacerStore {
     ///
     /// The caller must guarantee that `pos < end <= self.data.len()`.
     unsafe fn sift_down_range(&mut self, pos: usize, end: usize) {
-        let frame_id = self.data[pos];
+        let frame_id = self.next_frame_to_evict_heap[pos];
 
         let mut pos = pos;
         let mut child = 2 * pos + 1;
@@ -278,12 +278,12 @@ impl LRUKReplacerStore {
             //  child + 1 == 2 * hole.pos() + 2 != hole.pos().
             // FIXME: 2 * hole.pos() + 1 or 2 * hole.pos() + 2 could overflow
             //  if T is a ZST
-            child += self.compares_le(self.data[child], self.data[child + 1]) as usize;
+            child += self.compares_le(self.next_frame_to_evict_heap[child], self.next_frame_to_evict_heap[child + 1]) as usize;
 
             // if we are already in order, stop.
             // SAFETY: child is now either the old child or the old child+1
             //  We already proven that both are < self.data.len() and != hole.pos()
-            if self.compares_ge(frame_id, self.data[child]) {
+            if self.compares_ge(frame_id, self.next_frame_to_evict_heap[child]) {
                 return;
             }
 
@@ -293,7 +293,7 @@ impl LRUKReplacerStore {
 
         // SAFETY: && short circuit, which means that in the
         //  second condition it's already true that child == end - 1 < self.data.len().
-        if child == end - 1 && self.compares_lt(frame_id, self.data[child]) {
+        if child == end - 1 && self.compares_lt(frame_id, self.next_frame_to_evict_heap[child]) {
             // SAFETY: child is already proven to be a valid index and
             //  child == 2 * hole.pos() + 1 != hole.pos().
             pos = self.move_hole_to_new_position(pos, child);
@@ -306,7 +306,7 @@ impl LRUKReplacerStore {
     ///
     /// The caller must guarantee that `pos < self.data.len()`.
     unsafe fn sift_down(&mut self, pos: usize) {
-        let len = self.data.len();
+        let len = self.next_frame_to_evict_heap.len();
         // SAFETY: pos < len is guaranteed by the caller and
         //  obviously len = self.data.len() <= self.len().
         unsafe { self.sift_down_range(pos, len) };
@@ -322,10 +322,10 @@ impl LRUKReplacerStore {
     ///
     /// The caller must guarantee that `pos < self.data.len()`.
     unsafe fn sift_down_to_bottom(&mut self, mut pos: usize) {
-        let end = self.data.len();
+        let end = self.next_frame_to_evict_heap.len();
         let start = pos;
 
-        let frame_id = self.data[pos];
+        let frame_id = self.next_frame_to_evict_heap[pos];
 
         let mut pos = pos;
         let mut child = 2 * pos + 1;
@@ -338,7 +338,7 @@ impl LRUKReplacerStore {
             //  child + 1 == 2 * hole.pos() + 2 != hole.pos().
             // FIXME: 2 * hole.pos() + 1 or 2 * hole.pos() + 2 could overflow
             //  if T is a ZST
-            child += unsafe { self.compares_le(self.data[child], self.data[child + 1]) } as usize;
+            child += unsafe { self.compares_le(self.next_frame_to_evict_heap[child], self.next_frame_to_evict_heap[child + 1]) } as usize;
 
             pos = self.move_hole_to_new_position(pos, child);
             child = 2 * pos + 1;
@@ -380,8 +380,8 @@ impl LRUKReplacerStore {
     ///
     #[must_use]
     pub fn len(&self) -> usize {
-        debug_assert!(self.data.len() == self.data.len());
-        self.data.len()
+        debug_assert!(self.next_frame_to_evict_heap.len() == self.next_frame_to_evict_heap.len());
+        self.next_frame_to_evict_heap.len()
     }
 
     /// Checks if the binary heap is empty.
@@ -400,9 +400,9 @@ impl LRUKReplacerStore {
     #[inline]
     fn move_hole_to_new_position(&mut self, hole_pos: usize, target_position: usize) -> usize {
         debug_assert_ne!(target_position, hole_pos);
-        debug_assert!(target_position < self.data.len());
+        debug_assert!(target_position < self.next_frame_to_evict_heap.len());
         // update target index in key map
-        let target_frame = self.data[target_position];
+        let target_frame = self.next_frame_to_evict_heap[target_position];
 
         // Update the position of the node to point to the new location
         self.all[target_frame as usize].1.replace(hole_pos).expect(
@@ -410,7 +410,7 @@ impl LRUKReplacerStore {
         );
 
         // move target into hole
-        self.data.swap(target_position, hole_pos);
+        self.next_frame_to_evict_heap.swap(target_position, hole_pos);
 
         // update hole position
         target_position
@@ -420,7 +420,7 @@ impl LRUKReplacerStore {
     /// position with the value that was originally removed.
     fn fill_hole(&mut self, pos: usize, frame_id: FrameId) {
         // fill the hole again
-        self.data[pos] = frame_id;
+        self.next_frame_to_evict_heap[pos] = frame_id;
 
         // Update the position
         self.all[frame_id as usize].1.replace(pos).expect(
@@ -446,7 +446,7 @@ mod test {
 
     fn assert_key_map_valid(bh: &LRUKReplacerStore) {
         let mut expected_keys = HashMap::new();
-        for (i, kv) in bh.data.iter().enumerate() {
+        for (i, kv) in bh.next_frame_to_evict_heap.iter().enumerate() {
             expected_keys.insert(kv.clone(), i);
         }
 
