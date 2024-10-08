@@ -9,7 +9,4 @@ pub(super) trait LRUNode {
 
     #[inline]
     fn is_evictable(&self) -> bool;
-
-    #[inline]
-    fn set_evictable(&mut self, evictable: bool);
 }

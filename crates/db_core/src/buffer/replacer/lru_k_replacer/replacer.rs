@@ -219,8 +219,6 @@ impl Replacer for LRUKReplacer {
             return;
         }
 
-        node.set_evictable(set_evictable);
-
         // If about to be evictable, mark it and update the count
         if set_evictable {
             self.evictable_frames += 1;
