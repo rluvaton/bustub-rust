@@ -165,16 +165,6 @@ impl LRUKReplacerStore {
         item
     }
 
-    /// Returns `true` if the heap contains a value for the given key.
-    ///
-    /// # Time complexity
-    ///
-    /// This method runs in *O*(1) time.
-    ///
-    pub fn contains_key(&self, key: &FrameId) -> bool {
-        self.all[*key as usize].1.is_some()
-    }
-
     /// Removes a key from the heap, returning the `(key, value)` if the key
     /// was previously in the heap.
     ///
@@ -228,7 +218,7 @@ impl LRUKReplacerStore {
     /// # Safety
     ///
     /// The caller must guarantee that `pos < self.data.len()`.
-    unsafe fn sift_up(&mut self, start: usize, pos: usize) -> usize {
+    fn sift_up(&mut self, start: usize, pos: usize) -> usize {
         // Take out the value at `pos` and create a hole.
         // SAFETY: The caller guarantees that pos < self.data.len()
         let frame_id = self.data[pos];
@@ -242,13 +232,15 @@ impl LRUKReplacerStore {
             //  This guarantees that parent < hole.pos() so
             //  it's a valid index and also != hole.pos().
 
-            if LRUKReplacerStore::compares_le(self.get_node_wrapper_from_frame_id(frame_id).unwrap(), self.get_node_wrapper_from_data_index(parent).unwrap())
-            {
+            if LRUKReplacerStore::compares_le(
+                self.get_node_wrapper_from_frame_id(frame_id).unwrap(),
+                self.get_node_wrapper_from_data_index(parent).unwrap(),
+            ) {
                 break;
             }
 
             // SAFETY: Same as above
-            self.move_hole_to_new_position(&mut pos, parent);
+            pos = self.move_hole_to_new_position(pos, parent);
         }
 
         self.fill_hole(pos, frame_id);
@@ -277,28 +269,34 @@ impl LRUKReplacerStore {
             //  child + 1 == 2 * hole.pos() + 2 != hole.pos().
             // FIXME: 2 * hole.pos() + 1 or 2 * hole.pos() + 2 could overflow
             //  if T is a ZST
-            child += LRUKReplacerStore::compares_le(self.get_node_wrapper_from_data_index(child).unwrap(), self.get_node_wrapper_from_data_index(child + 1).unwrap()) as usize;
+            child += LRUKReplacerStore::compares_le(
+                self.get_node_wrapper_from_data_index(child).unwrap(),
+                self.get_node_wrapper_from_data_index(child + 1).unwrap()
+            ) as usize;
 
             // if we are already in order, stop.
             // SAFETY: child is now either the old child or the old child+1
             //  We already proven that both are < self.data.len() and != hole.pos()
-            if LRUKReplacerStore::compares_ge(self.get_node_wrapper_from_frame_id(frame_id).unwrap(), self.get_node_wrapper_from_data_index(child).unwrap())
-            {
+            if LRUKReplacerStore::compares_ge(
+                self.get_node_wrapper_from_frame_id(frame_id).unwrap(),
+                self.get_node_wrapper_from_data_index(child).unwrap()
+            ) {
                 return;
             }
 
-            self.move_hole_to_new_position(&mut pos, child);
+            pos = self.move_hole_to_new_position(pos, child);
             child = 2 * pos + 1;
         }
 
         // SAFETY: && short circuit, which means that in the
         //  second condition it's already true that child == end - 1 < self.data.len().
-        if child == end - 1
-            && LRUKReplacerStore::compares_lt(self.get_node_wrapper_from_frame_id(frame_id).unwrap(), self.get_node_wrapper_from_data_index(child).unwrap())
-        {
+        if child == end - 1 && LRUKReplacerStore::compares_lt(
+            self.get_node_wrapper_from_frame_id(frame_id).unwrap(),
+            self.get_node_wrapper_from_data_index(child).unwrap()
+        ) {
             // SAFETY: child is already proven to be a valid index and
             //  child == 2 * hole.pos() + 1 != hole.pos().
-            self.move_hole_to_new_position(&mut pos, child);
+            pos = self.move_hole_to_new_position(pos, child);
         }
 
         self.fill_hole(pos, frame_id);
@@ -340,16 +338,19 @@ impl LRUKReplacerStore {
             //  child + 1 == 2 * hole.pos() + 2 != hole.pos().
             // FIXME: 2 * hole.pos() + 1 or 2 * hole.pos() + 2 could overflow
             //  if T is a ZST
-            child += unsafe { LRUKReplacerStore::compares_le(self.get_node_wrapper_from_data_index(child).unwrap(), self.get_node_wrapper_from_data_index(child + 1).unwrap()) } as usize;
+            child += unsafe { LRUKReplacerStore::compares_le(
+                self.get_node_wrapper_from_data_index(child).unwrap(),
+                self.get_node_wrapper_from_data_index(child + 1).unwrap()
+            ) } as usize;
 
-            self.move_hole_to_new_position(&mut pos, child);
+            pos = self.move_hole_to_new_position(pos, child);
             child = 2 * pos + 1;
         }
 
         if child == end - 1 {
             // SAFETY: child == end - 1 < self.data.len(), so it's a valid index
             //  and child == 2 * hole.pos() + 1 != hole.pos().
-            self.move_hole_to_new_position(&mut pos, child);
+            pos = self.move_hole_to_new_position(pos, child);
         }
         self.fill_hole(pos, frame_id);
 
@@ -390,28 +391,28 @@ impl LRUKReplacerStore {
     }
 
 
-    /// Move hole to new location
+    /// Move hole to new location and return the updated position
     ///
     /// # Safety
     ///
     /// target_position must be within the data slice and not equal to pos.
     #[inline]
-    fn move_hole_to_new_position(&mut self, hole_pos: &mut usize, target_position: usize) {
-        debug_assert!(target_position != *hole_pos);
+    fn move_hole_to_new_position(&mut self, hole_pos: usize, target_position: usize) -> usize {
+        debug_assert_ne!(target_position, hole_pos);
         debug_assert!(target_position < self.data.len());
         // update target index in key map
         let target_frame = self.data[target_position];
 
         // Update the position of the node to point to the new location
-        self.all[target_frame as usize].1.replace(*hole_pos).expect(
+        self.all[target_frame as usize].1.replace(hole_pos).expect(
             "Hole can only exist for key values pairs, that are already part of the heap.",
         );
 
         // move target into hole
-        self.data.swap(target_position, *hole_pos);
+        self.data.swap(target_position, hole_pos);
 
         // update hole position
-        *hole_pos = target_position;
+        target_position
     }
 
     /// restore the slice by filling the hole
@@ -434,9 +435,7 @@ impl LRUKReplacerStore {
         let &frame_id = self.data.get(index)?;
         self.all[frame_id as usize].0.as_ref()
     }
-
 }
-
 
 
 #[cfg(test)]
