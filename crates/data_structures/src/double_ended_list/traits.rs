@@ -2,7 +2,10 @@ use std::fmt::Debug;
 
 
 pub trait DoubleEndedList<T> {
-    type Iter<'a>: Iterator<Item=&'a T> where Self: 'a, T: 'a;
+    type Iter<'a>: Iterator<Item=&'a T>
+    where
+        Self: 'a,
+        T: 'a;
 
     #[inline]
     #[must_use]
@@ -116,7 +119,9 @@ pub trait DoubleEndedList<T> {
     /// assert_eq!(dl.front(), None);
     /// ```
     #[inline]
-    fn clear(&mut self) where T: Clone;
+    fn clear(&mut self)
+    where
+        T: Clone;
 
     /// Provides a reference to the front element, or `None` if the list is
     /// empty.
@@ -299,10 +304,8 @@ pub trait DoubleEndedList<T> {
     /// ```
     fn pop_back(&mut self) -> Option<T>;
 
-    fn iter<'a>(&'a self) -> Self::Iter<'a>;
+    fn iter(&self) -> Self::Iter<'_>;
 }
-
-
 
 #[cfg(test)]
 pub(super) mod tests_utils {
@@ -365,8 +368,10 @@ pub(super) mod tests_utils {
         front
     }
 
-    pub fn all<T: Copy + PartialEq + Debug>(capacity: usize, mut list: impl DoubleEndedList<T>) where Standard: Distribution<T> {
-
+    pub fn all<T: Copy + PartialEq + Debug>(capacity: usize, mut list: impl DoubleEndedList<T>)
+    where
+        Standard: Distribution<T>,
+    {
         let mut rng = rand::thread_rng();
 
         let mut helper_list = LinkedList::<T>::new();
@@ -377,7 +382,7 @@ pub(super) mod tests_utils {
         assert_eq!(list.capacity(), capacity);
 
         for i in 0..capacity {
-            let item  = rng.gen();
+            let item = rng.gen();
 
             helper_list.push_back(item);
             assert_eq!(list.push_back(item), true, "should insert for iteration {}", i);
@@ -592,7 +597,10 @@ pub(super) mod tests_utils {
         }
     }
 
-    pub fn random<T: Copy + PartialEq + Debug, List: DoubleEndedList<T>, CustomValidationFn: Fn(&List)>(capacity: usize, mut list: List, custom_validation_after_each_op: CustomValidationFn) where Standard: Distribution<T> {
+    pub fn random<T: Copy + PartialEq + Debug, List: DoubleEndedList<T>, CustomValidationFn: Fn(&List)>(capacity: usize, mut list: List, custom_validation_after_each_op: CustomValidationFn)
+    where
+        Standard: Distribution<T>,
+    {
         let shuffle_seed: u64 = thread_rng().gen::<u64>();
         println!("Seed used: {}", shuffle_seed);
         let mut rng = ChaChaRng::seed_from_u64(shuffle_seed);
@@ -692,7 +700,7 @@ pub(super) mod tests_utils {
                         let front = helper_list.pop_back();
                         assert_eq!(list.pop_back(), front);
                     }
-                },
+                }
 
                 Operation::Clear => {
                     list.clear();

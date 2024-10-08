@@ -1,6 +1,6 @@
 use crate::double_ended_list::traits::DoubleEndedList;
-use std::fmt::{Debug, Formatter};
 use crate::FixedSizeLinkedListSliceIter;
+use std::fmt::{Debug, Formatter};
 
 pub struct FixedSizeLinkedListSlice<'a, T> {
     pub(super) length: usize,
@@ -458,8 +458,7 @@ unsafe impl<T: Send> Send for FixedSizeLinkedListSlice<'_, T> {
 
 impl<T: Debug> Debug for FixedSizeLinkedListSlice<'_, T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        // TODO - fix this
-        write!(f, "{:?}", self.data)
+        f.debug_list().entries(self.iter()).finish()
     }
 }
 

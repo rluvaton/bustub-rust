@@ -473,10 +473,6 @@ unsafe impl<T: Send> Send for FixedSizeLinkedList<T> {
 
 impl<T: Debug> Debug for FixedSizeLinkedList<T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        if self.is_empty() {
-            return f.debug_list().entries(self.iter()).finish()
-        }
-        // TODO - fix this
-        write!(f, "{:?}", self.data)
+        f.debug_list().entries(self.iter()).finish()
     }
 }
