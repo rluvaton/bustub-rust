@@ -5,10 +5,6 @@ pub(super) trait LRUNode {
 
     fn reuse(&mut self, counter: &AtomicI64Counter);
 
-    fn inactive(&mut self);
-
-    fn is_usable(&self) -> bool;
-
     fn marked_accessed(&mut self, counter: &AtomicI64Counter);
 
     #[inline]
