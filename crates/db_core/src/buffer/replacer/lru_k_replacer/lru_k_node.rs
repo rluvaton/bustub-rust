@@ -39,22 +39,6 @@ impl LRUKNode {
         }
     }
 
-    pub(super) fn new(k: usize, counter: &AtomicI64Counter) -> Self {
-        assert!(k > 0, "K > 0");
-
-        let mut history = FixedSizeLinkedList::with_capacity(k);
-
-        let now = Self::get_new_access_record(counter);
-        let interval = if k != 1 { LRUKNode::calculate_interval_for_less_than_k(now) } else { LRUKNode::calculate_interval_full_access_history(&now) };
-
-        history.push_back(now);
-        LRUKNode {
-            history,
-            interval,
-            heap_pos: NO_HEAP_POS
-        }
-    }
-
     #[inline(always)]
     fn calculate_interval_for_less_than_k(last_access: HistoryRecord) -> i64 {
         // Fallback to LRU

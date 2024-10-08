@@ -58,15 +58,12 @@ impl LRUKReplacerStore {
     }
 
     // This is for when the item is missing
-    pub fn add_node(&mut self, frame_id: FrameId, k: usize, history_access_counter: &Arc<AtomicI64Counter>, evictable: bool) {
-
-        self.all[frame_id as usize].reuse(history_access_counter);
-
+    pub fn add_non_evictable_node(&mut self, frame_id: FrameId, history_access_counter: &Arc<AtomicI64Counter>) {
+        let node = &mut self.all[frame_id as usize];
+        node.reuse(history_access_counter);
         self.can_use.set(frame_id as usize, true);
 
-        if evictable {
-            self.push_evictable(frame_id);
-        }
+        debug_assert_eq!(node.is_evictable(), false);
     }
 
     // This is for when the item is missing
@@ -81,17 +78,26 @@ impl LRUKReplacerStore {
     }
 
     // This is for when the item is missing
-    pub fn remove_node(&mut self, frame_id: FrameId) -> Option<LRUKNode> {
-        if !self.can_use[frame_id as usize] {
-            return None;
+    pub fn remove_node_if_evictable(&mut self, frame_id: FrameId) -> bool {
+        if !self.can_use[frame_id as usize] || !self.all[frame_id as usize].is_evictable() {
+            return false;
         }
 
-        let removed = self.all[frame_id as usize].clone();
         self.can_use.set(frame_id as usize, false);
 
         self.remove_evictable(&frame_id);
 
-        Some(removed)
+        true
+    }
+
+    pub fn has_node(&self, frame_id: FrameId) -> bool {
+        self.can_use[frame_id as usize]
+    }
+
+    /// # Safety
+    /// node must exists
+    pub unsafe fn is_existing_node_evictable_unchecked(&self, frame_id: FrameId) -> bool {
+        self.all[frame_id as usize].is_evictable()
     }
 
     pub fn get_node(&mut self, frame_id: FrameId) -> Option<&mut LRUKNode> {
@@ -106,11 +112,7 @@ impl LRUKReplacerStore {
 
     /// inactivate top node from top of the heap
     pub fn inactivate_top_node(&mut self) -> Option<FrameId> {
-        let frame_id = self.pop_evictable_key()?;
-
-        self.can_use.set(frame_id as usize, false);
-
-        Some(frame_id)
+        self.pop_evictable_key()
     }
 
     /**
@@ -213,7 +215,7 @@ impl LRUKReplacerStore {
     /// # Time complexity
     ///
     /// This function runs in *O*(*log* n) time.
-    fn update_after_evictable(&mut self, key: FrameId) {
+    pub fn update_after_evictable(&mut self, key: FrameId) {
         let pos = self.all[key as usize].get_heap_pos().unwrap();
         let pos_after_sift_up = unsafe { self.sift_up(0, pos) };
         if pos_after_sift_up != pos {

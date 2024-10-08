@@ -87,12 +87,10 @@ impl LRUKReplacer {
         let node = node.as_mut();
 
         if node.is_none() {
-            self.store.add_node(
+            // Not inserting to evictable frames as new frame is not evictable by default
+            self.store.add_non_evictable_node(
                 frame_id,
-                self.k,
                 &self.history_access_counter,
-                // Not inserting to evictable frames as new frame is not evictable by default
-                false,
             );
 
             return;
@@ -105,7 +103,7 @@ impl LRUKReplacer {
         // if evictable, the node should be reinserted as it's location would be updated
         if node.is_evictable() {
             // Update the heap with the updated value
-            self.store.push_evictable(frame_id);
+            self.store.update_after_evictable(frame_id);
         }
     }
 }
@@ -203,19 +201,8 @@ impl Replacer for LRUKReplacer {
         // We are certain that the frame id is valid
         self.assert_valid_frame_id(frame_id);
 
-        let mut node = self.store.get_node(frame_id);
-        let node = node.as_mut();
-
-        // Nothing to do
-        if node.is_none() {
-            return;
-        }
-
-        let node = node.unwrap();
-
-
-        // Nothing to change
-        if node.is_evictable() == set_evictable {
+        // if missing - nothing to do, if evictable status is the same - Nothing to change
+        if !self.store.has_node(frame_id) || self.store.is_existing_node_evictable_unchecked(frame_id) == set_evictable {
             return;
         }
 
@@ -227,7 +214,6 @@ impl Replacer for LRUKReplacer {
             self.evictable_frames -= 1;
             self.store.remove_evictable(&frame_id);
         }
-
     }
 
     /// Remove an evictable frame from replacer, along with its access history.
@@ -245,16 +231,10 @@ impl Replacer for LRUKReplacer {
     ///
     fn remove(&mut self, frame_id: FrameId) {
         // To improve performance we are inferring that the node is evictable (most common) and if not we correct ourselves
-        let frame = self.store.remove_node(frame_id);
+        let removed = self.store.remove_node_if_evictable(frame_id);
 
-        if let Some(frame) = frame {
-            // Correct ourselves if the frame is not evictable
-                if frame.is_evictable() {
-                    self.store.add_node_without_reuse(frame_id, frame, false);
-                    return;
-                }
-
-            // Decrease evictable frames
+        // Decrease evictable frames
+        if removed {
             self.evictable_frames -= 1;
         }
     }
