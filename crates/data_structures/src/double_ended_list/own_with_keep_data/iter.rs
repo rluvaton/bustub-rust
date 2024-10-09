@@ -1,3 +1,4 @@
+use crate::DoubleEndedList;
 use super::FixedSizeLinkedListWithoutOption;
 
 pub struct FixedSizeLinkedListWithoutOptionIter<'a, T: 'a + Copy> {
@@ -23,7 +24,7 @@ impl<'a, T: 'a + Copy> Iterator for FixedSizeLinkedListWithoutOptionIter<'a, T> 
             return None;
         }
 
-        let index = (self.list.front_index + self.length_passed) % self.list.capacity;
+        let index = (self.list.front_index + self.length_passed) % self.list.capacity();
 
         self.length_passed += 1;
 

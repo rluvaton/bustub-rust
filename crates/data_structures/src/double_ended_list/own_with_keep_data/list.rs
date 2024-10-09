@@ -4,7 +4,6 @@ use std::fmt::{Debug, Formatter};
 use std::mem;
 
 pub struct FixedSizeLinkedListWithoutOption<T: Copy> {
-    pub(super) capacity: usize,
     pub(super) length: usize,
     pub(super) front_index: usize,
     pub(super) back_index: usize,
@@ -15,7 +14,6 @@ impl<T: Copy> FixedSizeLinkedListWithoutOption<T> {
     pub fn with_capacity_and_value(capacity: usize, value: T) -> Self {
         Self {
             length: 0,
-            capacity,
             front_index: 0,
             back_index: capacity - 1,
             data: vec![value; capacity],
@@ -27,7 +25,6 @@ impl<T: Default + Copy> FixedSizeLinkedListWithoutOption<T> {
     pub fn with_capacity(capacity: usize) -> Self {
         Self {
             length: 0,
-            capacity,
             front_index: 0,
             back_index: capacity - 1,
             data: vec![T::default(); capacity],
@@ -41,7 +38,7 @@ impl<T: Copy> DoubleEndedList<T> for FixedSizeLinkedListWithoutOption<T> {
     #[inline]
     #[must_use]
     fn capacity(&self) -> usize {
-        self.capacity
+        self.data.capacity()
     }
 
     /// Returns `true` if the `FixedSizeLinkedList` is empty.
@@ -83,7 +80,7 @@ impl<T: Copy> DoubleEndedList<T> for FixedSizeLinkedListWithoutOption<T> {
     #[inline]
     #[must_use]
     fn is_full(&self) -> bool {
-        self.length == self.capacity
+        self.length == self.data.capacity()
     }
 
     /// Returns the length of the `FixedSizeLinkedList`.
@@ -120,7 +117,7 @@ impl<T: Copy> DoubleEndedList<T> for FixedSizeLinkedListWithoutOption<T> {
     #[inline]
     fn start_over(&mut self) {
         self.front_index = 0;
-        self.back_index = self.capacity - 1;
+        self.back_index = self.data.capacity() - 1;
         self.length = 0;
     }
 
@@ -131,7 +128,7 @@ impl<T: Copy> DoubleEndedList<T> for FixedSizeLinkedListWithoutOption<T> {
     #[inline]
     fn clear(&mut self) where T: Clone {
         self.front_index = 0;
-        self.back_index = self.capacity - 1;
+        self.back_index = self.data.capacity() - 1;
         self.length = 0;
     }
 
@@ -200,7 +197,7 @@ impl<T: Copy> DoubleEndedList<T> for FixedSizeLinkedListWithoutOption<T> {
             false
         } else {
             // Going 1 index back and rotate if reached 0
-            let prev_index = (self.front_index + self.capacity - 1) % self.capacity;
+            let prev_index = (self.front_index + self.data.capacity() - 1) % self.data.capacity();
 
             self.data[prev_index] = item;
 
@@ -220,7 +217,7 @@ impl<T: Copy> DoubleEndedList<T> for FixedSizeLinkedListWithoutOption<T> {
             None
         } else {
             let next_index = self.front_index;
-            self.front_index = (self.front_index + 1) % self.capacity;
+            self.front_index = (self.front_index + 1) % self.data.capacity();
 
             self.length -= 1;
 
@@ -235,7 +232,7 @@ impl<T: Copy> DoubleEndedList<T> for FixedSizeLinkedListWithoutOption<T> {
         if self.is_full() {
             false
         } else {
-            let next_index = (self.back_index + 1) % self.capacity;
+            let next_index = (self.back_index + 1) % self.data.capacity();
 
             self.data[next_index] = item;
 
@@ -254,12 +251,12 @@ impl<T: Copy> DoubleEndedList<T> for FixedSizeLinkedListWithoutOption<T> {
             let front = mem::replace(&mut self.data[self.front_index], item);
 
             self.back_index = self.front_index;
-            self.front_index = (self.front_index + 1) % self.capacity;
+            self.front_index = (self.front_index + 1) % self.data.capacity();
 
             Some(front)
         } else {
             // No need for rotate, same as push_back
-            let next_index = (self.back_index + 1) % self.capacity;
+            let next_index = (self.back_index + 1) % self.data.capacity();
 
             self.data[next_index] = item;
 
@@ -280,7 +277,7 @@ impl<T: Copy> DoubleEndedList<T> for FixedSizeLinkedListWithoutOption<T> {
             None
         } else {
             let prev_index = self.back_index;
-            self.back_index = (self.back_index + self.capacity - 1) % self.capacity;
+            self.back_index = (self.back_index + self.data.capacity() - 1) % self.data.capacity();
 
             self.length -= 1;
             Some(self.data[prev_index])
@@ -297,7 +294,6 @@ impl<T: Copy> Clone for FixedSizeLinkedListWithoutOption<T> {
     fn clone(&self) -> Self {
         Self {
             length: self.length,
-            capacity: self.capacity,
             front_index: self.front_index,
             back_index: self.back_index,
             data: self.data.clone(),
