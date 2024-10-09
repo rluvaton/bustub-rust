@@ -1,7 +1,7 @@
 use crate::manager::InnerBufferPoolManager;
 use crate::{BufferPoolManager, BufferPoolManagerStats};
 use disk_storage::{DiskManager, DiskScheduler};
-use eviction_policy::{EvictionPoliciesTypes, LRUKOptions};
+use eviction_policy::{EvictionPoliciesTypes, EvictionPolicy, EvictionPolicyCreator, LRUKEvictionPolicy, LRUKOptions};
 use pages::AtomicPageId;
 use parking_lot::Mutex;
 use recovery_log_manager::LogManager;
@@ -15,7 +15,8 @@ pub struct BufferPoolManagerBuilder {
     /// This is required
     disk_scheduler: Option<DiskScheduler>,
 
-    eviction_policy_type: EvictionPoliciesTypes,
+    // Eviction policy creator, it get the pool size and return the eviction policy
+    eviction_policy_creator: Box<dyn FnOnce(usize) -> Box<dyn EvictionPolicy>>,
 
     /// This is not required
     log_manager: Option<LogManager>,
@@ -55,11 +56,11 @@ impl BufferPoolManagerBuilder {
     // ################# Eviction Policies #####################
 
     pub fn with_lru_k_eviction_policy(self, k: usize) -> Self {
-        self.with_eviction_policy(EvictionPoliciesTypes::LRU_K(LRUKOptions::new(k)))
+        self.with_eviction_policy_creator(EvictionPoliciesTypes::LRU_K(LRUKOptions::new(k)).get_creator())
     }
 
-    pub fn with_eviction_policy(mut self, eviction_policy: EvictionPoliciesTypes) -> Self {
-        self.eviction_policy_type = eviction_policy;
+    pub fn with_eviction_policy_creator<Creator: FnOnce(usize) -> Box<dyn EvictionPolicy> + 'static>(mut self, creator: Creator) -> Self {
+        self.eviction_policy_creator = Box::new(creator);
 
         self
     }
@@ -92,7 +93,7 @@ impl BufferPoolManagerBuilder {
                 // we allocate a consecutive memory space for the buffer pool
                 pages: Vec::with_capacity(pool_size),
 
-                eviction_policy: self.eviction_policy_type.create_policy(pool_size),
+                eviction_policy: (self.eviction_policy_creator)(pool_size),
 
                 page_table: HashMap::with_capacity(pool_size),
                 free_list,
@@ -117,8 +118,8 @@ impl Default for BufferPoolManagerBuilder {
         Self {
             pool_size: None,
             disk_scheduler: None,
-            eviction_policy_type: EvictionPoliciesTypes::default(),
-            log_manager: None
+            eviction_policy_creator: Box::new(|number_of_frames: usize| Box::new(LRUKEvictionPolicy::new(number_of_frames, LRUKOptions::default()))),
+            log_manager: None,
         }
     }
 }

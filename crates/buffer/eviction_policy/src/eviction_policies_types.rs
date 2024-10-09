@@ -15,6 +15,10 @@ impl EvictionPoliciesTypes {
             }
         )
     }
+
+    pub fn get_creator(self) -> Box<dyn FnOnce(usize) -> Box<dyn EvictionPolicy>> {
+        Box::new(|number_of_frames| self.create_policy(number_of_frames))
+    }
 }
 
 impl Default for EvictionPoliciesTypes {
