@@ -110,8 +110,8 @@ impl HeaderPage {
     ///
     /// returns: ()
     ///
-    pub(crate)  fn set_directory_page_id(&mut self, directory_idx: u32, directory_page_id: PageId) {
-        assert!(directory_idx < Self::MAX_DEPTH, "Directory index ({}) is larger than the size directory size: {}", directory_idx, Self::ARRAY_SIZE);
+    pub(crate) fn set_directory_page_id(&mut self, directory_idx: u32, directory_page_id: PageId) {
+        assert!(directory_idx < Self::ARRAY_SIZE as u32, "Directory index ({}) is larger than the size directory size: {}", directory_idx, Self::ARRAY_SIZE as u32);
 
         self.directory_page_ids[directory_idx as usize] = directory_page_id;
     }
