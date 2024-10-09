@@ -14,7 +14,7 @@ members = [
     "crates/rid",
 
     "crates/storage/pages",
-    "crates/storage/disk", "crates/recovery/log_manager", "crates/buffer/eviction_policy", "crates/buffer/common", "crates/buffer/manager", "crates/concurrency/transaction/core",
+    "crates/storage/disk", "crates/recovery/log_manager", "crates/buffer/eviction_policy", "crates/buffer/common", "crates/buffer/manager", "crates/concurrency/transaction/core", "crates/execution/expression",
 ]
 
 [profile.bench]

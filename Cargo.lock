@@ -453,6 +453,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "expression"
+version = "0.1.0"
+
+[[package]]
 name = "fixedbitset"
 version = "0.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1153,6 +1157,18 @@ dependencies = [
 [[package]]
 name = "transaction"
 version = "0.1.0"
+dependencies = [
+ "atomic",
+ "buffer_common",
+ "buffer_pool_manager",
+ "bytemuck",
+ "common",
+ "disk_storage",
+ "pages",
+ "parking_lot",
+ "recovery_log_manager",
+ "rid",
+]
 
 [[package]]
 name = "unicode-ident"
