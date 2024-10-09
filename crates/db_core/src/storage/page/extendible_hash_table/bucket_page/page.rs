@@ -1,8 +1,6 @@
-use crate::storage::page::b_plus_tree::MappingType;
-use crate::storage::{Comparator, ExtendibleHashBucketPageInsertionErrors, GenericComparator, GenericKey};
+use crate::storage::{Comparator, ExtendibleHashBucketPageInsertionErrors, OrdComparator};
 use pages::PAGE_SIZE;
 use common::{PageKey, PageValue};
-use rid::RID;
 use prettytable::{row, Table};
 use std::cmp::Ordering;
 use std::fmt::{Debug, Formatter};
@@ -10,14 +8,16 @@ use std::marker::PhantomData;
 use std::mem::size_of;
 use std::slice::Iter;
 
-// Test assertion helper type
-const _ASSERTION_TEST_TYPE: usize = hash_table_bucket_array_size::<GenericKey<8>, RID>();
+pub type MappingType<KeyType, ValueType>  = (KeyType, ValueType);
+
 
 //noinspection RsAssertEqual
 const _: () = {
+    type Key = u64;
+    type Value = u16;
     // Assert that the comparator phantom data does not affecting size
     assert!(
-        size_of::<BucketPage<_ASSERTION_TEST_TYPE, GenericKey<8>, RID, GenericComparator<8>>>() ==
+        size_of::<BucketPage<{hash_table_bucket_array_size::<Key, Value>()}, Key, Value, OrdComparator<Key>>>() ==
             0 +
                 // size
                 size_of::<u32>() +
@@ -26,7 +26,7 @@ const _: () = {
                 size_of::<u32>() +
 
                 // array
-                size_of::<MappingType<GenericKey<8>, RID>>() * _ASSERTION_TEST_TYPE
+                size_of::<MappingType<Key, Value>>() * hash_table_bucket_array_size::<Key, Value>()
     );
 };
 
@@ -299,24 +299,6 @@ impl<const ARRAY_SIZE: usize, Key: PageKey, Value: PageValue, KeyComparator: Com
 
         f.write_str(table.to_string().as_str())?;
         f.write_str("================ END BUCKET ================\n")
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use std::array;
-
-    #[test]
-    fn assert_size() {
-        const SIZE: usize = hash_table_bucket_array_size::<GenericKey<8>, RID>();
-
-        BucketPage::<SIZE, GenericKey<8>, RID, GenericComparator<8>> {
-            size: 0,
-            max_size: 0,
-            array: array::from_fn(|_| (GenericKey::default(), RID::default())),
-            _key_comparator: PhantomData
-        };
     }
 }
 
