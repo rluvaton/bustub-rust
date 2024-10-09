@@ -1,5 +1,5 @@
-use crate::concurrency::UndoLink;
-use crate::storage::Tuple;
+use crate::UndoLink;
+use tuple::Tuple;
 use common::config::{Timestamp, INVALID_TIMESTAMP};
 
 #[derive(Clone)]

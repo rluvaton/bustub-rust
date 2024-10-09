@@ -1,4 +1,4 @@
-use crate::concurrency::UndoLink;
+use crate::UndoLink;
 
 /// The first undo link in the version chain, that links table heap tuple to the undo log.
 #[derive(Clone, PartialEq)]

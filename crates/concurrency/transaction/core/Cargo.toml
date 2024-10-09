@@ -4,3 +4,21 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+
+common = {path = "../../../common"}
+pages = {path = "../../../storage/pages"}
+disk_storage = {path = "../../../storage/disk"}
+tuple = {path = "../../../storage/table/tuple"}
+
+buffer_common = {path = "../../../buffer/common"}
+buffer_pool_manager = {path = "../../../buffer/manager"}
+
+recovery_log_manager = {path = "../../../recovery/log_manager"}
+expression = {path = "../../../execution/expression"}
+rid = {path = "../../../rid"}
+
+atomic = "0.6.0"
+bytemuck = "1.18.0"
+
+# Make sure to sync this version with the one in the dev-dependencies
+parking_lot = "0.12.3"

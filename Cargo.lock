@@ -1169,6 +1169,7 @@ dependencies = [
  "parking_lot",
  "recovery_log_manager",
  "rid",
+ "tuple",
 ]
 
 [[package]]
