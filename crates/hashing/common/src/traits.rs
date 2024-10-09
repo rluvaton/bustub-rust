@@ -19,21 +19,15 @@ impl KeyHasher for DefaultKeyHasher {
     }
 }
 
-#[cfg(test)]
-pub mod test_util {
-    use crate::container::KeyHasher;
-    use common::PageKey;
+pub struct U64IdentityKeyHasher;
 
-    pub struct U64IdentityKeyHasher;
+impl KeyHasher for U64IdentityKeyHasher {
+    fn hash_key<Key: PageKey>(key: &Key) -> u64 {
+        let p = key as *const Key;
+        let n = p as *const u64;
 
-    impl KeyHasher for U64IdentityKeyHasher {
-        fn hash_key<Key: PageKey>(key: &Key) -> u64 {
-            let p = key as *const Key;
-            let n = p as *const u64;
-
-            unsafe {
-                *n
-            }
+        unsafe {
+            *n
         }
     }
 }
