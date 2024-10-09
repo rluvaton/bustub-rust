@@ -25,7 +25,7 @@ pub const HEADER_PAGE_ID: PageId = 0;                                           
 /// ```
 /// use db_core::storage::{hash_table_bucket_array_size, GenericComparator, GenericKey};
 /// use db_core::container::{DiskExtendibleHashTable, DefaultKeyHasher};
-/// use common::RID;
+/// use rid::RID;
 ///
 /// const KEY_SIZE: usize = 8;
 /// type Key = GenericKey<KEY_SIZE>;

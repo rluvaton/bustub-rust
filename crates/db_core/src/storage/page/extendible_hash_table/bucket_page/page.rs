@@ -55,7 +55,7 @@ pub const fn hash_table_bucket_array_size<Key: PageKey, Value: PageValue>() -> u
 /// # Examples
 /// ```rust
 /// use std::cmp::Ordering;
-/// use common::RID;
+/// use rid::RID;
 /// use db_core::storage::{ExtendibleHashTableBucketPage, hash_table_bucket_array_size, U8Comparator};
 ///
 /// type B = ExtendibleHashTableBucketPage::<{hash_table_bucket_array_size::<u8, u8>()}, u8, u8, U8Comparator>;
