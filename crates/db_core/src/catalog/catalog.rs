@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 use common::config::{AtomicIndexOID, AtomicTableOID, IndexOID, TableOID};
-use crate::buffer::BufferPoolManager;
+use buffer_pool_manager::BufferPoolManager;
 use crate::catalog::IndexInfo;
 use crate::catalog::table_info::TableInfo;
 use crate::concurrency::LockManager;

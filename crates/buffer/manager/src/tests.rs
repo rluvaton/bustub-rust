@@ -1,8 +1,8 @@
 #[cfg(test)]
 mod tests {
-    use crate::buffer::buffer_pool_manager::errors::{FetchPageError, NewPageError, NoAvailableFrameFound};
+    use crate::errors::{FetchPageError, NewPageError, NoAvailableFrameFound};
     use buffer_common::AccessType;
-    use crate::buffer::buffer_pool_manager::{BufferPool, BufferPoolManager, PageWriteGuard};
+    use crate::{BufferPool, BufferPoolManager, PageWriteGuard};
     use pages::{AlignToPageData, PageData, PageId, PAGE_SIZE};
     use parking_lot::{Condvar, Mutex};
     use rand::Rng;

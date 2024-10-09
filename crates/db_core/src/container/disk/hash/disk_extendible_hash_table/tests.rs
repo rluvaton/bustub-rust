@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use crate::buffer::BufferPoolManager;
+    use buffer_pool_manager::BufferPoolManager;
     use crate::catalog::Schema;
     use crate::container::test_util::U64IdentityKeyHasher;
     use crate::container::{DefaultKeyHasher, DiskExtendibleHashTable, KeyHasher};

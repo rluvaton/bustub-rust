@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use parking_lot::Mutex;
 use pages::{PageId, INVALID_PAGE_ID};
-use crate::buffer::BufferPoolManager;
+use buffer_pool_manager::BufferPoolManager;
 
 /// TODO - implement more from src/include/storage/table/table_heap.h
 pub struct TableHeap {

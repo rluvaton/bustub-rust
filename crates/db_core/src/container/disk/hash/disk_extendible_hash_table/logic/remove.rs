@@ -1,8 +1,7 @@
 use super::super::type_alias_trait::TypeAliases;
 use super::super::HashTable;
-use crate::buffer;
-use crate::buffer::errors::{BufferPoolError, MapErrorToBufferPoolError};
-use crate::buffer::{BufferPool, PageWriteGuard};
+use buffer_pool_manager::{BufferPool, PageWriteGuard};
+use buffer_pool_manager::errors::{BufferPoolError, MapErrorToBufferPoolError};
 use crate::concurrency::Transaction;
 use crate::container::hash::KeyHasher;
 use crate::storage::Comparator;
@@ -17,7 +16,7 @@ use buffer_common::AccessType;
 #[derive(thiserror::Error, Debug, PartialEq, Clone)]
 pub enum RemoveError {
     #[error("buffer pool error")]
-    BufferPoolError(#[from] buffer::errors::BufferPoolError),
+    BufferPoolError(#[from] BufferPoolError),
 
     #[error("error during merge")]
     MergeError(#[from] MergeError),
@@ -26,7 +25,7 @@ pub enum RemoveError {
 #[derive(thiserror::Error, Debug, PartialEq, Clone)]
 pub enum MergeError {
     #[error("buffer pool error")]
-    BufferPoolError(#[from] buffer::errors::BufferPoolError),
+    BufferPoolError(#[from] BufferPoolError),
 
     #[error("unknown error")]
     Unknown,

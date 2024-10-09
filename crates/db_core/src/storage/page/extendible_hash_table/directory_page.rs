@@ -413,7 +413,7 @@ fn format_number_in_bits(n: u64, number_of_bits: u32) -> String {
 
 #[cfg(test)]
 mod tests {
-    use crate::buffer::{BufferPool, BufferPoolManager};
+    use buffer_pool_manager::{BufferPool, BufferPoolManager};
     use buffer_common::AccessType;
 
     use crate::storage::{ExtendibleHashTableDirectoryPage};

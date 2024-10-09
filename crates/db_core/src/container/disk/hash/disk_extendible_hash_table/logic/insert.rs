@@ -1,8 +1,7 @@
 use super::super::type_alias_trait::TypeAliases;
 use super::super::HashTable;
-use crate::buffer;
-use crate::buffer::errors::MapErrorToBufferPoolError;
-use crate::buffer::{BufferPool, PageWriteGuard};
+use buffer_pool_manager::{BufferPool, PageWriteGuard};
+use buffer_pool_manager::errors::{BufferPoolError, MapErrorToBufferPoolError};
 use crate::concurrency::Transaction;
 use crate::container::hash::KeyHasher;
 use crate::storage::Comparator;
@@ -23,7 +22,7 @@ pub enum InsertionError {
     ReachedSplitRetryLimit(usize),
 
     #[error("buffer pool error")]
-    BufferPoolError(#[from] buffer::errors::BufferPoolError),
+    BufferPoolError(#[from] BufferPoolError),
 
     #[error("No space left for inserting as the bucket is full and it cannot be splitted again")]
     BucketIsFull,
@@ -221,7 +220,7 @@ where
         }
     }
 
-    fn init_new_directory(&self) -> Result<PageWriteGuard, buffer::errors::BufferPoolError> {
+    fn init_new_directory(&self) -> Result<PageWriteGuard, BufferPoolError> {
         let mut directory_page = self.bpm.new_page(AccessType::Unknown).map_err_to_buffer_pool_err().context("Should be able to create page")?;
 
         {
@@ -233,7 +232,7 @@ where
         Ok(directory_page)
     }
 
-    fn init_new_bucket(&self) -> Result<PageWriteGuard, buffer::errors::BufferPoolError> {
+    fn init_new_bucket(&self) -> Result<PageWriteGuard, BufferPoolError> {
         let mut bucket_page = self.bpm.new_page(AccessType::Unknown).map_err_to_buffer_pool_err().context("Should be able to create page")?;
 
         let bucket = bucket_page.cast_mut::<<Self as TypeAliases>::BucketPage>();

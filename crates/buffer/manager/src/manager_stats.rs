@@ -8,8 +8,8 @@ const INDENTATION_STEP: usize = 2;
 
 #[derive(Clone)]
 pub struct BufferPoolManagerStats {
-    pub(in crate::buffer) holding_inner_latch: RunningTimeStats,
-    pub(in crate::buffer) waiting_for_inner_latch: RunningTimeStats,
+    pub(crate) holding_inner_latch: RunningTimeStats,
+    pub(crate) waiting_for_inner_latch: RunningTimeStats,
 }
 
 impl BufferPoolManagerStats {

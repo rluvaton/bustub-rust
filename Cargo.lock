@@ -153,6 +153,7 @@ name = "bpm_bench"
 version = "0.1.0"
 dependencies = [
  "buffer_common",
+ "buffer_pool_manager",
  "clap",
  "common",
  "db_core",
@@ -172,6 +173,25 @@ version = "0.1.0"
 [[package]]
 name = "buffer_pool_manager"
 version = "0.1.0"
+dependencies = [
+ "buffer_common",
+ "common",
+ "derive_builder",
+ "disk_storage",
+ "error_utils",
+ "eviction_policy",
+ "num-format",
+ "pages",
+ "parking_lot",
+ "rand 0.8.5",
+ "rand_chacha",
+ "recovery_log_manager",
+ "stats",
+ "tempdir",
+ "thiserror",
+ "tracy-client",
+ "zipf",
+]
 
 [[package]]
 name = "bumpalo"
@@ -381,6 +401,7 @@ dependencies = [
  "atomic",
  "binary_utils",
  "buffer_common",
+ "buffer_pool_manager",
  "bytemuck",
  "chrono",
  "common",

@@ -1,6 +1,5 @@
 use super::super::type_alias_trait::TypeAliases;
 use super::super::HashTable;
-use crate::buffer;
 use crate::concurrency::Transaction;
 use crate::container::hash::KeyHasher;
 use crate::storage::Comparator;
@@ -10,14 +9,13 @@ use error_utils::Context;
 use std::fmt::Debug;
 use std::sync::Arc;
 use buffer_common::AccessType;
-use crate::buffer::{BufferPool};
-use crate::buffer::errors::MapErrorToBufferPoolError;
-
+use buffer_pool_manager::BufferPool;
+use buffer_pool_manager::errors::{BufferPoolError, MapErrorToBufferPoolError};
 
 #[derive(thiserror::Error, Debug, PartialEq, Clone)]
 pub enum LookupError {
     #[error("buffer pool error")]
-    BufferPoolError(#[from] buffer::errors::BufferPoolError),
+    BufferPoolError(#[from] BufferPoolError),
 }
 
 

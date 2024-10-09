@@ -17,6 +17,7 @@ common = {path = "../../crates/common"}
 pages = {path = "../../crates/storage/pages"}
 disk_storage = {path = "../../crates/storage/disk"}
 buffer_common = {path = "../../crates/buffer/common"}
+buffer_pool_manager = {path = "../../crates/buffer/manager"}
 
 tempdir = "0.3.7"
 
@@ -26,6 +27,6 @@ debug = true
 
 [features]
 default = []
-statistics = ["db_core/statistics"]
-tracing = ["tracy-client/enable", "db_core/tracing"]
+statistics = ["buffer_pool_manager/statistics"]
+tracing = ["tracy-client/enable", "buffer_pool_manager/tracing"]
 tracing-memory-allocation = ["tracing"]

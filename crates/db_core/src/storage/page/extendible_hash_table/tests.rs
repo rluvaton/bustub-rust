@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use crate::buffer::{BufferPool, BufferPoolManager};
+    use buffer_pool_manager::{BufferPool, BufferPoolManager};
     use buffer_common::AccessType;
 
     use crate::catalog::Schema;

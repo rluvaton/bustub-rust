@@ -10,6 +10,7 @@ disk_storage = {path = "../storage/disk"}
 
 buffer_common = {path = "../buffer/common"}
 eviction_policy = {path = "../buffer/eviction_policy"}
+buffer_pool_manager = {path = "../buffer/manager"}
 
 recovery_log_manager = {path = "../recovery/log_manager"}
 
@@ -54,5 +55,5 @@ debug = true
 
 [features]
 default = []
-statistics = []
-tracing = ["tracy-client/enable", "eviction_policy/tracing"]
+statistics = ["buffer_pool_manager/statistics"]
+tracing = ["tracy-client/enable", "eviction_policy/tracing", "buffer_pool_manager/tracing"]

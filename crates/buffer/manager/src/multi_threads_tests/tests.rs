@@ -1,7 +1,7 @@
 use std::cmp::max;
 use super::helpers::get_tmp_dir;
 use super::options::{DiskManagerImplementationOptions, DurationType, Options};
-use crate::buffer::{BufferPool, BufferPoolManager};
+use crate::{BufferPool, BufferPoolManager};
 use buffer_common::AccessType;
 
 use pages::{PageData, PageId};

@@ -1,14 +1,15 @@
-pub fn add(left: u64, right: u64) -> u64 {
-    left + right
-}
+mod manager;
+mod tests;
+mod manager_stats;
+mod page_guards;
+pub mod errors;
+mod traits;
 
 #[cfg(test)]
-mod tests {
-    use super::*;
+mod multi_threads_tests;
 
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
-    }
-}
+pub use manager::BufferPoolManager;
+pub use page_guards::*;
+pub use manager_stats::BufferPoolManagerStats;
+
+pub use traits::BufferPool;
