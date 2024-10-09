@@ -1,8 +1,8 @@
 use std::ops::{Deref, DerefMut};
-use std::time::Duration;
-use crate::storage::{Page, PageAndGuard, PageAndReadGuard, PageWriteGuard, UnderlyingPage};
+use crate::{Page, PageAndReadGuard, PageWriteGuard, UnderlyingPage};
+use crate::page_and_guard::PageAndGuard;
 
-pub(crate) struct PageAndWriteGuard<'a>(
+pub struct PageAndWriteGuard<'a>(
     // First drop the guard and then the page
     PageWriteGuard<'a>,
     Page,
@@ -56,8 +56,7 @@ impl<'a> From<Page> for PageAndWriteGuard<'a> {
 
 #[cfg(test)]
 mod tests {
-    use crate::storage::Page;
-    use super::*;
+    use crate::*;
 
     #[test]
     fn should_not_leak_write_lock() {

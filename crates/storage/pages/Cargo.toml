@@ -4,3 +4,12 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+common = {path = "../../common"}
+
+parking_lot = { version = "0.12.3", features = ["default"] }
+
+[dev-dependencies]
+
+
+[profile.bench]
+debug = true

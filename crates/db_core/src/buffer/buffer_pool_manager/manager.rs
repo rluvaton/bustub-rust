@@ -7,7 +7,8 @@ use common::{Future, Promise, SharedFuture, SharedPromise, UnsafeSingleRefData, 
 use crate::buffer::buffer_pool_manager::*;
 use crate::buffer::{AccessType, LRUKReplacer, Replacer};
 use crate::recovery::LogManager;
-use crate::storage::{DiskManager, DiskScheduler, Page, PageAndGuard, PageAndReadGuard, PageAndWriteGuard, ReadDiskRequest, WriteDiskRequest};
+use crate::storage::{DiskManager, DiskScheduler, ReadDiskRequest, WriteDiskRequest};
+use pages::{Page, PageAndGuard, PageAndReadGuard, PageAndWriteGuard};
 
 #[cfg(feature = "tracing")]
 use tracy_client::span;

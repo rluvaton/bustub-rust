@@ -1,7 +1,7 @@
 use std::fmt::{Debug, Formatter};
 use std::mem;
 use super::super::BufferPoolManager;
-use crate::storage::PageAndReadGuard;
+use pages::PageAndReadGuard;
 use std::sync::Arc;
 use common::config::{PageData, PageId};
 use crate::buffer::AccessType;

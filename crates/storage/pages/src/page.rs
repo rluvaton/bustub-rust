@@ -1,4 +1,4 @@
-use crate::storage::page::underlying_page::UnderlyingPage;
+use crate::UnderlyingPage;
 use common::config::{PageData, PageId, BUSTUB_PAGE_SIZE, INVALID_PAGE_ID};
 use common::ReaderWriterLatch;
 use parking_lot::{RwLockReadGuard, RwLockWriteGuard};
@@ -6,7 +6,6 @@ use std::ops::{Deref, DerefMut};
 use std::sync::atomic::{AtomicBool, AtomicIsize, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
-
 
 pub type PageReadGuard<'a> = RwLockReadGuard<'a, UnderlyingPage>;
 pub type PageWriteGuard<'a> = RwLockWriteGuard<'a, UnderlyingPage>;
@@ -180,7 +179,7 @@ impl Drop for Page {
 
 #[cfg(test)]
 mod tests {
-    use crate::storage::page::page::Page;
+    use crate::*;
     use common::config::INVALID_PAGE_ID;
 
     // TODO - unignore

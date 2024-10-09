@@ -155,6 +155,7 @@ dependencies = [
  "clap",
  "common",
  "db_core",
+ "pages",
  "parking_lot",
  "rand 0.8.5",
  "tempdir",
@@ -381,6 +382,7 @@ dependencies = [
  "generics",
  "mut-binary-heap",
  "num-format",
+ "pages",
  "parking_lot",
  "prettytable",
  "rand 0.8.5",
@@ -752,6 +754,10 @@ checksum = "b15813163c1d831bf4a13c3610c05c0d03b39feb07f7e09fa234dac9b15aaf39"
 [[package]]
 name = "pages"
 version = "0.1.0"
+dependencies = [
+ "common",
+ "parking_lot",
+]
 
 [[package]]
 name = "parking_lot"
