@@ -235,10 +235,12 @@ fn init_buffer_pool_manager_for_test(options: &Options, temp_dir: Option<TempDir
             let file_path = o.file_path.unwrap_or_else(|| {
                 temp_dir.unwrap().into_path().join("data.db")
             });
-            bpm_raw = create_bpm(
-                &options,
-                Arc::new(Mutex::new(DefaultDiskManager::new(file_path).expect("Must be able to create disk manager"))),
-            );
+
+            bpm_raw = BufferPoolManager::builder()
+                .with_pool_size(options.bpm_size)
+                .with_disk_manager(DefaultDiskManager::new(file_path).expect("Must be able to create disk manager"))
+                .with_lru_k_eviction_policy(options.lru_k_size)
+                .build_arc();
 
             initialize_bpm_pages(&options, &mut page_ids, bpm_raw.clone());
         }
@@ -246,7 +248,11 @@ fn init_buffer_pool_manager_for_test(options: &Options, temp_dir: Option<TempDir
             let manager = Arc::new(Mutex::new(DiskManagerUnlimitedMemory::new()));
             let cloned_manager = Arc::clone(&manager);
 
-            bpm_raw = create_bpm(&options, manager);
+            bpm_raw = BufferPoolManager::builder()
+                .with_pool_size(options.bpm_size)
+                .with_arc_disk_manager(manager)
+                .with_lru_k_eviction_policy(options.lru_k_size)
+                .build_arc();
 
             initialize_bpm_pages(&options, &mut page_ids, bpm_raw.clone());
 
@@ -268,14 +274,6 @@ fn initialize_bpm_pages(options: &Options, page_ids: &mut Vec<PageId>, bpm: Arc<
     }
 }
 
-fn create_bpm(options: &Options, m: Arc<Mutex<(impl DiskManager + 'static)>>) -> Arc<BufferPoolManager> {
-    BufferPoolManager::new(
-        options.bpm_size,
-        m,
-        Some(options.lru_k_size),
-        None, /* log manager */
-    )
-}
 
 #[cfg(test)]
 mod tests {

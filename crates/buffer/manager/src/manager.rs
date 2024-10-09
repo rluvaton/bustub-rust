@@ -1,4 +1,3 @@
-use common::config::{LRUK_REPLACER_K};
 use parking_lot::{Mutex, MutexGuard};
 use std::collections::{HashMap, LinkedList};
 use std::sync::atomic::Ordering;
@@ -13,44 +12,45 @@ use buffer_common::{AccessType, FrameId};
 use eviction_policy::{LRUKEvictionPolicy, EvictionPolicy};
 use recovery_log_manager::LogManager;
 use crate::{errors, BufferPool, BufferPoolManagerStats, PageReadGuard, PageWriteGuard};
+use crate::builder::BufferPoolManagerBuilder;
 
 ///
 /// BufferPoolManager reads disk pages to and from its internal buffer pool.
 ///
 pub struct BufferPoolManager {
     /// The next page id to be allocated
-    next_page_id: AtomicPageId,
+    pub(super) next_page_id: AtomicPageId,
 
     /// Number of pages in the buffer pool
     /// This will not change after initial set
     /// TODO - remove pub(crate) and expose getter to avoid user setting the value
-    pool_size: usize,
+    pub(super) pool_size: usize,
 
     /// Pointer to the disk scheduler.
     /// This is mutex to avoid writing and reading the same page twice
-    disk_scheduler: Arc<Mutex<DiskScheduler>>,
+    pub(super) disk_scheduler: Arc<Mutex<DiskScheduler>>,
 
     /// Pointer to the log manager. Please ignore this for P1.
     // LogManager *log_manager_ __attribute__((__unused__));
     #[allow(unused)]
-    log_manager: Option<LogManager>,
+    pub(super) log_manager: Option<LogManager>,
 
-    inner: Mutex<InnerBufferPoolManager>,
+    pub(super) inner: Mutex<InnerBufferPoolManager>,
 
     /// Pending fetch requests from disk
-    pending_fetch_requests: Mutex<HashMap<PageId, SharedFuture<()>>>,
+    pub(super) pending_fetch_requests: Mutex<HashMap<PageId, SharedFuture<()>>>,
 
     #[cfg(feature = "statistics")]
     /// Statistics on buffer pool
-    stats: BufferPoolManagerStats,
+    pub(super) stats: BufferPoolManagerStats,
 }
 
 unsafe impl Sync for BufferPoolManager {}
 
-struct InnerBufferPoolManager {
+pub(super) struct InnerBufferPoolManager {
     /** Array of buffer pool pages. */
     // The index is the frame_id
-    pages: Vec<Page>,
+    pub(super) pages: Vec<Page>,
 
     /// Page table for keeping track of buffer pool pages.
     ///
@@ -60,59 +60,19 @@ struct InnerBufferPoolManager {
     /// ```
     ///
     /// this is a thread safe hashmap
-    page_table: HashMap<PageId, FrameId>,
+    pub(super) page_table: HashMap<PageId, FrameId>,
 
-    /// Replacer to find unpinned pages for replacement.
-    /// TODO - change type to just implement Replacer
-    eviction_policy: LRUKEvictionPolicy,
+    /// Eviction policy to find unpinned pages for replacement.
+    pub(super) eviction_policy: Box<dyn EvictionPolicy>,
 
     /// List of free frames that don't have any pages on them.
-    free_list: LinkedList<FrameId>,
+    pub(super) free_list: LinkedList<FrameId>,
 }
 
 impl BufferPoolManager {
-    pub fn new(
-        pool_size: usize,
-        disk_manager: Arc<Mutex<(impl DiskManager + 'static)>>,
-        replacer_k: Option<usize>,
-        log_manager: Option<LogManager>,
-    ) -> Arc<Self> {
-        // Initially, every page is in the free list.
-        let mut free_list = LinkedList::new();
 
-        for i in 0..pool_size {
-            free_list.push_back(i as i32)
-        }
-
-        let this = BufferPoolManager {
-            next_page_id: AtomicPageId::new(0),
-            pool_size,
-
-            log_manager,
-
-            inner: Mutex::new(InnerBufferPoolManager {
-
-                // we allocate a consecutive memory space for the buffer pool
-                pages: Vec::with_capacity(pool_size),
-
-                eviction_policy: LRUKEvictionPolicy::new(
-                    pool_size,
-                    replacer_k.unwrap_or(LRUK_REPLACER_K),
-                ),
-
-                page_table: HashMap::with_capacity(pool_size),
-                free_list,
-            }),
-
-            disk_scheduler: Arc::new(Mutex::new(DiskScheduler::new(disk_manager))),
-
-            pending_fetch_requests: Mutex::new(HashMap::new()),
-
-            #[cfg(feature = "statistics")]
-            stats: BufferPoolManagerStats::default(),
-        };
-
-        Arc::new(this)
+    pub fn builder() -> BufferPoolManagerBuilder {
+        BufferPoolManagerBuilder::default()
     }
 
     /// Allocate a page on disk. Caller should acquire the latch before calling this function.

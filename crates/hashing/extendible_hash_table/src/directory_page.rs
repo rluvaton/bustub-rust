@@ -424,9 +424,10 @@ mod tests {
 
     #[test]
     fn global_and_local_depth_mash() {
-        let disk_mgr = Arc::new(Mutex::new(DiskManagerUnlimitedMemory::new()));
-        let bpm = BufferPoolManager::new(5, disk_mgr, None, None);
-
+        let bpm = BufferPoolManager::builder()
+            .with_pool_size(5)
+            .with_disk_manager(DiskManagerUnlimitedMemory::new())
+            .build_arc();
 
         // Create directory
         let mut directory_guard = bpm.new_page(AccessType::Unknown).expect("Should be able to create new page");

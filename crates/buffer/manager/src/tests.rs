@@ -34,7 +34,11 @@ mod tests {
         assert_eq!(upper_bound - lower_bound, 255);
 
         let disk_manager = DefaultDiskManager::new(db_name).expect("should create disk manager");
-        let bpm = BufferPoolManager::new(buffer_pool_size, Arc::new(Mutex::new(disk_manager)), Some(k), None);
+        let bpm = BufferPoolManager::builder()
+            .with_pool_size(buffer_pool_size)
+            .with_disk_manager(disk_manager)
+            .with_lru_k_eviction_policy(k)
+            .build_arc();
 
         // Scenario: The buffer pool is empty. We should be able to create a new page.
         let mut page0 = bpm.new_page(AccessType::Unknown).expect("The buffer pool is empty. We should be able to create a new page");
@@ -104,7 +108,12 @@ mod tests {
         let k = 5;
 
         let disk_manager = DefaultDiskManager::new(db_name).expect("should create disk manager");
-        let bpm = BufferPoolManager::new(buffer_pool_size, Arc::new(Mutex::new(disk_manager)), Some(k), None);
+
+        let bpm = BufferPoolManager::builder()
+            .with_pool_size(buffer_pool_size)
+            .with_disk_manager(disk_manager)
+            .with_lru_k_eviction_policy(k)
+            .build_arc();
 
         // Scenario: The buffer pool is empty. We should be able to create a new page.
         let mut page0 = bpm.new_page(AccessType::Unknown).expect("The buffer pool is empty. We should be able to create a new page");
@@ -171,7 +180,11 @@ mod tests {
         let k = 5;
 
         let disk_manager = DefaultDiskManager::new(db_name).expect("should create disk manager");
-        let bpm = BufferPoolManager::new(buffer_pool_size, Arc::new(Mutex::new(disk_manager)), Some(k), None);
+        let bpm = BufferPoolManager::builder()
+            .with_pool_size(buffer_pool_size)
+            .with_disk_manager(disk_manager)
+            .with_lru_k_eviction_policy(k)
+            .build_arc();
 
         let created_page_id = bpm.new_page(AccessType::Unknown).expect("should create new page").get_page_id();
 
@@ -235,11 +248,15 @@ mod tests {
     fn page_pin_easy() {
         let tmpdir = setup();
         let db_name = tmpdir.path().join("test.db");
-        let buffer_pool_size = 10;
+        let buffer_pool_size = 1;
         let k = 5;
 
         let disk_manager = DefaultDiskManager::new(db_name).expect("should create disk manager");
-        let bpm = BufferPoolManager::new(2, Arc::new(Mutex::new(disk_manager)), Some(k), None);
+        let bpm = BufferPoolManager::builder()
+            .with_pool_size(buffer_pool_size)
+            .with_disk_manager(disk_manager)
+            .with_lru_k_eviction_policy(k)
+            .build_arc();
 
         let page_id_0: PageId;
         let page_id_1: PageId;
@@ -331,8 +348,11 @@ mod tests {
         let k = 5;
 
         let disk_manager = DefaultDiskManager::new(db_name).expect("should create disk manager");
-        let bpm = BufferPoolManager::new(buffer_pool_size, Arc::new(Mutex::new(disk_manager)), Some(k), None);
-
+        let bpm = BufferPoolManager::builder()
+            .with_pool_size(buffer_pool_size)
+            .with_disk_manager(disk_manager)
+            .with_lru_k_eviction_policy(k)
+            .build_arc();
 
         // Scenario: The buffer pool is empty. We should be able to create a new page.
         let mut page0 = bpm.new_page(AccessType::Unknown).unwrap();
@@ -414,11 +434,15 @@ mod tests {
     fn page_access_test() {
         let tmpdir = setup();
         let db_name = tmpdir.path().join("test.db");
-        let buffer_pool_size = 10;
+        let buffer_pool_size = 1;
         let k = 5;
 
         let disk_manager = DefaultDiskManager::new(db_name).expect("should create disk manager");
-        let bpm = BufferPoolManager::new(1, Arc::new(Mutex::new(disk_manager)), Some(k), None);
+        let bpm = BufferPoolManager::builder()
+            .with_pool_size(buffer_pool_size)
+            .with_disk_manager(disk_manager)
+            .with_lru_k_eviction_policy(k)
+            .build_arc();
 
         const ROUNDS: usize = 50;
 
@@ -467,7 +491,11 @@ mod tests {
         let k = 5;
 
         let disk_manager = DefaultDiskManager::new(db_name).expect("should create disk manager");
-        let bpm = BufferPoolManager::new(buffer_pool_size, Arc::new(Mutex::new(disk_manager)), Some(k), None);
+        let bpm = BufferPoolManager::builder()
+            .with_pool_size(buffer_pool_size)
+            .with_disk_manager(disk_manager)
+            .with_lru_k_eviction_policy(k)
+            .build_arc();
 
         const ROUNDS: usize = 100000;
 
@@ -508,7 +536,11 @@ mod tests {
         let k = 5;
 
         let disk_manager = DefaultDiskManager::new(db_name).expect("should create disk manager");
-        let bpm = BufferPoolManager::new(buffer_pool_size, Arc::new(Mutex::new(disk_manager)), Some(k), None);
+        let bpm = BufferPoolManager::builder()
+            .with_pool_size(buffer_pool_size)
+            .with_disk_manager(disk_manager)
+            .with_lru_k_eviction_policy(k)
+            .build_arc();
 
         let pid0 = bpm.new_page(AccessType::Unknown).unwrap().get_page_id();
         let pid1 = bpm.new_page(AccessType::Unknown).unwrap().get_page_id();
@@ -562,7 +594,11 @@ mod tests {
         let disk_manager = DefaultDiskManager::new(db_name).expect("should create disk manager");
 
         // Only allocate 1 frame of memory to the buffer pool manager.
-        let bpm = BufferPoolManager::new(1, Arc::new(Mutex::new(disk_manager)), Some(k), None);
+        let bpm = BufferPoolManager::builder()
+            .with_pool_size(1)
+            .with_disk_manager(disk_manager)
+            .with_lru_k_eviction_policy(k)
+            .build_arc();
 
         for i in 0..rounds {
             // This signal tells the readers that they can start reading after the main thread has already taken the read latch.

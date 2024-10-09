@@ -17,8 +17,11 @@ mod tests {
     fn bucket_page_sample() {
         type Key = u64;
         type Value = u16;
-        let disk_mgr = Arc::new(Mutex::new(DiskManagerUnlimitedMemory::new()));
-        let bpm = BufferPoolManager::new(5, disk_mgr, None, None);
+
+        let bpm = BufferPoolManager::builder()
+            .with_pool_size(5)
+            .with_disk_manager(DiskManagerUnlimitedMemory::new())
+            .build_arc();
 
         {
             let mut guard = bpm.new_page(AccessType::Unknown).expect("Should be able to create new page");
@@ -77,8 +80,10 @@ mod tests {
         type Key = u64;
         type Value = u16;
 
-        let disk_mgr = Arc::new(Mutex::new(DiskManagerUnlimitedMemory::new()));
-        let bpm = BufferPoolManager::new(5, disk_mgr, None, None);
+        let bpm = BufferPoolManager::builder()
+            .with_pool_size(5)
+            .with_disk_manager(DiskManagerUnlimitedMemory::new())
+            .build_arc();
 
 
 

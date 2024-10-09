@@ -56,8 +56,11 @@ mod tests {
     }
 
     fn create_extendible_hash_table(pool_size: usize) -> DiskHashTable<{ bucket_array_size::<TestKey, TestValue>() }, TestKey, TestValue, OrdComparator<TestKey>, DefaultKeyHasher> {
-        let disk_manager = Arc::new(Mutex::new(DiskManagerUnlimitedMemory::new()));
-        let bpm = BufferPoolManager::new(4, disk_manager, Some(2), None);
+        let bpm = BufferPoolManager::builder()
+            .with_pool_size(4)
+            .with_disk_manager(DiskManagerUnlimitedMemory::new())
+            .with_lru_k_eviction_policy(2)
+            .build_arc();
 
         DiskHashTable::new(
             "temp".to_string(),
@@ -332,8 +335,11 @@ mod tests {
 
     #[test]
     fn test_from_example_in_single_directory() {
-        let disk_manager = Arc::new(Mutex::new(DiskManagerUnlimitedMemory::new()));
-        let bpm = BufferPoolManager::new(100, disk_manager, Some(100), None);
+        let bpm = BufferPoolManager::builder()
+            .with_pool_size(100)
+            .with_disk_manager(DiskManagerUnlimitedMemory::new())
+            .with_lru_k_eviction_policy(100)
+            .build_arc();
 
         type Key = u64;
         type Value = u64;
@@ -553,8 +559,12 @@ mod tests {
 
     #[test]
     fn lifecycle_small_number_of_keys() {
-        let disk_manager = Arc::new(Mutex::new(DiskManagerUnlimitedMemory::new()));
-        let bpm = BufferPoolManager::new(4, disk_manager, Some(2), None);
+
+        let bpm = BufferPoolManager::builder()
+            .with_pool_size(4)
+            .with_disk_manager(DiskManagerUnlimitedMemory::new())
+            .with_lru_k_eviction_policy(2)
+            .build_arc();
 
         type Key = u64;
         type Value = u64;
@@ -584,8 +594,11 @@ mod tests {
 
     #[test]
     fn thread_safety_test() {
-        let disk_manager = Arc::new(Mutex::new(DiskManagerUnlimitedMemory::new()));
-        let bpm = BufferPoolManager::new(100, disk_manager, Some(2), None);
+        let bpm = BufferPoolManager::builder()
+            .with_pool_size(100)
+            .with_disk_manager(DiskManagerUnlimitedMemory::new())
+            .with_lru_k_eviction_policy(2)
+            .build_arc();
 
         type Key = u64;
         type Value = u64;

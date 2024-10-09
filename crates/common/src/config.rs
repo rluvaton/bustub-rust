@@ -14,7 +14,6 @@ pub const INVALID_LSN: LSN = -1;                                               /
 pub const INVALID_TIMESTAMP: Timestamp = -1;
 
 pub const BUCKET_SIZE: usize = 50;                                               // size of extendible hash bucket
-pub const LRUK_REPLACER_K: usize = 10;  // lookback window for lru-k replacer
 
 pub type TxnId = i64; // transaction id type (in cpp it was `txn_id_t`)
 pub type AtomicTxnId = AtomicI64; // std::atomic<txn_id_t>

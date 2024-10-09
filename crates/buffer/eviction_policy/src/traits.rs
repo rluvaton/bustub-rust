@@ -1,7 +1,25 @@
 use buffer_common::{AccessType, FrameId};
 
+pub trait EvictionPolicyCreator {
+    /// The specific eviction policy options
+    type Options;
+
+
+    /// Create eviction policy from number of frames and the specific policy options
+    ///
+    /// # Arguments
+    ///
+    /// * `num_frames`: the maximum number of frames the policy will be required to store
+    /// * `options`: the specific eviction policy options
+    ///
+    /// returns: EvictionPolicy
+    ///
+    fn new(number_of_frames: usize, option: Self::Options) -> Self;
+}
+
 /// Replacement Policy for the buffer pool, this is not promised to be thread safe
-pub trait EvictionPolicy {
+pub trait EvictionPolicy: Send {
+
     /// Find the frame with to evict and evict that frame. Only frames
     /// that are marked as `evictable` are candidates for eviction.
     ///

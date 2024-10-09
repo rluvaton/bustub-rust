@@ -37,7 +37,7 @@ struct DiskSchedulerWorker {
 type DiskSchedulerPromise = Promise<bool>;
 
 impl DiskScheduler {
-    pub fn new(disk_manager: Arc<Mutex<impl DiskManager + 'static>>) -> Self {
+    pub fn new<D: DiskManager + 'static>(disk_manager: Arc<Mutex<D>>) -> Self {
         // let (sender, receiver) = mpsc::channel();
 
         let channel = Arc::new(Channel::new());
@@ -99,7 +99,7 @@ impl DiskSchedulerWorker {
      * The background thread needs to process requests while the DiskScheduler exists, i.e., this function should not
      * return until ~DiskScheduler() is called. At that point you need to make sure that the function does return.
      */
-    fn new(disk_manager: Arc<Mutex<dyn DiskManager + Send + Sync>>, receiver: Arc<Channel<DiskSchedulerWorkerMessage>>) -> DiskSchedulerWorker {
+    fn new<D: DiskManager + Send + Sync + 'static>(disk_manager: Arc<Mutex<D>>, receiver: Arc<Channel<DiskSchedulerWorkerMessage>>) -> DiskSchedulerWorker {
         let thread = Builder::new()
             .name("Disk Scheduler".to_string())
             .spawn(move || {

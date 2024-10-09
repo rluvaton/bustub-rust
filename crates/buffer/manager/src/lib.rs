@@ -7,6 +7,7 @@ mod traits;
 
 #[cfg(test)]
 mod multi_threads_tests;
+mod builder;
 
 pub use manager::BufferPoolManager;
 pub use page_guards::*;

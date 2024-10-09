@@ -207,14 +207,12 @@ fn main() {
     let disk_manager = DiskManagerUnlimitedMemory::new();
 
 
-    let disk_manager = Arc::new(Mutex::new(disk_manager));
-
-    let bpm: Arc<BufferPoolManager> = BufferPoolManager::new(
-        bustub_bpm_size,
-        Arc::clone(&disk_manager),
-        Some(lru_k_size),
-        None, /* log manager */
-    );
+    let bpm = BufferPoolManager::builder()
+        .with_pool_size(bustub_bpm_size)
+        .with_disk_manager(DiskManagerUnlimitedMemory::new())
+        // .with_disk_manager(DefaultDiskManager::new(db_name).expect("should create disk manager"))
+        .with_lru_k_eviction_policy(lru_k_size)
+        .build_arc();
     let page_ids: Arc<RwLock<Vec<PageId>>> = Arc::new(RwLock::new(vec![]));
 
     init_pages(bustub_page_cnt, &bpm, &page_ids);

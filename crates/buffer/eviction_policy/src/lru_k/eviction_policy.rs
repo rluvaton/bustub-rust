@@ -7,6 +7,8 @@ use super::counter::AtomicI64Counter;
 use super::store::Store;
 use buffer_common::{AccessType, FrameId};
 use crate::EvictionPolicy;
+use crate::lru_k::LRUKOptions;
+use crate::traits::EvictionPolicyCreator;
 
 /**
  * LRUKEvictionPolicy implements the LRU-k replacement policy.
@@ -23,7 +25,6 @@ use crate::EvictionPolicy;
 pub struct LRUKEvictionPolicy {
     store: Store,
     replacer_size: usize,
-    k: usize,
 
     // Tracks the number of evictable frames
     evictable_frames: usize,
@@ -31,29 +32,9 @@ pub struct LRUKEvictionPolicy {
     history_access_counter: Arc<AtomicI64Counter>,
 }
 
-// TODO - can remove this?
 unsafe impl Send for LRUKEvictionPolicy {}
 
-
 impl LRUKEvictionPolicy {
-    /// a new `LRUKEvictionPolicy`
-    ///
-    /// # Arguments
-    ///
-    /// * `num_frames`: the maximum number of frames the LRUReplacer will be required to store
-    /// * `k`: the `k` in the LRU-K
-    ///
-    /// returns: LRUKEvictionPolicy
-    ///
-    pub fn new(num_frames: usize, k: usize) -> Self {
-        Self {
-            store: Store::with_capacity(k, num_frames),
-            k,
-            replacer_size: num_frames,
-            evictable_frames: 0,
-            history_access_counter: Arc::new(AtomicI64Counter::default()),
-        }
-    }
 
     fn is_valid_frame_id(&self, frame_id: FrameId) -> bool {
         self.replacer_size > frame_id as usize
@@ -107,6 +88,27 @@ impl LRUKEvictionPolicy {
     }
 }
 
+impl EvictionPolicyCreator for LRUKEvictionPolicy {
+    type Options = LRUKOptions;
+
+    /// a new `LRUKEvictionPolicy`
+    ///
+    /// # Arguments
+    ///
+    /// * `num_frames`: the maximum number of frames the LRUReplacer will be required to store
+    /// * `k`: the `k` in the LRU-K
+    ///
+    /// returns: LRUKEvictionPolicy
+    ///
+    fn new(num_frames: usize, options: LRUKOptions) -> Self {
+        Self {
+            store: Store::with_capacity(options.k, num_frames),
+            replacer_size: num_frames,
+            evictable_frames: 0,
+            history_access_counter: Arc::new(AtomicI64Counter::default()),
+        }
+    }
+}
 
 impl EvictionPolicy for LRUKEvictionPolicy {
     /// Find the frame with the largest backward k-distance and evict that frame. Only frames
