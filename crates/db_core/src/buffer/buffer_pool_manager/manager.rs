@@ -5,13 +5,13 @@ use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use common::{Future, Promise, SharedFuture, SharedPromise, UnsafeSingleRefData, UnsafeSingleRefMutData};
 use crate::buffer::buffer_pool_manager::*;
-use crate::buffer::{LRUKReplacer, Replacer};
 use disk_storage::{DiskManager, DiskScheduler, ReadDiskRequest, WriteDiskRequest};
 use pages::{Page, PageAndGuard, PageAndReadGuard, PageAndWriteGuard, AtomicPageId, PageData, PageId, INVALID_PAGE_ID};
 
 #[cfg(feature = "tracing")]
 use tracy_client::span;
 use buffer_common::AccessType;
+use eviction_policy::{LRUKReplacer, Replacer};
 use recovery_log_manager::LogManager;
 
 ///

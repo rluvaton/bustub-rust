@@ -9,6 +9,7 @@ pages = {path = "../storage/pages"}
 disk_storage = {path = "../storage/disk"}
 
 buffer_common = {path = "../buffer/common"}
+eviction_policy = {path = "../buffer/eviction_policy"}
 
 recovery_log_manager = {path = "../recovery/log_manager"}
 
@@ -34,14 +35,13 @@ rand = "0.8"
 rand_chacha = "0.3.1"
 
 # Make sure to sync this version with the one in the dev-dependencies
-parking_lot = { version = "0.12.3", features = ["default"] }
+parking_lot = "0.12.3"
 derive_builder = "0.20.0"
 num-format = "0.4.4"
 mut-binary-heap = "0.1.0"
 
 # Profiling
 tracy-client = { version = "0.17.3", default-features = false}
-bit-vec = "0.8.0"
 
 [dev-dependencies]
 tempdir = "0.3.7"
@@ -55,4 +55,4 @@ debug = true
 [features]
 default = []
 statistics = []
-tracing = ["tracy-client/enable"]
+tracing = ["tracy-client/enable", "eviction_policy/tracing"]

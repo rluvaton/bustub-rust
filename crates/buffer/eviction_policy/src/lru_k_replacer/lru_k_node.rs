@@ -18,7 +18,7 @@ pub const NO_HEAP_POS: usize = usize::MAX;
 
 // TODO - make it possible to reuse easily
 #[derive(Clone, Debug)]
-pub(in crate::buffer) struct LRUKNode {
+pub(crate) struct LRUKNode {
     /// History of last seen K timestamps of this page. Least recent timestamp stored in front
     /// in cpp it was std::list<size_t>
     history: FixedSizeLinkedList<HistoryRecord>,

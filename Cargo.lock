@@ -376,7 +376,6 @@ version = "0.1.0"
 dependencies = [
  "atomic",
  "binary_utils",
- "bit-vec",
  "buffer_common",
  "bytemuck",
  "chrono",
@@ -387,6 +386,7 @@ dependencies = [
  "derive_builder",
  "disk_storage",
  "error_utils",
+ "eviction_policy",
  "generics",
  "mut-binary-heap",
  "num-format",
@@ -490,6 +490,17 @@ dependencies = [
 [[package]]
 name = "eviction_policy"
 version = "0.1.0"
+dependencies = [
+ "bit-vec",
+ "buffer_common",
+ "common",
+ "data_structures",
+ "pages",
+ "parking_lot",
+ "rand 0.8.5",
+ "rand_chacha",
+ "tracy-client",
+]
 
 [[package]]
 name = "fixedbitset"

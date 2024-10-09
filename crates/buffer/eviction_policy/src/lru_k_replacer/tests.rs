@@ -1,6 +1,5 @@
 #[cfg(test)]
 mod tests {
-    use crate::buffer::{LRUKReplacer, Replacer};
     use buffer_common::AccessType;
 
     use common::config::FrameId;
@@ -12,6 +11,7 @@ mod tests {
     use std::thread::{sleep, JoinHandle};
     use std::time::Duration;
     use parking_lot::Mutex;
+    use crate::{LRUKReplacer, Replacer};
 
     #[test]
     fn sample() {

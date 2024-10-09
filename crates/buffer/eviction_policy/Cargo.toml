@@ -4,3 +4,24 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+common = {path = "../../common"}
+data_structures = {path = "../../data_structures"}
+
+pages = {path = "../../storage/pages"}
+
+buffer_common = {path = "../common"}
+
+bit-vec = "0.8.0"
+rand = "0.8"
+rand_chacha = "0.3.1"
+parking_lot = "0.12.3"
+
+# Profiling
+tracy-client = { version = "0.17.3", default-features = false}
+
+[profile.bench]
+debug = true
+
+[features]
+default = []
+tracing = ["tracy-client/enable"]

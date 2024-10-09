@@ -5,10 +5,10 @@ use tracy_client::span;
 
 use super::counter::AtomicI64Counter;
 use super::lru_k_replacer_store::LRUKReplacerStore;
-use crate::buffer::{Replacer};
 use buffer_common::AccessType;
 use common::config::FrameId;
-use crate::buffer::replacer::lru_k_replacer::lru_node_trait::LRUNode;
+use crate::lru_k_replacer::lru_node_trait::LRUNode;
+use crate::Replacer;
 
 /**
  * LRUKReplacer implements the LRU-k replacement policy.
@@ -66,7 +66,7 @@ impl LRUKReplacer {
     }
 
     /// Helper for debugging in tests
-    pub(in crate::buffer) fn get_order_of_eviction(&self) -> Vec<FrameId> {
+    pub(crate) fn get_order_of_eviction(&self) -> Vec<FrameId> {
         self.store.clone().get_order_of_eviction()
     }
 
