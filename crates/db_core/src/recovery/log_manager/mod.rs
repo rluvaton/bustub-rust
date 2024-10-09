@@ -1,11 +1,11 @@
 mod manager_impl;
+mod types;
 
-use common::config::{AtomicLSN, LOG_BUFFER_SIZE};
+use common::config::{AtomicLSN};
 use parking_lot::{Condvar, Mutex};
 use disk_storage::DiskManager;
 
-pub type LogBuffer = [u8; LOG_BUFFER_SIZE];
-pub type FlushBuffer = [u8; LOG_BUFFER_SIZE];
+pub use types::*;
 
 pub struct LogManager {
 

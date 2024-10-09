@@ -12,10 +12,7 @@ use std::sync::atomic::{AtomicI32, AtomicI64, AtomicU32};
 pub const INVALID_TXN_ID: TxnId = -1;                                            // invalid transaction id
 pub const INVALID_LSN: LSN = -1;                                               // invalid log sequence number
 pub const INVALID_TIMESTAMP: Timestamp = -1;
-pub const BUFFER_POOL_SIZE: usize = 10;                                          // size of buffer pool
 
-#[deprecated(note = "ONCE USED MOVE TO THE DESIGNATED CRATE AND CHANGE IT TO `(BUFFER_POOL_SIZE + 1) * BUSTUB_PAGE_SIZE`")]
-pub const LOG_BUFFER_SIZE: usize = 0;  // size of a log buffer in byte
 pub const BUCKET_SIZE: usize = 50;                                               // size of extendible hash bucket
 pub const LRUK_REPLACER_K: usize = 10;  // lookback window for lru-k replacer
 
