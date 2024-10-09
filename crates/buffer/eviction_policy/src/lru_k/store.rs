@@ -323,17 +323,17 @@ impl Store {
 
     // Check if less than or equal to
     fn compares_le(&self, a: FrameId, b: FrameId) -> bool {
-        unsafe { self.get_node_by_frame_unchecked(a).interval <= self.get_node_by_frame_unchecked(b).interval }
+        unsafe { self.get_node_by_frame_unchecked(a).get_interval() <= self.get_node_by_frame_unchecked(b).get_interval() }
     }
 
     // Check if less than
     fn compares_lt(&self, a: FrameId, b: FrameId) -> bool {
-        unsafe { self.get_node_by_frame_unchecked(a).interval < self.get_node_by_frame_unchecked(b).interval }
+        unsafe { self.get_node_by_frame_unchecked(a).get_interval() < self.get_node_by_frame_unchecked(b).get_interval() }
     }
 
     // Check if greater than or equal to
     fn compares_ge(&self, a: FrameId, b: FrameId) -> bool {
-        unsafe { self.get_node_by_frame_unchecked(a).interval >= self.get_node_by_frame_unchecked(b).interval }
+        unsafe { self.get_node_by_frame_unchecked(a).get_interval() >= self.get_node_by_frame_unchecked(b).get_interval() }
     }
 
     unsafe fn get_node_by_frame_unchecked(&self, frame_id: FrameId) -> &LRUKNode {

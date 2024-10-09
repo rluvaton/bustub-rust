@@ -20,7 +20,7 @@ pub(crate) struct LRUKNode {
     /// in cpp it was std::list<size_t>
     history: FixedSizeLinkedList<HistoryRecord>,
 
-    pub(super) interval: i64,
+    interval: i64,
     heap_pos: usize,
 }
 
@@ -72,6 +72,11 @@ impl LRUKNode {
     #[inline(always)]
     pub(super) fn set_heap_pos(&mut self, heap_pos: usize) {
         self.heap_pos = heap_pos;
+    }
+
+    #[inline(always)]
+    pub(super) fn get_interval(&self) -> i64 {
+        self.interval
     }
 
     pub(super) fn reuse(&mut self, counter: &AtomicI64Counter) {
