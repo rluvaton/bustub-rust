@@ -360,13 +360,15 @@ fn main() {
 
     total_metrics.lock().report();
 
-    println!("\n\n");
-    println!("###################");
-    println!("       Stats       ");
-    println!("###################");
-    println!();
     #[cfg(feature = "statistics")]
-    println!("{}", bpm.clone().get_stats());
+    {
+        println!("\n\n");
+        println!("###################");
+        println!("       Stats       ");
+        println!("###################");
+        println!();
+        println!("{}", bpm.clone().get_stats());
+    }
 }
 
 fn init_pages(bustub_page_cnt: usize, bpm: &Arc<BufferPoolManager>, page_ids: &Arc<RwLock<Vec<PageId>>>) {
