@@ -1,6 +1,11 @@
 [package]
-name = "log_manager"
+name = "recovery_log_manager"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+common = {path = "../../common"}
+pages = {path = "../../storage/pages"}
+disk_storage = {path = "../../storage/disk"}
+
+parking_lot = "0.12.3"

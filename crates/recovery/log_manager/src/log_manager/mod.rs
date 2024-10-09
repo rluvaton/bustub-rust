@@ -1,11 +1,9 @@
 mod manager_impl;
-mod types;
 
 use common::config::{AtomicLSN};
 use parking_lot::{Condvar, Mutex};
 use disk_storage::DiskManager;
-
-pub use types::*;
+use crate::types::{FlushBuffer, LogBuffer};
 
 pub struct LogManager {
 

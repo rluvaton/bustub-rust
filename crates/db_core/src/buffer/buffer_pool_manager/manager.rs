@@ -6,12 +6,12 @@ use std::sync::Arc;
 use common::{Future, Promise, SharedFuture, SharedPromise, UnsafeSingleRefData, UnsafeSingleRefMutData};
 use crate::buffer::buffer_pool_manager::*;
 use crate::buffer::{AccessType, LRUKReplacer, Replacer};
-use crate::recovery::LogManager;
 use disk_storage::{DiskManager, DiskScheduler, ReadDiskRequest, WriteDiskRequest};
 use pages::{Page, PageAndGuard, PageAndReadGuard, PageAndWriteGuard, AtomicPageId, PageData, PageId, INVALID_PAGE_ID};
 
 #[cfg(feature = "tracing")]
 use tracy_client::span;
+use recovery_log_manager::LogManager;
 
 ///
 /// BufferPoolManager reads disk pages to and from its internal buffer pool.

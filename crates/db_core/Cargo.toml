@@ -7,6 +7,8 @@ edition = "2021"
 common = {path = "../common"}
 pages = {path = "../storage/pages"}
 disk_storage = {path = "../storage/disk"}
+recovery_log_manager = {path = "../recovery/log_manager"}
+
 rid = {path = "../rid"}
 binary_utils = {path = "../binary_utils"}
 generics = {path = "../generics"}

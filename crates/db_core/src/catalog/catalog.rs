@@ -5,7 +5,7 @@ use crate::buffer::BufferPoolManager;
 use crate::catalog::IndexInfo;
 use crate::catalog::table_info::TableInfo;
 use crate::concurrency::LockManager;
-use crate::recovery::LogManager;
+use recovery_log_manager::LogManager;
 
 pub struct Catalog {
     #[allow(unused)]
