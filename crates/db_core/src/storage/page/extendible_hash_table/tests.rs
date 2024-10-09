@@ -3,10 +3,11 @@ mod tests {
     use buffer_pool_manager::{BufferPool, BufferPoolManager};
     use buffer_common::AccessType;
 
-    use crate::storage::{hash_table_bucket_array_size, ExtendibleHashBucketPageInsertionErrors, ExtendibleHashTableBucketPage, ExtendibleHashTableDirectoryPage, ExtendibleHashTableHeaderPage, OrdComparator};
+    use crate::storage::{hash_table_bucket_array_size, ExtendibleHashBucketPageInsertionErrors, ExtendibleHashTableBucketPage, ExtendibleHashTableDirectoryPage, ExtendibleHashTableHeaderPage};
     use pages::{PageId, INVALID_PAGE_ID};
     use parking_lot::Mutex;
     use std::sync::Arc;
+    use common::OrdComparator;
     use disk_storage::DiskManagerUnlimitedMemory;
 
     #[test]

@@ -1,6 +1,6 @@
-use common::{PageKey, PageValue};
+use common::{Comparator, PageKey, PageValue};
 use crate::container::KeyHasher;
-use crate::storage::{Comparator, ExtendibleHashTableBucketPage, ExtendibleHashTableDirectoryPage, ExtendibleHashTableHeaderPage};
+use crate::storage::{ExtendibleHashTableBucketPage, ExtendibleHashTableDirectoryPage, ExtendibleHashTableHeaderPage};
 use super::DiskExtendibleHashTable;
 
 /// Type aliases to be used for easy access to types with generic or other

@@ -8,6 +8,7 @@ mod unsafe_single_reference_data;
 mod page_traits;
 mod on_panic_hooks;
 mod shared_promise;
+mod comparator;
 
 pub use promise::{Promise, Future};
 pub use shared_promise::{SharedPromise, SharedFuture};
@@ -17,3 +18,4 @@ pub use string_helpers::*;
 pub use unsafe_single_reference_data::*;
 pub use page_traits::{PageValue, PageKey};
 pub use on_panic_hooks::*;
+pub use comparator::*;

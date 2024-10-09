@@ -1,9 +1,8 @@
 use super::super::type_alias_trait::TypeAliases;
 use super::super::HashTable;
 use crate::container::hash::KeyHasher;
-use crate::storage::Comparator;
 use pages::{PageId, INVALID_PAGE_ID};
-use common::{PageKey, PageValue};
+use common::{Comparator, PageKey, PageValue};
 use error_utils::Context;
 use std::fmt::Debug;
 use std::sync::Arc;

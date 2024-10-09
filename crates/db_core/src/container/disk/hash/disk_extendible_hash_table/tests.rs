@@ -4,9 +4,9 @@ mod tests {
     use crate::catalog::Schema;
     use crate::container::test_util::U64IdentityKeyHasher;
     use crate::container::{DefaultKeyHasher, DiskExtendibleHashTable, KeyHasher};
-    use crate::storage::{hash_table_bucket_array_size, Comparator, GenericComparator, GenericKey, OrdComparator, U64Comparator};
+    use crate::storage::{hash_table_bucket_array_size, GenericComparator, GenericKey};
     use pages::{PageId, PAGE_SIZE};
-    use common::{PageKey, PageValue};
+    use common::{Comparator, OrdComparator, PageKey, PageValue, U64Comparator};
     use rid::RID;
     use generics::Shuffle;
     use parking_lot::Mutex;

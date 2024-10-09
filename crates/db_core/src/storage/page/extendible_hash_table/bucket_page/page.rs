@@ -1,6 +1,6 @@
-use crate::storage::{Comparator, ExtendibleHashBucketPageInsertionErrors, OrdComparator};
+use crate::storage::{ExtendibleHashBucketPageInsertionErrors};
 use pages::PAGE_SIZE;
-use common::{PageKey, PageValue};
+use common::{Comparator, OrdComparator, PageKey, PageValue};
 use prettytable::{row, Table};
 use std::cmp::Ordering;
 use std::fmt::{Debug, Formatter};

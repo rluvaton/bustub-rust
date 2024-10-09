@@ -1,7 +1,8 @@
 use crate::catalog::Schema;
-use crate::storage::{Comparator, GenericKey};
+use crate::storage::{GenericKey};
 use std::cmp::Ordering;
 use std::sync::Arc;
+use common::Comparator;
 
 #[derive(Clone)]
 pub struct GenericComparator<const KEY_SIZE: usize> {
