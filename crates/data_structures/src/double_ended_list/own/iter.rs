@@ -36,3 +36,5 @@ impl<'a, T: 'a> Iterator for FixedSizeLinkedListIter<'a, T> {
         (len, Some(len))
     }
 }
+
+impl<T> ExactSizeIterator for FixedSizeLinkedListIter<'_, T> {}

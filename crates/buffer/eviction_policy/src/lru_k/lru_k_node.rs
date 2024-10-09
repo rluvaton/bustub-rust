@@ -1,15 +1,12 @@
-use super::AtomicI64Counter;
+use super::HistoryRecord;
+use crate::lru_k::history_record_producer::{HistoryRecordProducer, HistoryRecordProducerExt};
 use data_structures::{DoubleEndedList, FixedSizeLinkedList};
 
-// Global counter
-// Not using timestamp as it is slower
-type HistoryRecord = i64;
-
-const INF_COUNTER: i64 = i64::MAX;
+const INF_COUNTER: HistoryRecord = HistoryRecordProducer::MAX;
 
 // In order to avoid getting the last message id ever created (right) when wanting to calculate the interval,
 // we will use this large number that we will never reach and consider it as current value
-const IMAGINARY_NOW: i64 = i64::MAX / 2;
+const IMAGINARY_NOW: HistoryRecord = HistoryRecordProducer::MAX / 2;
 
 pub const NO_HEAP_POS: usize = usize::MAX;
 
@@ -49,8 +46,8 @@ impl LRUKNode {
         IMAGINARY_NOW - first_access
     }
 
-    fn get_new_access_record(counter: &AtomicI64Counter) -> HistoryRecord {
-        counter.get_next()
+    fn get_new_access_record(producer: &mut HistoryRecordProducer) -> HistoryRecord {
+        producer.next()
     }
 
     #[must_use]
@@ -79,7 +76,7 @@ impl LRUKNode {
         self.interval
     }
 
-    pub(super) fn reuse(&mut self, counter: &AtomicI64Counter) {
+    pub(super) fn reuse(&mut self, counter: &mut HistoryRecordProducer) {
         self.history.start_over();
 
         let now = Self::get_new_access_record(counter);
@@ -89,7 +86,7 @@ impl LRUKNode {
         self.heap_pos = NO_HEAP_POS;
     }
 
-    pub(super) fn marked_accessed(&mut self, counter: &AtomicI64Counter) {
+    pub(super) fn marked_accessed(&mut self, counter: &mut HistoryRecordProducer) {
         // LRU-K evicts the page whose K-th most recent access is furthest in the past.
         // So we only need to calculate
 

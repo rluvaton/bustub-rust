@@ -1,5 +1,5 @@
 // Heap implementation greatly influenced by https://github.com/Wasabi375/mut-binary-heap
-use super::{LRUKNode, AtomicI64Counter};
+use super::{LRUKNode, HistoryRecordProducer};
 use core::mem::swap;
 use std::collections::HashMap;
 use std::hash::Hash;
@@ -57,7 +57,7 @@ impl Store {
         frames
     }
 
-    pub fn add_non_evictable_node(&mut self, frame_id: FrameId, history_access_counter: &Arc<AtomicI64Counter>) {
+    pub fn add_non_evictable_node(&mut self, frame_id: FrameId, history_access_counter: &mut HistoryRecordProducer) {
         let node = &mut self.all[frame_id as usize];
         node.reuse(history_access_counter);
         self.can_use.set(frame_id as usize, true);

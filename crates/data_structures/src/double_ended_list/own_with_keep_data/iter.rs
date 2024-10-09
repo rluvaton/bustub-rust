@@ -36,3 +36,4 @@ impl<'a, T: 'a + Copy> Iterator for FixedSizeLinkedListWithoutOptionIter<'a, T> 
         (len, Some(len))
     }
 }
+impl<T: Copy> ExactSizeIterator for FixedSizeLinkedListWithoutOptionIter<'_, T> {}

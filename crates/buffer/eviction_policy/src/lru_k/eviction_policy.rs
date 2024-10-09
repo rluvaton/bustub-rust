@@ -3,10 +3,11 @@ use std::sync::Arc;
 #[cfg(feature = "tracing")]
 use tracy_client::span;
 
-use super::counter::AtomicI64Counter;
 use super::store::Store;
 use buffer_common::{AccessType, FrameId};
 use crate::EvictionPolicy;
+use crate::lru_k::history_record_producer::HistoryRecordProducerExt;
+use super::HistoryRecordProducer;
 use crate::lru_k::LRUKOptions;
 use crate::traits::EvictionPolicyCreator;
 
@@ -21,7 +22,7 @@ use crate::traits::EvictionPolicyCreator;
  * +inf as its backward k-distance. When multiple frames have +inf backward k-distance,
  * classical LRU algorithm is used to choose victim.
  */
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct LRUKEvictionPolicy {
     store: Store,
     replacer_size: usize,
@@ -29,7 +30,7 @@ pub struct LRUKEvictionPolicy {
     // Tracks the number of evictable frames
     evictable_frames: usize,
 
-    history_access_counter: Arc<AtomicI64Counter>,
+    history_access_counter: HistoryRecordProducer,
 }
 
 unsafe impl Send for LRUKEvictionPolicy {}
@@ -70,7 +71,7 @@ impl LRUKEvictionPolicy {
             // Not inserting to evictable frames as new frame is not evictable by default
             self.store.add_non_evictable_node(
                 frame_id,
-                &self.history_access_counter,
+                &mut self.history_access_counter,
             );
 
             return;
@@ -78,7 +79,7 @@ impl LRUKEvictionPolicy {
 
         let node = node.unwrap();
 
-        node.marked_accessed(&self.history_access_counter);
+        node.marked_accessed(&mut self.history_access_counter);
 
         // if evictable, the node should be reinserted as it's location would be updated
         if node.is_evictable() {
@@ -105,7 +106,7 @@ impl EvictionPolicyCreator for LRUKEvictionPolicy {
             store: Store::with_capacity(options.k, num_frames),
             replacer_size: num_frames,
             evictable_frames: 0,
-            history_access_counter: Arc::new(AtomicI64Counter::default()),
+            history_access_counter: HistoryRecordProducer::init(),
         }
     }
 }
