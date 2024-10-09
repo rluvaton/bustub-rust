@@ -14,7 +14,7 @@ members = [
     "crates/rid",
 
     "crates/storage/pages",
-    "crates/storage/disk",
+    "crates/storage/disk", "crates/recovery/log_manager",
 ]
 
 [profile.bench]
