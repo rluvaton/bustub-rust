@@ -171,7 +171,12 @@ mod metrics;
 // get: 237713.67621079297
 // >>> END
 
-
+// Remove atomic and arc from lru-k
+// Release:
+// <<< BEGIN
+// scan: 217037.53208226393
+// get: 242322.38925369154
+// >>> END
 
 fn setup() -> TempDir {
     TempDir::new("bpm_bench").expect("Should create tmp directory")
