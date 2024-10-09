@@ -1,24 +1,25 @@
 #[cfg(test)]
 mod tests {
-    use buffer_pool_manager::BufferPoolManager;
-    use crate::catalog::Schema;
     use crate::container::test_util::U64IdentityKeyHasher;
     use crate::container::{DefaultKeyHasher, DiskExtendibleHashTable, KeyHasher};
-    use crate::storage::{hash_table_bucket_array_size, GenericComparator, GenericKey};
-    use pages::{PageId, PAGE_SIZE};
+    use crate::storage::{hash_table_bucket_array_size};
+    use buffer_pool_manager::BufferPoolManager;
     use common::{Comparator, OrdComparator, PageKey, PageValue, U64Comparator};
-    use rid::RID;
+    use disk_storage::DiskManagerUnlimitedMemory;
     use generics::Shuffle;
+    use pages::PAGE_SIZE;
     use parking_lot::Mutex;
     use rand::seq::SliceRandom;
     use rand::{thread_rng, Rng, SeedableRng};
     use rand_chacha::ChaChaRng;
     use std::collections::HashSet;
-    use std::sync::Arc;
     use std::sync::atomic::{AtomicBool, Ordering};
+    use std::sync::Arc;
     use std::sync::Barrier;
     use std::thread;
-    use disk_storage::DiskManagerUnlimitedMemory;
+
+    type TestKey = u32;
+    type TestValue = u64;
 
     fn panic_on_deadlock() -> (Arc<AtomicBool>, thread::JoinHandle<()>) {
         use std::thread;
@@ -55,16 +56,14 @@ mod tests {
         (finished, handle)
     }
 
-    fn create_extendible_hash_table(pool_size: usize) -> DiskExtendibleHashTable<{ hash_table_bucket_array_size::<GenericKey<8>, RID>() }, GenericKey<8>, RID, GenericComparator<8>, DefaultKeyHasher> {
+    fn create_extendible_hash_table(pool_size: usize) -> DiskExtendibleHashTable<{ hash_table_bucket_array_size::<TestKey, TestValue>() }, TestKey, TestValue, OrdComparator<TestKey>, DefaultKeyHasher> {
         let disk_manager = Arc::new(Mutex::new(DiskManagerUnlimitedMemory::new()));
         let bpm = BufferPoolManager::new(4, disk_manager, Some(2), None);
-
-        let key_schema = Schema::parse_create_statement("a bigint").expect("Should be able to create schema");
 
         DiskExtendibleHashTable::new(
             "temp".to_string(),
             bpm,
-            GenericComparator::from(key_schema),
+            OrdComparator::default(),
             None,
             None,
             None,
@@ -300,16 +299,11 @@ mod tests {
         let hash_table = create_extendible_hash_table(4);
 
         // Having enough keys so a split would happen
-        let total = (PAGE_SIZE * 100) as i64;
+        let total = (PAGE_SIZE * 100);
 
-        let mut key = GenericKey::<8>::default();
-        let mut value = RID::default();
 
         for i in 0..total {
-            key.set_from_integer(i);
-            value.set(i as PageId, i as u32);
-
-            assert_eq!(hash_table.get_value(&key, None), Ok(vec![]), "should not find values for key {}", i);
+            assert_eq!(hash_table.get_value(&(i as TestKey), None), Ok(vec![]), "should not find values for key {}", i);
         }
     }
 
@@ -320,8 +314,8 @@ mod tests {
         // Having enough keys so a split would happen
         let total = (PAGE_SIZE * 100) as i64;
         test_lifecycle(hash_table, total, |i| (
-            GenericKey::<8>::new_from_integer(i),
-            RID::new(i as PageId, i as u32)
+            i as TestKey,
+            i as TestValue,
         ));
     }
 
@@ -332,8 +326,8 @@ mod tests {
         // Having enough keys so a split would happen
         let total = (PAGE_SIZE * 100) as i64;
         test_lifecycle(hash_table, total, |i| (
-            GenericKey::<8>::new_from_integer(i),
-            RID::new(i as PageId, i as u32)
+            i as TestKey,
+            i as TestValue,
         ));
     }
 
