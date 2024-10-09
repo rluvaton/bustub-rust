@@ -1,7 +1,7 @@
 use buffer_common::{AccessType, FrameId};
 
 /// Replacement Policy for the buffer pool, this is not promised to be thread safe
-pub trait Replacer {
+pub trait EvictionPolicy {
     /// Find the frame with to evict and evict that frame. Only frames
     /// that are marked as `evictable` are candidates for eviction.
     ///

@@ -4,13 +4,12 @@ use std::sync::Arc;
 use tracy_client::span;
 
 use super::counter::AtomicI64Counter;
-use super::lru_k_replacer_store::LRUKReplacerStore;
+use super::store::Store;
 use buffer_common::{AccessType, FrameId};
-use crate::lru_k_replacer::lru_node_trait::LRUNode;
-use crate::Replacer;
+use crate::EvictionPolicy;
 
 /**
- * LRUKReplacer implements the LRU-k replacement policy.
+ * LRUKEvictionPolicy implements the LRU-k replacement policy.
  *
  * The LRU-k algorithm evicts a frame whose backward k-distance is maximum
  * of all frames. Backward k-distance is computed as the difference in time between
@@ -21,8 +20,8 @@ use crate::Replacer;
  * classical LRU algorithm is used to choose victim.
  */
 #[derive(Clone, Debug)]
-pub struct LRUKReplacer {
-    store: LRUKReplacerStore,
+pub struct LRUKEvictionPolicy {
+    store: Store,
     replacer_size: usize,
     k: usize,
 
@@ -33,22 +32,22 @@ pub struct LRUKReplacer {
 }
 
 // TODO - can remove this?
-unsafe impl Send for LRUKReplacer {}
+unsafe impl Send for LRUKEvictionPolicy {}
 
 
-impl LRUKReplacer {
-    /// a new `LRUKReplacerImpl`
+impl LRUKEvictionPolicy {
+    /// a new `LRUKEvictionPolicy`
     ///
     /// # Arguments
     ///
     /// * `num_frames`: the maximum number of frames the LRUReplacer will be required to store
     /// * `k`: the `k` in the LRU-K
     ///
-    /// returns: LRUKReplacerImpl
+    /// returns: LRUKEvictionPolicy
     ///
     pub fn new(num_frames: usize, k: usize) -> Self {
         Self {
-            store: LRUKReplacerStore::with_capacity(k, num_frames),
+            store: Store::with_capacity(k, num_frames),
             k,
             replacer_size: num_frames,
             evictable_frames: 0,
@@ -109,7 +108,7 @@ impl LRUKReplacer {
 }
 
 
-impl Replacer for LRUKReplacer {
+impl EvictionPolicy for LRUKEvictionPolicy {
     /// Find the frame with the largest backward k-distance and evict that frame. Only frames
     /// that are marked as `evictable` are candidates for eviction.
     ///

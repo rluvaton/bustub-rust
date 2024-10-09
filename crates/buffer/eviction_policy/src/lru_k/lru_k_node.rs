@@ -1,7 +1,4 @@
-use super::{
-    AtomicI64Counter,
-    LRUNode,
-};
+use super::AtomicI64Counter;
 use data_structures::{DoubleEndedList, FixedSizeLinkedList};
 
 // Global counter
@@ -76,10 +73,8 @@ impl LRUKNode {
     pub(super) fn set_heap_pos(&mut self, heap_pos: usize) {
         self.heap_pos = heap_pos;
     }
-}
 
-impl LRUNode for LRUKNode {
-    fn reuse(&mut self, counter: &AtomicI64Counter) {
+    pub(super) fn reuse(&mut self, counter: &AtomicI64Counter) {
         self.history.start_over();
 
         let now = Self::get_new_access_record(counter);
@@ -89,7 +84,7 @@ impl LRUNode for LRUKNode {
         self.heap_pos = NO_HEAP_POS;
     }
 
-    fn marked_accessed(&mut self, counter: &AtomicI64Counter) {
+    pub(super) fn marked_accessed(&mut self, counter: &AtomicI64Counter) {
         // LRU-K evicts the page whose K-th most recent access is furthest in the past.
         // So we only need to calculate
 
@@ -110,7 +105,7 @@ impl LRUNode for LRUKNode {
     }
 
     #[inline]
-    fn is_evictable(&self) -> bool {
+    pub(super) fn is_evictable(&self) -> bool {
         self.heap_pos != NO_HEAP_POS
     }
 }

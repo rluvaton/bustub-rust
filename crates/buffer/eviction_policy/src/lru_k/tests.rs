@@ -10,11 +10,11 @@ mod tests {
     use std::thread::{sleep, JoinHandle};
     use std::time::Duration;
     use parking_lot::Mutex;
-    use crate::{LRUKReplacer, Replacer};
+    use crate::{LRUKEvictionPolicy, EvictionPolicy};
 
     #[test]
     fn sample() {
-        let mut lru_replacer: LRUKReplacer = LRUKReplacer::new(7, 2);
+        let mut lru_replacer: LRUKEvictionPolicy = LRUKEvictionPolicy::new(7, 2);
 
         // Scenario: add six elements to the replacer. We have [1,2,3,4,5]. Frame 6 is non-evictable.
         lru_replacer.record_access(1, AccessType::default());
@@ -99,7 +99,7 @@ mod tests {
         // This does not check any correctness, it just checks that we can use the LRU with threads
 
         const FRAMES: usize = 50;
-        let lru_replacer = Arc::new(Mutex::new(LRUKReplacer::new(FRAMES, 10)));
+        let lru_replacer = Arc::new(Mutex::new(LRUKEvictionPolicy::new(FRAMES, 10)));
 
         let mut threads: Vec<JoinHandle<()>> = vec![];
 
@@ -131,7 +131,7 @@ mod tests {
     fn many_threads() {
         // This does not check any correctness, it just check that we can use the lru with threads
         const FRAMES: usize = 1000;
-        let lru_replacer = Arc::new(Mutex::new(LRUKReplacer::new(FRAMES, 10)));
+        let lru_replacer = Arc::new(Mutex::new(LRUKEvictionPolicy::new(FRAMES, 10)));
 
         let mut threads: Vec<JoinHandle<()>> = vec![];
 
@@ -200,7 +200,7 @@ mod tests {
     fn concurrent_set_evictable() {
         // This does not check any correctness, it just check that we can use the lru with threads
         const FRAMES: usize = 10;
-        let mut lru_replacer = Arc::new(Mutex::new(LRUKReplacer::new(FRAMES, 10)));
+        let mut lru_replacer = Arc::new(Mutex::new(LRUKEvictionPolicy::new(FRAMES, 10)));
 
         for i in 0..FRAMES {
             lru_replacer.lock().record_access(i as FrameId, AccessType::default());
@@ -232,7 +232,7 @@ mod tests {
 
     #[test]
     fn concurrent_evict_and_access() {
-        let mut lru_replacer = Arc::new(Mutex::new(LRUKReplacer::new(7, 2)));
+        let mut lru_replacer = Arc::new(Mutex::new(LRUKEvictionPolicy::new(7, 2)));
         lru_replacer.lock().record_access(1, AccessType::default());
         lru_replacer.lock().set_evictable(1, true);
 

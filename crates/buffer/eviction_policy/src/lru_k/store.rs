@@ -8,7 +8,6 @@ use std::ops::Deref;
 use std::ops::DerefMut;
 use std::sync::Arc;
 use std::vec;
-use super::LRUNode;
 use bit_vec::BitVec;
 use buffer_common::FrameId;
 
@@ -19,7 +18,7 @@ use buffer_common::FrameId;
 /// This is mutable Heap to allow for updating LRU-K Node without removing and reinserting
 /// TODO - implement proper debug
 #[derive(Clone, Debug)]
-pub(super) struct LRUKReplacerStore {
+pub(super) struct Store {
     /// Bit vector for whether a frame exists or not
     ///
     /// TODO - maybe remove this and add it to the lru-k node for locality?
@@ -35,12 +34,12 @@ pub(super) struct LRUKReplacerStore {
 }
 
 
-unsafe impl Send for LRUKReplacerStore {}
+unsafe impl Send for Store {}
 
-impl LRUKReplacerStore {
+impl Store {
     #[must_use]
     pub fn with_capacity(k: usize, capacity: usize) -> Self {
-        LRUKReplacerStore {
+        Store {
             can_use: BitVec::from_elem(capacity, false),
             next_frame_to_evict_heap: Vec::with_capacity(capacity),
             all: vec![LRUKNode::create_invalid(k); capacity],
@@ -404,11 +403,11 @@ mod test {
 
     #[test]
     fn check_is_send_unpin() {
-        is_normal::<LRUKReplacerStore>();
+        is_normal::<Store>();
         assert!(true);
     }
 
-    fn assert_key_map_valid(bh: &LRUKReplacerStore) {
+    fn assert_key_map_valid(bh: &Store) {
         let mut expected_keys = HashMap::new();
         for (i, kv) in bh.next_frame_to_evict_heap.iter().enumerate() {
             expected_keys.insert(kv.clone(), i);

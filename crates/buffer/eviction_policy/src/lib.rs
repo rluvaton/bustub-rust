@@ -1,5 +1,5 @@
 mod traits;
-mod lru_k_replacer;
+mod lru_k;
 
-pub use traits::{Replacer};
-pub use lru_k_replacer::{LRUKReplacer};
+pub use traits::{EvictionPolicy};
+pub use lru_k::{LRUKEvictionPolicy};

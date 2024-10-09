@@ -10,7 +10,7 @@ use pages::{Page, PageAndGuard, PageAndReadGuard, PageAndWriteGuard, AtomicPageI
 #[cfg(feature = "tracing")]
 use tracy_client::span;
 use buffer_common::{AccessType, FrameId};
-use eviction_policy::{LRUKReplacer, Replacer};
+use eviction_policy::{LRUKEvictionPolicy, EvictionPolicy};
 use recovery_log_manager::LogManager;
 use crate::{errors, BufferPool, BufferPoolManagerStats, PageReadGuard, PageWriteGuard};
 
@@ -64,7 +64,7 @@ struct InnerBufferPoolManager {
 
     /// Replacer to find unpinned pages for replacement.
     /// TODO - change type to just implement Replacer
-    replacer: LRUKReplacer,
+    eviction_policy: LRUKEvictionPolicy,
 
     /// List of free frames that don't have any pages on them.
     free_list: LinkedList<FrameId>,
@@ -95,7 +95,7 @@ impl BufferPoolManager {
                 // we allocate a consecutive memory space for the buffer pool
                 pages: Vec::with_capacity(pool_size),
 
-                replacer: LRUKReplacer::new(
+                eviction_policy: LRUKEvictionPolicy::new(
                     pool_size,
                     replacer_k.unwrap_or(LRUK_REPLACER_K),
                 ),
@@ -150,7 +150,7 @@ impl BufferPoolManager {
             inner.free_list.pop_front().ok_or(errors::NoAvailableFrameFound)
         } else {
             // pick replacement from the replacer, can't be empty
-            inner.replacer.evict().ok_or(errors::NoAvailableFrameFound)
+            inner.eviction_policy.evict().ok_or(errors::NoAvailableFrameFound)
         }
     }
 
@@ -466,7 +466,7 @@ impl BufferPoolManager {
 
             // 6. If we reached to pin count 0, this means we need to set as evictable
             if page.get_pin_count() == 0 {
-                inner.replacer.set_evictable(frame_id, true);
+                inner.eviction_policy.set_evictable(frame_id, true);
             }
 
             true
@@ -486,12 +486,12 @@ impl InnerBufferPoolManager {
     fn record_access_and_avoid_eviction(&mut self, frame_id: FrameId, access_type: AccessType) {
 
         // Avoid evicting the frame
-        self.replacer.set_evictable(frame_id, false);
+        self.eviction_policy.set_evictable(frame_id, false);
 
 
         // Record access to the frame so the LRU-K would work
         // this is done after the set evictable for performance reasons (avoiding updating the evictable heap twice)
-        self.replacer.record_access(frame_id, access_type);
+        self.eviction_policy.record_access(frame_id, access_type);
     }
 }
 
@@ -644,7 +644,7 @@ impl BufferPool for Arc<BufferPoolManager> {
         }
 
         // Avoid evicting in the middle
-        inner.replacer.set_evictable(frame_id, false);
+        inner.eviction_policy.set_evictable(frame_id, false);
         page.pin();
 
         let mut scheduler = self.disk_scheduler.lock();
@@ -709,7 +709,7 @@ impl BufferPool for Arc<BufferPoolManager> {
         (*inner).page_table.remove(&page_id);
         (*inner).free_list.push_front(frame_id);
 
-        (*inner).replacer.remove(frame_id);
+        (*inner).eviction_policy.remove(frame_id);
 
         page.with_write(|u| {
             // Do not remove the item, and instead change it to INVALID_PAGE_ID
