@@ -17,12 +17,3 @@ impl Indentation for String {
     }
 }
 
-// impl Indentation for &str {
-//     fn indent_spaces(&self, indent: usize) -> Self {
-//         self.to_string().indent_spaces(indent).as_str()
-//     }
-//
-//     fn indent_tabs(&self, indent: usize) -> Self {
-//         self.to_string().indent_tabs(indent).as_str()
-//     }
-// }

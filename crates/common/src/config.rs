@@ -16,8 +16,6 @@ pub const INVALID_TIMESTAMP: Timestamp = -1;
 pub const BUCKET_SIZE: usize = 50;                                               // size of extendible hash bucket
 pub const LRUK_REPLACER_K: usize = 10;  // lookback window for lru-k replacer
 
-pub type FrameId = i32; // frame id type (in cpp it was `frame_id_t`)
-
 pub type TxnId = i64; // transaction id type (in cpp it was `txn_id_t`)
 pub type AtomicTxnId = AtomicI64; // std::atomic<txn_id_t>
 pub type LSN = i32; // log sequence number type (in cpp it was `lsn_t`)

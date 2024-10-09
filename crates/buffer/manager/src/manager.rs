@@ -1,4 +1,4 @@
-use common::config::{FrameId, LRUK_REPLACER_K};
+use common::config::{LRUK_REPLACER_K};
 use parking_lot::{Mutex, MutexGuard};
 use std::collections::{HashMap, LinkedList};
 use std::sync::atomic::Ordering;
@@ -9,7 +9,7 @@ use pages::{Page, PageAndGuard, PageAndReadGuard, PageAndWriteGuard, AtomicPageI
 
 #[cfg(feature = "tracing")]
 use tracy_client::span;
-use buffer_common::AccessType;
+use buffer_common::{AccessType, FrameId};
 use eviction_policy::{LRUKReplacer, Replacer};
 use recovery_log_manager::LogManager;
 use crate::{errors, BufferPool, BufferPoolManagerStats, PageReadGuard, PageWriteGuard};

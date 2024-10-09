@@ -1,8 +1,7 @@
 #[cfg(test)]
 mod tests {
-    use buffer_common::AccessType;
+    use buffer_common::{AccessType, FrameId};
 
-    use common::config::FrameId;
     use rand::Rng;
     use std::sync::atomic::AtomicBool;
     use std::sync::atomic::Ordering::SeqCst;

@@ -1,5 +1,4 @@
-use common::config::FrameId;
-use buffer_common::AccessType;
+use buffer_common::{AccessType, FrameId};
 
 /// Replacement Policy for the buffer pool, this is not promised to be thread safe
 pub trait Replacer {

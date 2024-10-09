@@ -1,6 +1,5 @@
 // Heap implementation greatly influenced by https://github.com/Wasabi375/mut-binary-heap
 use super::{LRUKNode, AtomicI64Counter};
-use common::config::FrameId;
 use core::mem::swap;
 use std::collections::HashMap;
 use std::hash::Hash;
@@ -11,7 +10,7 @@ use std::sync::Arc;
 use std::vec;
 use super::LRUNode;
 use bit_vec::BitVec;
-
+use buffer_common::FrameId;
 
 /// This max heap for LRU-K + node store
 ///
