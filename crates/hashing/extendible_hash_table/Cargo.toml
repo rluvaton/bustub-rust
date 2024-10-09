@@ -16,9 +16,9 @@ buffer_pool_manager = {path = "../../buffer/manager"}
 
 transaction = {path = "../../concurrency/transaction/core"}
 
-binary_utils = {path = "../../binary_utils"}
-generics = {path = "../../generics"}
-error_utils = {path = "../../error_utils"}
+binary_utils = {path = "../../utils/binary_utils"}
+generics = {path = "../../utils/generics"}
+error_utils = {path = "../../utils/error_utils"}
 
 thiserror = "1.0.64"
 prettytable = "0.10.0"

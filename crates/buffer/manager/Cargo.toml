@@ -5,8 +5,8 @@ edition = "2021"
 
 [dependencies]
 common = {path = "../../common"}
-stats = {path = "../../stats"}
-error_utils = {path = "../../error_utils"}
+stats = {path = "../../utils/stats"}
+error_utils = {path = "../../utils/error_utils"}
 
 pages = {path = "../../storage/pages"}
 disk_storage = {path = "../../storage/disk"}

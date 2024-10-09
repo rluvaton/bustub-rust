@@ -6,7 +6,7 @@ edition = "2021"
 [dependencies]
 common = {path = "../../common"}
 pages = {path = "../pages"}
-error_utils = {path = "../../error_utils"}
+error_utils = {path = "../../utils/error_utils"}
 
 parking_lot = { version = "0.12.3", features = ["default"] }
 

@@ -16,7 +16,7 @@ tuple = {path = "../storage/table/tuple"}
 
 rid = {path = "../rid"}
 data_types = {path = "../data_types"}
-error_utils = {path = "../error_utils"}
+error_utils = {path = "../utils/error_utils"}
 
 thiserror = "1.0.64"
 
