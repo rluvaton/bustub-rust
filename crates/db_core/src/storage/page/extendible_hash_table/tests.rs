@@ -3,67 +3,65 @@ mod tests {
     use buffer_pool_manager::{BufferPool, BufferPoolManager};
     use buffer_common::AccessType;
 
-    use crate::catalog::Schema;
-    use crate::storage::{hash_table_bucket_array_size, ExtendibleHashBucketPageInsertionErrors, ExtendibleHashTableBucketPage, ExtendibleHashTableDirectoryPage, ExtendibleHashTableHeaderPage, GenericComparator, GenericKey};
+    use crate::storage::{hash_table_bucket_array_size, ExtendibleHashBucketPageInsertionErrors, ExtendibleHashTableBucketPage, ExtendibleHashTableDirectoryPage, ExtendibleHashTableHeaderPage, OrdComparator};
     use pages::{PageId, INVALID_PAGE_ID};
-    use rid::RID;
     use parking_lot::Mutex;
     use std::sync::Arc;
     use disk_storage::DiskManagerUnlimitedMemory;
 
     #[test]
     fn bucket_page_sample() {
+        type Key = u64;
+        type Value = u16;
         let disk_mgr = Arc::new(Mutex::new(DiskManagerUnlimitedMemory::new()));
         let bpm = BufferPoolManager::new(5, disk_mgr, None, None);
 
         {
             let mut guard = bpm.new_page(AccessType::Unknown).expect("Should be able to create new page");
 
-            const BUCKET_SIZE: usize = hash_table_bucket_array_size::<GenericKey<8>, RID>();
-            let bucket_page = guard.cast_mut::<ExtendibleHashTableBucketPage<BUCKET_SIZE, GenericKey<8>, RID, GenericComparator<8>>>();
+            const BUCKET_SIZE: usize = hash_table_bucket_array_size::<Key, Value>();
+            let bucket_page = guard.cast_mut::<ExtendibleHashTableBucketPage<{
+                hash_table_bucket_array_size::<Key, Value>()
+            }, Key, Value, OrdComparator<Key>>>();
             bucket_page.init(Some(10));
 
-            let key_schema = Schema::parse_create_statement("a bigint").expect("Should be able to create schema");
-            let comparator = GenericComparator::<8>::from(Arc::clone(&key_schema));
-            let mut index_key = GenericKey::<8>::default();
-            let mut rid = RID::default();
+            let comparator = OrdComparator::<Key>::default();
 
             // insert a few (key, value) pairs
             for i in 0..10 {
-                index_key.set_from_integer(i);
-                rid.set(i as PageId, i as u32);
-                bucket_page.insert(&index_key, &rid, &comparator).expect(format!("should insert new key {}", i).as_str());
+                let key: Key = i;
+                let value: Value = i as Value;
+                bucket_page.insert(&key, &value, &comparator).expect(format!("should insert new key {}", i).as_str());
             }
 
-            index_key.set_from_integer(11);
-            rid.set(11, 11);
             assert!(bucket_page.is_full(), "bucket should be full");
 
-            assert_eq!(bucket_page.insert(&index_key, &rid, &comparator), Err(ExtendibleHashBucketPageInsertionErrors::BucketIsFull), "should not insert when bucket is full");
+            assert_eq!(bucket_page.insert(&11, &11, &comparator), Err(ExtendibleHashBucketPageInsertionErrors::BucketIsFull), "should not insert when bucket is full");
 
             // check for the inserted pairs
             for i in 0..10 {
-                index_key.set_from_integer(i);
-                let rid_value = bucket_page.lookup(&index_key, &comparator).cloned();
-                assert_eq!(rid_value, Some(RID::new(i as PageId, i as u32)), "Should find key {} and", i)
+                let key: Key = i;
+                let value: Value = i as Value;
+                let actual_value = bucket_page.lookup(&key, &comparator).cloned();
+                assert_eq!(actual_value, Some(value), "Should find key {} and", i)
             }
 
             // remove a few pairs
             for i in 0..10 {
                 if i % 2 == 1 {
-                    index_key.set_from_integer(i);
-                    assert!(bucket_page.remove(&index_key, &comparator), "Should be able to remove {}", i);
+                    let key: Key = i;
+                    assert!(bucket_page.remove(&key, &comparator), "Should be able to remove {}", i);
                 }
             }
 
             for i in 0..10 {
                 if i % 2 == 1 {
                     // remove the same pairs again
-                    index_key.set_from_integer(i);
-                    assert_eq!(bucket_page.remove(&index_key, &comparator), false, "Should not remove already removed {}", i);
+                    let key: Key = i;
+                    assert_eq!(bucket_page.remove(&key, &comparator), false, "Should not remove already removed {}", i);
                 } else {
-                    index_key.set_from_integer(i);
-                    assert!(bucket_page.remove(&index_key, &comparator), "Should be able to remove {}", i);
+                    let key: Key = i;
+                    assert!(bucket_page.remove(&key, &comparator), "Should be able to remove {}", i);
                 }
             }
             assert!(bucket_page.is_empty(), "Page should be empty");
@@ -72,11 +70,16 @@ mod tests {
 
     #[test]
     fn header_directory_page_sample() {
+        type Key = u64;
+        type Value = u16;
+
         let disk_mgr = Arc::new(Mutex::new(DiskManagerUnlimitedMemory::new()));
         let bpm = BufferPoolManager::new(5, disk_mgr, None, None);
 
-        const BUCKET_SIZE: usize = hash_table_bucket_array_size::<GenericKey<8>, RID>();
-        type BucketPageType = ExtendibleHashTableBucketPage<BUCKET_SIZE, GenericKey<8>, RID, GenericComparator<8>>;
+
+
+        const BUCKET_SIZE: usize = hash_table_bucket_array_size::<Key, Value>();
+        type BucketPageType = ExtendibleHashTableBucketPage<BUCKET_SIZE, Key, Value, OrdComparator<Key>>;
 
         let mut bucket_page_id_1: PageId = INVALID_PAGE_ID;
         let mut bucket_page_id_2: PageId = INVALID_PAGE_ID;
