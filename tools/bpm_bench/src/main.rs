@@ -13,7 +13,7 @@ use std::sync::Arc;
 use std::thread;
 use std::thread::JoinHandle;
 #[allow(unused)]
-use db_core::storage::{DefaultDiskManager, DiskManagerUnlimitedMemory};
+use disk_storage::{DefaultDiskManager, DiskManagerUnlimitedMemory};
 use tempdir::TempDir;
 
 #[cfg(feature = "tracing")]

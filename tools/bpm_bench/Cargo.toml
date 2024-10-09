@@ -15,6 +15,7 @@ tracy-client = { version = "0.17.3", default-features = false }
 db_core = {path = "../../crates/db_core" }
 common = {path = "../../crates/common"}
 pages = {path = "../../crates/storage/pages"}
+disk_storage = {path = "../../crates/storage/disk"}
 
 tempdir = "0.3.7"
 

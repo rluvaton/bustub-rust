@@ -6,6 +6,7 @@ edition = "2021"
 [dependencies]
 common = {path = "../common"}
 pages = {path = "../storage/pages"}
+disk_storage = {path = "../storage/disk"}
 rid = {path = "../rid"}
 binary_utils = {path = "../binary_utils"}
 generics = {path = "../generics"}

@@ -2,7 +2,6 @@ use std::cmp::max;
 use super::helpers::get_tmp_dir;
 use super::options::{DiskManagerImplementationOptions, DurationType, Options};
 use crate::buffer::{AccessType, BufferPool, BufferPoolManager};
-use crate::storage::{DefaultDiskManager, DiskManager, DiskManagerUnlimitedMemory};
 use pages::{PageData, PageId};
 use parking_lot::{Mutex, RwLock};
 use std::collections::HashMap;
@@ -11,6 +10,7 @@ use std::thread;
 use std::thread::JoinHandle;
 use std::time::Duration;
 use tempdir::TempDir;
+use disk_storage::{DefaultDiskManager, DiskManager, DiskManagerUnlimitedMemory};
 
 // This is the structure of the page
 #[allow(unused)]

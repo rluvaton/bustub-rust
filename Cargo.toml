@@ -1,6 +1,7 @@
 [workspace]
 members = [
     "tools/bpm_bench",
+
     "crates/common",
     "crates/primer",
     "crates/db_core",
@@ -10,8 +11,10 @@ members = [
     "crates/generics",
     "crates/error_utils",
     "crates/data_structures",
-    "crates/storage/pages",
     "crates/rid",
+
+    "crates/storage/pages",
+    "crates/storage/disk",
 ]
 
 [profile.bench]

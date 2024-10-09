@@ -7,7 +7,7 @@ use common::{Future, Promise, SharedFuture, SharedPromise, UnsafeSingleRefData, 
 use crate::buffer::buffer_pool_manager::*;
 use crate::buffer::{AccessType, LRUKReplacer, Replacer};
 use crate::recovery::LogManager;
-use crate::storage::{DiskManager, DiskScheduler, ReadDiskRequest, WriteDiskRequest};
+use disk_storage::{DiskManager, DiskScheduler, ReadDiskRequest, WriteDiskRequest};
 use pages::{Page, PageAndGuard, PageAndReadGuard, PageAndWriteGuard, AtomicPageId, PageData, PageId, INVALID_PAGE_ID};
 
 #[cfg(feature = "tracing")]

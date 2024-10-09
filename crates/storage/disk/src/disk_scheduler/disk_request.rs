@@ -18,7 +18,7 @@ pub struct ReadDiskRequest {
 }
 
 impl ReadDiskRequest {
-    pub(crate) fn new(page_id: PageId, data: UnsafeSingleRefMutData<PageData>, callback: Promise<bool>) -> Self {
+    pub fn new(page_id: PageId, data: UnsafeSingleRefMutData<PageData>, callback: Promise<bool>) -> Self {
         ReadDiskRequest {
             page_id,
             data,
@@ -36,13 +36,13 @@ pub struct WriteDiskRequest {
 
     Having box will reduce performance as it will need to create in the heap
      */
-    pub(in crate::storage) data: UnsafeSingleRefData<PageData>,
+    pub(super) data: UnsafeSingleRefData<PageData>,
 
     /** ID of the page being written to disk. */
-    pub(in crate::storage) page_id: PageId,
+    pub(super) page_id: PageId,
 
     /** Callback used to signal to the request issuer when the request has been completed. */
-    pub(in crate::storage) callback: Promise<bool>,
+    pub(super) callback: Promise<bool>,
 }
 
 

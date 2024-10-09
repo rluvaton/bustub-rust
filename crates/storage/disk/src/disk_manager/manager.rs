@@ -1,5 +1,3 @@
-use crate::storage::disk::disk_manager::disk_manager_trait::DiskManager;
-use crate::storage::disk::disk_manager::utils::get_file_size;
 use pages::{PageId, PAGE_SIZE};
 use common::Future;
 use parking_lot::Mutex;
@@ -9,6 +7,8 @@ use std::path::PathBuf;
 use std::time::Duration;
 use error_utils::anyhow::anyhow;
 use error_utils::ToAnyhowResult;
+use super::utils::get_file_size;
+use crate::DiskManager;
 
 static BUFFER_USED: Mutex<Option<Vec<u8>>> = Mutex::new(None);
 

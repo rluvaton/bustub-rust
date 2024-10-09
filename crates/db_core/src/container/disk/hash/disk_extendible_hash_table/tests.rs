@@ -4,7 +4,7 @@ mod tests {
     use crate::catalog::Schema;
     use crate::container::test_util::U64IdentityKeyHasher;
     use crate::container::{DefaultKeyHasher, DiskExtendibleHashTable, KeyHasher};
-    use crate::storage::{hash_table_bucket_array_size, Comparator, DiskManagerUnlimitedMemory, GenericComparator, GenericKey, OrdComparator, U64Comparator};
+    use crate::storage::{hash_table_bucket_array_size, Comparator, GenericComparator, GenericKey, OrdComparator, U64Comparator};
     use pages::{PageId, PAGE_SIZE};
     use common::{PageKey, PageValue};
     use rid::RID;
@@ -18,6 +18,7 @@ mod tests {
     use std::sync::atomic::{AtomicBool, Ordering};
     use std::sync::Barrier;
     use std::thread;
+    use disk_storage::DiskManagerUnlimitedMemory;
 
     fn panic_on_deadlock() -> (Arc<AtomicBool>, thread::JoinHandle<()>) {
         use std::thread;

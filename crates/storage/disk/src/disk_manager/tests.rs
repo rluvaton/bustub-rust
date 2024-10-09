@@ -1,9 +1,9 @@
 #[cfg(test)]
 mod tests {
-    use crate::storage::{DefaultDiskManager, DiskManager, DiskManagerUnlimitedMemory};
     use pages::PAGE_SIZE;
     use std::path::PathBuf;
     use tempdir::TempDir;
+    use crate::*;
 
     fn setup() -> TempDir {
         TempDir::new("disk_manager_tests").expect("Should create tmp directory")

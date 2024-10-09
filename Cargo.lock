@@ -155,6 +155,7 @@ dependencies = [
  "clap",
  "common",
  "db_core",
+ "disk_storage",
  "pages",
  "parking_lot",
  "rand 0.8.5",
@@ -378,6 +379,7 @@ dependencies = [
  "data_structures",
  "data_types",
  "derive_builder",
+ "disk_storage",
  "error_utils",
  "generics",
  "mut-binary-heap",
@@ -445,6 +447,17 @@ dependencies = [
  "libc",
  "redox_users",
  "winapi",
+]
+
+[[package]]
+name = "disk_storage"
+version = "0.1.0"
+dependencies = [
+ "common",
+ "error_utils",
+ "pages",
+ "parking_lot",
+ "tempdir",
 ]
 
 [[package]]

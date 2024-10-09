@@ -414,9 +414,10 @@ fn format_number_in_bits(n: u64, number_of_bits: u32) -> String {
 #[cfg(test)]
 mod tests {
     use crate::buffer::{AccessType, BufferPool, BufferPoolManager};
-    use crate::storage::{DiskManagerUnlimitedMemory, ExtendibleHashTableDirectoryPage};
+    use crate::storage::{ExtendibleHashTableDirectoryPage};
     use parking_lot::Mutex;
     use std::sync::Arc;
+    use disk_storage::DiskManagerUnlimitedMemory;
 
     #[test]
     fn global_and_local_depth_mash() {

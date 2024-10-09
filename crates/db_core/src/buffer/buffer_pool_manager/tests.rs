@@ -3,8 +3,7 @@ mod tests {
     use crate::buffer::buffer_pool_manager::errors::{FetchPageError, NewPageError, NoAvailableFrameFound};
     use crate::buffer::{AccessType};
     use crate::buffer::buffer_pool_manager::{BufferPool, BufferPoolManager, PageWriteGuard};
-    use crate::storage::{AlignToPageData, DefaultDiskManager};
-    use pages::{PageData, PageId, PAGE_SIZE};
+    use pages::{AlignToPageData, PageData, PageId, PAGE_SIZE};
     use parking_lot::{Condvar, Mutex};
     use rand::Rng;
     use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
@@ -12,6 +11,7 @@ mod tests {
     use std::time::Duration;
     use std::thread;
     use tempdir::TempDir;
+    use disk_storage::DefaultDiskManager;
 
     fn setup() -> TempDir {
         TempDir::new("buffer_pool_manager_tests").expect("Should create tmp directory")

@@ -6,7 +6,7 @@ mod tests {
     use std::sync::{Arc};
     use std::time::Duration;
     use parking_lot::Mutex;
-    use crate::storage::*;
+    use crate::*;
 
     #[test]
     fn schedule_write_read() {

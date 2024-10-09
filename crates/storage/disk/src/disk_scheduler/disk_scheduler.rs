@@ -2,8 +2,9 @@ use parking_lot::Mutex;
 use std::sync::Arc;
 use std::thread::{Builder, JoinHandle};
 
-use crate::storage::{DiskManager, DiskRequestType};
 use common::{abort_process_on_panic, Channel, Promise};
+
+use crate::{DiskManager, DiskRequestType};
 
 /**
  * @brief The DiskScheduler schedules disk read and write operations.

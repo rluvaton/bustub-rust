@@ -1,7 +1,7 @@
 use std::sync::atomic::Ordering;
 use parking_lot::Mutex;
 use common::config::{AtomicLSN, INVALID_LSN, LOG_BUFFER_SIZE, LSN};
-use crate::storage::DiskManager;
+use disk_storage::DiskManager;
 use crate::recovery::log_manager::{LogBuffer, LogManager};
 use crate::recovery::log_record::LogRecord;
 
