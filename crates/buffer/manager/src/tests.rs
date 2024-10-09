@@ -248,7 +248,7 @@ mod tests {
     fn page_pin_easy() {
         let tmpdir = setup();
         let db_name = tmpdir.path().join("test.db");
-        let buffer_pool_size = 1;
+        let buffer_pool_size = 2;
         let k = 5;
 
         let disk_manager = DefaultDiskManager::new(db_name).expect("should create disk manager");
