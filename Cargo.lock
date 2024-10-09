@@ -170,6 +170,10 @@ name = "buffer_common"
 version = "0.1.0"
 
 [[package]]
+name = "buffer_pool_manager"
+version = "0.1.0"
+
+[[package]]
 name = "bumpalo"
 version = "3.16.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
