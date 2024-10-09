@@ -1164,11 +1164,16 @@ dependencies = [
  "bytemuck",
  "common",
  "disk_storage",
+ "expression",
  "pages",
  "parking_lot",
  "recovery_log_manager",
  "rid",
 ]
+
+[[package]]
+name = "tuple"
+version = "0.1.0"
 
 [[package]]
 name = "unicode-ident"
