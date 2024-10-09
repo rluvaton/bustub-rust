@@ -1,8 +1,8 @@
 use crate::catalog::Schema;
-use crate::storage::{Tuple};
 use data_types::{DBTypeId, Value};
 use std::fmt::{Debug, Display, Formatter};
 use common::PageKey;
+use tuple::Tuple;
 
 /**
  * Generic key is used for indexing with opaque data.

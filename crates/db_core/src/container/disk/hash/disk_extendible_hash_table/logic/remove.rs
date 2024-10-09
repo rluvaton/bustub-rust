@@ -2,7 +2,6 @@ use super::super::type_alias_trait::TypeAliases;
 use super::super::HashTable;
 use buffer_pool_manager::{BufferPool, PageWriteGuard};
 use buffer_pool_manager::errors::{BufferPoolError, MapErrorToBufferPoolError};
-use crate::concurrency::Transaction;
 use crate::container::hash::KeyHasher;
 use crate::storage::Comparator;
 use binary_utils::{GetAllNumbersWithPrefixBitsUntilMaxBits, GetNBits, ModifyBit};
@@ -12,6 +11,7 @@ use error_utils::Context;
 use std::fmt::Debug;
 use std::sync::Arc;
 use buffer_common::AccessType;
+use transaction::Transaction;
 
 #[derive(thiserror::Error, Debug, PartialEq, Clone)]
 pub enum RemoveError {

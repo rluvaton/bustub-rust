@@ -1,6 +1,5 @@
 use super::super::type_alias_trait::TypeAliases;
 use super::super::HashTable;
-use crate::concurrency::Transaction;
 use crate::container::hash::KeyHasher;
 use crate::storage::Comparator;
 use pages::{PageId, INVALID_PAGE_ID};
@@ -11,6 +10,7 @@ use std::sync::Arc;
 use buffer_common::AccessType;
 use buffer_pool_manager::BufferPool;
 use buffer_pool_manager::errors::{BufferPoolError, MapErrorToBufferPoolError};
+use transaction::Transaction;
 
 #[derive(thiserror::Error, Debug, PartialEq, Clone)]
 pub enum LookupError {

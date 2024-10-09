@@ -351,6 +351,8 @@ dependencies = [
  "tempdir",
  "thiserror",
  "tracy-client",
+ "transaction",
+ "tuple",
  "zipf",
 ]
 
