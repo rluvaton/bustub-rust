@@ -461,6 +461,26 @@ version = "0.1.0"
 [[package]]
 name = "extendible_hash_table"
 version = "0.1.0"
+dependencies = [
+ "atomic",
+ "binary_utils",
+ "buffer_common",
+ "buffer_pool_manager",
+ "bytemuck",
+ "common",
+ "data_types",
+ "disk_storage",
+ "error_utils",
+ "generics",
+ "hashing_common",
+ "pages",
+ "parking_lot",
+ "prettytable",
+ "rand 0.8.5",
+ "rand_chacha",
+ "thiserror",
+ "transaction",
+]
 
 [[package]]
 name = "fixedbitset"

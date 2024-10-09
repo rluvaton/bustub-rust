@@ -1,8 +1,7 @@
 use super::super::type_alias_trait::TypeAliases;
-use super::super::HashTable;
+use super::super::DiskHashTable;
 use buffer_pool_manager::{BufferPool, PageWriteGuard};
 use buffer_pool_manager::errors::{BufferPoolError, MapErrorToBufferPoolError};
-use crate::container::hash::KeyHasher;
 use binary_utils::ModifyBit;
 use pages::{PageId, INVALID_PAGE_ID};
 use common::{Comparator, PageKey, PageValue};
@@ -10,6 +9,7 @@ use error_utils::Context;
 use std::fmt::Debug;
 use std::sync::Arc;
 use buffer_common::AccessType;
+use hashing_common::KeyHasher;
 use transaction::Transaction;
 
 #[derive(thiserror::Error, Debug, PartialEq, Clone)]
@@ -29,7 +29,7 @@ pub enum InsertionError {
 
 const NUMBER_OF_SPLIT_RETRIES: usize = 3;
 
-impl<const BUCKET_MAX_SIZE: usize, Key, Value, KeyComparator, KeyHasherImpl> HashTable<BUCKET_MAX_SIZE, Key, Value, KeyComparator, KeyHasherImpl>
+impl<const BUCKET_MAX_SIZE: usize, Key, Value, KeyComparator, KeyHasherImpl> DiskHashTable<BUCKET_MAX_SIZE, Key, Value, KeyComparator, KeyHasherImpl>
 where
     Key: PageKey,
     Value: PageValue,

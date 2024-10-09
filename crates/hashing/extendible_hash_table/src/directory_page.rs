@@ -6,21 +6,14 @@ use std::collections::HashMap;
 use std::fmt::{Debug, Formatter};
 use std::mem::size_of;
 
-const _HASH_TABLE_DIRECTORY_PAGE_METADATA_SIZE: usize = size_of::<u32>() * 2;
+const PAGE_METADATA_SIZE: usize = size_of::<u32>() * 2;
 
-/// `HASH_TABLE_DIRECTORY_ARRAY_SIZE` is the number of page_ids that can fit in the directory page of an extendible hash index.
-/// This is 512 because the directory array must grow in powers of 2, and 1024 page_ids leaves zero room for
-/// storage of the other member variables.
-///
-///
-pub const HASH_TABLE_DIRECTORY_MAX_DEPTH: u32 = 9;
-const HASH_TABLE_DIRECTORY_ARRAY_SIZE: usize = 1 << HASH_TABLE_DIRECTORY_MAX_DEPTH;
 
 
 //noinspection RsAssertEqual
 const _: () = assert!(size_of::<PageId>() == 4);
 //noinspection RsAssertEqual
-const _: () = assert!(size_of::<DirectoryPage>() == _HASH_TABLE_DIRECTORY_PAGE_METADATA_SIZE + HASH_TABLE_DIRECTORY_ARRAY_SIZE + size_of::<PageId>() * HASH_TABLE_DIRECTORY_ARRAY_SIZE);
+const _: () = assert!(size_of::<DirectoryPage>() == PAGE_METADATA_SIZE + DirectoryPage::ARRAY_SIZE + size_of::<PageId>() * DirectoryPage::ARRAY_SIZE);
 const _: () = assert!(size_of::<DirectoryPage>() <= PAGE_SIZE);
 
 ///
@@ -28,7 +21,7 @@ const _: () = assert!(size_of::<DirectoryPage>() <= PAGE_SIZE);
 /// Each of them stores the logical child pointers to the bucket pages (as page ids), as well as metadata for handling bucket mapping and dynamic directory growing and shrinking.
 ///
 #[repr(C)]
-pub struct DirectoryPage {
+pub(crate) struct DirectoryPage {
     /// The maximum depth the header page could handle
     max_depth: u32,
 
@@ -36,14 +29,22 @@ pub struct DirectoryPage {
     global_depth: u32,
 
     /// An array of bucket page local depths
-    local_depths: [u8; HASH_TABLE_DIRECTORY_ARRAY_SIZE],
+    local_depths: [u8; DirectoryPage::ARRAY_SIZE],
 
     /// An array of bucket page ids
-    bucket_page_ids: [PageId; HASH_TABLE_DIRECTORY_ARRAY_SIZE],
+    bucket_page_ids: [PageId; DirectoryPage::ARRAY_SIZE],
 }
 
 
 impl DirectoryPage {
+
+    pub(crate) const MAX_DEPTH: u32 = 9;
+
+    /// `ARRAY_SIZE` is the number of page_ids that can fit in the directory page of an extendible hash index.
+    /// This is 512 because the directory array must grow in powers of 2, and 1024 page_ids leaves zero room for
+    /// storage of the other member variables.
+    const ARRAY_SIZE: usize = 1 << Self::MAX_DEPTH;
+
     // Delete all constructor / destructor to ensure memory safety
     // TODO - delete destructor?
 
@@ -56,8 +57,8 @@ impl DirectoryPage {
     ///
     /// returns: ()
     ///
-    pub fn init(&mut self, max_depth: Option<u32>) {
-        self.max_depth = max_depth.unwrap_or(HASH_TABLE_DIRECTORY_MAX_DEPTH);
+    pub(crate)  fn init(&mut self, max_depth: Option<u32>) {
+        self.max_depth = max_depth.unwrap_or(Self::MAX_DEPTH);
         self.local_depths.fill(0);
         self.global_depth = 0;
         self.bucket_page_ids.fill(INVALID_PAGE_ID);
@@ -72,7 +73,7 @@ impl DirectoryPage {
     ///
     /// returns: u32 bucket index current key is hashed to
     ///
-    pub fn hash_to_bucket_index(&self, hash: u32) -> u32 {
+    pub(crate)  fn hash_to_bucket_index(&self, hash: u32) -> u32 {
         // When global depth is 0 than all goes to the same bucket
         if self.global_depth == 0 {
             return 0;
@@ -94,7 +95,7 @@ impl DirectoryPage {
     ///
     /// returns: PageId bucket page_id corresponding to bucket_idx
     ///
-    pub fn get_bucket_page_id(&self, bucket_idx: u32) -> PageId {
+    pub(crate)  fn get_bucket_page_id(&self, bucket_idx: u32) -> PageId {
         self.bucket_page_ids[bucket_idx as usize]
     }
 
@@ -107,7 +108,7 @@ impl DirectoryPage {
     /// * `bucket_page_id`: page_id to insert
     ///
     ///
-    pub fn set_bucket_page_id(&mut self, bucket_idx: u32, bucket_page_id: PageId) {
+    pub(crate)  fn set_bucket_page_id(&mut self, bucket_idx: u32, bucket_page_id: PageId) {
         self.bucket_page_ids[bucket_idx as usize] = bucket_page_id
     }
 
@@ -119,7 +120,7 @@ impl DirectoryPage {
     ///
     /// returns: u32 the directory index of the split image
     ///
-    pub fn get_split_image_index(&self, _bucket_idx: u32) -> u32 {
+    pub(crate)  fn get_split_image_index(&self, _bucket_idx: u32) -> u32 {
         unimplemented!()
     }
 
@@ -136,7 +137,7 @@ impl DirectoryPage {
     ///
     /// returns: u32 mask of global_depth 1's and the rest 0's (with 1's from LSB upwards)
     ///
-    pub fn get_global_depth_mask(&self) -> u32 {
+    pub(crate)  fn get_global_depth_mask(&self) -> u32 {
         u32::MAX.get_n_lsb_bits(self.global_depth as u8)
     }
 
@@ -149,7 +150,7 @@ impl DirectoryPage {
     ///
     /// returns: u32 mask of local 1's and the rest 0's (with 1's from LSB upwards)
     ///
-    pub fn get_local_depth_mask(&self, bucket_idx: u32) -> u32 {
+    pub(crate)  fn get_local_depth_mask(&self, bucket_idx: u32) -> u32 {
         let local_depth = self.get_local_depth(bucket_idx);
 
         if local_depth == 0 {
@@ -165,16 +166,16 @@ impl DirectoryPage {
     ///
     /// returns: u32 the global depth of the directory
     ///
-    pub fn get_global_depth(&self) -> u32 {
+    pub(crate)  fn get_global_depth(&self) -> u32 {
         self.global_depth
     }
 
-    pub fn get_max_depth(&self) -> u32 {
+    pub(crate)  fn get_max_depth(&self) -> u32 {
         self.max_depth
     }
 
     /// Increment the global depth of the directory
-    pub fn incr_global_depth(&mut self) -> bool {
+    pub(crate)  fn incr_global_depth(&mut self) -> bool {
         // If reached the max depth
         if self.global_depth + 1 > self.max_depth {
             return false;
@@ -211,7 +212,7 @@ impl DirectoryPage {
     }
 
     /// Decrement the global depth of the directory
-    pub fn decr_global_depth(&mut self) -> bool {
+    pub(crate)  fn decr_global_depth(&mut self) -> bool {
         if self.global_depth == 0 {
             return false;
         }
@@ -233,21 +234,21 @@ impl DirectoryPage {
     ///
     /// returns: bool true if the directory can be shrunk
     ///
-    pub fn can_shrink(&self) -> bool {
+    pub(crate)  fn can_shrink(&self) -> bool {
         self.local_depths.iter().all(|&d| (d as u32) < self.global_depth)
     }
 
     ///
     /// returns: u32 the current directory size
     ///
-    pub fn size(&self) -> u32 {
+    pub(crate)  fn size(&self) -> u32 {
         2u32.pow(self.global_depth)
     }
 
     ///
     /// returns: u32 the max directory size
     ///
-    pub fn max_size(&self) -> u32 {
+    pub(crate)  fn max_size(&self) -> u32 {
         2u32.pow(self.max_depth)
     }
 
@@ -259,7 +260,7 @@ impl DirectoryPage {
     ///
     /// returns: u32 the local depth of the bucket at bucket_idx
     ///
-    pub fn get_local_depth(&self, bucket_idx: u32) -> u32 {
+    pub(crate)  fn get_local_depth(&self, bucket_idx: u32) -> u32 {
         self.local_depths[bucket_idx as usize] as u32
     }
 
@@ -271,7 +272,7 @@ impl DirectoryPage {
     /// * `bucket_idx`: the bucket index to update
     /// * `local_depth`: new local depth
     ///
-    pub fn set_local_depth(&mut self, bucket_idx: u32, local_depth: u8) {
+    pub(crate)  fn set_local_depth(&mut self, bucket_idx: u32, local_depth: u8) {
         // assert!((local_depth as u32 )<= self.global_depth, "Local depth cant be larger than global depth");
         self.local_depths[bucket_idx as usize] = local_depth;
     }
@@ -282,7 +283,7 @@ impl DirectoryPage {
     ///
     /// * `bucket_idx`: bucket index to increment
     ///
-    pub fn incr_local_depth(&mut self, bucket_idx: u32) {
+    pub(crate)  fn incr_local_depth(&mut self, bucket_idx: u32) {
         assert!((self.local_depths[bucket_idx as usize] as u32) < self.global_depth, "can't increment more than the global depth {}", self.global_depth);
 
         self.local_depths[bucket_idx as usize] += 1;
@@ -294,7 +295,7 @@ impl DirectoryPage {
     ///
     /// * `bucket_idx`: bucket index to decrement
     ///
-    pub fn decr_local_depth(&mut self, bucket_idx: u32) {
+    pub(crate)  fn decr_local_depth(&mut self, bucket_idx: u32) {
         assert!(self.local_depths[bucket_idx as usize] + 1 > 0, "local depth is already 0");
 
         self.local_depths[bucket_idx as usize] -= 1;
@@ -309,7 +310,7 @@ impl DirectoryPage {
     /// (2) Each bucket has precisely 2^(GD - LD) pointers pointing to it.
     /// (3) The LD is the same at each index with the same bucket_page_id
     ///
-    pub fn verify_integrity(&self, print_directory_on_failure: bool) {
+    pub(crate)  fn verify_integrity(&self, print_directory_on_failure: bool) {
         // build maps of {bucket_page_id : pointer_count} and {bucket_page_id : local_depth}
         let mut page_id_to_count: HashMap<PageId, u32> = HashMap::new();
         let mut page_id_to_ld: HashMap<PageId, u32> = HashMap::new();
@@ -352,11 +353,11 @@ impl DirectoryPage {
     }
 
     /// Prints the current directory
-    pub fn print_directory(&self) {
+    pub(crate)  fn print_directory(&self) {
         println!("{:?}", self)
     }
 
-    pub fn extended_format<GetKeysForBucketFn: Fn(PageId) -> Vec<String>>(&self, f: &mut Formatter<'_>, get_keys_for_bucket: GetKeysForBucketFn) -> std::fmt::Result {
+    pub(crate)  fn extended_format<GetKeysForBucketFn: Fn(PageId) -> Vec<String>>(&self, f: &mut Formatter<'_>, get_keys_for_bucket: GetKeysForBucketFn) -> std::fmt::Result {
         f.write_str(format!("======== DIRECTORY (global_depth: {}) ========\n", self.global_depth).as_str())?;
 
         let mut table = Table::new();
@@ -416,10 +417,10 @@ mod tests {
     use buffer_pool_manager::{BufferPool, BufferPoolManager};
     use buffer_common::AccessType;
 
-    use crate::storage::{ExtendibleHashTableDirectoryPage};
     use parking_lot::Mutex;
     use std::sync::Arc;
     use disk_storage::DiskManagerUnlimitedMemory;
+    use crate::directory_page::DirectoryPage;
 
     #[test]
     fn global_and_local_depth_mash() {
@@ -430,7 +431,7 @@ mod tests {
         // Create directory
         let mut directory_guard = bpm.new_page(AccessType::Unknown).expect("Should be able to create new page");
 
-        let directory_page = directory_guard.cast_mut::<ExtendibleHashTableDirectoryPage>();
+        let directory_page = directory_guard.cast_mut::<DirectoryPage>();
         directory_page.init(Some(3));
 
         assert_eq!(directory_page.global_depth, 0);

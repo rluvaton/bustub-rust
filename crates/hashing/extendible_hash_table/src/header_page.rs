@@ -4,15 +4,12 @@ use std::mem::size_of;
 use prettytable::{row, Table};
 use binary_utils::GetNBits;
 
-const _HASH_TABLE_HEADER_PAGE_METADATA_SIZE: usize = size_of::<u32>();
-pub const HASH_TABLE_HEADER_MAX_DEPTH: u32 = 9;
-const HASH_TABLE_HEADER_ARRAY_SIZE: usize = 1 << HASH_TABLE_HEADER_MAX_DEPTH;
-
+const PAGE_METADATA_SIZE: usize = size_of::<u32>();
 
 //noinspection RsAssertEqual
 const _: () = assert!(size_of::<PageId>() == 4);
 //noinspection RsAssertEqual
-const _: () = assert!(size_of::<HeaderPage>() == size_of::<PageId>() * HASH_TABLE_HEADER_ARRAY_SIZE + _HASH_TABLE_HEADER_PAGE_METADATA_SIZE);
+const _: () = assert!(size_of::<HeaderPage>() == size_of::<PageId>() * HeaderPage::ARRAY_SIZE + PAGE_METADATA_SIZE);
 const _: () = assert!(size_of::<HeaderPage>() <= PAGE_SIZE);
 
 ///
@@ -29,9 +26,9 @@ const _: () = assert!(size_of::<HeaderPage>() <= PAGE_SIZE);
 /// It stores the logical child pointers to the directory pages (as page ids).
 /// You can think about it as a static first-level directory page. The header page has the following fields:
 #[repr(C)]
-pub struct HeaderPage {
+pub(crate)  struct HeaderPage {
     /// An array of directory page ids
-    directory_page_ids: [PageId; HASH_TABLE_HEADER_ARRAY_SIZE],
+    directory_page_ids: [PageId; HeaderPage::ARRAY_SIZE],
 
     /// The maximum depth the header page could handle
     max_depth: u32,
@@ -39,6 +36,8 @@ pub struct HeaderPage {
 
 
 impl HeaderPage {
+    pub(crate) const MAX_DEPTH: u32 = 9;
+    const ARRAY_SIZE: usize = 1 << Self::MAX_DEPTH;
     // Delete all constructor / destructor to ensure memory safety
     // TODO - delete destructor?
 
@@ -51,8 +50,8 @@ impl HeaderPage {
     ///
     /// returns: ()
     ///
-    pub fn init(&mut self, max_depth: Option<u32>) {
-        self.max_depth = max_depth.unwrap_or(HASH_TABLE_HEADER_MAX_DEPTH);
+    pub(crate)  fn init(&mut self, max_depth: Option<u32>) {
+        self.max_depth = max_depth.unwrap_or(Self::MAX_DEPTH);
         self.directory_page_ids.fill(INVALID_PAGE_ID);
     }
 
@@ -65,7 +64,7 @@ impl HeaderPage {
     ///
     /// returns: u32 directory index the key is hashed to
     ///
-    pub fn hash_to_directory_index(&self, hash: u32) -> u32 {
+    pub(crate)  fn hash_to_directory_index(&self, hash: u32) -> u32 {
         // When max depth is 0 than all goes to the same directory
         if self.max_depth == 0 {
             return 0;
@@ -94,8 +93,8 @@ impl HeaderPage {
     ///
     /// TODO - should return Option in case of invalid?
     ///        Should add unsafe unchecked function?
-    pub fn get_directory_page_id(&self, directory_idx: u32) -> PageId {
-        if directory_idx >= HASH_TABLE_HEADER_ARRAY_SIZE as u32 {
+    pub(crate)  fn get_directory_page_id(&self, directory_idx: u32) -> PageId {
+        if directory_idx >= Self::ARRAY_SIZE as u32 {
             return INVALID_PAGE_ID
         }
         self.directory_page_ids[directory_idx as usize]
@@ -111,8 +110,8 @@ impl HeaderPage {
     ///
     /// returns: ()
     ///
-    pub fn set_directory_page_id(&mut self, directory_idx: u32, directory_page_id: PageId) {
-        assert!(directory_idx < HASH_TABLE_HEADER_ARRAY_SIZE as u32, "Directory index ({}) is larger than the size directory size: {}", directory_idx, HASH_TABLE_HEADER_ARRAY_SIZE);
+    pub(crate)  fn set_directory_page_id(&mut self, directory_idx: u32, directory_page_id: PageId) {
+        assert!(directory_idx < Self::MAX_DEPTH, "Directory index ({}) is larger than the size directory size: {}", directory_idx, Self::ARRAY_SIZE);
 
         self.directory_page_ids[directory_idx as usize] = directory_page_id;
     }

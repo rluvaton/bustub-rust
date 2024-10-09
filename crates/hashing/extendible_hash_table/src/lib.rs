@@ -1,14 +1,14 @@
-pub fn add(left: u64, right: u64) -> u64 {
-    left + right
-}
+mod disk_hash_table;
+mod pages_tests;
+mod directory_page;
+mod header_page;
+mod bucket_page;
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+pub use disk_hash_table::*;
+pub use disk_hash_table::{DiskHashTable as DiskExtendibleHashTable};
 
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
-    }
-}
+pub use bucket_page::bucket_array_size;
+
+pub(crate) use bucket_page::BucketPage;
+pub(crate) use directory_page::DirectoryPage;
+pub(crate) use header_page::HeaderPage;

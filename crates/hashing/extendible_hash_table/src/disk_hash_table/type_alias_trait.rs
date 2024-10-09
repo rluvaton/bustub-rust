@@ -1,7 +1,6 @@
 use common::{Comparator, PageKey, PageValue};
-use crate::container::KeyHasher;
-use crate::storage::{ExtendibleHashTableBucketPage, ExtendibleHashTableDirectoryPage, ExtendibleHashTableHeaderPage};
-use super::DiskExtendibleHashTable;
+use hashing_common::KeyHasher;
+use crate::{DiskHashTable, HeaderPage, DirectoryPage, BucketPage};
 
 /// Type aliases to be used for easy access to types with generic or other
 ///
@@ -28,14 +27,14 @@ pub(super) trait TypeAliases {
     type BucketPage;
 }
 
-impl<const BUCKET_MAX_SIZE: usize, Key, Value, KeyComparator, KeyHasherImpl> TypeAliases for DiskExtendibleHashTable<BUCKET_MAX_SIZE, Key, Value, KeyComparator, KeyHasherImpl>
+impl<const BUCKET_MAX_SIZE: usize, Key, Value, KeyComparator, KeyHasherImpl> TypeAliases for DiskHashTable<BUCKET_MAX_SIZE, Key, Value, KeyComparator, KeyHasherImpl>
 where
     Key: PageKey,
     Value: PageValue,
     KeyComparator: Comparator<Key>,
     KeyHasherImpl: KeyHasher
 {
-    type HeaderPage = ExtendibleHashTableHeaderPage;
-    type DirectoryPage = ExtendibleHashTableDirectoryPage;
-    type BucketPage = ExtendibleHashTableBucketPage<BUCKET_MAX_SIZE, Key, Value, KeyComparator>;
+    type HeaderPage = HeaderPage;
+    type DirectoryPage = DirectoryPage;
+    type BucketPage = BucketPage<BUCKET_MAX_SIZE, Key, Value, KeyComparator>;
 }

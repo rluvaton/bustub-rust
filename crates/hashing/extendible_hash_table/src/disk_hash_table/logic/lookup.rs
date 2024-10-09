@@ -1,6 +1,5 @@
 use super::super::type_alias_trait::TypeAliases;
-use super::super::HashTable;
-use crate::container::hash::KeyHasher;
+use super::super::DiskHashTable;
 use pages::{PageId, INVALID_PAGE_ID};
 use common::{Comparator, PageKey, PageValue};
 use error_utils::Context;
@@ -9,6 +8,7 @@ use std::sync::Arc;
 use buffer_common::AccessType;
 use buffer_pool_manager::BufferPool;
 use buffer_pool_manager::errors::{BufferPoolError, MapErrorToBufferPoolError};
+use hashing_common::KeyHasher;
 use transaction::Transaction;
 
 #[derive(thiserror::Error, Debug, PartialEq, Clone)]
@@ -18,7 +18,7 @@ pub enum LookupError {
 }
 
 
-impl<const BUCKET_MAX_SIZE: usize, Key, Value, KeyComparator, KeyHasherImpl> HashTable<BUCKET_MAX_SIZE, Key, Value, KeyComparator, KeyHasherImpl>
+impl<const BUCKET_MAX_SIZE: usize, Key, Value, KeyComparator, KeyHasherImpl> DiskHashTable<BUCKET_MAX_SIZE, Key, Value, KeyComparator, KeyHasherImpl>
 where
     Key: PageKey,
     Value: PageValue,

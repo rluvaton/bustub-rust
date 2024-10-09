@@ -3,12 +3,15 @@ mod tests {
     use buffer_pool_manager::{BufferPool, BufferPoolManager};
     use buffer_common::AccessType;
 
-    use crate::storage::{hash_table_bucket_array_size, ExtendibleHashBucketPageInsertionErrors, ExtendibleHashTableBucketPage, ExtendibleHashTableDirectoryPage, ExtendibleHashTableHeaderPage};
+    use crate::{bucket_array_size, bucket_page};
     use pages::{PageId, INVALID_PAGE_ID};
     use parking_lot::Mutex;
     use std::sync::Arc;
     use common::OrdComparator;
     use disk_storage::DiskManagerUnlimitedMemory;
+    use crate::bucket_page::{BucketPage};
+    use crate::directory_page::DirectoryPage;
+    use crate::header_page::HeaderPage;
 
     #[test]
     fn bucket_page_sample() {
@@ -20,9 +23,9 @@ mod tests {
         {
             let mut guard = bpm.new_page(AccessType::Unknown).expect("Should be able to create new page");
 
-            const BUCKET_SIZE: usize = hash_table_bucket_array_size::<Key, Value>();
-            let bucket_page = guard.cast_mut::<ExtendibleHashTableBucketPage<{
-                hash_table_bucket_array_size::<Key, Value>()
+            const BUCKET_SIZE: usize = bucket_array_size::<Key, Value>();
+            let bucket_page = guard.cast_mut::<BucketPage<{
+                bucket_array_size::<Key, Value>()
             }, Key, Value, OrdComparator<Key>>>();
             bucket_page.init(Some(10));
 
@@ -37,7 +40,7 @@ mod tests {
 
             assert!(bucket_page.is_full(), "bucket should be full");
 
-            assert_eq!(bucket_page.insert(&11, &11, &comparator), Err(ExtendibleHashBucketPageInsertionErrors::BucketIsFull), "should not insert when bucket is full");
+            assert_eq!(bucket_page.insert(&11, &11, &comparator), Err(bucket_page::errors::InsertionErrors::BucketIsFull), "should not insert when bucket is full");
 
             // check for the inserted pairs
             for i in 0..10 {
@@ -79,8 +82,8 @@ mod tests {
 
 
 
-        const BUCKET_SIZE: usize = hash_table_bucket_array_size::<Key, Value>();
-        type BucketPageType = ExtendibleHashTableBucketPage<BUCKET_SIZE, Key, Value, OrdComparator<Key>>;
+        const BUCKET_SIZE: usize = bucket_array_size::<Key, Value>();
+        type BucketPageType = BucketPage<BUCKET_SIZE, Key, Value, OrdComparator<Key>>;
 
         let mut bucket_page_id_1: PageId = INVALID_PAGE_ID;
         let mut bucket_page_id_2: PageId = INVALID_PAGE_ID;
@@ -92,7 +95,7 @@ mod tests {
                 /************************ HEADER PAGE TEST ************************/
                 let mut header_guard = bpm.new_page(AccessType::Unknown).expect("Should be able to create new page");
 
-                let header_page = header_guard.cast_mut::<ExtendibleHashTableHeaderPage>();
+                let header_page = header_guard.cast_mut::<HeaderPage>();
                 header_page.init(Some(2));
 
                 // Test hashes for header page
@@ -115,7 +118,7 @@ mod tests {
             // Create directory
             let mut directory_guard = bpm.new_page(AccessType::Unknown).expect("Should be able to create new page");
 
-            let directory_page = directory_guard.cast_mut::<ExtendibleHashTableDirectoryPage>();
+            let directory_page = directory_guard.cast_mut::<DirectoryPage>();
             directory_page.init(Some(3));
 
             // Create bucket No. 1

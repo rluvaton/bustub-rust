@@ -1,8 +1,5 @@
 #[cfg(test)]
 mod tests {
-    use crate::container::test_util::U64IdentityKeyHasher;
-    use crate::container::{DefaultKeyHasher, DiskExtendibleHashTable, KeyHasher};
-    use crate::storage::{hash_table_bucket_array_size};
     use buffer_pool_manager::BufferPoolManager;
     use common::{Comparator, OrdComparator, PageKey, PageValue, U64Comparator};
     use disk_storage::DiskManagerUnlimitedMemory;
@@ -17,6 +14,8 @@ mod tests {
     use std::sync::Arc;
     use std::sync::Barrier;
     use std::thread;
+    use hashing_common::{DefaultKeyHasher, KeyHasher, U64IdentityKeyHasher};
+    use crate::{bucket_array_size, DiskHashTable};
 
     type TestKey = u32;
     type TestValue = u64;
@@ -56,11 +55,11 @@ mod tests {
         (finished, handle)
     }
 
-    fn create_extendible_hash_table(pool_size: usize) -> DiskExtendibleHashTable<{ hash_table_bucket_array_size::<TestKey, TestValue>() }, TestKey, TestValue, OrdComparator<TestKey>, DefaultKeyHasher> {
+    fn create_extendible_hash_table(pool_size: usize) -> DiskHashTable<{ bucket_array_size::<TestKey, TestValue>() }, TestKey, TestValue, OrdComparator<TestKey>, DefaultKeyHasher> {
         let disk_manager = Arc::new(Mutex::new(DiskManagerUnlimitedMemory::new()));
         let bpm = BufferPoolManager::new(4, disk_manager, Some(2), None);
 
-        DiskExtendibleHashTable::new(
+        DiskHashTable::new(
             "temp".to_string(),
             bpm,
             OrdComparator::default(),
@@ -77,7 +76,7 @@ mod tests {
         KeyComparator: Comparator<Key>,
         KeyHasherImpl: KeyHasher,
         GetEntryFn: Fn(i64) -> (Key, Value)
-    >(mut hash_table: DiskExtendibleHashTable<ARRAY_SIZE, Key, Value, KeyComparator, KeyHasherImpl>, total: i64, get_entry_for_index: GetEntryFn) {
+    >(mut hash_table: DiskHashTable<ARRAY_SIZE, Key, Value, KeyComparator, KeyHasherImpl>, total: i64, get_entry_for_index: GetEntryFn) {
         let shuffle_seed: u64 = thread_rng().gen();
         println!("Seed used: {}", shuffle_seed);
         let mut rng = ChaChaRng::seed_from_u64(shuffle_seed);
@@ -339,8 +338,8 @@ mod tests {
         type Key = u64;
         type Value = u64;
 
-        let mut hash_table = DiskExtendibleHashTable::<
-            { hash_table_bucket_array_size::<Key, Value>() },
+        let mut hash_table = DiskHashTable::<
+            { bucket_array_size::<Key, Value>() },
             Key,
             Value,
             U64Comparator,
@@ -560,8 +559,8 @@ mod tests {
         type Key = u64;
         type Value = u64;
 
-        let hash_table = DiskExtendibleHashTable::<
-            { hash_table_bucket_array_size::<Key, Value>() },
+        let hash_table = DiskHashTable::<
+            { bucket_array_size::<Key, Value>() },
             Key,
             Value,
             OrdComparator<Key>,
@@ -591,8 +590,8 @@ mod tests {
         type Key = u64;
         type Value = u64;
 
-        let hash_table = Arc::new(DiskExtendibleHashTable::<
-            { hash_table_bucket_array_size::<Key, Value>() },
+        let hash_table = Arc::new(DiskHashTable::<
+            { bucket_array_size::<Key, Value>() },
             Key,
             Value,
             OrdComparator<Key>,

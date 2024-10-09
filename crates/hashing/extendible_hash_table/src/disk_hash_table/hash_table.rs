@@ -1,8 +1,6 @@
 use super::errors;
 use super::type_alias_trait::TypeAliases;
 use buffer_pool_manager::{BufferPool, BufferPoolManager};
-use crate::container::hash::KeyHasher;
-use crate::storage::{HASH_TABLE_DIRECTORY_MAX_DEPTH as DIRECTORY_MAX_DEPTH, HASH_TABLE_HEADER_MAX_DEPTH as HEADER_MAX_DEPTH};
 use pages::{PageId, INVALID_PAGE_ID};
 use common::{Comparator, PageKey, PageValue};
 use std::fmt::{Debug, Formatter};
@@ -10,6 +8,11 @@ use std::marker::PhantomData;
 use std::sync::Arc;
 use buffer_common::AccessType;
 use buffer_pool_manager::errors::MapErrorToBufferPoolError;
+use hashing_common::KeyHasher;
+use crate::bucket_array_size;
+use crate::bucket_page::BucketPage;
+use crate::directory_page::DirectoryPage;
+use crate::header_page::HeaderPage;
 
 pub const HEADER_PAGE_ID: PageId = 0;                                             // the header page id
 
@@ -24,24 +27,46 @@ pub const HEADER_PAGE_ID: PageId = 0;                                           
 /// # Examples
 ///
 /// ```
-/// use db_core::storage::{hash_table_bucket_array_size, GenericComparator, GenericKey};
-/// use db_core::container::{DiskExtendibleHashTable, DefaultKeyHasher};
-/// use rid::RID;
+/// use common::OrdComparator;
+/// use extendible_hash_table::{bucket_array_size, DiskExtendibleHashTable};
+/// use hashing_common::DefaultKeyHasher;
 ///
-/// const KEY_SIZE: usize = 8;
-/// type Key = GenericKey<KEY_SIZE>;
-/// type Value = RID;
+/// type Key = u64; // can also be GenericKey<8>;
+/// type Value = u16; // can also be RID;
 ///
 /// // Your table
 /// type HashTable = DiskExtendibleHashTable<
-///     { hash_table_bucket_array_size::<Key, Value>() },
+///     { bucket_array_size::<Key, Value>() },
 ///     Key,
 ///     Value,
-///     GenericComparator<KEY_SIZE>,
+///     OrdComparator<Key>,
 ///     DefaultKeyHasher
 /// >;
+///
+/// let _ = HashTable::BUCKET_ARRAY_SIZE_OK;
 /// ```
-pub struct HashTable<const BUCKET_MAX_SIZE: usize, Key, Value, KeyComparator, KeyHasherImpl>
+///
+/// When the bucket page size is not the hash_table_bucket_array_size size
+/// ```compile_fail
+/// use common::OrdComparator;
+/// use extendible_hash_table::{bucket_array_size, DiskExtendibleHashTable};
+/// use hashing_common::DefaultKeyHasher;
+///
+/// type Key = u64; // can also be GenericKey<8>;
+/// type Value = u16; // can also be RID;
+///
+/// // Your table
+/// type HashTable = DiskExtendibleHashTable<
+///     { bucket_array_size::<Key, Value>() - 1 }, // -1 will break
+///     Key,
+///     Value,
+///     OrdComparator<Key>,
+///     DefaultKeyHasher
+/// >;
+///
+/// let _ = HashTable::BUCKET_ARRAY_SIZE_OK;
+/// ```
+pub struct DiskHashTable<const BUCKET_MAX_SIZE: usize, Key, Value, KeyComparator, KeyHasherImpl>
 where
     Key: PageKey,
     Value: PageValue,
@@ -60,7 +85,7 @@ where
     pub(super) phantom_data: PhantomData<(Key, Value, KeyComparator, KeyHasherImpl)>,
 }
 
-unsafe impl<const BUCKET_MAX_SIZE: usize, Key, Value, KeyComparator, KeyHasherImpl> Sync for HashTable<BUCKET_MAX_SIZE, Key, Value, KeyComparator, KeyHasherImpl>
+unsafe impl<const BUCKET_MAX_SIZE: usize, Key, Value, KeyComparator, KeyHasherImpl> Sync for DiskHashTable<BUCKET_MAX_SIZE, Key, Value, KeyComparator, KeyHasherImpl>
 where
     Key: PageKey,
     Value: PageValue,
@@ -68,13 +93,15 @@ where
     KeyHasherImpl: KeyHasher,
 {}
 
-impl<const BUCKET_MAX_SIZE: usize, Key, Value, KeyComparator, KeyHasherImpl> HashTable<BUCKET_MAX_SIZE, Key, Value, KeyComparator, KeyHasherImpl>
+impl<const BUCKET_MAX_SIZE: usize, Key, Value, KeyComparator, KeyHasherImpl> DiskHashTable<BUCKET_MAX_SIZE, Key, Value, KeyComparator, KeyHasherImpl>
 where
     Key: PageKey,
     Value: PageValue,
     KeyComparator: Comparator<Key>,
     KeyHasherImpl: KeyHasher,
 {
+    pub const BUCKET_ARRAY_SIZE_OK: () = <Self as TypeAliases>::BucketPage::ARRAY_SIZE_OK;
+
     /// @brief Creates a new DiskExtendibleHashTable.
     ///
     /// # Arguments
@@ -93,7 +120,7 @@ where
 
         assert_eq!(BUCKET_MAX_SIZE as u32 as usize, BUCKET_MAX_SIZE, "Bucket max size must be u32 in size");
 
-        let header_max_depth = header_max_depth.unwrap_or(HEADER_MAX_DEPTH);
+        let header_max_depth = header_max_depth.unwrap_or(HeaderPage::MAX_DEPTH);
         Self::init_new_header(bpm.clone(), header_max_depth)?;
 
         Ok(Self {
@@ -103,7 +130,7 @@ where
 
             header_page_id: HEADER_PAGE_ID,
 
-            directory_max_depth: directory_max_depth.unwrap_or(DIRECTORY_MAX_DEPTH),
+            directory_max_depth: directory_max_depth.unwrap_or(DirectoryPage::MAX_DEPTH),
             bucket_max_size: bucket_max_size.unwrap_or(BUCKET_MAX_SIZE as u32),
 
             phantom_data: PhantomData,
@@ -159,7 +186,7 @@ where
     }
 }
 
-impl<const BUCKET_MAX_SIZE: usize, Key: PageKey, Value: PageValue, KeyComparator: Comparator<Key>, KeyHasherImpl: KeyHasher> Debug for HashTable<BUCKET_MAX_SIZE, Key, Value, KeyComparator, KeyHasherImpl> {
+impl<const BUCKET_MAX_SIZE: usize, Key: PageKey, Value: PageValue, KeyComparator: Comparator<Key>, KeyHasherImpl: KeyHasher> Debug for DiskHashTable<BUCKET_MAX_SIZE, Key, Value, KeyComparator, KeyHasherImpl> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.write_str("\n================ PRINT! ================\n")?;
 

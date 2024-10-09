@@ -1,4 +1,3 @@
-use crate::storage::{ExtendibleHashBucketPageInsertionErrors};
 use pages::PAGE_SIZE;
 use common::{Comparator, OrdComparator, PageKey, PageValue};
 use prettytable::{row, Table};
@@ -7,6 +6,7 @@ use std::fmt::{Debug, Formatter};
 use std::marker::PhantomData;
 use std::mem::size_of;
 use std::slice::Iter;
+use super::errors::InsertionErrors;
 
 pub type MappingType<KeyType, ValueType>  = (KeyType, ValueType);
 
@@ -17,7 +17,7 @@ const _: () = {
     type Value = u16;
     // Assert that the comparator phantom data does not affecting size
     assert!(
-        size_of::<BucketPage<{hash_table_bucket_array_size::<Key, Value>()}, Key, Value, OrdComparator<Key>>>() ==
+        size_of::<BucketPage<{ bucket_array_size::<Key, Value>()}, Key, Value, OrdComparator<Key>>>() ==
             0 +
                 // size
                 size_of::<u32>() +
@@ -26,14 +26,14 @@ const _: () = {
                 size_of::<u32>() +
 
                 // array
-                size_of::<MappingType<Key, Value>>() * hash_table_bucket_array_size::<Key, Value>()
+                size_of::<MappingType<Key, Value>>() * bucket_array_size::<Key, Value>()
     );
 };
 
-const HASH_TABLE_BUCKET_PAGE_METADATA_SIZE: usize = size_of::<u32>() * 2;
+const PAGE_METADATA_SIZE: usize = size_of::<u32>() * 2;
 
-pub const fn hash_table_bucket_array_size<Key: PageKey, Value: PageValue>() -> usize {
-    (PAGE_SIZE - HASH_TABLE_BUCKET_PAGE_METADATA_SIZE) / size_of::<MappingType<Key, Value>>()
+pub const fn bucket_array_size<Key: PageKey, Value: PageValue>() -> usize {
+    (PAGE_SIZE - PAGE_METADATA_SIZE) / size_of::<MappingType<Key, Value>>()
 }
 
 
@@ -52,31 +52,9 @@ pub const fn hash_table_bucket_array_size<Key: PageKey, Value: PageValue>() -> u
 /// The `ArraySize` generic must be the value of `hash_table_bucket_array_size`
 /// This can be removed once [`feature(generic_const_exprs)`](https://github.com/rust-lang/rust/issues/76560) is stable
 ///
-/// # Examples
-/// ```rust
-/// use std::cmp::Ordering;
-/// use rid::RID;
-/// use db_core::storage::{ExtendibleHashTableBucketPage, hash_table_bucket_array_size, U8Comparator};
-///
-/// type B = ExtendibleHashTableBucketPage::<{hash_table_bucket_array_size::<u8, u8>()}, u8, u8, U8Comparator>;
-///
-/// let _ = B::ARRAY_SIZE_OK;
-/// ```
-///
-/// When the bucket page size is not the hash_table_bucket_array_size size
-/// ```compile_fail
-/// use std::cmp::Ordering;
-/// use rid::RID;
-/// use db_core::storage::{ExtendibleHashTableBucketPage, hash_table_bucket_array_size, U8Comparator};
-///
-/// type B = ExtendibleHashTableBucketPage::<{hash_table_bucket_array_size::<u8, u8>() - 1}, u8, u8, U8Comparator>;
-///
-/// let _ = B::ARRAY_SIZE_OK;
-/// ```
-///
 #[repr(C)]
 // TODO - replace the repr(C)
-pub struct BucketPage<const ARRAY_SIZE: usize, Key, Value, KeyComparator>
+pub(crate) struct BucketPage<const ARRAY_SIZE: usize, Key, Value, KeyComparator>
 where
     Key: PageKey,
     Value: PageValue,
@@ -107,7 +85,7 @@ where
     /// but it's the best we can do for know
     /// Won't be needed once [`feature(generic_const_exprs)`](https://github.com/rust-lang/rust/issues/76560) is stable
     // noinspection RsAssertEqual
-    pub const ARRAY_SIZE_OK: () = assert!(ARRAY_SIZE == hash_table_bucket_array_size::<Key, Value>(), "ArraySize generic was not hash_table_bucket_array_size::<Key, ValueType>()");
+    pub(crate) const ARRAY_SIZE_OK: () = assert!(ARRAY_SIZE == bucket_array_size::<Key, Value>(), "ArraySize generic was not hash_table_bucket_array_size::<Key, ValueType>()");
 
     // Delete all constructor / destructor to ensure memory safety
     // TODO - delete destructor?
@@ -118,7 +96,7 @@ where
      * method to set default values
      * @param max_size Max size of the bucket array
      */
-    pub fn init(&mut self, max_size: Option<u32>) {
+    pub(crate)  fn init(&mut self, max_size: Option<u32>) {
         // Validate correct generic at compile time
         let _ = Self::ARRAY_SIZE_OK;
         let max_size = max_size.unwrap_or(ARRAY_SIZE as u32);
@@ -138,7 +116,7 @@ where
     ///
     /// returns: Option<& Value> None if the key was missing, Some with reference to the found value if not
     ///
-    pub fn lookup(&self, key: &Key, comparator: &KeyComparator) -> Option<&Value> {
+    pub(crate)  fn lookup(&self, key: &Key, comparator: &KeyComparator) -> Option<&Value> {
         self
             .iter()
             .find(|(item_key, _)| comparator.cmp(key, &item_key) == Ordering::Equal)
@@ -153,9 +131,9 @@ where
      * @param cmp the comparator to use
      * @return true if inserted, false if bucket is full or the same key is already present
      */
-    pub fn insert(&mut self, key: &Key, value: &Value, comparator: &KeyComparator) -> Result<(), ExtendibleHashBucketPageInsertionErrors> {
+    pub(crate)  fn insert(&mut self, key: &Key, value: &Value, comparator: &KeyComparator) -> Result<(), InsertionErrors> {
         if self.is_full() {
-            return Err(ExtendibleHashBucketPageInsertionErrors::BucketIsFull);
+            return Err(InsertionErrors::BucketIsFull);
         }
 
         let missing = self.array[0..self.size as usize]
@@ -163,7 +141,7 @@ where
             .all(|(item_key, _)| comparator.cmp(key, &item_key) != Ordering::Equal);
 
         if !missing {
-            return Err(ExtendibleHashBucketPageInsertionErrors::KeyAlreadyExists);
+            return Err(InsertionErrors::KeyAlreadyExists);
         }
 
         // TODO - No need to clone as key and value support copy
@@ -180,7 +158,7 @@ where
      *
      * @return true if removed, false if not found
      */
-    pub fn remove(&mut self, key: &Key, comparator: &KeyComparator) -> bool {
+    pub(crate)  fn remove(&mut self, key: &Key, comparator: &KeyComparator) -> bool {
         if self.is_empty() {
             return false;
         }
@@ -196,7 +174,7 @@ where
         false
     }
 
-    pub fn remove_at(&mut self, bucket_idx: u32) {
+    pub(crate)  fn remove_at(&mut self, bucket_idx: u32) {
         if bucket_idx >= self.size {
             return;
         }
@@ -215,7 +193,7 @@ where
      * @param bucket_idx the index in the bucket to get the key at
      * @return key at index bucket_idx of the bucket
      */
-    pub fn key_at(&self, bucket_idx: u32) -> &Key {
+    pub(crate)  fn key_at(&self, bucket_idx: u32) -> &Key {
         &self.entry_at(bucket_idx).0
     }
 
@@ -225,7 +203,7 @@ where
      * @param bucket_idx the index in the bucket to get the value at
      * @return value at index bucket_idx of the bucket
      */
-    pub fn value_at(&self, bucket_idx: u32) -> &Value {
+    pub(crate)  fn value_at(&self, bucket_idx: u32) -> &Value {
         &self.entry_at(bucket_idx).1
     }
 
@@ -235,12 +213,12 @@ where
      * @param bucket_idx the index in the bucket to get the entry at
      * @return entry at index bucket_idx of the bucket
      */
-    pub fn entry_at(&self, bucket_idx: u32) -> &MappingType<Key, Value> {
+    pub(crate)  fn entry_at(&self, bucket_idx: u32) -> &MappingType<Key, Value> {
         &self.array[bucket_idx as usize]
     }
 
     // Replace all entries with different one, this is useful for rehashing
-    pub fn replace_all_entries(&mut self, new_items: &[MappingType<Key, Value>]) {
+    pub(crate)  fn replace_all_entries(&mut self, new_items: &[MappingType<Key, Value>]) {
         assert!(self.max_size as usize >= new_items.len(), "can't insert more items than bucket can hold");
 
         // TODO - should do swap to the memory or something for better perf?
@@ -252,26 +230,26 @@ where
     /**
      * @return number of entries in the bucket
      */
-    pub fn size(&self) -> u32 {
+    pub(crate)  fn size(&self) -> u32 {
         self.size
     }
 
     /**
      * @return whether the bucket is full
      */
-    pub fn is_full(&self) -> bool {
+    pub(crate)  fn is_full(&self) -> bool {
         self.size == self.max_size
     }
 
     /**
      * @return whether the bucket is empty
      */
-    pub fn is_empty(&self) -> bool {
+    pub(crate)  fn is_empty(&self) -> bool {
         self.size == 0
     }
 
     /// Prints the bucket's occupancy information
-    pub fn print_bucket(&self) {
+    pub(crate)  fn print_bucket(&self) {
         println!("{:?}", self)
     }
 
@@ -279,7 +257,7 @@ where
         self.array[..self.size() as usize].iter().position(|item| comparator.cmp(key, &item.0) == Ordering::Equal)
     }
 
-    pub fn iter(&self) -> Iter<'_, MappingType<Key, Value>> {
+    pub(crate)  fn iter(&self) -> Iter<'_, MappingType<Key, Value>> {
         self.array[..self.size() as usize].iter()
     }
 }

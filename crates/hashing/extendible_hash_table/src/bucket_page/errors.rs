@@ -1,7 +1,7 @@
 use thiserror::Error;
 
 #[derive(Error, Debug, PartialEq, Clone)]
-pub enum ExtendibleHashBucketPageInsertionErrors {
+pub(crate) enum InsertionErrors {
     #[error("Bucket is full")]
     BucketIsFull,
 
