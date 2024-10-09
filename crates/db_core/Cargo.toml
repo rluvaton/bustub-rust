@@ -6,7 +6,6 @@ edition = "2021"
 [dependencies]
 common = {path = "../common"}
 pages = {path = "../storage/pages"}
-disk_storage = {path = "../storage/disk"}
 
 buffer_common = {path = "../buffer/common"}
 buffer_pool_manager = {path = "../buffer/manager"}
@@ -16,36 +15,16 @@ transaction = {path = "../concurrency/transaction/core"}
 tuple = {path = "../storage/table/tuple"}
 
 rid = {path = "../rid"}
-binary_utils = {path = "../binary_utils"}
-generics = {path = "../generics"}
 data_types = {path = "../data_types"}
 error_utils = {path = "../error_utils"}
 
 thiserror = "1.0.64"
-prettytable = "0.10.0"
-atomic = "0.6.0"
-bytemuck = "1.18.0"
 
-# TODO - remove unused features
-rand = "0.8"
-rand_chacha = "0.3.1"
-
-# Make sure to sync this version with the one in the dev-dependencies
 parking_lot = "0.12.3"
-
-# Profiling
-tracy-client = { version = "0.17.3", default-features = false}
 
 [dev-dependencies]
 tempdir = "0.3.7"
-zipf = "7"
-parking_lot = { version = "0.12.3", features = ["default", "deadlock_detection"] }
 
-
-[profile.bench]
-debug = true
 
 [features]
 default = []
-statistics = ["buffer_pool_manager/statistics"]
-tracing = ["tracy-client/enable", "buffer_pool_manager/tracing"]

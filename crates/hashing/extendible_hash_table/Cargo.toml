@@ -18,15 +18,11 @@ transaction = {path = "../../concurrency/transaction/core"}
 
 binary_utils = {path = "../../binary_utils"}
 generics = {path = "../../generics"}
-data_types = {path = "../../data_types"}
 error_utils = {path = "../../error_utils"}
 
 thiserror = "1.0.64"
 prettytable = "0.10.0"
-atomic = "0.6.0"
-bytemuck = "1.18.0"
 
-# TODO - remove unused features
 rand = "0.8"
 rand_chacha = "0.3.1"
 

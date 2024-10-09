@@ -331,29 +331,19 @@ dependencies = [
 name = "db_core"
 version = "0.1.0"
 dependencies = [
- "atomic",
- "binary_utils",
  "buffer_common",
  "buffer_pool_manager",
- "bytemuck",
  "common",
  "data_types",
- "disk_storage",
  "error_utils",
- "generics",
  "pages",
  "parking_lot",
- "prettytable",
- "rand 0.8.5",
- "rand_chacha",
  "recovery_log_manager",
  "rid",
  "tempdir",
  "thiserror",
- "tracy-client",
  "transaction",
  "tuple",
- "zipf",
 ]
 
 [[package]]
@@ -462,13 +452,10 @@ version = "0.1.0"
 name = "extendible_hash_table"
 version = "0.1.0"
 dependencies = [
- "atomic",
  "binary_utils",
  "buffer_common",
  "buffer_pool_manager",
- "bytemuck",
  "common",
- "data_types",
  "disk_storage",
  "error_utils",
  "generics",
