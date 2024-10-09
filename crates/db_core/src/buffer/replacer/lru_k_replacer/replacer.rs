@@ -5,7 +5,8 @@ use tracy_client::span;
 
 use super::counter::AtomicI64Counter;
 use super::lru_k_replacer_store::LRUKReplacerStore;
-use crate::buffer::{AccessType, Replacer};
+use crate::buffer::{Replacer};
+use buffer_common::AccessType;
 use common::config::FrameId;
 use crate::buffer::replacer::lru_k_replacer::lru_node_trait::LRUNode;
 

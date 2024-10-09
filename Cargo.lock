@@ -152,6 +152,7 @@ checksum = "b048fb63fd8b5923fc5aa7b340d8e156aec7ec02f0c78fa8a6ddc2613f6f71de"
 name = "bpm_bench"
 version = "0.1.0"
 dependencies = [
+ "buffer_common",
  "clap",
  "common",
  "db_core",
@@ -376,6 +377,7 @@ dependencies = [
  "atomic",
  "binary_utils",
  "bit-vec",
+ "buffer_common",
  "bytemuck",
  "chrono",
  "common",

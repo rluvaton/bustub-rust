@@ -16,6 +16,7 @@ db_core = {path = "../../crates/db_core" }
 common = {path = "../../crates/common"}
 pages = {path = "../../crates/storage/pages"}
 disk_storage = {path = "../../crates/storage/disk"}
+buffer_common = {path = "../../crates/buffer/common"}
 
 tempdir = "0.3.7"
 

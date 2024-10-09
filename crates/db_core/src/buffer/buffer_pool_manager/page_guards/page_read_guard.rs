@@ -7,7 +7,7 @@ use pages::{
     PageId
 };
 use std::sync::Arc;
-use crate::buffer::AccessType;
+use buffer_common::AccessType;
 
 /// Read guard on page that will also unpin on drop
 #[clippy::has_significant_drop]

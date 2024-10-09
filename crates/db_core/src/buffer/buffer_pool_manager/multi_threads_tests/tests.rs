@@ -1,7 +1,9 @@
 use std::cmp::max;
 use super::helpers::get_tmp_dir;
 use super::options::{DiskManagerImplementationOptions, DurationType, Options};
-use crate::buffer::{AccessType, BufferPool, BufferPoolManager};
+use crate::buffer::{BufferPool, BufferPoolManager};
+use buffer_common::AccessType;
+
 use pages::{PageData, PageId};
 use parking_lot::{Mutex, RwLock};
 use std::collections::HashMap;

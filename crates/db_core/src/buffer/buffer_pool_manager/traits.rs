@@ -1,6 +1,6 @@
 use super::errors::{DeletePageError, FetchPageError, NewPageError};
 use super::page_guards::{PageReadGuard, PageWriteGuard};
-use crate::buffer::{AccessType};
+use buffer_common::AccessType;
 use pages::PageId;
 
 /// Buffer pool
@@ -60,12 +60,6 @@ pub trait BufferPool {
     /// * `page_id`: page id to delete
     ///
     /// returns: Result<bool, DeletePageError> false if the page is missing
-    ///
-    /// # Examples
-    ///
-    /// ```
-    ///
-    /// ```
     fn delete_page(&self, page_id: PageId) -> Result<bool, DeletePageError>;
 
 

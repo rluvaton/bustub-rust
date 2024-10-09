@@ -1,6 +1,8 @@
 #[cfg(test)]
 mod tests {
-    use crate::buffer::{AccessType, BufferPool, BufferPoolManager};
+    use crate::buffer::{BufferPool, BufferPoolManager};
+    use buffer_common::AccessType;
+
     use crate::catalog::Schema;
     use crate::storage::{hash_table_bucket_array_size, ExtendibleHashBucketPageInsertionErrors, ExtendibleHashTableBucketPage, ExtendibleHashTableDirectoryPage, ExtendibleHashTableHeaderPage, GenericComparator, GenericKey};
     use pages::{PageId, INVALID_PAGE_ID};

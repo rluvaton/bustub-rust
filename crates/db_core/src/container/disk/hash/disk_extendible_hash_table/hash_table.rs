@@ -1,6 +1,6 @@
 use super::errors;
 use super::type_alias_trait::TypeAliases;
-use crate::buffer::{AccessType, BufferPool, BufferPoolManager};
+use crate::buffer::{BufferPool, BufferPoolManager};
 use crate::container::hash::KeyHasher;
 use crate::storage::{Comparator, HASH_TABLE_DIRECTORY_MAX_DEPTH as DIRECTORY_MAX_DEPTH, HASH_TABLE_HEADER_MAX_DEPTH as HEADER_MAX_DEPTH};
 use pages::{PageId, INVALID_PAGE_ID};
@@ -8,6 +8,7 @@ use common::{PageKey, PageValue};
 use std::fmt::{Debug, Formatter};
 use std::marker::PhantomData;
 use std::sync::Arc;
+use buffer_common::AccessType;
 use crate::buffer::errors::{MapErrorToBufferPoolError};
 
 pub const HEADER_PAGE_ID: PageId = 0;                                             // the header page id

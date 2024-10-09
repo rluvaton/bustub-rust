@@ -2,7 +2,7 @@ use super::super::type_alias_trait::TypeAliases;
 use super::super::HashTable;
 use crate::buffer;
 use crate::buffer::errors::MapErrorToBufferPoolError;
-use crate::buffer::{AccessType, BufferPool, PageWriteGuard};
+use crate::buffer::{BufferPool, PageWriteGuard};
 use crate::concurrency::Transaction;
 use crate::container::hash::KeyHasher;
 use crate::storage::Comparator;
@@ -12,6 +12,7 @@ use common::{PageKey, PageValue};
 use error_utils::Context;
 use std::fmt::Debug;
 use std::sync::Arc;
+use buffer_common::AccessType;
 
 #[derive(thiserror::Error, Debug, PartialEq, Clone)]
 pub enum InsertionError {

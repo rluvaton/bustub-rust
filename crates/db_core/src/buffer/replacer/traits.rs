@@ -1,5 +1,5 @@
 use common::config::FrameId;
-use crate::buffer::AccessType;
+use buffer_common::AccessType;
 
 /// Replacement Policy for the buffer pool, this is not promised to be thread safe
 pub(crate) trait Replacer {

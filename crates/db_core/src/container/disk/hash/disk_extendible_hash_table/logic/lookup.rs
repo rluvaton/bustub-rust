@@ -9,7 +9,8 @@ use common::{PageKey, PageValue};
 use error_utils::Context;
 use std::fmt::Debug;
 use std::sync::Arc;
-use crate::buffer::{AccessType, BufferPool};
+use buffer_common::AccessType;
+use crate::buffer::{BufferPool};
 use crate::buffer::errors::MapErrorToBufferPoolError;
 
 
