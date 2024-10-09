@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
     use crate::storage::{DefaultDiskManager, DiskManager, DiskManagerUnlimitedMemory};
-    use common::config::BUSTUB_PAGE_SIZE;
+    use pages::PAGE_SIZE;
     use std::path::PathBuf;
     use tempdir::TempDir;
 
@@ -11,8 +11,8 @@ mod tests {
 
     #[test]
     fn read_write_page() {
-        let mut buf = [0u8; BUSTUB_PAGE_SIZE];
-        let mut data = [0u8; BUSTUB_PAGE_SIZE];
+        let mut buf = [0u8; PAGE_SIZE];
+        let mut data = [0u8; PAGE_SIZE];
         let tmp_dir = setup();
 
         let db_file = tmp_dir.path().join("test.db");
@@ -76,8 +76,8 @@ mod tests {
 
     #[test]
     fn read_write_page_unlimited_memory() {
-        let mut buf = [0u8; BUSTUB_PAGE_SIZE];
-        let mut data = [0u8; BUSTUB_PAGE_SIZE];
+        let mut buf = [0u8; PAGE_SIZE];
+        let mut data = [0u8; PAGE_SIZE];
 
         let mut dm = DiskManagerUnlimitedMemory::new();
         let val = "A test string.";

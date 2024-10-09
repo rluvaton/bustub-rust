@@ -4,7 +4,7 @@ use crate::buffer;
 use crate::concurrency::Transaction;
 use crate::container::hash::KeyHasher;
 use crate::storage::Comparator;
-use common::config::{PageId, INVALID_PAGE_ID};
+use pages::{PageId, INVALID_PAGE_ID};
 use common::{PageKey, PageValue};
 use error_utils::Context;
 use std::fmt::Debug;

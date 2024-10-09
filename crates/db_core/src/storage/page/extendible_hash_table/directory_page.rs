@@ -1,5 +1,5 @@
 use binary_utils::GetNBits;
-use common::config::{PageId, BUSTUB_PAGE_SIZE, INVALID_PAGE_ID};
+use pages::{PageId, PAGE_SIZE, INVALID_PAGE_ID};
 use generics::GetOr;
 use prettytable::{row, Table};
 use std::collections::HashMap;
@@ -21,7 +21,7 @@ const HASH_TABLE_DIRECTORY_ARRAY_SIZE: usize = 1 << HASH_TABLE_DIRECTORY_MAX_DEP
 const _: () = assert!(size_of::<PageId>() == 4);
 //noinspection RsAssertEqual
 const _: () = assert!(size_of::<DirectoryPage>() == _HASH_TABLE_DIRECTORY_PAGE_METADATA_SIZE + HASH_TABLE_DIRECTORY_ARRAY_SIZE + size_of::<PageId>() * HASH_TABLE_DIRECTORY_ARRAY_SIZE);
-const _: () = assert!(size_of::<DirectoryPage>() <= BUSTUB_PAGE_SIZE);
+const _: () = assert!(size_of::<DirectoryPage>() <= PAGE_SIZE);
 
 ///
 /// Directory pages sit at the second level of our disk-based extendible hash table.

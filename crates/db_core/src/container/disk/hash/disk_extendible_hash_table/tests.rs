@@ -5,8 +5,9 @@ mod tests {
     use crate::container::test_util::U64IdentityKeyHasher;
     use crate::container::{DefaultKeyHasher, DiskExtendibleHashTable, KeyHasher};
     use crate::storage::{hash_table_bucket_array_size, Comparator, DiskManagerUnlimitedMemory, GenericComparator, GenericKey, OrdComparator, U64Comparator};
-    use common::config::{PageId, BUSTUB_PAGE_SIZE};
-    use common::{PageKey, PageValue, RID};
+    use pages::{PageId, PAGE_SIZE};
+    use common::{PageKey, PageValue};
+    use rid::RID;
     use generics::Shuffle;
     use parking_lot::Mutex;
     use rand::seq::SliceRandom;
@@ -298,7 +299,7 @@ mod tests {
         let hash_table = create_extendible_hash_table(4);
 
         // Having enough keys so a split would happen
-        let total = (BUSTUB_PAGE_SIZE * 100) as i64;
+        let total = (PAGE_SIZE * 100) as i64;
 
         let mut key = GenericKey::<8>::default();
         let mut value = RID::default();
@@ -316,7 +317,7 @@ mod tests {
         let hash_table = create_extendible_hash_table(4);
 
         // Having enough keys so a split would happen
-        let total = (BUSTUB_PAGE_SIZE * 100) as i64;
+        let total = (PAGE_SIZE * 100) as i64;
         test_lifecycle(hash_table, total, |i| (
             GenericKey::<8>::new_from_integer(i),
             RID::new(i as PageId, i as u32)
@@ -328,7 +329,7 @@ mod tests {
         let hash_table = create_extendible_hash_table(1000);
 
         // Having enough keys so a split would happen
-        let total = (BUSTUB_PAGE_SIZE * 100) as i64;
+        let total = (PAGE_SIZE * 100) as i64;
         test_lifecycle(hash_table, total, |i| (
             GenericKey::<8>::new_from_integer(i),
             RID::new(i as PageId, i as u32)
@@ -580,7 +581,7 @@ mod tests {
         ).expect("Should be able to create hash table");
 
         // Having enough keys so a split would happen
-        let total = BUSTUB_PAGE_SIZE as i64;
+        let total = PAGE_SIZE as i64;
         test_lifecycle(hash_table, total, |i| (
             i as Key,
             i as Value
@@ -610,7 +611,7 @@ mod tests {
             None,
         ).expect("Should be able to create hash table"));
 
-        let total = (BUSTUB_PAGE_SIZE * 10) as i64; // Reduce the number of operations for concurrency testing
+        let total = (PAGE_SIZE * 10) as i64; // Reduce the number of operations for concurrency testing
 
         // Number of threads to spawn
         let num_threads = 8;

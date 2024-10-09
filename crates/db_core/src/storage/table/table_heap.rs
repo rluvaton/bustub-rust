@@ -1,6 +1,6 @@
 use std::sync::Arc;
 use parking_lot::Mutex;
-use common::config::{PageId, INVALID_PAGE_ID};
+use pages::{PageId, INVALID_PAGE_ID};
 use crate::buffer::BufferPoolManager;
 
 /// TODO - implement more from src/include/storage/table/table_heap.h

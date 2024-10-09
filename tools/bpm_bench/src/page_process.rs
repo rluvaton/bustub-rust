@@ -1,5 +1,5 @@
 use std::process::abort;
-use common::config::PageData;
+use pages::PageData;
 
 // This is the structure of the page
 #[allow(unused)]

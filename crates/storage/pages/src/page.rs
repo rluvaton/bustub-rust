@@ -1,5 +1,4 @@
-use crate::UnderlyingPage;
-use common::config::{PageData, PageId, BUSTUB_PAGE_SIZE, INVALID_PAGE_ID};
+use crate::{PageData, PageId, UnderlyingPage, INVALID_PAGE_ID, PAGE_SIZE};
 use common::ReaderWriterLatch;
 use parking_lot::{RwLockReadGuard, RwLockWriteGuard};
 use std::ops::{Deref, DerefMut};
@@ -33,7 +32,7 @@ impl Page {
     /// returns: Page
     ///
     pub fn new(page_id: PageId) -> Self {
-        let page = Self::create_with_data(page_id, [0u8; BUSTUB_PAGE_SIZE]);
+        let page = Self::create_with_data(page_id, [0u8; PAGE_SIZE]);
 
         // Creating new page is marked as dirty by default in order for new pages to be flushed to disk
         page.is_dirty.store(true, Ordering::Relaxed);
@@ -180,7 +179,6 @@ impl Drop for Page {
 #[cfg(test)]
 mod tests {
     use crate::*;
-    use common::config::INVALID_PAGE_ID;
 
     // TODO - unignore
     #[test]

@@ -3,12 +3,15 @@ use super::type_alias_trait::TypeAliases;
 use crate::buffer::{AccessType, BufferPool, BufferPoolManager};
 use crate::container::hash::KeyHasher;
 use crate::storage::{Comparator, HASH_TABLE_DIRECTORY_MAX_DEPTH as DIRECTORY_MAX_DEPTH, HASH_TABLE_HEADER_MAX_DEPTH as HEADER_MAX_DEPTH};
-use common::config::{PageId, HEADER_PAGE_ID, INVALID_PAGE_ID};
+use pages::{PageId, INVALID_PAGE_ID};
 use common::{PageKey, PageValue};
 use std::fmt::{Debug, Formatter};
 use std::marker::PhantomData;
 use std::sync::Arc;
 use crate::buffer::errors::{MapErrorToBufferPoolError};
+
+pub const HEADER_PAGE_ID: PageId = 0;                                             // the header page id
+
 
 /// Thread safe implementation of extendible hash table that is backed by a buffer pool
 /// manager. Non-unique keys are supported. Supports insert and delete. The

@@ -1,6 +1,6 @@
 use std::cell::UnsafeCell;
 use crate::storage::disk::disk_manager::disk_manager_trait::DiskManager;
-use common::config::{PageId, BUSTUB_PAGE_SIZE};
+use pages::{PageData, PageId, PAGE_SIZE};
 use std::sync::{Arc};
 use parking_lot::{Mutex, MutexGuard};
 use std::thread;
@@ -8,11 +8,11 @@ use std::thread::{sleep, ThreadId};
 use std::time::Duration;
 use common::Future;
 
-type Page = [u8; BUSTUB_PAGE_SIZE];
+type Page = PageData;
 type ProtectedPage = Arc<Mutex<Option<Page>>>;
 
 fn create_page() -> Page {
-    [0u8; BUSTUB_PAGE_SIZE]
+    [0u8; PAGE_SIZE]
 }
 
 struct LatencyProcessor {
@@ -172,7 +172,7 @@ impl DiskManager for DiskManagerUnlimitedMemory {
             let mut value = (*page_lock).unwrap();
 
             // Using clone to avoid data being modified when using that page_data reference
-            value[0..BUSTUB_PAGE_SIZE].clone_from_slice(page_data);
+            value[0..PAGE_SIZE].clone_from_slice(page_data);
 
             // Set it back
             *page_lock = Some(value);
@@ -215,7 +215,7 @@ impl DiskManager for DiskManagerUnlimitedMemory {
             panic!("page {} not exists", page_id);
         }
 
-        page_data[0..BUSTUB_PAGE_SIZE].copy_from_slice(&page_lock.unwrap());
+        page_data[0..PAGE_SIZE].copy_from_slice(&page_lock.unwrap());
 
         self.post_process_latency(page_id);
 

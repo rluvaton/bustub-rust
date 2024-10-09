@@ -1,5 +1,6 @@
-use common::config::{PageData, PageId, BUSTUB_PAGE_SIZE, INVALID_PAGE_ID, LSN};
+use common::config::{LSN};
 use std::mem::size_of;
+use crate::{PageData, PageId, INVALID_PAGE_ID, PAGE_SIZE};
 
 //noinspection RsAssertEqual
 const _:() = assert!(size_of::<PageId>() == 4);
@@ -135,7 +136,7 @@ impl UnderlyingPage {
 
     pub fn reset(&mut self, page_id: PageId) {
         self.partial_reset(page_id);
-        self.data = [0u8; BUSTUB_PAGE_SIZE];
+        self.data = [0u8; PAGE_SIZE];
     }
 
     pub fn partial_reset(&mut self, page_id: PageId) {
@@ -171,7 +172,7 @@ impl UnderlyingPage {
 
 impl Default for UnderlyingPage {
     fn default() -> Self {
-        UnderlyingPage::new(INVALID_PAGE_ID, [0u8; BUSTUB_PAGE_SIZE])
+        UnderlyingPage::new(INVALID_PAGE_ID, [0u8; PAGE_SIZE])
     }
 }
 

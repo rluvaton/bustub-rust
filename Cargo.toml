@@ -9,7 +9,9 @@ members = [
     "crates/binary_utils",
     "crates/generics",
     "crates/error_utils",
-    "crates/data_structures", "crates/storage/pages",
+    "crates/data_structures",
+    "crates/storage/pages",
+    "crates/rid",
 ]
 
 [profile.bench]

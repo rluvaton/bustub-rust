@@ -1,5 +1,5 @@
 use common::config::{TableOID, TxnId};
-use common::RID;
+use rid::RID;
 use crate::concurrency::LockMode;
 
 /// Structure to hold a lock request.

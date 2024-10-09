@@ -1,4 +1,4 @@
-use pages::{PageData, PAGE_SIZE};
+use crate::{PageData, PAGE_SIZE};
 
 pub trait AlignToPageData {
     fn align_to_page_data(&self) -> PageData;

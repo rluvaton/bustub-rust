@@ -4,7 +4,7 @@ use std::thread;
 use atomic::Atomic;
 use parking_lot::Mutex;
 use common::config::{AtomicTimestamp, TableOID, Timestamp, TxnId, INVALID_TIMESTAMP, TXN_START_ID};
-use common::RID;
+use rid::RID;
 use crate::concurrency::{IsolationLevel, TransactionState, UndoLink, UndoLog};
 use crate::execution::expression::AbstractExpressionRef;
 

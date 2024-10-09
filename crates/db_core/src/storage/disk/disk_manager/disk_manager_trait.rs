@@ -1,4 +1,4 @@
-use common::config::PageId;
+use pages::PageId;
 use common::Future;
 
 /**

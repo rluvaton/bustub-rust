@@ -3,8 +3,8 @@ mod tests {
     use crate::buffer::{AccessType, BufferPool, BufferPoolManager};
     use crate::catalog::Schema;
     use crate::storage::{hash_table_bucket_array_size, DiskManagerUnlimitedMemory, ExtendibleHashBucketPageInsertionErrors, ExtendibleHashTableBucketPage, ExtendibleHashTableDirectoryPage, ExtendibleHashTableHeaderPage, GenericComparator, GenericKey};
-    use common::config::{PageId, INVALID_PAGE_ID};
-    use common::RID;
+    use pages::{PageId, INVALID_PAGE_ID};
+    use rid::RID;
     use parking_lot::Mutex;
     use std::sync::Arc;
 

@@ -1,4 +1,4 @@
-use common::config::{PageData, PageId};
+use pages::{PageData, PageId};
 use common::{Promise, UnsafeSingleRefData, UnsafeSingleRefMutData};
 
 /**

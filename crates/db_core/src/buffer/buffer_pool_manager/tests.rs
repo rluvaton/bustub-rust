@@ -4,7 +4,7 @@ mod tests {
     use crate::buffer::{AccessType};
     use crate::buffer::buffer_pool_manager::{BufferPool, BufferPoolManager, PageWriteGuard};
     use crate::storage::{AlignToPageData, DefaultDiskManager};
-    use common::config::{PageId, BUSTUB_PAGE_SIZE};
+    use pages::{PageData, PageId, PAGE_SIZE};
     use parking_lot::{Condvar, Mutex};
     use rand::Rng;
     use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
@@ -42,13 +42,13 @@ mod tests {
         assert_eq!(page0.get_page_id(), 0);
 
         // Generate random binary data
-        let mut random_binary_data: [u8; BUSTUB_PAGE_SIZE] = [0; BUSTUB_PAGE_SIZE];
+        let mut random_binary_data: PageData = [0; PAGE_SIZE];
 
         random_binary_data.fill_with(|| rng.gen_range(lower_bound..upper_bound) as u8);
 
         // Insert terminal characters both in the middle and at end
-        random_binary_data[BUSTUB_PAGE_SIZE / 2] = 0;
-        random_binary_data[BUSTUB_PAGE_SIZE - 1] = 0;
+        random_binary_data[PAGE_SIZE / 2] = 0;
+        random_binary_data[PAGE_SIZE - 1] = 0;
 
         // Scenario: Once we have a page, we should be able to read and write content.
         page0.get_data_mut().copy_from_slice(&random_binary_data);

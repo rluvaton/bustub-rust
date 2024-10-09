@@ -1,5 +1,5 @@
 use std::fmt::{Debug, Formatter};
-use common::config::{PageId, BUSTUB_PAGE_SIZE, INVALID_PAGE_ID};
+use pages::{PageId, PAGE_SIZE, INVALID_PAGE_ID};
 use std::mem::size_of;
 use prettytable::{row, Table};
 use binary_utils::GetNBits;
@@ -13,7 +13,7 @@ const HASH_TABLE_HEADER_ARRAY_SIZE: usize = 1 << HASH_TABLE_HEADER_MAX_DEPTH;
 const _: () = assert!(size_of::<PageId>() == 4);
 //noinspection RsAssertEqual
 const _: () = assert!(size_of::<HeaderPage>() == size_of::<PageId>() * HASH_TABLE_HEADER_ARRAY_SIZE + _HASH_TABLE_HEADER_PAGE_METADATA_SIZE);
-const _: () = assert!(size_of::<HeaderPage>() <= BUSTUB_PAGE_SIZE);
+const _: () = assert!(size_of::<HeaderPage>() <= PAGE_SIZE);
 
 ///
 /// Header page format:

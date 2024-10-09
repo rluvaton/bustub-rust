@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
     use std::collections::HashMap;
-    use common::config::{PageId, BUSTUB_PAGE_SIZE};
+    use pages::{PageId, PAGE_SIZE};
     use common::{Future, Promise, UnsafeSingleRefData, UnsafeSingleRefMutData};
     use std::sync::{Arc};
     use std::time::Duration;
@@ -10,8 +10,8 @@ mod tests {
 
     #[test]
     fn schedule_write_read() {
-        let mut buf = [0u8; BUSTUB_PAGE_SIZE];
-        let mut data = [0u8; BUSTUB_PAGE_SIZE];
+        let mut buf = [0u8; PAGE_SIZE];
+        let mut data = [0u8; PAGE_SIZE];
 
         let dm = DiskManagerUnlimitedMemory::new();
 
@@ -147,8 +147,8 @@ mod tests {
 
         let mut disk_scheduler = DiskScheduler::new(Arc::clone(&manual_manager));
 
-        let data1 = [0u8; BUSTUB_PAGE_SIZE];
-        let data2 = [0u8; BUSTUB_PAGE_SIZE];
+        let data1 = [0u8; PAGE_SIZE];
+        let data2 = [0u8; PAGE_SIZE];
 
         let promise1 = Promise::new();
         let future1 = promise1.get_future();

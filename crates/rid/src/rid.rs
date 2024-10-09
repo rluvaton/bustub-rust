@@ -1,8 +1,9 @@
 use std::fmt::{Debug, Display, Formatter};
 use std::hash::{Hash, Hasher};
-use crate::config::{PageId, INVALID_PAGE_ID};
-use crate::page_traits::PageValue;
+use common::PageValue;
+use pages::{PageId, INVALID_PAGE_ID};
 
+/// Record Identifier for the given page identifier and slot number
 #[derive(Copy, Clone, PartialEq, Eq)]
 pub struct RID {
     /// Default is Invalid

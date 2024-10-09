@@ -1,9 +1,10 @@
 use crate::catalog::Catalog;
 use crate::concurrency::{Transaction, VersionUndoLink, Watermark};
-use common::config::{AtomicTimestamp, AtomicTxnId, PageId, SlotOffset, TxnId, TXN_START_ID};
+use common::config::{AtomicTimestamp, AtomicTxnId, SlotOffset, TxnId, TXN_START_ID};
 use parking_lot::Mutex;
 use std::collections::HashMap;
 use std::sync::Arc;
+use pages::PageId;
 
 pub struct TransactionManager {
     /// protects txn map - All transactions, running or committed

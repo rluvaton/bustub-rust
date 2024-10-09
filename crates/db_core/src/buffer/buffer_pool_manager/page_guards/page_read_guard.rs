@@ -1,9 +1,12 @@
 use std::fmt::{Debug, Formatter};
 use std::mem;
 use super::super::BufferPoolManager;
-use pages::PageAndReadGuard;
+use pages::{
+    PageAndReadGuard,
+    PageData,
+    PageId
+};
 use std::sync::Arc;
-use common::config::{PageData, PageId};
 use crate::buffer::AccessType;
 
 /// Read guard on page that will also unpin on drop

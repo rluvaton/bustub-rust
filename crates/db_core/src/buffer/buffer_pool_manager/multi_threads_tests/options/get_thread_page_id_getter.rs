@@ -3,7 +3,7 @@ use rand::prelude::StdRng;
 use rand::rngs::ThreadRng;
 use rand::SeedableRng;
 use zipf::ZipfDistribution;
-use common::config::PageId;
+use pages::PageId;
 
 pub(in super::super) trait GetThreadPageIdGetter {
     fn get(&mut self) -> PageId;

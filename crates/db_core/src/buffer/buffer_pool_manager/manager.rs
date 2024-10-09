@@ -1,4 +1,4 @@
-use common::config::{AtomicPageId, FrameId, PageData, PageId, INVALID_PAGE_ID, LRUK_REPLACER_K};
+use common::config::{FrameId, LRUK_REPLACER_K};
 use parking_lot::{Mutex, MutexGuard};
 use std::collections::{HashMap, LinkedList};
 use std::sync::atomic::Ordering;
@@ -8,7 +8,7 @@ use crate::buffer::buffer_pool_manager::*;
 use crate::buffer::{AccessType, LRUKReplacer, Replacer};
 use crate::recovery::LogManager;
 use crate::storage::{DiskManager, DiskScheduler, ReadDiskRequest, WriteDiskRequest};
-use pages::{Page, PageAndGuard, PageAndReadGuard, PageAndWriteGuard};
+use pages::{Page, PageAndGuard, PageAndReadGuard, PageAndWriteGuard, AtomicPageId, PageData, PageId, INVALID_PAGE_ID};
 
 #[cfg(feature = "tracing")]
 use tracy_client::span;

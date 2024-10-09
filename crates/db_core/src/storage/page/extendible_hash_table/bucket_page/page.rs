@@ -1,7 +1,8 @@
 use crate::storage::page::b_plus_tree::MappingType;
 use crate::storage::{Comparator, ExtendibleHashBucketPageInsertionErrors, GenericComparator, GenericKey};
-use common::config::BUSTUB_PAGE_SIZE;
-use common::{PageKey, PageValue, RID};
+use pages::PAGE_SIZE;
+use common::{PageKey, PageValue};
+use rid::RID;
 use prettytable::{row, Table};
 use std::cmp::Ordering;
 use std::fmt::{Debug, Formatter};
@@ -32,7 +33,7 @@ const _: () = {
 const HASH_TABLE_BUCKET_PAGE_METADATA_SIZE: usize = size_of::<u32>() * 2;
 
 pub const fn hash_table_bucket_array_size<Key: PageKey, Value: PageValue>() -> usize {
-    (BUSTUB_PAGE_SIZE - HASH_TABLE_BUCKET_PAGE_METADATA_SIZE) / size_of::<MappingType<Key, Value>>()
+    (PAGE_SIZE - HASH_TABLE_BUCKET_PAGE_METADATA_SIZE) / size_of::<MappingType<Key, Value>>()
 }
 
 

@@ -1,4 +1,4 @@
-use common::config::PageId;
+use pages::PageId;
 use error_utils::{Error};
 
 #[derive(thiserror::Error, Debug, PartialEq, Clone)]

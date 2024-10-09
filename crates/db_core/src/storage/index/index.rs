@@ -1,7 +1,7 @@
 use std::fmt::{Debug, Formatter};
 use crate::storage::{IndexMetadata, Tuple};
 use std::sync::Arc;
-use common::RID;
+use rid::RID;
 use crate::catalog::Schema;
 use crate::concurrency::Transaction;
 

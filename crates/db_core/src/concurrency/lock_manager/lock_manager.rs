@@ -4,7 +4,7 @@ use std::sync::atomic::AtomicBool;
 use std::thread::JoinHandle;
 use parking_lot::Mutex;
 use common::config::{TableOID, TxnId};
-use common::RID;
+use rid::RID;
 use crate::concurrency::{LockRequestQueue, TransactionManager};
 
 pub struct LockManager {

@@ -3,7 +3,7 @@ use crate::metrics::bpm_metrics::BpmMetrics;
 use crate::page_process::{check_page_consistent, check_page_consistent_no_seed, modify_page};
 use db_core::buffer::{AccessType, BufferPool, BufferPoolManager};
 use clap::Parser;
-use common::config::PageId;
+use pages::PageId;
 use metrics::bpm_total_metrics::BpmTotalMetrics;
 use parking_lot::{Mutex, RwLock};
 use rand::distributions::Distribution;

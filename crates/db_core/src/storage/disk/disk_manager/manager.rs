@@ -1,6 +1,6 @@
 use crate::storage::disk::disk_manager::disk_manager_trait::DiskManager;
 use crate::storage::disk::disk_manager::utils::get_file_size;
-use common::config::{PageId, BUSTUB_PAGE_SIZE};
+use pages::{PageId, PAGE_SIZE};
 use common::Future;
 use parking_lot::Mutex;
 use std::fs::{File, OpenOptions};
@@ -152,7 +152,7 @@ impl DiskManager for DefaultDiskManager {
         // std::scoped_lock scoped_db_io_latch(db_io_latch_);
         let mut db_io = self.db_io_latch.lock();
 
-        let offset = page_id as u64 * BUSTUB_PAGE_SIZE as u64;
+        let offset = page_id as u64 * PAGE_SIZE as u64;
         // set write cursor to offset
         self.num_writes += 1;
 
@@ -163,7 +163,7 @@ impl DiskManager for DefaultDiskManager {
             println!("I/O error while writing (in seek)");
             return;
         }
-        let write_res = db_io.write(&page_data[0..BUSTUB_PAGE_SIZE]);
+        let write_res = db_io.write(&page_data[0..PAGE_SIZE]);
 
         // check for I/O error
         if write_res.is_err() {
@@ -187,7 +187,7 @@ impl DiskManager for DefaultDiskManager {
         let mut db_io = self.db_io_latch.lock();
 
 
-        let offset = page_id * BUSTUB_PAGE_SIZE as i32;
+        let offset = page_id * PAGE_SIZE as i32;
         // check if read beyond file length
         if offset > get_file_size(self.file_name.as_path()) {
             println!("I/O error reading past end of file");
@@ -202,7 +202,7 @@ impl DiskManager for DefaultDiskManager {
             eprintln!("I/O error while reading (seek)");
             return;
         }
-        let read_res = db_io.read(&mut page_data[0..BUSTUB_PAGE_SIZE]);
+        let read_res = db_io.read(&mut page_data[0..PAGE_SIZE]);
 
         if read_res.is_err() {
             eprintln!("I/O error while reading (read)");
@@ -212,11 +212,11 @@ impl DiskManager for DefaultDiskManager {
         // if file ends before reading BUSTUB_PAGE_SIZE
         // let read_count = db_io_.gcount();
         let read_count = read_res.unwrap();
-        if read_count < BUSTUB_PAGE_SIZE {
+        if read_count < PAGE_SIZE {
             eprintln!("Read less than a page");
 
             // Set the rest of the to be 0
-            page_data[read_count..(BUSTUB_PAGE_SIZE) - read_count].fill(0);
+            page_data[read_count..(PAGE_SIZE) - read_count].fill(0);
         }
     }
 
