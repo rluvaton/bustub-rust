@@ -1,27 +1,27 @@
-use pages::{PageData, PageId};
-use common::{Promise, UnsafeSingleRefData, UnsafeSingleRefMutData};
+use pages::{Page, PageData, PageId};
+use common::{Promise, PromiseLifetime, UnsafeSingleRefData, UnsafeSingleRefMutData};
 
 /**
  * @brief Represents a Read request for the DiskManager to execute.
  */
-pub struct ReadDiskRequest {
+pub struct ReadDiskRequest<'a> {
     /**
      *  Pointer to the start of the memory location where a page is being read into from disk (on a read).
      */
-    pub data: UnsafeSingleRefMutData<PageData>,
+    pub data: &'a mut PageData,
 
     /** ID of the page being read from disk. */
     pub page_id: PageId,
 
     /** Callback used to signal to the request issuer when the request has been completed. */
-    pub callback: Promise<bool>,
+    pub callback: PromiseLifetime<'a, bool>,
 }
 
-impl ReadDiskRequest {
-    pub fn new(source_page_id: PageId, dest_data: &mut PageData, callback: Promise<bool>) -> Self {
+impl<'a> ReadDiskRequest<'a> {
+    pub fn new(source_page_id: PageId, dest_data: &'a mut PageData, callback: PromiseLifetime<'a, bool>) -> Self {
         ReadDiskRequest {
             page_id: source_page_id,
-            data: unsafe  { UnsafeSingleRefMutData::new(dest_data) },
+            data: dest_data,
             callback,
         }
     }
@@ -30,45 +30,80 @@ impl ReadDiskRequest {
 /**
  * @brief Represents a Write request for the DiskManager to execute.
  */
-pub struct WriteDiskRequest {
+pub struct WriteDiskRequest<'a> {
     /**
      *  Pointer to the start of the memory location where a page being written out to disk
 
     Having box will reduce performance as it will need to create in the heap
      */
-    pub(super) data: UnsafeSingleRefData<PageData>,
+    pub(super) data: &'a PageData,
 
     /** ID of the page being written to disk. */
     pub(super) page_id: PageId,
 
     /** Callback used to signal to the request issuer when the request has been completed. */
-    pub(super) callback: Promise<bool>,
+    pub(super) callback: PromiseLifetime<'a, bool>,
 }
 
 
-impl WriteDiskRequest {
-    pub fn new(dest_page_id: PageId, source_data: &PageData, callback: Promise<bool>) -> Self {
+impl<'a> WriteDiskRequest<'a> {
+    pub fn new(dest_page_id: PageId, source_data: &'a PageData, callback: PromiseLifetime<'a, bool>) -> Self {
         WriteDiskRequest {
             page_id: dest_page_id,
-            data: unsafe  { UnsafeSingleRefData::new(source_data) },
+            data: source_data,
             callback,
         }
     }
 }
 
-pub enum DiskRequestType {
-    Read(ReadDiskRequest),
-    Write(WriteDiskRequest),
+/// Single message for both read and write to the same page data buffer
+///
+/// First writing the data provided to the dest_page_id and then reading from source_page_id into the data (replacing the content)
+pub struct WriteAndReadDiskRequest<'a> {
+    /// Data to write to disk and to read from disk
+    pub data: &'a mut PageData,
+
+    /// The ID of the page that first going to write the data
+    pub dest_page_id: PageId,
+
+    // The ID of the page that after write is going to be read from disk
+    pub source_page_id: PageId,
+
+    /** Callback used to signal to the request issuer when the request has been completed. */
+    pub callback: PromiseLifetime<'a, bool>,
 }
 
-impl From<ReadDiskRequest> for DiskRequestType {
-    fn from(value: ReadDiskRequest) -> Self {
+impl<'a> WriteAndReadDiskRequest<'a> {
+    pub fn new(dest_page_id: PageId, source_page_id: PageId, data: &'a mut PageData, callback: PromiseLifetime<'a, bool>) -> Self {
+        WriteAndReadDiskRequest {
+            dest_page_id,
+            source_page_id,
+            data,
+            callback,
+        }
+    }
+}
+
+pub enum DiskRequestType<'a> {
+    Read(ReadDiskRequest<'a>),
+    Write(WriteDiskRequest<'a>),
+    WriteAndRead(WriteAndReadDiskRequest<'a>),
+}
+
+impl<'a> From<ReadDiskRequest<'a>> for DiskRequestType<'a> {
+    fn from(value: ReadDiskRequest<'a>) -> Self {
         DiskRequestType::Read(value)
     }
 }
 
-impl From<WriteDiskRequest> for DiskRequestType {
-    fn from(value: WriteDiskRequest) -> Self {
+impl<'a> From<WriteDiskRequest<'a>> for DiskRequestType<'a> {
+    fn from(value: WriteDiskRequest<'a>) -> Self {
         DiskRequestType::Write(value)
+    }
+}
+
+impl<'a> From<WriteAndReadDiskRequest<'a>> for DiskRequestType<'a> {
+    fn from(value: WriteAndReadDiskRequest<'a>) -> Self {
+        DiskRequestType::WriteAndRead(value)
     }
 }

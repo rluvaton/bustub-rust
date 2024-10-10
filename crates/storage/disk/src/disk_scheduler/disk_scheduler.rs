@@ -1,10 +1,13 @@
 use parking_lot::Mutex;
+use std::marker::PhantomData;
 use std::sync::Arc;
+use std::thread;
 use std::thread::{Builder, JoinHandle};
 
-use common::{abort_process_on_panic, Channel, Future, Promise};
-use pages::{PageData, PageId};
+use crate::disk_scheduler::disk_request::WriteAndReadDiskRequest;
 use crate::{DiskManager, DiskRequestType, ReadDiskRequest, WriteDiskRequest};
+use common::{abort_process_on_panic, Channel, FutureLifetime, Promise, PromiseLifetime};
+use pages::{PageData, PageId};
 
 /**
  * @brief The DiskScheduler schedules disk read and write operations.
@@ -19,13 +22,13 @@ pub struct DiskScheduler {
 
     /** A shared queue to concurrently schedule and process requests. When the DiskScheduler's destructor is called,
                  * `std::nullopt` is put into the queue to signal to the background thread to stop execution. */
-    sender: Arc<Channel<DiskSchedulerWorkerMessage>>,
+    sender: Arc<Channel<DiskSchedulerWorkerMessage<'static>>>,
 }
 
 
-enum DiskSchedulerWorkerMessage {
+enum DiskSchedulerWorkerMessage<'a> {
     Terminate,
-    NewJob(DiskRequestType),
+    NewJob(DiskRequestType<'a>),
 }
 
 
@@ -51,25 +54,59 @@ impl DiskScheduler {
         scheduler
     }
 
-    pub fn schedule_read_page_from_disk(&mut self, page_id_to_read: PageId, dest: &mut PageData) -> Future<bool> {
+    pub fn schedule_read_page_from_disk<'a>(&mut self, page_id_to_read: PageId, dest: &'a mut PageData) -> FutureLifetime<'a, bool> {
         // promise value should be set to true once the request is processed.
-        let promise = Promise::new();
+        let promise = PromiseLifetime::<'static>::new();
         let future = promise.get_future();
 
-        let request = ReadDiskRequest::new(page_id_to_read, dest, promise);
+        // change dest lifetime
+        let dest_updated_lifetime: &'static mut PageData = unsafe {
+            let ptr: *mut PageData = dest;
+
+            &mut *ptr
+        };
+
+        let request = ReadDiskRequest::new(page_id_to_read, dest_updated_lifetime, promise);
 
         self.sender.put(DiskSchedulerWorkerMessage::NewJob(request.into()));
 
         future
     }
 
-    pub fn schedule_write_page_to_disk(&mut self, page_id_to_write: PageId, src: &PageData) -> Future<bool> {
+    /// Schedule page to be written to disk
+    pub fn schedule_write_page_to_disk<'page>(&mut self, page_id_to_write: PageId, src: &'page PageData) -> FutureLifetime<'page, bool> {
         // promise value should be set to true once the request is processed.
 
-        let promise = Promise::new();
+        let promise = PromiseLifetime::<'static>::new();
         let future = promise.get_future();
 
-        let request = WriteDiskRequest::new(page_id_to_write, src, promise);
+        // change src lifetime
+        let src_updated_lifetime: &'static PageData = unsafe {
+            let ptr: *const PageData = src;
+
+            &*ptr
+        };
+
+        let request = WriteDiskRequest::new(page_id_to_write, src_updated_lifetime, promise);
+
+        self.sender.put(DiskSchedulerWorkerMessage::NewJob(request.into()));
+
+        future
+    }
+
+    pub fn schedule_write_and_read_page_from_disk<'a>(&mut self, page_id_to_write: PageId, page_id_to_read: PageId, data: &mut PageData) -> FutureLifetime<'a, bool> {
+        // promise value should be set to true once the request is processed.
+        let promise = PromiseLifetime::<'static>::new();
+        let future = promise.get_future();
+
+        // change data lifetime
+        let data_updated_lifetime: &'static mut PageData = unsafe {
+            let ptr: *mut PageData = data;
+
+            &mut *ptr
+        };
+
+        let request = WriteAndReadDiskRequest::<'static>::new(page_id_to_write, page_id_to_read, data_updated_lifetime, promise);
 
         self.sender.put(DiskSchedulerWorkerMessage::NewJob(request.into()));
 
@@ -108,7 +145,7 @@ impl DiskSchedulerWorker {
      * The background thread needs to process requests while the DiskScheduler exists, i.e., this function should not
      * return until ~DiskScheduler() is called. At that point you need to make sure that the function does return.
      */
-    fn new<D: DiskManager + Send + Sync + 'static>(disk_manager: Arc<Mutex<D>>, receiver: Arc<Channel<DiskSchedulerWorkerMessage>>) -> DiskSchedulerWorker {
+    fn new<D: DiskManager + Send + Sync + 'static>(disk_manager: Arc<Mutex<D>>, receiver: Arc<Channel<DiskSchedulerWorkerMessage<'static>>>) -> DiskSchedulerWorker {
         let thread = Builder::new()
             .name("Disk Scheduler".to_string())
             .spawn(move || {
@@ -129,12 +166,20 @@ impl DiskSchedulerWorker {
                     }
 
                     match req {
-                        DiskRequestType::Read(req) => unsafe {
-                            disk_manager.lock().read_page(req.page_id, req.data.clone().get_mut().as_mut_slice());
+                        DiskRequestType::Read(req) => {
+                            disk_manager.lock().read_page(req.page_id, req.data.as_mut_slice());
                             req.callback.set_value(true);
                         }
-                        DiskRequestType::Write(req) => unsafe {
-                            disk_manager.lock().write_page(req.page_id, req.data.get().as_slice());
+                        DiskRequestType::Write(req) => {
+                            disk_manager.lock().write_page(req.page_id, req.data.as_slice());
+                            req.callback.set_value(true);
+                        }
+                        DiskRequestType::WriteAndRead(req) => {
+                            disk_manager.lock().write_page(req.dest_page_id, req.data.as_slice());
+
+                            // TODO - read page if write was successful
+                            //        as otherwise, if the write failed we will read and lose the data
+                            disk_manager.lock().read_page(req.source_page_id, req.data.as_mut_slice());
                             req.callback.set_value(true);
                         }
                     }

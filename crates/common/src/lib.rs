@@ -9,9 +9,11 @@ mod page_traits;
 mod on_panic_hooks;
 mod shared_promise;
 mod comparator;
+mod promise_lifetime;
 
 pub use promise::{Promise, Future};
 pub use shared_promise::{SharedPromise, SharedFuture};
+pub use promise_lifetime::{PromiseLifetime, FutureLifetime};
 pub use channel::Channel;
 pub use reader_writer_latch::ReaderWriterLatch;
 pub use string_helpers::*;

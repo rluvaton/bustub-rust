@@ -2,7 +2,7 @@ use parking_lot::{Mutex, MutexGuard};
 use std::collections::{HashMap, LinkedList};
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
-use common::{Future, Promise, SharedFuture, SharedPromise, UnsafeSingleRefData, UnsafeSingleRefMutData};
+use common::{Future, FutureLifetime, Promise, SharedFuture, SharedPromise, UnsafeSingleRefData, UnsafeSingleRefMutData};
 use disk_storage::{DiskManager, DiskScheduler, ReadDiskRequest, WriteDiskRequest};
 use pages::{Page, PageAndGuard, PageAndReadGuard, PageAndWriteGuard, AtomicPageId, PageData, PageId, INVALID_PAGE_ID};
 
@@ -113,11 +113,11 @@ impl BufferPoolManager {
         }
     }
 
-    fn request_read_page(disk_scheduler: &mut DiskScheduler, page_id: PageId, page_data: &mut PageData) -> Future<bool> {
+    fn request_read_page<'a>(disk_scheduler: &mut DiskScheduler, page_id: PageId, page_data: &'a mut PageData) -> FutureLifetime<'a, bool> {
         disk_scheduler.schedule_read_page_from_disk(page_id, page_data)
     }
 
-    fn request_write_page(disk_scheduler: &mut DiskScheduler, page_id: PageId, page_data: &PageData) -> Future<bool> {
+    fn request_write_page<'a>(disk_scheduler: &mut DiskScheduler, page_id: PageId, page_data: &'a PageData) -> FutureLifetime<'a, bool> {
         disk_scheduler.schedule_write_page_to_disk(page_id, page_data)
     }
 
@@ -162,7 +162,7 @@ impl BufferPoolManager {
         fetch_promise.set_value(());
     }
 
-    fn fetch_page<PageAndGuardImpl: PageAndGuard, R, F: FnOnce(Arc<Self>, PageAndGuardImpl) -> R>(self: &Arc<Self>, page_id: PageId, access_type: AccessType, create_guard: F) -> Result<R, errors::FetchPageError> {
+    fn fetch_page<'a, PageAndGuardImpl: PageAndGuard<'a>, R, F: FnOnce(Arc<Self>, PageAndGuardImpl) -> R>(self: &Arc<Self>, page_id: PageId, access_type: AccessType, create_guard: F) -> Result<R, errors::FetchPageError> {
         // Find available frame
 
         // 1. Hold replacer guard as all pin and unpin must first hold the replacer to avoid getting replaced in the middle
@@ -231,8 +231,6 @@ impl BufferPoolManager {
         if let Some(page_to_replace) = page_to_replace {
             // Option 1, replacing existing frame
 
-            let page_to_replace_backup = page_to_replace.clone();
-
             // 1. Get write lock, the page to replace must never have write lock created outside the buffer pool as it is about to be pinned
             let mut page_to_replace_guard = PageAndWriteGuard::from(page_to_replace);
 
@@ -247,47 +245,33 @@ impl BufferPoolManager {
                 // 5. Get the scheduler
                 let mut scheduler = self.disk_scheduler.lock();
 
-                // 6. Add flush message to the scheduler
-                let flush_page_future = BufferPoolManager::request_write_page(&mut scheduler, page_to_replace_guard.get_page_id(), page_to_replace_guard.get_data());
-
-                // TODO - only request read if the write page was successful
-                //        as otherwise, if the write failed we will read and lose the data
-                let fetch_page_future = BufferPoolManager::request_read_page(&mut scheduler, page_id, page_to_replace_guard.get_data_mut());
+                // 6. Add flush + read message to the scheduler
+                let flush_and_read_future = scheduler.schedule_write_and_read_page_from_disk(page_to_replace_guard.get_page_id(), page_id, page_to_replace_guard.get_data_mut());
 
                 // 8. release all locks as we don't want to hold the entire lock while flushing to disk
                 drop(scheduler);
                 drop(holding_inner_latch);
                 drop(inner);
 
-                // 9. Wait for the flush to finish
+                // 9. Wait for the flush abd fetch to finish
                 // TODO - handle errors in flushing
-                let flush_page_result = flush_page_future.wait();
+                let flush_and_fetch_page_result = flush_and_read_future.wait();
 
-                if !flush_page_result {
+                if !flush_and_fetch_page_result {
                     self.finish_current_pending_fetch_page_request(page_id, current_fetch_promise);
 
                     // TODO - reset page in page table
-                    panic!("Must be able to flush page");
+                    panic!("Must be able to flush and fetch page");
                 }
 
-                // 9.1. Reset page to the current page
+                // 10. Mark page as not dirty after read from disk
                 page_to_replace_guard.page().set_is_dirty(false);
-
-                // 10. Wait for the fetch to finish
-                let fetch_page_result = fetch_page_future.wait();
-
-                if !fetch_page_result {
-                    self.finish_current_pending_fetch_page_request(page_id, current_fetch_promise);
-
-                    panic!("Must be able to fetch page");
-                }
 
                 // 11. Set page id to be the correct page id
                 page_to_replace_guard.set_page_id(page_id);
 
                 // Convert write lock to the desired lock
-                drop(page_to_replace_guard);
-                let page_to_replace_requested_guard = PageAndGuardImpl::from(page_to_replace_backup);
+                let page_to_replace_requested_guard = PageAndGuardImpl::from(page_to_replace_guard);
 
                 self.finish_current_pending_fetch_page_request(page_id, current_fetch_promise);
 
@@ -320,8 +304,7 @@ impl BufferPoolManager {
                 page_to_replace_guard.set_page_id(page_id);
 
                 // Convert write lock to the requested guard
-                drop(page_to_replace_guard);
-                let page_to_replace_requested_guard = PageAndGuardImpl::from(page_to_replace_backup);
+                let page_to_replace_requested_guard = PageAndGuardImpl::from(page_to_replace_guard);
 
                 self.finish_current_pending_fetch_page_request(page_id, current_fetch_promise);
 
@@ -336,11 +319,13 @@ impl BufferPoolManager {
             // 2. Pin page
             page.pin();
 
+            let mut write_guard = PageAndWriteGuard::from(page);
+
             // 5. Get the scheduler
             let mut scheduler = self.disk_scheduler.lock();
 
             // 6. Request read page
-            let fetch_page_future = BufferPoolManager::request_read_page(&mut scheduler, page_id, page.write().get_data_mut());
+            let fetch_page_future = BufferPoolManager::request_read_page(&mut scheduler, page_id, write_guard.get_data_mut());
 
             // 7. release all locks as we don't want to hold the entire lock while flushing to disk
             drop(scheduler);
@@ -356,7 +341,7 @@ impl BufferPoolManager {
                 panic!("Must be able to fetch page");
             }
 
-            let requested_guard = PageAndGuardImpl::from(page);
+            let requested_guard = PageAndGuardImpl::from(write_guard);
 
             self.finish_current_pending_fetch_page_request(page_id, current_fetch_promise);
 
@@ -588,8 +573,11 @@ impl BufferPool for Arc<BufferPoolManager> {
 
         let mut scheduler = self.disk_scheduler.lock();
 
+
+        let page_guard = page.read();
+
         // Add flush message to the scheduler
-        let flush_page_future = BufferPoolManager::request_write_page(&mut scheduler, page_id, page.read().get_data());
+        let flush_page_future = BufferPoolManager::request_write_page(&mut scheduler, page_id, page_guard.get_data());
 
         // release all locks as we don't want to hold the entire lock while flushing to disk
         drop(scheduler);
@@ -599,6 +587,8 @@ impl BufferPool for Arc<BufferPoolManager> {
         assert_eq!(flush_page_future.wait(), true, "Must be able to flush page");
 
         page.set_is_dirty(false);
+
+        drop(page_guard);
 
         self.unpin_page(page_id, AccessType::Unknown);
 
