@@ -4,7 +4,7 @@ use crate::page_and_guard::PageAndGuard;
 
 pub struct PageAndWriteGuard<'a>(
     // First drop the guard and then the page
-    PageWriteGuard<'a>,
+    pub(super) PageWriteGuard<'a>,
     Page,
 );
 
@@ -22,13 +22,13 @@ impl<'a> PageAndWriteGuard<'a> {
     }
 
     #[inline(always)]
-    pub(crate) fn write_guard(self) -> PageWriteGuard<'a> {
-        self.0
+    pub fn write_guard(&self) -> &PageWriteGuard<'a> {
+        &self.0
     }
 
-    #[allow(unused)]
-    pub(crate) fn downgrade(self) -> PageAndReadGuard<'a> {
-        PageAndReadGuard::from(self)
+    #[inline(always)]
+    pub fn write_guard_mut(&mut self) -> &mut PageWriteGuard<'a> {
+        &mut self.0
     }
 }
 

@@ -1,5 +1,5 @@
-use pages::{Page, PageData, PageId};
-use common::{Promise, PromiseLifetime, UnsafeSingleRefData, UnsafeSingleRefMutData};
+use common::PromiseLifetime;
+use pages::{PageData, PageId};
 
 /**
  * @brief Represents a Read request for the DiskManager to execute.

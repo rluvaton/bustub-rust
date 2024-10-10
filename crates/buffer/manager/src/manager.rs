@@ -1,5 +1,6 @@
 use parking_lot::{Mutex, MutexGuard};
 use std::collections::{HashMap, LinkedList};
+use std::ops::Deref;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use common::{Future, FutureLifetime, Promise, SharedFuture, SharedPromise, UnsafeSingleRefData, UnsafeSingleRefMutData};
@@ -111,14 +112,6 @@ impl BufferPoolManager {
             // pick replacement from the replacer, can't be empty
             inner.eviction_policy.evict().ok_or(errors::NoAvailableFrameFound)
         }
-    }
-
-    fn request_read_page<'a>(disk_scheduler: &mut DiskScheduler, page_id: PageId, page_data: &'a mut PageData) -> FutureLifetime<'a, bool> {
-        disk_scheduler.schedule_read_page_from_disk(page_id, page_data)
-    }
-
-    fn request_write_page<'a>(disk_scheduler: &mut DiskScheduler, page_id: PageId, page_data: &'a PageData) -> FutureLifetime<'a, bool> {
-        disk_scheduler.schedule_write_page_to_disk(page_id, page_data)
     }
 
     fn wait_for_pending_request_page_to_finish(&self, requests_map: &Mutex<HashMap<PageId, SharedFuture<()>>>, page_id: PageId) -> MutexGuard<InnerBufferPoolManager> {
@@ -246,7 +239,7 @@ impl BufferPoolManager {
                 let mut scheduler = self.disk_scheduler.lock();
 
                 // 6. Add flush + read message to the scheduler
-                let flush_and_read_future = scheduler.schedule_write_and_read_page_from_disk(page_to_replace_guard.get_page_id(), page_id, page_to_replace_guard.get_data_mut());
+                let flush_and_read_future = scheduler.schedule_write_and_read_page_from_disk(page_to_replace_guard.get_page_id(), page_id, page_to_replace_guard.write_guard_mut());
 
                 // 8. release all locks as we don't want to hold the entire lock while flushing to disk
                 drop(scheduler);
@@ -278,12 +271,13 @@ impl BufferPoolManager {
                 Ok(create_guard(self.clone(), page_to_replace_requested_guard))
             } else {
                 // If page is not dirty we can just fetch the page
+                page_to_replace_guard.set_page_id(page_id);
 
                 // 5. Get the scheduler
                 let mut scheduler = self.disk_scheduler.lock();
 
                 // 6. Request read page
-                let fetch_page_future = BufferPoolManager::request_read_page(&mut scheduler, page_id, page_to_replace_guard.get_data_mut());
+                let fetch_page_future = scheduler.schedule_read_page_from_disk(page_to_replace_guard.write_guard_mut());
 
                 // 7. release all locks as we don't want to hold the entire lock while flushing to disk
                 drop(scheduler);
@@ -299,9 +293,6 @@ impl BufferPoolManager {
                     panic!("Must be able to fetch page");
                 }
 
-                // 11. Set page id to be the correct page id
-                page_to_replace_guard.page().set_is_dirty(false);
-                page_to_replace_guard.set_page_id(page_id);
 
                 // Convert write lock to the requested guard
                 let page_to_replace_requested_guard = PageAndGuardImpl::from(page_to_replace_guard);
@@ -325,7 +316,7 @@ impl BufferPoolManager {
             let mut scheduler = self.disk_scheduler.lock();
 
             // 6. Request read page
-            let fetch_page_future = BufferPoolManager::request_read_page(&mut scheduler, page_id, write_guard.get_data_mut());
+            let fetch_page_future = scheduler.schedule_read_page_from_disk(write_guard.write_guard_mut());
 
             // 7. release all locks as we don't want to hold the entire lock while flushing to disk
             drop(scheduler);
@@ -486,7 +477,7 @@ impl BufferPool for Arc<BufferPoolManager> {
                 let mut scheduler = self.disk_scheduler.lock();
 
                 // 6. Add flush message to the scheduler
-                let flush_page_future = BufferPoolManager::request_write_page(&mut scheduler, page_and_write.get_page_id(), page_and_write.get_data());
+                let flush_page_future = scheduler.schedule_write_page_to_disk(page_and_write.deref());
 
                 // 7. release all locks as we don't want to hold the entire lock while flushing to disk
                 drop(scheduler);
@@ -577,7 +568,7 @@ impl BufferPool for Arc<BufferPoolManager> {
         let page_guard = page.read();
 
         // Add flush message to the scheduler
-        let flush_page_future = BufferPoolManager::request_write_page(&mut scheduler, page_id, page_guard.get_data());
+        let flush_page_future = scheduler.schedule_write_page_to_disk(page_guard.deref());
 
         // release all locks as we don't want to hold the entire lock while flushing to disk
         drop(scheduler);

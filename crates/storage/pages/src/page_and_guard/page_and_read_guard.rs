@@ -46,7 +46,7 @@ impl<'a> From<Page> for PageAndReadGuard<'a> {
 impl<'a> From<PageAndWriteGuard<'a>> for PageAndReadGuard<'a> {
     fn from(page_and_guard: PageAndWriteGuard<'a>) -> Self {
         let page = page_and_guard.page().clone();
-        let read_guard = unsafe { std::mem::transmute::<PageReadGuard<'_>, PageReadGuard<'static>>(PageWriteGuard::downgrade(page_and_guard.write_guard())) };
+        let read_guard = unsafe { std::mem::transmute::<PageReadGuard<'_>, PageReadGuard<'static>>(PageWriteGuard::downgrade(page_and_guard.0)) };
 
         PageAndReadGuard(read_guard, page)
     }

@@ -1,13 +1,11 @@
 use parking_lot::Mutex;
-use std::marker::PhantomData;
 use std::sync::Arc;
-use std::thread;
 use std::thread::{Builder, JoinHandle};
 
 use crate::disk_scheduler::disk_request::WriteAndReadDiskRequest;
 use crate::{DiskManager, DiskRequestType, ReadDiskRequest, WriteDiskRequest};
 use common::{abort_process_on_panic, Channel, FutureLifetime, Promise, PromiseLifetime};
-use pages::{PageData, PageId};
+use pages::{PageData, PageId, PageWriteGuard, UnderlyingPage};
 
 /**
  * @brief The DiskScheduler schedules disk read and write operations.
@@ -54,19 +52,19 @@ impl DiskScheduler {
         scheduler
     }
 
-    pub fn schedule_read_page_from_disk<'a>(&mut self, page_id_to_read: PageId, dest: &'a mut PageData) -> FutureLifetime<'a, bool> {
+    pub fn schedule_read_page_from_disk<'a>(&mut self, dest: &mut PageWriteGuard<'a>) -> FutureLifetime<'a, bool> {
         // promise value should be set to true once the request is processed.
         let promise = PromiseLifetime::<'static>::new();
         let future = promise.get_future();
 
         // change dest lifetime
         let dest_updated_lifetime: &'static mut PageData = unsafe {
-            let ptr: *mut PageData = dest;
+            let ptr: *mut PageData = dest.get_data_mut();
 
             &mut *ptr
         };
 
-        let request = ReadDiskRequest::new(page_id_to_read, dest_updated_lifetime, promise);
+        let request = ReadDiskRequest::new(dest.get_page_id(), dest_updated_lifetime, promise);
 
         self.sender.put(DiskSchedulerWorkerMessage::NewJob(request.into()));
 
@@ -74,7 +72,7 @@ impl DiskScheduler {
     }
 
     /// Schedule page to be written to disk
-    pub fn schedule_write_page_to_disk<'page>(&mut self, page_id_to_write: PageId, src: &'page PageData) -> FutureLifetime<'page, bool> {
+    pub fn schedule_write_page_to_disk<'a>(&mut self, page_to_write: &UnderlyingPage) -> FutureLifetime<'a, bool> {
         // promise value should be set to true once the request is processed.
 
         let promise = PromiseLifetime::<'static>::new();
@@ -82,26 +80,32 @@ impl DiskScheduler {
 
         // change src lifetime
         let src_updated_lifetime: &'static PageData = unsafe {
-            let ptr: *const PageData = src;
+            let ptr: *const PageData = page_to_write.get_data();
 
             &*ptr
         };
 
-        let request = WriteDiskRequest::new(page_id_to_write, src_updated_lifetime, promise);
+        let request = WriteDiskRequest::new(page_to_write.get_page_id(), src_updated_lifetime, promise);
 
         self.sender.put(DiskSchedulerWorkerMessage::NewJob(request.into()));
 
         future
     }
 
-    pub fn schedule_write_and_read_page_from_disk<'a>(&mut self, page_id_to_write: PageId, page_id_to_read: PageId, data: &mut PageData) -> FutureLifetime<'a, bool> {
+    /// Schedule write and then read
+    ///
+    ///
+    /// # SAFETY
+    /// guard must not be released
+    #[must_use]
+    pub fn schedule_write_and_read_page_from_disk<'a>(&mut self, page_id_to_write: PageId, page_id_to_read: PageId, data: &mut PageWriteGuard<'a>) -> FutureLifetime<'a, bool> {
         // promise value should be set to true once the request is processed.
         let promise = PromiseLifetime::<'static>::new();
         let future = promise.get_future();
 
         // change data lifetime
         let data_updated_lifetime: &'static mut PageData = unsafe {
-            let ptr: *mut PageData = data;
+            let ptr: *mut PageData = data.get_data_mut();
 
             &mut *ptr
         };
