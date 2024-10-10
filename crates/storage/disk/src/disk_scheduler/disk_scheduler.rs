@@ -2,9 +2,9 @@ use parking_lot::Mutex;
 use std::sync::Arc;
 use std::thread::{Builder, JoinHandle};
 
-use common::{abort_process_on_panic, Channel, Future, Promise};
-use pages::{PageId, PageReadGuard, PageWriteGuard, UnderlyingPage};
-use crate::{DiskManager, DiskRequestType, ReadDiskRequest, WriteDiskRequest};
+use common::{abort_process_on_panic, Channel, Promise};
+
+use crate::{DiskManager, DiskRequestType};
 
 /**
  * @brief The DiskScheduler schedules disk read and write operations.
@@ -66,39 +66,6 @@ impl DiskScheduler {
         self.sender.put(DiskSchedulerWorkerMessage::NewJob(r))
     }
 
-    pub fn schedule_read_page_from_disk(&mut self, page_id_to_read: PageId, dest: PageWriteGuard) -> Future<bool> {
-        let promise = Promise::new();
-        let future = promise.get_future();
-
-        let request = ReadDiskRequest::new(page_id_to_read, dest, promise);
-
-        self.sender.put(DiskSchedulerWorkerMessage::NewJob(request.into()));
-
-        future
-    }
-
-    pub fn schedule_write_page_to_disk(&mut self, page_id_to_write: PageId, src: PageReadGuard) -> Future<bool> {
-        let promise = Promise::new();
-        let future = promise.get_future();
-
-        let request = WriteDiskRequest::new(page_id_to_write, src, promise);
-
-        self.sender.put(DiskSchedulerWorkerMessage::NewJob(request.into()));
-
-        future
-    }
-
-    pub fn schedule_write_page_and_read_different_page_to_disk(&mut self, page_id_to_write: PageId, page_id_to_read: PageId, src: PageReadGuard) -> Future<bool> {
-        let promise = Promise::new();
-        let future = promise.get_future();
-
-        let request = WriteDiskRequest::new(page_id_to_write, src, promise);
-
-        self.sender.put(DiskSchedulerWorkerMessage::NewJob(request.into()));
-
-        future
-    }
-
 
     /**
      * @brief Create a Promise object. If you want to implement your own version of promise, you can change this function
@@ -153,8 +120,8 @@ impl DiskSchedulerWorker {
                     }
 
                     match req {
-                        DiskRequestType::Read(mut req) => unsafe {
-                            disk_manager.lock().read_page(req.page_id, req.data.get_mut().as_mut_slice());
+                        DiskRequestType::Read(req) => unsafe {
+                            disk_manager.lock().read_page(req.page_id, req.data.clone().get_mut().as_mut_slice());
                             req.callback.set_value(true);
                         }
                         DiskRequestType::Write(req) => unsafe {

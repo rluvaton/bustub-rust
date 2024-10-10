@@ -1,5 +1,5 @@
 use pages::{PageId, PAGE_SIZE};
-use common::{Future, SharedFuture};
+use common::Future;
 use parking_lot::Mutex;
 use std::fs::{File, OpenOptions};
 use std::io::{Read, Seek, SeekFrom, Write};
@@ -34,7 +34,7 @@ pub struct DefaultDiskManager {
     flush_log: bool,
 
     // std::future<void> *flush_log_f_{nullptr};
-    flush_log_f: Option<SharedFuture<()>>,
+    flush_log_f: Option<Future<()>>,
 }
 
 impl DefaultDiskManager {
@@ -338,7 +338,7 @@ impl DiskManager for DefaultDiskManager {
      * Sets the future which is used to check for non-blocking flushes.
      * @param f the non-blocking flush check
      */
-    fn set_flush_log_future(&mut self, f: Option<SharedFuture<()>>) {
+    fn set_flush_log_future(&mut self, f: Option<Future<()>>) {
         self.flush_log_f = f;
     }
 

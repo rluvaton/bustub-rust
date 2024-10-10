@@ -33,7 +33,7 @@ impl UnderlyingPage {
     #[allow(unused)]
     const OFFSET_LSN: usize = 4;
 
-    pub(crate) fn new(page_id: PageId, data: PageData) -> Self {
+    pub fn new(page_id: PageId, data: PageData) -> Self {
         UnderlyingPage {
             page_id,
             // is_dirty: false,

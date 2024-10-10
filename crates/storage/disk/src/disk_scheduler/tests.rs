@@ -1,61 +1,55 @@
 #[cfg(test)]
 mod tests {
-    use crate::*;
-    use common::{Promise, SharedFuture};
-    use pages::{AlignToPageData, Page, PageId};
-    use parking_lot::Mutex;
     use std::collections::HashMap;
-    use std::ops::{Deref, DerefMut};
-    use std::sync::Arc;
+    use pages::{PageId, PAGE_SIZE};
+    use common::{Future, Promise, UnsafeSingleRefData, UnsafeSingleRefMutData};
+    use std::sync::{Arc};
     use std::time::Duration;
+    use parking_lot::Mutex;
+    use crate::*;
 
     #[test]
     fn schedule_write_read() {
-        let last_page_string = "some string to write";
-        let page1 = Page::new(1);
-        {
-            let mut underlying_page_data = page1.write();
-
-            underlying_page_data.get_data_mut()[0..last_page_string.len()].copy_from_slice(last_page_string.as_bytes());
-        }
-
-        let page2 = Page::new(2);
-        {
-            let mut underlying_page_data = page2.write();
-
-            let val = "This is another string";
-            underlying_page_data.get_data_mut()[0..val.len()].copy_from_slice(val.as_bytes());
-        }
+        let mut buf = [0u8; PAGE_SIZE];
+        let mut data = [0u8; PAGE_SIZE];
 
         let dm = DiskManagerUnlimitedMemory::new();
+
         let mut disk_scheduler = DiskScheduler::new(Arc::new(Mutex::new(dm)));
 
-        // Write first page
-        {
-            let guard = page1.read();
+        let val = "A test string.";
+        data[0..val.len()].copy_from_slice(val.as_bytes());
 
-            let mut finish_writing_future = disk_scheduler.schedule_write_page_to_disk(guard.get_page_id(), &guard);
+        let promise1 = Promise::new();
+        let future1 = promise1.get_future();
+        let promise2 = disk_scheduler.create_promise();
+        let future2 = promise2.get_future();
 
-            assert!(finish_writing_future.wait());
-        }
+        let data_ref = unsafe { UnsafeSingleRefData::new(&data) };
+        let buf_ref = unsafe { UnsafeSingleRefMutData::new(&mut buf) };
 
-        let mut write_second_page_future = {
-            let guard = page2.read();
+        disk_scheduler.schedule(
+            WriteDiskRequest {
+                data: data_ref,
+                page_id: 0,
+                callback: promise1
+            }.into(),
+        );
+        disk_scheduler.schedule(
+            ReadDiskRequest {
+                data: buf_ref,
 
-            disk_scheduler.schedule_write_page_to_disk(guard.get_page_id(), guard.deref())
-        };
+                page_id: 0,
+                callback: promise2
+            }.into(),
+        );
 
-        let mut read_first_page_to_second_page_future = {
-            let page1_id = page1.read().get_page_id();
+        assert!(future1.wait());
+        assert!(future2.wait());
 
-            disk_scheduler.schedule_read_page_from_disk(page1_id, page2.write().deref_mut())
-        };
+        assert_eq!(buf, data);
 
-        assert!(write_second_page_future.wait());
-        assert!(read_first_page_to_second_page_future.wait());
-
-        assert_eq!(page1.read().get_data(), &last_page_string.align_to_page_data());
-        assert_eq!(page1.read().get_data(), page2.read().get_data());
+        // dm.shut_down();
     }
 
     #[test]
@@ -107,7 +101,7 @@ mod tests {
                 unimplemented!()
             }
 
-            fn set_flush_log_future(&mut self, _f: Option<SharedFuture<()>>) {
+            fn set_flush_log_future(&mut self, _f: Option<Future<()>>) {
                 unimplemented!()
             }
 
@@ -150,22 +144,38 @@ mod tests {
         }
 
         let manual_manager = Arc::new(Mutex::new(ManualDiskManager::default()));
+
         let mut disk_scheduler = DiskScheduler::new(Arc::clone(&manual_manager));
 
-        let page0 = Page::new(0);
-        let page1 = Page::new(1);
+        let data1 = [0u8; PAGE_SIZE];
+        let data2 = [0u8; PAGE_SIZE];
 
-        let mut write_page_0_future = {
-            let guard = page0.read();
-            disk_scheduler.schedule_write_page_to_disk(guard.get_page_id(), &guard)
-        };
-        let mut write_page_1_future = {
-            let guard = page1.read();
-            disk_scheduler.schedule_write_page_to_disk(guard.get_page_id(), &guard)
-        };
+        let promise1 = Promise::new();
+        let future1 = promise1.get_future();
 
-        assert!(write_page_0_future.wait());
-        assert!(write_page_1_future.wait());
+        let promise2 = Promise::new();
+        let future2 = promise2.get_future();
+
+        let data1_ref = unsafe { UnsafeSingleRefData::new(&data1) };
+        let data2_ref = unsafe { UnsafeSingleRefData::new(&data2) };
+
+        disk_scheduler.schedule(
+            WriteDiskRequest {
+                data: data1_ref,
+                page_id: 0,
+                callback: promise1
+            }.into(),
+        );
+        disk_scheduler.schedule(
+            WriteDiskRequest {
+                data: data2_ref,
+                page_id: 1,
+                callback: promise2
+            }.into(),
+        );
+
+        assert!(future1.wait());
+        assert!(future2.wait());
 
         assert_eq!(manual_manager.lock().get_current_queries(), vec![], "everything cleaned up");
         assert_eq!(manual_manager.lock().order_of_page_id_calls, vec![0, 1], "called with the next page");
