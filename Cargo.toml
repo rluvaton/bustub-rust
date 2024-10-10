@@ -23,7 +23,7 @@ members = [
     "crates/execution/expression",
     "crates/storage/table/tuple",
     "crates/hashing/common",
-    "crates/hashing/extendible_hash_table",
+    "crates/hashing/extendible_hash_table", "tools/hash_table_bench",
 ]
 
 [profile.bench]

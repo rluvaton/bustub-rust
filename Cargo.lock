@@ -526,6 +526,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "40ecd4077b5ae9fd2e9e169b102c6c330d0605168eb0e8bf79952b256dbefffd"
 
 [[package]]
+name = "hash_table_bench"
+version = "0.1.0"
+
+[[package]]
 name = "hashbrown"
 version = "0.15.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
