@@ -528,6 +528,22 @@ checksum = "40ecd4077b5ae9fd2e9e169b102c6c330d0605168eb0e8bf79952b256dbefffd"
 [[package]]
 name = "hash_table_bench"
 version = "0.1.0"
+dependencies = [
+ "buffer_common",
+ "buffer_pool_manager",
+ "clap",
+ "common",
+ "db_core",
+ "disk_storage",
+ "extendible_hash_table",
+ "hashing_common",
+ "pages",
+ "parking_lot",
+ "rand 0.8.5",
+ "rid",
+ "tracy-client",
+ "zipf",
+]
 
 [[package]]
 name = "hashbrown"

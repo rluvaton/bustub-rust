@@ -141,8 +141,7 @@ impl Schema {
         self.tuple_is_inlined
     }
 
-    // exported only for tests
-    #[cfg(test)]
+    // Only for tests
     pub fn parse_create_statement(sql_base: &str) -> error_utils::anyhow::Result<Arc<Schema>> {
         let mut n: usize;
         let mut v: Vec<Column> = vec![];

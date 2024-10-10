@@ -28,7 +28,7 @@ impl<const KEY_SIZE: usize> GenericKey<KEY_SIZE> {
 
     /// NOTE: for test purpose only
     #[allow(unused)]
-    pub(crate) fn set_from_integer(&mut self, key: i64) {
+    pub fn set_from_integer(&mut self, key: i64) {
         self.data.fill(0);
 
         self.data[..size_of_val(&key)].copy_from_slice(key.to_ne_bytes().as_slice());
@@ -36,7 +36,7 @@ impl<const KEY_SIZE: usize> GenericKey<KEY_SIZE> {
 
     /// NOTE: for test purpose only
     #[allow(unused)]
-    pub(crate) fn new_from_integer(key: i64) -> Self {
+    pub fn new_from_integer(key: i64) -> Self {
         let mut generic_key = Self::default();
 
         generic_key.set_from_integer(key);
