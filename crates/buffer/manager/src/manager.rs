@@ -23,7 +23,6 @@ pub struct BufferPoolManager {
 
     /// Number of pages in the buffer pool
     /// This will not change after initial set
-    /// TODO - remove pub(crate) and expose getter to avoid user setting the value
     pub(super) pool_size: usize,
 
     /// Pointer to the disk scheduler.
@@ -299,8 +298,7 @@ impl BufferPoolManager {
                 }
 
                 // 11. Set page id to be the correct page id
-                page_to_replace_guard.page().set_is_dirty(false);
-                page_to_replace_guard.partial_reset(page_id);
+                page_to_replace_guard.set_page_id(page_id);
 
                 // Convert write lock to the desired lock
                 drop(page_to_replace_guard);
@@ -334,7 +332,7 @@ impl BufferPoolManager {
 
                 // 11. Set page id to be the correct page id
                 page_to_replace_guard.page().set_is_dirty(false);
-                page_to_replace_guard.partial_reset(page_id);
+                page_to_replace_guard.set_page_id(page_id);
 
                 // Convert write lock to the requested guard
                 drop(page_to_replace_guard);
@@ -533,10 +531,8 @@ impl BufferPool for Arc<BufferPoolManager> {
                 page_and_write.page().set_is_dirty(false);
             }
 
-            // 5. Reset page
-            // 6. Change page id to be this page id
-            page_and_write.page().set_is_dirty(false);
-            page_and_write.reset(page_id);
+            // 5. Reset page data + Change page id to be this page id
+            page_and_write.clear_page(page_id);
 
             // Return page write guard
             Ok(PageWriteGuard::new(self.clone(), page_and_write))
@@ -599,9 +595,7 @@ impl BufferPool for Arc<BufferPoolManager> {
 
         let page = inner.pages[frame_id as usize].clone();
 
-        if page.is_locked_exclusive() {
-            panic!("Possible deadlock detected when trying to flush page {} when the page has already exclusive lock", page_id);
-        }
+        assert_ne!(page.is_locked_exclusive(), false, "Possible deadlock detected when trying to flush page {} when the page has already exclusive lock", page_id);
 
         // Avoid evicting in the middle
         inner.eviction_policy.set_evictable(frame_id, false);
@@ -674,7 +668,7 @@ impl BufferPool for Arc<BufferPoolManager> {
         page.with_write(|u| {
             // Do not remove the item, and instead change it to INVALID_PAGE_ID
             // so we won't change the frame location
-            u.reset(INVALID_PAGE_ID)
+            u.clear_page(INVALID_PAGE_ID)
         });
         page.set_is_dirty(false);
 

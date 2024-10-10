@@ -23,15 +23,6 @@ pub struct UnderlyingPage {
     /** The ID of this page. */
     // TODO - default = INVALID_PAGE_ID;
     page_id: PageId,
-
-    // The pin count of this page.
-    // pin_count: usize,
-
-    // True if the page is dirty, i.e. it is different from its corresponding page on disk.
-    // is_dirty: bool,
-
-    // Page latch.
-    // rwlatch: ReaderWriterLatch<()>,
 }
 
 impl UnderlyingPage {
@@ -93,35 +84,6 @@ impl UnderlyingPage {
         self.page_id
     }
 
-    /** @return the pin count of this page */
-    // pub fn get_pin_count(&self) -> usize {
-    //     self.pin_count
-    // }
-
-    /// Increment pin count without the safety check for number of references to the page
-    // pub unsafe fn increment_pin_count_unchecked(&mut self) {
-    //     self.pin_count += 1;
-    // }
-
-    // pub fn decrement_pin_count(&mut self) {
-    //     if self.pin_count == 0 {
-    //         eprintln!("Trying to unpin page which has no pins this is a mistake");
-    //         return;
-    //     }
-    //
-    //     self.pin_count -= 1;
-    // }
-
-    /** @return the pin count of this page */
-    // pub fn set_pin_count(&mut self, pin_count: usize) {
-    //     self.pin_count = pin_count;
-    // }
-
-    /** @return true if the page in memory has been modified from the page on disk, false otherwise */
-    // pub fn is_dirty(&self) -> bool {
-    //     self.is_dirty
-    // }
-
     /** @return the page LSN. */
     pub fn get_lsn(&self) -> LSN {
         // return *reinterpret_cast<lsn_t *>(GetData() + OFFSET_LSN);
@@ -134,36 +96,16 @@ impl UnderlyingPage {
         // memcpy(GetData() + OFFSET_LSN, &lsn, sizeof(lsn_t));
     }
 
-    pub fn reset(&mut self, page_id: PageId) {
-        self.partial_reset(page_id);
-        self.data = [0u8; PAGE_SIZE];
-    }
-
-    pub fn partial_reset(&mut self, page_id: PageId) {
+    /// Clear page id and data so it will be like a new page
+    pub fn clear_page(&mut self, page_id: PageId) {
         self.page_id = page_id;
-        // self.is_dirty = false;
-        // self.pin_count = 0;
+        self.data.fill(0);
     }
 
-    // When replacing content of page with different
-    // (not when updating existing page content but instead changing the underlying page)
-    pub fn update_with_different_page(&mut self, page_id: PageId, data: PageData) {
-        // self.is_dirty = false;
-
-        println!("Updating page id from {} to {}", self.page_id, page_id);
-        self.page_id = page_id;
-        println!("page id updated");
-        self.data = data;
-        // self.pin_count = 0;
-    }
-
-    pub fn replace_page_id_without_content_update(&mut self, page_id: PageId) {
+    /// Change th page id, this should only be used in buffer pools!
+    pub fn set_page_id(&mut self, page_id: PageId) {
         self.page_id = page_id;
     }
-
-    // pub fn set_is_dirty(&mut self, is_dirty: bool) {
-    //     self.is_dirty = is_dirty;
-    // }
 
     pub fn set_data(&mut self, data: PageData) {
         self.data = data;
