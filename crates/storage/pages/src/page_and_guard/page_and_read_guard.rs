@@ -7,7 +7,7 @@ pub struct PageAndReadGuard<'a>(
     Page,
 );
 
-impl<'a> PageAndGuard for PageAndReadGuard<'a> {
+impl<'a> PageAndGuard<'a> for PageAndReadGuard<'a> {
     fn page(&self) -> &Page {
         &self.1
     }

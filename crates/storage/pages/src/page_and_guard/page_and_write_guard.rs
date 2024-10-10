@@ -8,7 +8,7 @@ pub struct PageAndWriteGuard<'a>(
     Page,
 );
 
-impl<'a> PageAndGuard for PageAndWriteGuard<'a> {
+impl<'a> PageAndGuard<'a> for PageAndWriteGuard<'a> {
     fn page(&self) -> &Page {
         &self.1
     }
