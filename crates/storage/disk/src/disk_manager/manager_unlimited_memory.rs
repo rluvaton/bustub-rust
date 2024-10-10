@@ -5,7 +5,7 @@ use parking_lot::{Mutex, MutexGuard};
 use std::thread;
 use std::thread::{sleep, ThreadId};
 use std::time::Duration;
-use common::Future;
+use common::{Future, SharedFuture};
 use crate::DiskManager;
 
 type Page = PageData;
@@ -242,7 +242,7 @@ impl DiskManager for DiskManagerUnlimitedMemory {
         unimplemented!();
     }
 
-    fn set_flush_log_future(&mut self, _f: Option<Future<()>>) {
+    fn set_flush_log_future(&mut self, _f: Option<SharedFuture<()>>) {
         unimplemented!();
     }
 

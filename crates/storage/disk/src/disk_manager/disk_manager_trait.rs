@@ -1,5 +1,5 @@
 use pages::PageId;
-use common::Future;
+use common::{Future, SharedFuture};
 
 /**
  * DiskManager takes care of the allocation and deallocation of pages within a database. It performs the reading and
@@ -58,7 +58,7 @@ pub trait DiskManager: Sync + Send {
      * Sets the future which is used to check for non-blocking flushes.
      * @param f the non-blocking flush check
      */
-    fn set_flush_log_future(&mut self, f: Option<Future<()>>);
+    fn set_flush_log_future(&mut self, f: Option<SharedFuture<()>>);
 
     /** Checks if the non-blocking flush future was set. */
     fn has_flush_log_future(&self) -> bool;

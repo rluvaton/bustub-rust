@@ -36,7 +36,8 @@ pub struct Future<T> {
 }
 
 impl<T> Future<T> {
-    pub fn wait(&self) -> T {
+    /// The future is not usable after first use
+    pub fn wait(&mut self) -> T {
         let (lock, cvar) = &*self.result;
         let mut result = lock.lock().unwrap();
         while result.1.is_none() {
@@ -65,7 +66,7 @@ mod tests {
     #[test]
     fn should_work_with_boolean() {
         let promise = Promise::new();
-        let future = promise.get_future();
+        let mut future = promise.get_future();
 
         thread::spawn(move || {
             // Simulate some work
@@ -80,7 +81,7 @@ mod tests {
     #[test]
     fn should_work_with_string() {
         let promise = Promise::new();
-        let future = promise.get_future();
+        let mut future = promise.get_future();
 
         thread::spawn(move || {
             // Simulate some work
@@ -95,7 +96,7 @@ mod tests {
     #[test]
     fn support_wait_for() {
         let promise = Promise::new();
-        let future = promise.get_future();
+        let mut future = promise.get_future();
 
         thread::spawn(move || {
             thread::sleep(Duration::from_millis(2_000));

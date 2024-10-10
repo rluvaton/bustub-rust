@@ -1,10 +1,11 @@
 use parking_lot::{Mutex, MutexGuard};
 use std::collections::{HashMap, LinkedList};
+use std::ops::{Deref, DerefMut};
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
-use common::{Future, Promise, SharedFuture, SharedPromise, UnsafeSingleRefData, UnsafeSingleRefMutData};
+use common::{Future, Promise, SharedFuture, SharedPromise};
 use disk_storage::{DiskManager, DiskScheduler, ReadDiskRequest, WriteDiskRequest};
-use pages::{Page, PageAndGuard, PageAndReadGuard, PageAndWriteGuard, AtomicPageId, PageData, PageId, INVALID_PAGE_ID};
+use pages::{Page, PageAndGuard, PageAndReadGuard, PageAndWriteGuard, AtomicPageId, PageData, PageId, INVALID_PAGE_ID, UnderlyingPage};
 
 #[cfg(feature = "tracing")]
 use tracy_client::span;
@@ -113,27 +114,24 @@ impl BufferPoolManager {
         }
     }
 
-    fn request_read_page(disk_scheduler: &mut DiskScheduler, page_id: PageId, page_data: &mut PageData) -> Future<bool> {
-        let data = unsafe { UnsafeSingleRefMutData::new(page_data) };
-
-        let promise = Promise::new();
-        let future = promise.get_future();
-        let req = ReadDiskRequest::new(page_id, data, promise);
-
-        disk_scheduler.schedule(req.into());
-
-        future
+    /// Requesting to read a page from disk, without waiting for the request to finish
+    fn request_read_page(disk_scheduler: &mut DiskScheduler, page_id: PageId, page_data: pages::PageWriteGuard) -> Future<bool> {
+        // This does not wait for the page request to finish on purpose so we can release some latches
+        disk_scheduler.schedule_read_page_from_disk(page_id, page_data)
     }
 
-    fn request_write_page(disk_scheduler: &mut DiskScheduler, page_id: PageId, page_data: &PageData) -> Future<bool> {
-        let data = unsafe { UnsafeSingleRefData::new(page_data) };
-        let promise = Promise::new();
-        let future = promise.get_future();
-        let req = WriteDiskRequest::new(page_id, data, promise);
+    /// Requesting to write a page to disk, without waiting for the request to finish
+    fn request_write_page(disk_scheduler: &mut DiskScheduler, page_id: PageId, page_data: pages::PageReadGuard) -> Future<bool> {
 
-        disk_scheduler.schedule(req.into());
+        // This does not wait for the page request to finish on purpose so we can release some latches
+        disk_scheduler.schedule_write_page_to_disk(page_id, page_data)
+    }
 
-        future
+    /// Requesting to write a page to disk, without waiting for the request to finish
+    fn request_flush_and_read_page(disk_scheduler: &mut DiskScheduler, page_id: PageId, page_data: pages::PageReadGuard) -> Future<bool> {
+
+        // This does not wait for the page request to finish on purpose so we can release some latches
+        disk_scheduler.schedule_write_page_to_disk(page_id, page_data)
     }
 
     fn wait_for_pending_request_page_to_finish(&self, requests_map: &Mutex<HashMap<PageId, SharedFuture<()>>>, page_id: PageId) -> MutexGuard<InnerBufferPoolManager> {
@@ -263,11 +261,11 @@ impl BufferPoolManager {
                 let mut scheduler = self.disk_scheduler.lock();
 
                 // 6. Add flush message to the scheduler
-                let flush_page_future = BufferPoolManager::request_write_page(&mut scheduler, page_to_replace_guard.get_page_id(), page_to_replace_guard.get_data());
+                let mut flush_page_future = BufferPoolManager::request_write_page(&mut scheduler, page_to_replace_guard.get_page_id(), page_to_replace_guard);
 
                 // TODO - only request read if the write page was successful
                 //        as otherwise, if the write failed we will read and lose the data
-                let fetch_page_future = BufferPoolManager::request_read_page(&mut scheduler, page_id, page_to_replace_guard.get_data_mut());
+                let mut fetch_page_future = BufferPoolManager::request_read_page(&mut scheduler, page_id, page_to_replace_guard.deref_mut());
 
                 // 8. release all locks as we don't want to hold the entire lock while flushing to disk
                 drop(scheduler);
@@ -314,7 +312,7 @@ impl BufferPoolManager {
                 let mut scheduler = self.disk_scheduler.lock();
 
                 // 6. Request read page
-                let fetch_page_future = BufferPoolManager::request_read_page(&mut scheduler, page_id, page_to_replace_guard.get_data_mut());
+                let mut fetch_page_future = BufferPoolManager::request_read_page(&mut scheduler, page_id, page_to_replace_guard.deref_mut());
 
                 // 7. release all locks as we don't want to hold the entire lock while flushing to disk
                 drop(scheduler);
@@ -355,7 +353,7 @@ impl BufferPoolManager {
             let mut scheduler = self.disk_scheduler.lock();
 
             // 6. Request read page
-            let fetch_page_future = BufferPoolManager::request_read_page(&mut scheduler, page_id, page.write().get_data_mut());
+            let mut fetch_page_future = BufferPoolManager::request_read_page(&mut scheduler, page_id, page.write().deref_mut());
 
             // 7. release all locks as we don't want to hold the entire lock while flushing to disk
             drop(scheduler);
@@ -516,7 +514,7 @@ impl BufferPool for Arc<BufferPoolManager> {
                 let mut scheduler = self.disk_scheduler.lock();
 
                 // 6. Add flush message to the scheduler
-                let flush_page_future = BufferPoolManager::request_write_page(&mut scheduler, page_and_write.get_page_id(), page_and_write.get_data());
+                let mut flush_page_future = BufferPoolManager::request_write_page(&mut scheduler, page_and_write.get_page_id(), page_and_write.deref());
 
                 // 7. release all locks as we don't want to hold the entire lock while flushing to disk
                 drop(scheduler);
@@ -595,7 +593,7 @@ impl BufferPool for Arc<BufferPoolManager> {
 
         let page = inner.pages[frame_id as usize].clone();
 
-        assert_ne!(page.is_locked_exclusive(), false, "Possible deadlock detected when trying to flush page {} when the page has already exclusive lock", page_id);
+        assert_eq!(page.is_locked_exclusive(), false, "Possible deadlock detected when trying to flush page {} when the page has already exclusive lock", page_id);
 
         // Avoid evicting in the middle
         inner.eviction_policy.set_evictable(frame_id, false);
@@ -604,7 +602,7 @@ impl BufferPool for Arc<BufferPoolManager> {
         let mut scheduler = self.disk_scheduler.lock();
 
         // Add flush message to the scheduler
-        let flush_page_future = BufferPoolManager::request_write_page(&mut scheduler, page_id, page.read().get_data());
+        let mut flush_page_future = BufferPoolManager::request_write_page(&mut scheduler, page_id, page.read());
 
         // release all locks as we don't want to hold the entire lock while flushing to disk
         drop(scheduler);
