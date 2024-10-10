@@ -595,7 +595,7 @@ impl BufferPool for Arc<BufferPoolManager> {
 
         let page = inner.pages[frame_id as usize].clone();
 
-        assert_ne!(page.is_locked_exclusive(), false, "Possible deadlock detected when trying to flush page {} when the page has already exclusive lock", page_id);
+        assert_eq!(page.is_locked_exclusive(), false, "Possible deadlock detected when trying to flush page {} when the page has already exclusive lock", page_id);
 
         // Avoid evicting in the middle
         inner.eviction_policy.set_evictable(frame_id, false);
