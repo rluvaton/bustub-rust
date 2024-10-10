@@ -18,10 +18,10 @@ pub struct ReadDiskRequest {
 }
 
 impl ReadDiskRequest {
-    pub fn new(page_id: PageId, data: UnsafeSingleRefMutData<PageData>, callback: Promise<bool>) -> Self {
+    pub fn new(source_page_id: PageId, dest_data: &mut PageData, callback: Promise<bool>) -> Self {
         ReadDiskRequest {
-            page_id,
-            data,
+            page_id: source_page_id,
+            data: unsafe  { UnsafeSingleRefMutData::new(dest_data) },
             callback,
         }
     }
@@ -47,10 +47,10 @@ pub struct WriteDiskRequest {
 
 
 impl WriteDiskRequest {
-    pub fn new(page_id: PageId, data: UnsafeSingleRefData<PageData>, callback: Promise<bool>) -> Self {
+    pub fn new(dest_page_id: PageId, source_data: &PageData, callback: Promise<bool>) -> Self {
         WriteDiskRequest {
-            page_id,
-            data,
+            page_id: dest_page_id,
+            data: unsafe  { UnsafeSingleRefData::new(source_data) },
             callback,
         }
     }

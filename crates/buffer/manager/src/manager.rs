@@ -114,11 +114,10 @@ impl BufferPoolManager {
     }
 
     fn request_read_page(disk_scheduler: &mut DiskScheduler, page_id: PageId, page_data: &mut PageData) -> Future<bool> {
-        let data = unsafe { UnsafeSingleRefMutData::new(page_data) };
 
         let promise = Promise::new();
         let future = promise.get_future();
-        let req = ReadDiskRequest::new(page_id, data, promise);
+        let req = ReadDiskRequest::new(page_id, page_data, promise);
 
         disk_scheduler.schedule(req.into());
 
@@ -126,10 +125,9 @@ impl BufferPoolManager {
     }
 
     fn request_write_page(disk_scheduler: &mut DiskScheduler, page_id: PageId, page_data: &PageData) -> Future<bool> {
-        let data = unsafe { UnsafeSingleRefData::new(page_data) };
         let promise = Promise::new();
         let future = promise.get_future();
-        let req = WriteDiskRequest::new(page_id, data, promise);
+        let req = WriteDiskRequest::new(page_id, page_data, promise);
 
         disk_scheduler.schedule(req.into());
 
