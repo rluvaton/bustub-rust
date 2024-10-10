@@ -178,6 +178,13 @@ mod metrics;
 // get: 242322.38925369154
 // >>> END
 
+// Remove extra lock for disk scheduler + avoid creating wrapper for the data
+// Release:
+// <<< BEGIN
+// scan: 233204.35985467152
+// get: 261890.90363654544
+// >>> END
+
 fn setup() -> TempDir {
     TempDir::new("bpm_bench").expect("Should create tmp directory")
 }
