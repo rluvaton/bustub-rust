@@ -29,16 +29,15 @@ mod tests {
         }
 
         let dm = DiskManagerUnlimitedMemory::new();
-        let mut disk_scheduler = Mutex::new(DiskScheduler::new(Arc::new(Mutex::new(dm))));
+        let mut disk_scheduler = Arc::new(DiskScheduler::new(Arc::new(Mutex::new(dm))));
 
         // Write first page
         {
             let mut guard = page1.read();
 
-            let finish_writing_result = DiskScheduler::write_page_to_disk(
-                disk_scheduler.lock(),
+            let finish_writing_result = disk_scheduler.clone().write_page_to_disk(
                 &mut guard,
-                |_| {},
+                || {},
             );
 
             assert_eq!(finish_writing_result, (true, ()));
@@ -48,14 +47,13 @@ mod tests {
             // write page 2 and read page 1 into page 2 buffer
             let mut guard = page2.write();
 
-            let finish_writing_result = DiskScheduler::write_and_read_page_from_disk(
-                disk_scheduler.lock(),
+            let (finish_writing_result, _) = disk_scheduler.clone().write_and_read_page_from_disk(
                 &mut guard,
                 page1.read().get_page_id(),
-                |_| {},
+                || {},
             );
 
-            assert_eq!(finish_writing_result, (true, ()));
+            assert_eq!(finish_writing_result, true);
         };
 
         assert_eq!(page1.read().get_data(), &page1_string.align_to_page_data());
@@ -66,10 +64,9 @@ mod tests {
             let mut guard = page1.write();
             guard.set_page_id(page2.read().get_page_id());
 
-            DiskScheduler::read_page_from_disk(
-                disk_scheduler.lock(),
+            disk_scheduler.clone().read_page_from_disk(
                 &mut guard,
-                |_| {},
+                || {},
             );
         };
 

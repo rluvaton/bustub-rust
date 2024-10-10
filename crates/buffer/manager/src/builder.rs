@@ -97,9 +97,9 @@ impl BufferPoolManagerBuilder {
 
                 page_table: HashMap::with_capacity(pool_size),
                 free_list,
-            }),
 
-            disk_scheduler: Arc::new(Mutex::new(self.disk_scheduler.expect("Must have disk scheduler"))),
+                disk_scheduler: Arc::new(self.disk_scheduler.expect("Must have disk scheduler")),
+            }),
 
             pending_fetch_requests: Mutex::new(HashMap::new()),
 

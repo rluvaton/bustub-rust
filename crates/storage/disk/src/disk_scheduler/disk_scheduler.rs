@@ -1,11 +1,11 @@
-use parking_lot::{Mutex, MutexGuard};
+use parking_lot::Mutex;
 use std::sync::Arc;
 use std::thread::{Builder, JoinHandle};
 
 use crate::disk_scheduler::disk_request::WriteAndReadDiskRequest;
 use crate::{DiskManager, DiskRequestType, ReadDiskRequest, WriteDiskRequest};
-use common::{abort_process_on_panic, Channel, Future, FutureLifetime, Promise, PromiseLifetime};
-use pages::{PageData, PageId, PageWriteGuard, UnderlyingPage};
+use common::{abort_process_on_panic, Channel, Future, Promise};
+use pages::{PageData, PageId, UnderlyingPage};
 
 /**
  * @brief The DiskScheduler schedules disk read and write operations.
@@ -87,7 +87,7 @@ impl DiskScheduler {
     ///
     /// this only change the page data and nothing more
     ///
-    pub fn read_page_from_disk<'a, R, AfterRequestFn: FnOnce(MutexGuard<Self>) -> R>(scheduler: MutexGuard<Self>, dest: &mut UnderlyingPage, after_request_fn: AfterRequestFn) -> (bool, R) {
+    pub fn read_page_from_disk<'a, R, AfterRequestFn: FnOnce() -> R>(self: Arc<Self>, dest: &mut UnderlyingPage, after_request_fn: AfterRequestFn) -> (bool, R) {
         // promise value should be set to true once the request is processed.
         let promise = Promise::new();
         let future = promise.get_future();
@@ -106,9 +106,10 @@ impl DiskScheduler {
 
         let request = ReadDiskRequest::new(dest.get_page_id(), dest_updated_lifetime, promise);
 
-        scheduler.sender.put(DiskSchedulerWorkerMessage::NewJob(request.into()));
+        self.sender.put(DiskSchedulerWorkerMessage::NewJob(request.into()));
 
-        let r = after_request_fn(scheduler);
+        drop(self);
+        let r = after_request_fn();
 
         (future.wait(), r)
     }
@@ -143,7 +144,7 @@ impl DiskScheduler {
     /// Write page to disk
     ///
     /// This block until the page is written after the provided callback is called
-    pub fn write_page_to_disk<'a, R, AfterRequestFn: FnOnce(MutexGuard<Self>) -> R>(scheduler: MutexGuard<Self>, page_to_write: &UnderlyingPage, after_request_fn: AfterRequestFn) -> (bool, R) {
+    pub fn write_page_to_disk<'a, R, AfterRequestFn: FnOnce() -> R>(self: Arc<Self>, page_to_write: &UnderlyingPage, after_request_fn: AfterRequestFn) -> (bool, R) {
         // promise value should be set to true once the request is processed.
 
         let promise = Promise::new();
@@ -162,9 +163,10 @@ impl DiskScheduler {
 
         let request = WriteDiskRequest::new(page_to_write.get_page_id(), src_updated_lifetime, promise);
 
-        scheduler.sender.put(DiskSchedulerWorkerMessage::NewJob(request.into()));
+        self.sender.put(DiskSchedulerWorkerMessage::NewJob(request.into()));
 
-        let r = after_request_fn(scheduler);
+        drop(self);
+        let r = after_request_fn();
 
         (future.wait(), r)
     }
@@ -174,7 +176,7 @@ impl DiskScheduler {
     /// This block until the page is read after the provided callback is called
     ///
     /// this only change the page data and nothing more
-    pub fn write_and_read_page_from_disk<'a, R, AfterRequestFn: FnOnce(MutexGuard<Self>) -> R>(scheduler: MutexGuard<Self>, page: &mut UnderlyingPage, page_id_to_read: PageId, after_request_fn: AfterRequestFn) -> (bool, R) {
+    pub fn write_and_read_page_from_disk<'a, R, AfterRequestFn: FnOnce() -> R>(self: Arc<Self>, page: &mut UnderlyingPage, page_id_to_read: PageId, after_request_fn: AfterRequestFn) -> (bool, R) {
         // promise value should be set to true once the request is processed.
         let promise = Promise::new();
         let future = promise.get_future();
@@ -193,9 +195,11 @@ impl DiskScheduler {
 
         let request = WriteAndReadDiskRequest::new(page.get_page_id(), page_id_to_read, data_updated_lifetime, promise);
 
-        scheduler.sender.put(DiskSchedulerWorkerMessage::NewJob(request.into()));
+        self.sender.put(DiskSchedulerWorkerMessage::NewJob(request.into()));
 
-        let r = after_request_fn(scheduler);
+        drop(self);
+
+        let r = after_request_fn();
 
         (future.wait(), r)
     }

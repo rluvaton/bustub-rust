@@ -26,9 +26,6 @@ pub struct BufferPoolManager {
     /// This will not change after initial set
     pub(super) pool_size: usize,
 
-    /// Pointer to the disk scheduler.
-    /// This is mutex to avoid writing and reading the same page twice
-    pub(super) disk_scheduler: Arc<Mutex<DiskScheduler>>,
 
     /// Pointer to the log manager. Please ignore this for P1.
     // LogManager *log_manager_ __attribute__((__unused__));
@@ -67,6 +64,11 @@ pub(super) struct InnerBufferPoolManager {
 
     /// List of free frames that don't have any pages on them.
     pub(super) free_list: LinkedList<FrameId>,
+
+    /// Pointer to the disk scheduler.
+    /// This is inside `Arc` to allow dropping `inner` when calling disk scheduler
+    /// It is our responsibility to not leave dangling scheduler outside the mutex guard
+    pub(super) disk_scheduler: Arc<DiskScheduler>,
 }
 
 impl BufferPoolManager {
@@ -234,14 +236,13 @@ impl BufferPoolManager {
             // 4. If page to replace is dirty, need to flush it
             if page_to_replace_guard.page().is_dirty() {
                 // 6. Add flush + read message to the scheduler
-                let (flush_and_fetch_page_result, _) = DiskScheduler::write_and_read_page_from_disk(
-                    self.disk_scheduler.lock(),
+                let (flush_and_fetch_page_result, _) = inner.disk_scheduler.clone().write_and_read_page_from_disk(
                     page_to_replace_guard.write_guard_mut(),
                     page_id,
-                    |scheduler| {
-
+                    #[inline]
+                    || {
                         // 8. release all locks as we don't want to hold the entire lock while flushing to disk
-                        drop(scheduler);
+
                         drop(holding_inner_latch);
                         drop(inner);
 
@@ -274,12 +275,10 @@ impl BufferPoolManager {
                 page_to_replace_guard.set_page_id(page_id);
 
                 // 6. Request read page
-                let (fetch_page_result, _) = DiskScheduler::read_page_from_disk(
-                    self.disk_scheduler.lock(),
+                let (fetch_page_result, _) = inner.disk_scheduler.clone().read_page_from_disk(
                     page_to_replace_guard.write_guard_mut(),
-                    |scheduler| {
+                    || {
                         // 7. release all locks as we don't want to hold the entire lock while flushing to disk
-                        drop(scheduler);
                         drop(holding_inner_latch);
                         drop(inner);
                     });
@@ -315,12 +314,10 @@ impl BufferPoolManager {
             // 5. Get the scheduler
 
             // 6. Request read page
-            let (fetch_page_result, _) = DiskScheduler::read_page_from_disk(
-                self.disk_scheduler.lock(),
+            let (fetch_page_result, _) = inner.disk_scheduler.clone().read_page_from_disk(
                 write_guard.write_guard_mut(),
-                |scheduler| {
+                || {
                     // 7. release all locks as we don't want to hold the entire lock while flushing to disk
-                    drop(scheduler);
                     drop(holding_inner_latch);
                     drop(inner);
 
@@ -477,12 +474,10 @@ impl BufferPool for Arc<BufferPoolManager> {
             // 4. If page to replace is dirty, need to flush it
             if page_and_write.page().is_dirty() {
                 // 6. Add flush message to the scheduler
-                let (flush_page_result, _) = DiskScheduler::write_page_to_disk(
-                    self.disk_scheduler.lock(),
+                let (flush_page_result, _) = inner.disk_scheduler.clone().write_page_to_disk(
                     page_and_write.deref(),
-                    |scheduler| {
+                    || {
                         // 7. release all locks as we don't want to hold the entire lock while flushing to disk
-                        drop(scheduler);
                         drop(holding_root_lock);
                         drop(inner);
 
@@ -570,15 +565,13 @@ impl BufferPool for Arc<BufferPoolManager> {
         let page_guard = page.read();
 
         // Add flush message to the scheduler
-        let (flush_page_result, _) = DiskScheduler::write_page_to_disk(
-            self.disk_scheduler.lock(),
+        let (flush_page_result, _) = inner.disk_scheduler.clone().write_page_to_disk(
             page_guard.deref(),
-            |scheduler| {
+            #[inline]
+            || {
                 // release all locks as we don't want to hold the entire lock while flushing to disk
-                drop(scheduler);
                 drop(holding_root_lock);
                 drop(inner);
-
 
                 // Wait for the flush to finish
             }

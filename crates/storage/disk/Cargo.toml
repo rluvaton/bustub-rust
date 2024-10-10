@@ -8,7 +8,7 @@ common = {path = "../../common"}
 pages = {path = "../pages"}
 error_utils = {path = "../../utils/error_utils"}
 
-parking_lot = { version = "0.12.3", features = ["default"] }
+parking_lot = "0.12.3"
 
 [dev-dependencies]
 tempdir = "0.3.7"
