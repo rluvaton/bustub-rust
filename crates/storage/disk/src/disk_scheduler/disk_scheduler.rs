@@ -1,10 +1,10 @@
-use parking_lot::Mutex;
+use parking_lot::{Mutex, MutexGuard};
 use std::sync::Arc;
 use std::thread::{Builder, JoinHandle};
 
 use crate::disk_scheduler::disk_request::WriteAndReadDiskRequest;
 use crate::{DiskManager, DiskRequestType, ReadDiskRequest, WriteDiskRequest};
-use common::{abort_process_on_panic, Channel, FutureLifetime, Promise, PromiseLifetime};
+use common::{abort_process_on_panic, Channel, Future, FutureLifetime, Promise, PromiseLifetime};
 use pages::{PageData, PageId, PageWriteGuard, UnderlyingPage};
 
 /**
@@ -52,9 +52,19 @@ impl DiskScheduler {
         scheduler
     }
 
-    pub fn schedule_read_page_from_disk<'a>(&mut self, dest: &mut PageWriteGuard<'a>) -> FutureLifetime<'a, bool> {
+    /// Schedule read page from disk
+    ///
+    /// this is not blocking
+    ///
+    /// # Safety
+    /// You must not drop the page before calling `.wait` on the result as it will cause undefined behavior
+    ///
+    /// this only change the page data and nothing more
+    ///
+    #[must_use]
+    pub unsafe fn schedule_read_page_from_disk(&mut self, dest: &mut UnderlyingPage) -> Future<bool> {
         // promise value should be set to true once the request is processed.
-        let promise = PromiseLifetime::<'static>::new();
+        let promise = Promise::new();
         let future = promise.get_future();
 
         // change dest lifetime
@@ -71,11 +81,49 @@ impl DiskScheduler {
         future
     }
 
+    /// Read page from disk
+    ///
+    /// This block until the page is read after the provided callback is called
+    ///
+    /// this only change the page data and nothing more
+    ///
+    pub fn read_page_from_disk<'a, R, AfterRequestFn: FnOnce(MutexGuard<Self>) -> R>(scheduler: MutexGuard<Self>, dest: &mut UnderlyingPage, after_request_fn: AfterRequestFn) -> (bool, R) {
+        // promise value should be set to true once the request is processed.
+        let promise = Promise::new();
+        let future = promise.get_future();
+
+        // Change data lifetime
+        //
+        // SAFETY: this is safe as we wait until the scheduler request finish,
+        // and we hold mutable reference to the underlying page
+        // so the compiler will disallow other references as well
+        // so nothing should read the page in the middle (while reading from disk)
+        let dest_updated_lifetime: &'static mut PageData = unsafe {
+            let ptr: *mut PageData = dest.get_data_mut();
+
+            &mut *ptr
+        };
+
+        let request = ReadDiskRequest::new(dest.get_page_id(), dest_updated_lifetime, promise);
+
+        scheduler.sender.put(DiskSchedulerWorkerMessage::NewJob(request.into()));
+
+        let r = after_request_fn(scheduler);
+
+        (future.wait(), r)
+    }
+
     /// Schedule page to be written to disk
-    pub fn schedule_write_page_to_disk<'a>(&mut self, page_to_write: &UnderlyingPage) -> FutureLifetime<'a, bool> {
+    /// this is not blocking
+    ///
+    /// # Safety
+    /// You must not drop the page before calling `.wait` on the result as it will cause undefined behavior
+    ///
+    #[must_use]
+    pub unsafe fn schedule_write_page_to_disk<'a>(&mut self, page_to_write: &UnderlyingPage) -> Future<bool> {
         // promise value should be set to true once the request is processed.
 
-        let promise = PromiseLifetime::<'static>::new();
+        let promise = Promise::new();
         let future = promise.get_future();
 
         // change src lifetime
@@ -92,29 +140,64 @@ impl DiskScheduler {
         future
     }
 
-    /// Schedule write and then read
+    /// Write page to disk
     ///
-    ///
-    /// # SAFETY
-    /// guard must not be released
-    #[must_use]
-    pub fn schedule_write_and_read_page_from_disk<'a>(&mut self, page_id_to_write: PageId, page_id_to_read: PageId, data: &mut PageWriteGuard<'a>) -> FutureLifetime<'a, bool> {
+    /// This block until the page is written after the provided callback is called
+    pub fn write_page_to_disk<'a, R, AfterRequestFn: FnOnce(MutexGuard<Self>) -> R>(scheduler: MutexGuard<Self>, page_to_write: &UnderlyingPage, after_request_fn: AfterRequestFn) -> (bool, R) {
         // promise value should be set to true once the request is processed.
-        let promise = PromiseLifetime::<'static>::new();
+
+        let promise = Promise::new();
         let future = promise.get_future();
 
-        // change data lifetime
+        // Change data lifetime
+        //
+        // SAFETY: this is safe as we wait until the scheduler request finish,
+        // and we hold a shared reference to the underlying page
+        // so the compiler will disallow writers to override the page in the middle
+        let src_updated_lifetime: &'static PageData = unsafe {
+            let ptr: *const PageData = page_to_write.get_data();
+
+            &*ptr
+        };
+
+        let request = WriteDiskRequest::new(page_to_write.get_page_id(), src_updated_lifetime, promise);
+
+        scheduler.sender.put(DiskSchedulerWorkerMessage::NewJob(request.into()));
+
+        let r = after_request_fn(scheduler);
+
+        (future.wait(), r)
+    }
+
+    /// Write page and then read a new page from disk
+    ///
+    /// This block until the page is read after the provided callback is called
+    ///
+    /// this only change the page data and nothing more
+    pub fn write_and_read_page_from_disk<'a, R, AfterRequestFn: FnOnce(MutexGuard<Self>) -> R>(scheduler: MutexGuard<Self>, page: &mut UnderlyingPage, page_id_to_read: PageId, after_request_fn: AfterRequestFn) -> (bool, R) {
+        // promise value should be set to true once the request is processed.
+        let promise = Promise::new();
+        let future = promise.get_future();
+
+        // Change data lifetime
+        //
+        // SAFETY: this is safe as we wait until the scheduler request finish,
+        // and we hold mutable reference to the underlying page
+        // so the compiler will disallow other mutable references as well
+        // so nothing should change the page in the middle (while writing page to disk) or read the page in the middle (while reading from disk)
         let data_updated_lifetime: &'static mut PageData = unsafe {
-            let ptr: *mut PageData = data.get_data_mut();
+            let ptr: *mut PageData = page.get_data_mut();
 
             &mut *ptr
         };
 
-        let request = WriteAndReadDiskRequest::<'static>::new(page_id_to_write, page_id_to_read, data_updated_lifetime, promise);
+        let request = WriteAndReadDiskRequest::new(page.get_page_id(), page_id_to_read, data_updated_lifetime, promise);
 
-        self.sender.put(DiskSchedulerWorkerMessage::NewJob(request.into()));
+        scheduler.sender.put(DiskSchedulerWorkerMessage::NewJob(request.into()));
 
-        future
+        let r = after_request_fn(scheduler);
+
+        (future.wait(), r)
     }
 
     /**

@@ -1,4 +1,4 @@
-use common::PromiseLifetime;
+use common::{Promise, PromiseLifetime};
 use pages::{PageData, PageId};
 
 /**
@@ -14,11 +14,11 @@ pub struct ReadDiskRequest<'a> {
     pub page_id: PageId,
 
     /** Callback used to signal to the request issuer when the request has been completed. */
-    pub callback: PromiseLifetime<'a, bool>,
+    pub callback: Promise<bool>,
 }
 
 impl<'a> ReadDiskRequest<'a> {
-    pub fn new(source_page_id: PageId, dest_data: &'a mut PageData, callback: PromiseLifetime<'a, bool>) -> Self {
+    pub fn new(source_page_id: PageId, dest_data: &'a mut PageData, callback: Promise<bool>) -> Self {
         ReadDiskRequest {
             page_id: source_page_id,
             data: dest_data,
@@ -42,12 +42,12 @@ pub struct WriteDiskRequest<'a> {
     pub(super) page_id: PageId,
 
     /** Callback used to signal to the request issuer when the request has been completed. */
-    pub(super) callback: PromiseLifetime<'a, bool>,
+    pub(super) callback: Promise<bool>,
 }
 
 
 impl<'a> WriteDiskRequest<'a> {
-    pub fn new(dest_page_id: PageId, source_data: &'a PageData, callback: PromiseLifetime<'a, bool>) -> Self {
+    pub fn new(dest_page_id: PageId, source_data: &'a PageData, callback: Promise<bool>) -> Self {
         WriteDiskRequest {
             page_id: dest_page_id,
             data: source_data,
@@ -70,11 +70,11 @@ pub struct WriteAndReadDiskRequest<'a> {
     pub source_page_id: PageId,
 
     /** Callback used to signal to the request issuer when the request has been completed. */
-    pub callback: PromiseLifetime<'a, bool>,
+    pub callback: Promise<bool>,
 }
 
 impl<'a> WriteAndReadDiskRequest<'a> {
-    pub fn new(dest_page_id: PageId, source_page_id: PageId, data: &'a mut PageData, callback: PromiseLifetime<'a, bool>) -> Self {
+    pub fn new(dest_page_id: PageId, source_page_id: PageId, data: &'a mut PageData, callback: Promise<bool>) -> Self {
         WriteAndReadDiskRequest {
             dest_page_id,
             source_page_id,

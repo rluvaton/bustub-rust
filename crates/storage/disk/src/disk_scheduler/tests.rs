@@ -29,25 +29,33 @@ mod tests {
         }
 
         let dm = DiskManagerUnlimitedMemory::new();
-        let mut disk_scheduler = DiskScheduler::new(Arc::new(Mutex::new(dm)));
+        let mut disk_scheduler = Mutex::new(DiskScheduler::new(Arc::new(Mutex::new(dm))));
 
         // Write first page
         {
             let mut guard = page1.read();
 
-            let mut finish_writing_future = disk_scheduler.schedule_write_page_to_disk(&mut guard);
+            let finish_writing_result = DiskScheduler::write_page_to_disk(
+                disk_scheduler.lock(),
+                &mut guard,
+                |_| {},
+            );
 
-            assert!(finish_writing_future.wait());
+            assert_eq!(finish_writing_result, (true, ()));
         }
 
         {
             // write page 2 and read page 1 into page 2 buffer
             let mut guard = page2.write();
 
-            let pr = disk_scheduler
-                .schedule_write_and_read_page_from_disk(guard.get_page_id(), page1.read().get_page_id(), &mut guard);
+            let finish_writing_result = DiskScheduler::write_and_read_page_from_disk(
+                disk_scheduler.lock(),
+                &mut guard,
+                page1.read().get_page_id(),
+                |_| {},
+            );
 
-            pr.wait();
+            assert_eq!(finish_writing_result, (true, ()));
         };
 
         assert_eq!(page1.read().get_data(), &page1_string.align_to_page_data());
@@ -58,9 +66,11 @@ mod tests {
             let mut guard = page1.write();
             guard.set_page_id(page2.read().get_page_id());
 
-            disk_scheduler
-                .schedule_read_page_from_disk(&mut guard)
-                .wait();
+            DiskScheduler::read_page_from_disk(
+                disk_scheduler.lock(),
+                &mut guard,
+                |_| {},
+            );
         };
 
         assert_eq!(page1.read().get_data(), &page2_string.align_to_page_data());
@@ -164,8 +174,8 @@ mod tests {
         let page1 = Page::new(0);
         let page2 = Page::new(1);
 
-        let future1 = disk_scheduler.schedule_write_page_to_disk(page1.read().deref());
-        let future2 = disk_scheduler.schedule_read_page_from_disk(&mut page2.write());
+        let future1 = unsafe { disk_scheduler.schedule_write_page_to_disk(page1.read().deref()) };
+        let future2 = unsafe { disk_scheduler.schedule_read_page_from_disk(&mut page2.write()) };
 
         assert!(future1.wait());
         assert!(future2.wait());

@@ -70,7 +70,6 @@ pub(super) struct InnerBufferPoolManager {
 }
 
 impl BufferPoolManager {
-
     pub fn builder() -> BufferPoolManagerBuilder {
         BufferPoolManagerBuilder::default()
     }
@@ -164,7 +163,6 @@ impl BufferPoolManager {
         let holding_inner_latch = (
             #[cfg(feature = "tracing")]
             span!("[fetch_page] Holding root lock"),
-
             #[cfg(feature = "statistics")]
             self.stats.holding_inner_latch.create_single(),
         );
@@ -235,20 +233,22 @@ impl BufferPoolManager {
 
             // 4. If page to replace is dirty, need to flush it
             if page_to_replace_guard.page().is_dirty() {
-                // 5. Get the scheduler
-                let mut scheduler = self.disk_scheduler.lock();
-
                 // 6. Add flush + read message to the scheduler
-                let flush_and_read_future = scheduler.schedule_write_and_read_page_from_disk(page_to_replace_guard.get_page_id(), page_id, page_to_replace_guard.write_guard_mut());
+                let (flush_and_fetch_page_result, _) = DiskScheduler::write_and_read_page_from_disk(
+                    self.disk_scheduler.lock(),
+                    page_to_replace_guard.write_guard_mut(),
+                    page_id,
+                    |scheduler| {
 
-                // 8. release all locks as we don't want to hold the entire lock while flushing to disk
-                drop(scheduler);
-                drop(holding_inner_latch);
-                drop(inner);
+                        // 8. release all locks as we don't want to hold the entire lock while flushing to disk
+                        drop(scheduler);
+                        drop(holding_inner_latch);
+                        drop(inner);
 
-                // 9. Wait for the flush abd fetch to finish
-                // TODO - handle errors in flushing
-                let flush_and_fetch_page_result = flush_and_read_future.wait();
+                        // 9. Wait for the flush and fetch to finish
+                        // TODO - handle errors in flushing
+                    }
+                );
 
                 if !flush_and_fetch_page_result {
                     self.finish_current_pending_fetch_page_request(page_id, current_fetch_promise);
@@ -273,19 +273,19 @@ impl BufferPoolManager {
                 // If page is not dirty we can just fetch the page
                 page_to_replace_guard.set_page_id(page_id);
 
-                // 5. Get the scheduler
-                let mut scheduler = self.disk_scheduler.lock();
-
                 // 6. Request read page
-                let fetch_page_future = scheduler.schedule_read_page_from_disk(page_to_replace_guard.write_guard_mut());
+                let (fetch_page_result, _) = DiskScheduler::read_page_from_disk(
+                    self.disk_scheduler.lock(),
+                    page_to_replace_guard.write_guard_mut(),
+                    |scheduler| {
+                        // 7. release all locks as we don't want to hold the entire lock while flushing to disk
+                        drop(scheduler);
+                        drop(holding_inner_latch);
+                        drop(inner);
+                    });
 
-                // 7. release all locks as we don't want to hold the entire lock while flushing to disk
-                drop(scheduler);
-                drop(holding_inner_latch);
-                drop(inner);
 
                 // 8. Wait for the fetch to finish
-                let fetch_page_result = fetch_page_future.wait();
 
                 if !fetch_page_result {
                     self.finish_current_pending_fetch_page_request(page_id, current_fetch_promise);
@@ -313,18 +313,21 @@ impl BufferPoolManager {
             let mut write_guard = PageAndWriteGuard::from(page);
 
             // 5. Get the scheduler
-            let mut scheduler = self.disk_scheduler.lock();
 
             // 6. Request read page
-            let fetch_page_future = scheduler.schedule_read_page_from_disk(write_guard.write_guard_mut());
+            let (fetch_page_result, _) = DiskScheduler::read_page_from_disk(
+                self.disk_scheduler.lock(),
+                write_guard.write_guard_mut(),
+                |scheduler| {
+                    // 7. release all locks as we don't want to hold the entire lock while flushing to disk
+                    drop(scheduler);
+                    drop(holding_inner_latch);
+                    drop(inner);
 
-            // 7. release all locks as we don't want to hold the entire lock while flushing to disk
-            drop(scheduler);
-            drop(holding_inner_latch);
-            drop(inner);
+                    // 8. Wait for the fetch to finish
+                }
+            );
 
-            // 8. Wait for the fetch to finish
-            let fetch_page_result = fetch_page_future.wait();
 
             if !fetch_page_result {
                 self.finish_current_pending_fetch_page_request(page_id, current_fetch_promise);
@@ -473,20 +476,22 @@ impl BufferPool for Arc<BufferPoolManager> {
 
             // 4. If page to replace is dirty, need to flush it
             if page_and_write.page().is_dirty() {
-                // 5. Get the scheduler
-                let mut scheduler = self.disk_scheduler.lock();
-
                 // 6. Add flush message to the scheduler
-                let flush_page_future = scheduler.schedule_write_page_to_disk(page_and_write.deref());
+                let (flush_page_result, _) = DiskScheduler::write_page_to_disk(
+                    self.disk_scheduler.lock(),
+                    page_and_write.deref(),
+                    |scheduler| {
+                        // 7. release all locks as we don't want to hold the entire lock while flushing to disk
+                        drop(scheduler);
+                        drop(holding_root_lock);
+                        drop(inner);
 
-                // 7. release all locks as we don't want to hold the entire lock while flushing to disk
-                drop(scheduler);
-                drop(holding_root_lock);
-                drop(inner);
+                        // 8. Wait for the flush to finish
+                    }
+                );
 
-                // 8. Wait for the flush to finish
                 // TODO - handle errors in flushing
-                assert_eq!(flush_page_future.wait(), true, "Must be able to flush pages");
+                assert_eq!(flush_page_result, true, "Must be able to flush page");
 
                 // 9. Reset dirty
                 page_and_write.page().set_is_dirty(false);
@@ -562,20 +567,25 @@ impl BufferPool for Arc<BufferPoolManager> {
         inner.eviction_policy.set_evictable(frame_id, false);
         page.pin();
 
-        let mut scheduler = self.disk_scheduler.lock();
-
-
         let page_guard = page.read();
 
         // Add flush message to the scheduler
-        let flush_page_future = scheduler.schedule_write_page_to_disk(page_guard.deref());
+        let (flush_page_result, _) = DiskScheduler::write_page_to_disk(
+            self.disk_scheduler.lock(),
+            page_guard.deref(),
+            |scheduler| {
+                // release all locks as we don't want to hold the entire lock while flushing to disk
+                drop(scheduler);
+                drop(holding_root_lock);
+                drop(inner);
 
-        // release all locks as we don't want to hold the entire lock while flushing to disk
-        drop(scheduler);
-        drop(holding_root_lock);
-        drop(inner);
 
-        assert_eq!(flush_page_future.wait(), true, "Must be able to flush page");
+                // Wait for the flush to finish
+            }
+        );
+
+        // TODO - handle errors in flushing
+        assert_eq!(flush_page_result, true, "Must be able to flush page");
 
         page.set_is_dirty(false);
 
