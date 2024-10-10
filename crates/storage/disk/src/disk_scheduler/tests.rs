@@ -20,29 +20,9 @@ mod tests {
         let val = "A test string.";
         data[0..val.len()].copy_from_slice(val.as_bytes());
 
-        let promise1 = Promise::new();
-        let future1 = promise1.get_future();
-        let promise2 = disk_scheduler.create_promise();
-        let future2 = promise2.get_future();
 
-        let data_ref = unsafe { UnsafeSingleRefData::new(&data) };
-        let buf_ref = unsafe { UnsafeSingleRefMutData::new(&mut buf) };
-
-        disk_scheduler.schedule(
-            WriteDiskRequest {
-                data: data_ref,
-                page_id: 0,
-                callback: promise1
-            }.into(),
-        );
-        disk_scheduler.schedule(
-            ReadDiskRequest {
-                data: buf_ref,
-
-                page_id: 0,
-                callback: promise2
-            }.into(),
-        );
+        let future1 = disk_scheduler.schedule_write_page_to_disk(0, &data);
+        let future2 = disk_scheduler.schedule_read_page_from_disk(0, &mut buf);
 
         assert!(future1.wait());
         assert!(future2.wait());
@@ -148,31 +128,10 @@ mod tests {
         let mut disk_scheduler = DiskScheduler::new(Arc::clone(&manual_manager));
 
         let data1 = [0u8; PAGE_SIZE];
-        let data2 = [0u8; PAGE_SIZE];
+        let mut data2 = [0u8; PAGE_SIZE];
 
-        let promise1 = Promise::new();
-        let future1 = promise1.get_future();
-
-        let promise2 = Promise::new();
-        let future2 = promise2.get_future();
-
-        let data1_ref = unsafe { UnsafeSingleRefData::new(&data1) };
-        let data2_ref = unsafe { UnsafeSingleRefData::new(&data2) };
-
-        disk_scheduler.schedule(
-            WriteDiskRequest {
-                data: data1_ref,
-                page_id: 0,
-                callback: promise1
-            }.into(),
-        );
-        disk_scheduler.schedule(
-            WriteDiskRequest {
-                data: data2_ref,
-                page_id: 1,
-                callback: promise2
-            }.into(),
-        );
+        let future1 = disk_scheduler.schedule_write_page_to_disk(0, &data1);
+        let future2 = disk_scheduler.schedule_read_page_from_disk(1, &mut data2);
 
         assert!(future1.wait());
         assert!(future2.wait());

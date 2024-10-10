@@ -2,9 +2,9 @@ use parking_lot::Mutex;
 use std::sync::Arc;
 use std::thread::{Builder, JoinHandle};
 
-use common::{abort_process_on_panic, Channel, Promise};
-
-use crate::{DiskManager, DiskRequestType};
+use common::{abort_process_on_panic, Channel, Future, Promise};
+use pages::{PageData, PageId};
+use crate::{DiskManager, DiskRequestType, ReadDiskRequest, WriteDiskRequest};
 
 /**
  * @brief The DiskScheduler schedules disk read and write operations.
@@ -51,21 +51,30 @@ impl DiskScheduler {
         scheduler
     }
 
-    /**
-     * TODO(P1): Add implementation
-     *
-     * @brief Schedules a request for the DiskManager to execute.
-     *
-     * @param r The request to be scheduled.
-     */
-    pub fn schedule(&mut self, r: DiskRequestType) {
-        // Schedules a request for the `DiskManager` to execute.
-        // The `DiskRequest` struct specifies whether the request is for a read/write, where the data should be written into/from, and the page ID for the operation.
-        // The `DiskRequest` also includes a `std::promise` whose value should be set to true once the request is processed.
-        //
-        self.sender.put(DiskSchedulerWorkerMessage::NewJob(r))
+    pub fn schedule_read_page_from_disk(&mut self, page_id_to_read: PageId, dest: &mut PageData) -> Future<bool> {
+        // promise value should be set to true once the request is processed.
+        let promise = Promise::new();
+        let future = promise.get_future();
+
+        let request = ReadDiskRequest::new(page_id_to_read, dest, promise);
+
+        self.sender.put(DiskSchedulerWorkerMessage::NewJob(request.into()));
+
+        future
     }
 
+    pub fn schedule_write_page_to_disk(&mut self, page_id_to_write: PageId, src: &PageData) -> Future<bool> {
+        // promise value should be set to true once the request is processed.
+
+        let promise = Promise::new();
+        let future = promise.get_future();
+
+        let request = WriteDiskRequest::new(page_id_to_write, src, promise);
+
+        self.sender.put(DiskSchedulerWorkerMessage::NewJob(request.into()));
+
+        future
+    }
 
     /**
      * @brief Create a Promise object. If you want to implement your own version of promise, you can change this function
