@@ -165,9 +165,9 @@ dependencies = [
  "disk_storage",
  "error_utils",
  "eviction_policy",
- "num-format",
  "pages",
  "parking_lot",
+ "prettytable",
  "rand 0.8.5",
  "rand_chacha",
  "recovery_log_manager",
@@ -460,11 +460,13 @@ dependencies = [
  "error_utils",
  "generics",
  "hashing_common",
+ "num-format",
  "pages",
  "parking_lot",
  "prettytable",
  "rand 0.8.5",
  "rand_chacha",
+ "stats",
  "thiserror",
  "transaction",
 ]
@@ -1046,6 +1048,10 @@ checksum = "3c5e1a9a646d36c3599cd173a41282daf47c44583ad367b8e6837255952e5c67"
 [[package]]
 name = "stats"
 version = "0.1.0"
+dependencies = [
+ "num-format",
+ "prettytable",
+]
 
 [[package]]
 name = "strsim"

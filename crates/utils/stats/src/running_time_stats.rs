@@ -1,6 +1,9 @@
-use std::fmt::{Display, Formatter};
+use std::fmt::{Debug, Display, Formatter};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{Duration, Instant};
+use num_format::{Locale, ToFormattedString};
+use prettytable::{row, Table};
+use crate::traits::CreateTableOfStatistics;
 
 /// TODO - should rename to high precision and add unsafe to it so the consumer should make sure not using
 ///        methods that clone or calculate things while the running time is running
@@ -34,7 +37,7 @@ impl RunningTimeStats {
     pub fn create_single(&self) -> SingleRun {
         SingleRun {
             start_time: Instant::now(),
-            run_time: &self
+            run_time: &self,
         }
     }
 
@@ -76,8 +79,28 @@ impl Display for RunningTimeStats {
     }
 }
 
-impl Clone for RunningTimeStats {
+impl CreateTableOfStatistics for [&RunningTimeStats] {
+    fn create_table(&self) -> Table {
+        let mut table = Table::new();
 
+        table.add_row(row!["name", "total time", "total calls", "average time"]);
+
+        for &stat in self {
+            table.add_row(
+                row![
+                    stat.name,
+                    format!("{:?}", stat.get_total_time()),
+                    stat.get_number_of_runs().to_formatted_string(&Locale::en),
+                    format!("{:?}", stat.calculate_average())
+                ]
+            );
+        }
+
+        table
+    }
+}
+
+impl Clone for RunningTimeStats {
     /// Should not be cloned while keep adding new to duration
     fn clone(&self) -> Self {
         Self {
