@@ -1,14 +1,14 @@
-use pages::PAGE_SIZE;
+use super::errors::InsertionErrors;
 use common::{Comparator, OrdComparator, PageKey, PageValue};
+use pages::PAGE_SIZE;
 use prettytable::{row, Table};
 use std::cmp::Ordering;
 use std::fmt::{Debug, Formatter};
 use std::marker::PhantomData;
 use std::mem::size_of;
 use std::slice::Iter;
-use super::errors::InsertionErrors;
 
-pub type MappingType<KeyType, ValueType>  = (KeyType, ValueType);
+pub type MappingType<KeyType, ValueType> = (KeyType, ValueType);
 
 
 //noinspection RsAssertEqual
@@ -17,7 +17,7 @@ const _: () = {
     type Value = u16;
     // Assert that the comparator phantom data does not affecting size
     assert!(
-        size_of::<BucketPage<{ bucket_array_size::<Key, Value>()}, Key, Value, OrdComparator<Key>>>() ==
+        size_of::<BucketPage<{ bucket_array_size::<Key, Value>() }, Key, Value, OrdComparator<Key>>>() ==
             0 +
                 // size
                 size_of::<u32>() +
@@ -58,7 +58,7 @@ pub(crate) struct BucketPage<const ARRAY_SIZE: usize, Key, Value, KeyComparator>
 where
     Key: PageKey,
     Value: PageValue,
-    KeyComparator: Comparator<Key>
+    KeyComparator: Comparator<Key>,
 {
     /// The number of key-value pairs the bucket is holding
     size: u32,
@@ -69,7 +69,7 @@ where
     /// The array that holds the key-value pairs
     array: [MappingType<Key, Value>; ARRAY_SIZE],
 
-    _key_comparator: PhantomData<KeyComparator>
+    _key_comparator: PhantomData<KeyComparator>,
 }
 
 
@@ -78,7 +78,7 @@ impl<const ARRAY_SIZE: usize, Key, Value, KeyComparator> BucketPage<ARRAY_SIZE, 
 where
     Key: PageKey,
     Value: PageValue,
-    KeyComparator: Comparator<Key>
+    KeyComparator: Comparator<Key>,
 {
     /// Assert that the array size generic is ok
     /// this will not show pretty stack trace and will not be evaluated unless called explicitly,
@@ -96,7 +96,7 @@ where
      * method to set default values
      * @param max_size Max size of the bucket array
      */
-    pub(crate)  fn init(&mut self, max_size: Option<u32>) {
+    pub(crate) fn init(&mut self, max_size: Option<u32>) {
         // Validate correct generic at compile time
         let _ = Self::ARRAY_SIZE_OK;
         let max_size = max_size.unwrap_or(ARRAY_SIZE as u32);
@@ -116,7 +116,7 @@ where
     ///
     /// returns: Option<& Value> None if the key was missing, Some with reference to the found value if not
     ///
-    pub(crate)  fn lookup(&self, key: &Key, comparator: &KeyComparator) -> Option<&Value> {
+    pub(crate) fn lookup(&self, key: &Key, comparator: &KeyComparator) -> Option<&Value> {
         self
             .iter()
             .find(|(item_key, _)| comparator.cmp(key, &item_key) == Ordering::Equal)
@@ -131,7 +131,7 @@ where
      * @param cmp the comparator to use
      * @return true if inserted, false if bucket is full or the same key is already present
      */
-    pub(crate)  fn insert(&mut self, key: &Key, value: &Value, comparator: &KeyComparator) -> Result<(), InsertionErrors> {
+    pub(crate) fn insert(&mut self, key: &Key, value: &Value, comparator: &KeyComparator) -> Result<(), InsertionErrors> {
         if self.is_full() {
             return Err(InsertionErrors::BucketIsFull);
         }
@@ -153,17 +153,42 @@ where
         Ok(())
     }
 
+    /// Replace a value in key
+    ///
+    /// If the value does not exist it will not set it to the new value
+    ///
+    /// Returns true if value changed and false if not (the key is missing)
+    pub(crate) fn replace(&mut self, key: &Key, new_value: &Value, comparator: &KeyComparator) -> bool {
+        if self.is_empty() {
+            return false;
+        }
+
+        let bucket_index = self.get_bucket_idx_by_key(key, comparator);
+
+        if let Some(bucket_index) = bucket_index {
+            if bucket_index >= self.size as usize {
+                return false;
+            }
+
+            self.array[bucket_index].1 = *new_value;
+
+
+            return true;
+        }
+
+        false
+    }
+
     /**
      * Removes a key and value.
      *
      * @return true if removed, false if not found
      */
-    pub(crate)  fn remove(&mut self, key: &Key, comparator: &KeyComparator) -> bool {
+    pub(crate) fn remove(&mut self, key: &Key, comparator: &KeyComparator) -> bool {
         if self.is_empty() {
             return false;
         }
 
-        // TODO - can do binary search?
         let bucket_index = self.get_bucket_idx_by_key(key, comparator);
         if let Some(bucket_index) = bucket_index {
             self.remove_at(bucket_index as u32);
@@ -174,7 +199,7 @@ where
         false
     }
 
-    pub(crate)  fn remove_at(&mut self, bucket_idx: u32) {
+    pub(crate) fn remove_at(&mut self, bucket_idx: u32) {
         if bucket_idx >= self.size {
             return;
         }
@@ -193,7 +218,7 @@ where
      * @param bucket_idx the index in the bucket to get the key at
      * @return key at index bucket_idx of the bucket
      */
-    pub(crate)  fn key_at(&self, bucket_idx: u32) -> &Key {
+    pub(crate) fn key_at(&self, bucket_idx: u32) -> &Key {
         &self.entry_at(bucket_idx).0
     }
 
@@ -203,7 +228,7 @@ where
      * @param bucket_idx the index in the bucket to get the value at
      * @return value at index bucket_idx of the bucket
      */
-    pub(crate)  fn value_at(&self, bucket_idx: u32) -> &Value {
+    pub(crate) fn value_at(&self, bucket_idx: u32) -> &Value {
         &self.entry_at(bucket_idx).1
     }
 
@@ -213,12 +238,12 @@ where
      * @param bucket_idx the index in the bucket to get the entry at
      * @return entry at index bucket_idx of the bucket
      */
-    pub(crate)  fn entry_at(&self, bucket_idx: u32) -> &MappingType<Key, Value> {
+    pub(crate) fn entry_at(&self, bucket_idx: u32) -> &MappingType<Key, Value> {
         &self.array[bucket_idx as usize]
     }
 
     // Replace all entries with different one, this is useful for rehashing
-    pub(crate)  fn replace_all_entries(&mut self, new_items: &[MappingType<Key, Value>]) {
+    pub(crate) fn replace_all_entries(&mut self, new_items: &[MappingType<Key, Value>]) {
         assert!(self.max_size as usize >= new_items.len(), "can't insert more items than bucket can hold");
 
         // TODO - should do swap to the memory or something for better perf?
@@ -230,26 +255,26 @@ where
     /**
      * @return number of entries in the bucket
      */
-    pub(crate)  fn size(&self) -> u32 {
+    pub(crate) fn size(&self) -> u32 {
         self.size
     }
 
     /**
      * @return whether the bucket is full
      */
-    pub(crate)  fn is_full(&self) -> bool {
+    pub(crate) fn is_full(&self) -> bool {
         self.size == self.max_size
     }
 
     /**
      * @return whether the bucket is empty
      */
-    pub(crate)  fn is_empty(&self) -> bool {
+    pub(crate) fn is_empty(&self) -> bool {
         self.size == 0
     }
 
     /// Prints the bucket's occupancy information
-    pub(crate)  fn print_bucket(&self) {
+    pub(crate) fn print_bucket(&self) {
         println!("{:?}", self)
     }
 
@@ -257,13 +282,12 @@ where
         self.array[..self.size() as usize].iter().position(|item| comparator.cmp(key, &item.0) == Ordering::Equal)
     }
 
-    pub(crate)  fn iter(&self) -> Iter<'_, MappingType<Key, Value>> {
+    pub(crate) fn iter(&self) -> Iter<'_, MappingType<Key, Value>> {
         self.array[..self.size() as usize].iter()
     }
 }
 
 impl<const ARRAY_SIZE: usize, Key: PageKey, Value: PageValue, KeyComparator: Comparator<Key>> Debug for BucketPage<ARRAY_SIZE, Key, Value, KeyComparator> {
-
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.write_str(format!("======== BUCKET (size: {} | max_size: {}) ========\n", self.size, self.max_size).as_str())?;
 

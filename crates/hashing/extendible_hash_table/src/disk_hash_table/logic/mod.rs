@@ -3,7 +3,9 @@
 mod lookup;
 mod insert;
 mod remove;
+mod update;
 
 pub use lookup::LookupError;
 pub use insert::InsertionError;
 pub use remove::RemoveError;
+pub use update::UpdateError;

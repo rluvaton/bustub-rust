@@ -1,6 +1,6 @@
 use crate::disk_hash_table::logic;
 
-pub use logic::{InsertionError, RemoveError, LookupError};
+pub use logic::{InsertionError, RemoveError, LookupError, UpdateError};
 
 #[derive(thiserror::Error, Debug, PartialEq, Clone)]
 pub enum InitError {

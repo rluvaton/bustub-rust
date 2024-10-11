@@ -216,19 +216,18 @@ fn main() {
                     } else if key_will_change(key) {
                         // TODO - not really changing the key value as it's not allowed
 
-                        // let value = key as PageId;
-                        // rid.set(value, dist.sample(&mut rng) as u32);
-                        // index_key.set_from_integer(key as i64);
-                        // {
-                        //     #[cfg(feature = "tracing")]
-                        //     let _insert = span!("write thread - replace");
-                        //
-                        //     index.remove(&index_key, None).expect("Should remove when updating key");
-                        //     index.insert(&index_key, &rid, None).expect("should insert to insert when updating key");
-                        // }
-                        //
-                        // metrics.tick();
-                        // metrics.report();
+                        let value = key as PageId;
+                        rid.set(value, dist.sample(&mut rng) as u32);
+                        index_key.set_from_integer(key as i64);
+                        {
+                            #[cfg(feature = "tracing")]
+                            let _insert = span!("write thread - replace");
+
+                            index.update(&index_key, &rid, None).expect("Should update value");
+                        }
+
+                        metrics.tick();
+                        metrics.report();
                     }
                 }
 
