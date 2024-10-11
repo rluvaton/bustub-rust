@@ -199,27 +199,36 @@ fn main() {
                         if do_insert {
                             #[cfg(feature = "tracing")]
                             let _insert = span!("write thread - insert");
-                            index.insert(&index_key, &rid, None).expect("Should insert when key will vanish");
+
+                            // This can fail when we're trying to insert key that is already exists
+                            // it happens when we generate base random number in delete
+                            // and then generate base random number in insert that is smaller than the delete one
+                            let _ = index.insert(&index_key, &rid, None);
                         } else {
                             #[cfg(feature = "tracing")]
                             let _remove = span!("write thread - remove");
+
                             index.remove(&index_key, None).expect("Should remove when key will vanish");
                         }
 
                         metrics.tick();
                         metrics.report();
                     } else if key_will_change(key) {
-                        let value = key as PageId;
-                        rid.set(value, dist.sample(&mut rng) as u32);
-                        index_key.set_from_integer(key as i64);
-                        {
-                            #[cfg(feature = "tracing")]
-                            let _insert = span!("write thread - insert");
-                            index.insert(&index_key, &rid, None).expect("should insert when key will chnage");
-                        }
+                        // TODO - not really changing the key value as it's not allowed
 
-                        metrics.tick();
-                        metrics.report();
+                        // let value = key as PageId;
+                        // rid.set(value, dist.sample(&mut rng) as u32);
+                        // index_key.set_from_integer(key as i64);
+                        // {
+                        //     #[cfg(feature = "tracing")]
+                        //     let _insert = span!("write thread - replace");
+                        //
+                        //     index.remove(&index_key, None).expect("Should remove when updating key");
+                        //     index.insert(&index_key, &rid, None).expect("should insert to insert when updating key");
+                        // }
+                        //
+                        // metrics.tick();
+                        // metrics.report();
                     }
                 }
 
