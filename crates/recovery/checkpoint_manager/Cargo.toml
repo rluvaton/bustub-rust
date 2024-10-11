@@ -4,3 +4,6 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+db_core = {path = "../../db_core" }
+recovery_log_manager = {path = "../log_manager"}
+buffer_pool_manager = {path = "../../buffer/manager"}

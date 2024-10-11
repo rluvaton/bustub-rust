@@ -184,6 +184,7 @@ version = "0.1.0"
 dependencies = [
  "buffer_common",
  "buffer_pool_manager",
+ "checkpoint_manager",
  "clap",
  "common",
  "db_core",
@@ -226,6 +227,11 @@ checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
 [[package]]
 name = "checkpoint_manager"
 version = "0.1.0"
+dependencies = [
+ "buffer_pool_manager",
+ "db_core",
+ "recovery_log_manager",
+]
 
 [[package]]
 name = "clap"
@@ -466,6 +472,25 @@ dependencies = [
  "parking_lot",
  "rand 0.8.5",
  "rand_chacha",
+ "tracy-client",
+]
+
+[[package]]
+name = "execution_engine"
+version = "0.1.0"
+dependencies = [
+ "buffer_common",
+ "buffer_pool_manager",
+ "checkpoint_manager",
+ "common",
+ "db_core",
+ "disk_storage",
+ "extendible_hash_table",
+ "hashing_common",
+ "pages",
+ "parking_lot",
+ "recovery_log_manager",
+ "rid",
  "tracy-client",
 ]
 
