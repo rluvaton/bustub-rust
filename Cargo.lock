@@ -181,6 +181,23 @@ dependencies = [
 [[package]]
 name = "bustub_instance"
 version = "0.1.0"
+dependencies = [
+ "buffer_common",
+ "buffer_pool_manager",
+ "clap",
+ "common",
+ "db_core",
+ "disk_storage",
+ "extendible_hash_table",
+ "hashing_common",
+ "pages",
+ "parking_lot",
+ "rand 0.8.5",
+ "recovery_log_manager",
+ "rid",
+ "tracy-client",
+ "zipf",
+]
 
 [[package]]
 name = "bytemuck"
@@ -205,6 +222,10 @@ name = "cfg-if"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
+
+[[package]]
+name = "checkpoint_manager"
+version = "0.1.0"
 
 [[package]]
 name = "clap"
