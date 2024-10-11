@@ -1,5 +1,6 @@
 mod manager_impl;
 
+use std::sync::Arc;
 use common::config::{AtomicLSN};
 use parking_lot::{Condvar, Mutex};
 use disk_storage::DiskManager;
@@ -29,7 +30,7 @@ pub struct LogManager {
 
     #[allow(unused)]
     cv: Condvar,
-
-    #[allow(unused)]
-    disk_manager: Box<dyn DiskManager>,
+    //
+    // #[allow(unused)]
+    // disk_manager: Arc<Box<dyn DiskManager>>,
 }

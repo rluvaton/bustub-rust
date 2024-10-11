@@ -29,7 +29,7 @@ mod tests {
         }
 
         let dm = DiskManagerUnlimitedMemory::new();
-        let mut disk_scheduler = Arc::new(DiskScheduler::new(Arc::new(Mutex::new(dm))));
+        let mut disk_scheduler = Arc::new(DiskScheduler::new(Arc::new(dm)));
 
         // Write first page
         {
@@ -75,25 +75,27 @@ mod tests {
 
     #[test]
     fn should_not_handle_2_requests_at_the_same_time() {
-        struct ManualDiskManager {
+        struct ManualInnerDiskManager {
             map: HashMap<PageId, Promise<bool>>,
-            order_of_page_id_calls: Vec<PageId>,
-            order_of_page_id_finish: Vec<PageId>,
+            pub order_of_page_id_calls: Vec<PageId>,
+            pub order_of_page_id_finish: Vec<PageId>,
         }
+
+        struct ManualDiskManager(Mutex<ManualInnerDiskManager>);
 
         impl Default for ManualDiskManager {
             fn default() -> Self {
-                ManualDiskManager {
+                ManualDiskManager(Mutex::new(ManualInnerDiskManager {
                     map: HashMap::new(),
                     order_of_page_id_calls: vec![],
                     order_of_page_id_finish: vec![],
-                }
+                }))
             }
         }
 
         impl ManualDiskManager {
             fn get_current_queries(&self) -> Vec<PageId> {
-                self.map.keys().into_iter().map(|p| p.clone()).collect()
+                self.0.lock().map.keys().into_iter().map(|p| p.clone()).collect()
             }
         }
 
@@ -102,11 +104,11 @@ mod tests {
                 unimplemented!()
             }
 
-            fn write_log(&mut self, _log_data: &[u8], _size: i32) {
+            fn write_log(&self, _log_data: &[u8], _size: i32) {
                 unimplemented!()
             }
 
-            fn read_log(&mut self, _log_data: &mut [u8], _size: i32, _offset: i32) -> bool {
+            fn read_log(&self, _log_data: &mut [u8], _size: i32, _offset: i32) -> bool {
                 unimplemented!()
             }
 
@@ -130,41 +132,44 @@ mod tests {
                 unimplemented!()
             }
 
-            fn write_page(&mut self, page_id: PageId, _page_data: &[u8]) {
-                self.order_of_page_id_calls.push(page_id);
+            fn write_page(&self, page_id: PageId, _page_data: &[u8]) {
+                let mut inner = self.0.lock();
+                inner.order_of_page_id_calls.push(page_id);
                 let promise = Promise::new();
 
                 let future = promise.get_future();
 
-                self.map.insert(page_id, promise);
+                inner.map.insert(page_id, promise);
 
                 // If already has one, wait less so it will finish first
-                let wait_time = if self.map.len() == 1 { 100 } else { 50 };
+                let wait_time = if inner.map.len() == 1 { 100 } else { 50 };
                 future.wait_for(Duration::from_millis(wait_time));
 
-                self.order_of_page_id_finish.push(page_id);
+                inner.order_of_page_id_finish.push(page_id);
 
-                self.map.remove(&page_id);
+                inner.map.remove(&page_id);
             }
 
-            fn read_page(&mut self, page_id: PageId, _page_data: &mut [u8]) {
-                self.order_of_page_id_calls.push(page_id);
+            fn read_page(&self, page_id: PageId, _page_data: &mut [u8]) {
+                let mut inner = self.0.lock();
+
+                inner.order_of_page_id_calls.push(page_id);
                 let promise = Promise::new();
 
                 let future = promise.get_future();
 
-                self.map.insert(page_id, promise);
+                inner.map.insert(page_id, promise);
 
                 // If already has one, wait less so it will finish first
-                let wait_time = if self.map.len() == 1 { 100 } else { 50 };
+                let wait_time = if inner.map.len() == 1 { 100 } else { 50 };
                 future.wait_for(Duration::from_millis(wait_time));
 
-                self.order_of_page_id_finish.push(page_id);
-                self.map.remove(&page_id);
+                inner.order_of_page_id_finish.push(page_id);
+                inner.map.remove(&page_id);
             }
         }
 
-        let manual_manager = Arc::new(Mutex::new(ManualDiskManager::default()));
+        let manual_manager = Arc::new(ManualDiskManager::default());
 
         let mut disk_scheduler = DiskScheduler::new(Arc::clone(&manual_manager));
 
@@ -177,9 +182,9 @@ mod tests {
         assert!(future1.wait());
         assert!(future2.wait());
 
-        assert_eq!(manual_manager.lock().get_current_queries(), vec![], "everything cleaned up");
-        assert_eq!(manual_manager.lock().order_of_page_id_calls, vec![0, 1], "called with the next page");
-        assert_eq!(manual_manager.lock().order_of_page_id_finish, vec![0, 1], "both pages finished");
+        assert_eq!(manual_manager.get_current_queries(), vec![], "everything cleaned up");
+        assert_eq!(manual_manager.0.lock().order_of_page_id_calls, vec![0, 1], "called with the next page");
+        assert_eq!(manual_manager.0.lock().order_of_page_id_finish, vec![0, 1], "both pages finished");
 
         // dm.shut_down();
     }

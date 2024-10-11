@@ -1,3 +1,4 @@
+use std::sync::Arc;
 use std::sync::atomic::Ordering;
 use parking_lot::Mutex;
 use common::config::{AtomicLSN, INVALID_LSN, LSN};
@@ -7,7 +8,7 @@ use crate::types::LogBuffer;
 
 impl LogManager {
 
-    pub fn new(disk_manager: Box<dyn DiskManager>) -> Self {
+    pub fn new<D: DiskManager>(disk_manager: Arc<D>) -> Self {
         LogManager {
             next_lsn: AtomicLSN::new(0),
             persistent_lsn: AtomicLSN::new(INVALID_LSN),
@@ -16,7 +17,7 @@ impl LogManager {
             latch: Mutex::new(()),
             // flush_thread: (),
             cv: Default::default(),
-            disk_manager,
+            // disk_manager,
         }
     }
 

@@ -6,6 +6,7 @@ use pages::AtomicPageId;
 use parking_lot::Mutex;
 use recovery_log_manager::LogManager;
 use std::collections::{HashMap, LinkedList};
+use std::ops::Deref;
 use std::sync::Arc;
 
 pub struct BufferPoolManagerBuilder {
@@ -19,7 +20,7 @@ pub struct BufferPoolManagerBuilder {
     eviction_policy_creator: Box<dyn FnOnce(usize) -> Box<dyn EvictionPolicy>>,
 
     /// This is not required
-    log_manager: Option<LogManager>,
+    log_manager: Option<Arc<LogManager>>,
 }
 
 impl BufferPoolManagerBuilder {
@@ -34,10 +35,10 @@ impl BufferPoolManagerBuilder {
     // ################# Disk Scheduler #####################
 
     pub fn with_disk_manager<D: DiskManager + 'static>(mut self, disk_manager: D) -> Self {
-        self.with_arc_disk_manager(Arc::new(Mutex::new(disk_manager)))
+        self.with_arc_disk_manager(Arc::new(disk_manager))
     }
 
-    pub fn with_arc_disk_manager<D: DiskManager + 'static>(mut self, disk_manager: Arc<Mutex<D>>) -> Self {
+    pub fn with_arc_disk_manager<D: DiskManager>(mut self, disk_manager: Arc<D>) -> Self {
         assert!(self.disk_scheduler.is_none(), "Disk scheduler is already set");
 
         self.disk_scheduler.replace(DiskScheduler::new(disk_manager));
@@ -65,10 +66,10 @@ impl BufferPoolManagerBuilder {
         self
     }
 
-    pub fn with_log_manager(mut self, log_manager: LogManager) -> Self {
+    pub fn with_log_manager(mut self, log_manager: Option<Arc<LogManager>>) -> Self {
         assert!(self.pool_size.is_none(), "Log manager is already set");
 
-        self.log_manager.replace(log_manager);
+        self.log_manager = log_manager;
 
         self
     }

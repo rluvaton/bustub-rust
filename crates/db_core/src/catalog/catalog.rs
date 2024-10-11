@@ -11,9 +11,9 @@ pub struct Catalog {
     #[allow(unused)]
     bpm: Arc<BufferPoolManager>,
     #[allow(unused)]
-    lock_manager: Arc<LockManager>,
+    lock_manager: Option<Arc<LockManager>>,
     #[allow(unused)]
-    log_manager: Arc<LogManager>,
+    log_manager: Option<Arc<LogManager>>,
 
     ///
     /// Map table identifier -> table metadata.
@@ -51,7 +51,7 @@ pub struct Catalog {
 
 
 impl Catalog {
-    pub fn new(bpm: Arc<BufferPoolManager>, lock_manager: Arc<LockManager>, log_manager: Arc<LogManager>) -> Self {
+    pub fn new(bpm: Arc<BufferPoolManager>, lock_manager: Option<Arc<LockManager>>, log_manager: Option<Arc<LogManager>>) -> Self {
         Self {
             bpm,
             lock_manager,

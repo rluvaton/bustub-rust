@@ -189,6 +189,7 @@ dependencies = [
  "common",
  "db_core",
  "disk_storage",
+ "execution_engine",
  "extendible_hash_table",
  "hashing_common",
  "pages",

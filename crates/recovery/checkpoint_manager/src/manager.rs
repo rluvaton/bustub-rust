@@ -4,13 +4,13 @@ use db_core::concurrency::TransactionManager;
 use recovery_log_manager::LogManager;
 
 pub struct CheckpointManager {
-    transaction_manager: Arc<TransactionManager>,
+    transaction_manager: Option<Arc<TransactionManager>>,
     log_manager: Arc<LogManager>,
     buffer_pool_manager: Arc<BufferPoolManager>,
 }
 
 impl CheckpointManager {
-    pub fn new(transaction_manager: Arc<TransactionManager>,
+    pub fn new(transaction_manager: Option<Arc<TransactionManager>>,
                log_manager: Arc<LogManager>,
                buffer_pool_manager: Arc<BufferPoolManager>) -> Self {
         Self {

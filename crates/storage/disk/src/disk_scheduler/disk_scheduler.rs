@@ -38,7 +38,7 @@ struct DiskSchedulerWorker {
 type DiskSchedulerPromise = Promise<bool>;
 
 impl DiskScheduler {
-    pub fn new<D: DiskManager + 'static>(disk_manager: Arc<Mutex<D>>) -> Self {
+    pub fn new<D: DiskManager + 'static>(disk_manager: Arc<D>) -> Self {
         // let (sender, receiver) = mpsc::channel();
 
         let channel = Arc::new(Channel::new());
@@ -236,7 +236,7 @@ impl DiskSchedulerWorker {
      * The background thread needs to process requests while the DiskScheduler exists, i.e., this function should not
      * return until ~DiskScheduler() is called. At that point you need to make sure that the function does return.
      */
-    fn new<D: DiskManager + Send + Sync + 'static>(disk_manager: Arc<Mutex<D>>, receiver: Arc<Channel<DiskSchedulerWorkerMessage<'static>>>) -> DiskSchedulerWorker {
+    fn new<D: DiskManager>(disk_manager: Arc<D>, receiver: Arc<Channel<DiskSchedulerWorkerMessage<'static>>>) -> DiskSchedulerWorker {
         let thread = Builder::new()
             .name("Disk Scheduler".to_string())
             .spawn(move || {
@@ -258,19 +258,19 @@ impl DiskSchedulerWorker {
 
                     match req {
                         DiskRequestType::Read(req) => {
-                            disk_manager.lock().read_page(req.page_id, req.data.as_mut_slice());
+                            disk_manager.read_page(req.page_id, req.data.as_mut_slice());
                             req.callback.set_value(true);
                         }
                         DiskRequestType::Write(req) => {
-                            disk_manager.lock().write_page(req.page_id, req.data.as_slice());
+                            disk_manager.write_page(req.page_id, req.data.as_slice());
                             req.callback.set_value(true);
                         }
                         DiskRequestType::WriteAndRead(req) => {
-                            disk_manager.lock().write_page(req.dest_page_id, req.data.as_slice());
+                            disk_manager.write_page(req.dest_page_id, req.data.as_slice());
 
                             // TODO - read page if write was successful
                             //        as otherwise, if the write failed we will read and lose the data
-                            disk_manager.lock().read_page(req.source_page_id, req.data.as_mut_slice());
+                            disk_manager.read_page(req.source_page_id, req.data.as_mut_slice());
                             req.callback.set_value(true);
                         }
                     }

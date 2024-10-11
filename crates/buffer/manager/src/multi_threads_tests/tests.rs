@@ -245,7 +245,7 @@ fn init_buffer_pool_manager_for_test(options: &Options, temp_dir: Option<TempDir
             initialize_bpm_pages(&options, &mut page_ids, bpm_raw.clone());
         }
         DiskManagerImplementationOptions::UnlimitedMemory(o) => {
-            let manager = Arc::new(Mutex::new(DiskManagerUnlimitedMemory::new()));
+            let manager = Arc::new(DiskManagerUnlimitedMemory::new());
             let cloned_manager = Arc::clone(&manager);
 
             bpm_raw = BufferPoolManager::builder()
@@ -257,7 +257,7 @@ fn init_buffer_pool_manager_for_test(options: &Options, temp_dir: Option<TempDir
             initialize_bpm_pages(&options, &mut page_ids, bpm_raw.clone());
 
             // enable disk latency after creating all pages if enabled and if matching the disk manager implementation
-            cloned_manager.lock().enable_latency_simulator(o.enable_latency);
+            cloned_manager.enable_latency_simulator(o.enable_latency);
         }
     }
 

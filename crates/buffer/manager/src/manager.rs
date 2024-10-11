@@ -30,7 +30,7 @@ pub struct BufferPoolManager {
     /// Pointer to the log manager. Please ignore this for P1.
     // LogManager *log_manager_ __attribute__((__unused__));
     #[allow(unused)]
-    pub(super) log_manager: Option<LogManager>,
+    pub(super) log_manager: Option<Arc<LogManager>>,
 
     pub(super) inner: Mutex<InnerBufferPoolManager>,
 

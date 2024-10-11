@@ -4,6 +4,7 @@ use parking_lot::Mutex;
 use std::fs::{File, OpenOptions};
 use std::io::{Read, Seek, SeekFrom, Write};
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicBool, AtomicI32, Ordering};
 use std::time::Duration;
 use error_utils::anyhow::anyhow;
 use error_utils::ToAnyhowResult;
@@ -17,6 +18,15 @@ static BUFFER_USED: Mutex<Option<Vec<u8>>> = Mutex::new(None);
  * writing of pages to and from disk, providing a logical file layer within the context of a database management system.
  */
 pub struct DefaultDiskManager {
+    inner: Mutex<InnerDefaultDiskManager>,
+
+
+    num_flushes: AtomicI32,
+    num_writes: AtomicI32,
+    flush_log: AtomicBool,
+}
+
+struct InnerDefaultDiskManager {
     // stream to write log file
     // std::fstream log_io_;
     log_io: File,
@@ -27,11 +37,7 @@ pub struct DefaultDiskManager {
     file_name: PathBuf,
 
     // With multiple buffer pool instances, need to protect file access
-    db_io_latch: Mutex<File>,
-
-    num_flushes: i32,
-    num_writes: i32,
-    flush_log: bool,
+    db_io: File,
 
     // std::future<void> *flush_log_f_{nullptr};
     flush_log_f: Option<Future<()>>,
@@ -99,22 +105,24 @@ impl DefaultDiskManager {
 
         // std::scoped_lock scoped_db_io_latch(db_io_latch_);
         // No scoped lock in rust
-        let db_io_latch = Mutex::new(db_io);
+        // let db_io_latch = Mutex::new(db_io);
 
         // BUFFER_USED = None;
 
         Ok(
             DefaultDiskManager {
-                file_name,
-                log_name,
-                num_flushes: 0,
-                num_writes: 0,
-                flush_log: false,
-                log_io,
-                db_io_latch,
-                // db_io,
-                // TODO - implement flush_log
-                flush_log_f: None,
+                flush_log: AtomicBool::new(false),
+                num_flushes: AtomicI32::new(0),
+                num_writes: AtomicI32::new(0),
+                inner: Mutex::new(InnerDefaultDiskManager {
+                    file_name,
+                    log_name,
+                    log_io,
+                    db_io,
+                    // db_io,
+                    // TODO - implement flush_log
+                    flush_log_f: None,
+                })
             }
         )
     }
@@ -148,22 +156,22 @@ impl DiskManager for DefaultDiskManager {
      *
      * Write the contents of the specified page into disk file
      */
-    fn write_page(&mut self, page_id: PageId, page_data: &[u8]) {
+    fn write_page(&self, page_id: PageId, page_data: &[u8]) {
+        let mut inner = self.inner.lock();
         // std::scoped_lock scoped_db_io_latch(db_io_latch_);
-        let mut db_io = self.db_io_latch.lock();
 
         let offset = page_id as u64 * PAGE_SIZE as u64;
         // set write cursor to offset
-        self.num_writes += 1;
+        self.num_writes.fetch_add(1, Ordering::Relaxed);
 
         // TODO - cpp seekp is the same as seek from start?
-        let seek_res = db_io.seek(SeekFrom::Start(offset));
+        let seek_res = inner.db_io.seek(SeekFrom::Start(offset));
 
         if seek_res.is_err() {
             println!("I/O error while writing (in seek)");
             return;
         }
-        let write_res = db_io.write(&page_data[0..PAGE_SIZE]);
+        let write_res = inner.db_io.write(&page_data[0..PAGE_SIZE]);
 
         // check for I/O error
         if write_res.is_err() {
@@ -172,7 +180,7 @@ impl DiskManager for DefaultDiskManager {
         }
 
         // needs to flush to keep disk file in sync
-        db_io.flush().expect("Flush should work");
+        inner.db_io.flush().expect("Flush should work");
     }
 
     /**
@@ -182,14 +190,15 @@ impl DiskManager for DefaultDiskManager {
      *
      * Read the contents of the specified page into the given memory area
      */
-    fn read_page(&mut self, page_id: PageId, page_data: &mut [u8]) {
+    fn read_page(&self, page_id: PageId, page_data: &mut [u8]) {
+        let mut inner = self.inner.lock();
+
         // std::scoped_lock scoped_db_io_latch(db_io_latch_);
-        let mut db_io = self.db_io_latch.lock();
 
 
         let offset = page_id * PAGE_SIZE as i32;
         // check if read beyond file length
-        if offset > get_file_size(self.file_name.as_path()) {
+        if offset > get_file_size(inner.file_name.as_path()) {
             println!("I/O error reading past end of file");
             // std::cerr << "I/O error while reading" << std::endl;
 
@@ -197,12 +206,12 @@ impl DiskManager for DefaultDiskManager {
         }
         // set read cursor to offset
         // db_io.seekp(offset);
-        let seek_result = db_io.seek(SeekFrom::Start(offset as u64));
+        let seek_result = inner.db_io.seek(SeekFrom::Start(offset as u64));
         if seek_result.is_err() {
             eprintln!("I/O error while reading (seek)");
             return;
         }
-        let read_res = db_io.read(&mut page_data[0..PAGE_SIZE]);
+        let read_res = inner.db_io.read(&mut page_data[0..PAGE_SIZE]);
 
         if read_res.is_err() {
             eprintln!("I/O error while reading (read)");
@@ -228,7 +237,8 @@ impl DiskManager for DefaultDiskManager {
     * Write the contents of the log into disk file
     * Only return when sync is done, and only perform sequence write
      */
-    fn write_log(&mut self, log_data: &[u8], size: i32) {
+    fn write_log(&self, log_data: &[u8], size: i32) {
+        let mut inner = self.inner.lock();
         let mut buffer_used = BUFFER_USED.lock();
         // enforce swap log buffer
         // TODO - fix this as this is not true
@@ -242,17 +252,17 @@ impl DiskManager for DefaultDiskManager {
             return;
         }
 
-        self.flush_log = true;
+        self.flush_log.store(true, Ordering::SeqCst);
 
-        if let Some(flush_log_f) = &self.flush_log_f {
+        if let Some(flush_log_f) = &inner.flush_log_f {
             // used for checking non-blocking flushing
             assert_eq!(flush_log_f.wait_for(Duration::from_secs(10)), true);
         }
 
-        self.num_flushes += 1;
+        self.num_flushes.fetch_add(1, Ordering::Relaxed);
 
         // sequence write
-        let res = self.log_io.write(&log_data[0..size as usize]);
+        let res = inner.log_io.write(&log_data[0..size as usize]);
 
         // check for I/O error
         if res.is_err() {
@@ -261,8 +271,9 @@ impl DiskManager for DefaultDiskManager {
         }
 
         // needs to flush to keep disk file in sync
-        self.log_io.flush().expect("Flush should work");
-        self.flush_log = false;
+        inner.log_io.flush().expect("Flush should work");
+
+        self.flush_log.store(false, Ordering::SeqCst);
     }
 
     /**
@@ -276,9 +287,10 @@ impl DiskManager for DefaultDiskManager {
      * Always read from the beginning and perform sequence read
      * @return: false means already reach the end
      */
-    fn read_log(&mut self, log_data: &mut [u8], size: i32, offset: i32) -> bool {
+    fn read_log(&self, log_data: &mut [u8], size: i32, offset: i32) -> bool {
+        let mut inner = self.inner.lock();
 
-        if offset > get_file_size(self.log_name.as_path()) {
+        if offset > get_file_size(inner.log_name.as_path()) {
             // LOG_DEBUG("end of log file");
             // LOG_DEBUG("file size is %d", GetFileSize(log_name_));
             return false;
@@ -286,12 +298,12 @@ impl DiskManager for DefaultDiskManager {
 
         // set read cursor to offset
         // log_io.seekp(offset);
-        let seek_result = self.log_io.seek(SeekFrom::Start(offset as u64));
+        let seek_result = inner.log_io.seek(SeekFrom::Start(offset as u64));
         if seek_result.is_err() {
             println!("I/O error while reading log (seek)");
             return false;
         }
-        let read_res = self.log_io.read(&mut log_data[0..size as usize]);
+        let read_res = inner.log_io.read(&mut log_data[0..size as usize]);
 
         if read_res.is_err() {
             println!("I/O error while reading log (read)");
@@ -315,7 +327,7 @@ impl DiskManager for DefaultDiskManager {
     Returns number of flushes made so far
     */
     fn get_num_flushes(&self) -> i32 {
-        self.num_flushes
+        self.num_flushes.load(Ordering::Relaxed)
     }
 
     /**
@@ -323,7 +335,7 @@ impl DiskManager for DefaultDiskManager {
     Returns true if the log is currently being flushed
     */
     fn get_flush_state(&self) -> bool {
-        self.flush_log
+        self.flush_log.load(Ordering::Relaxed)
     }
 
     /**
@@ -331,7 +343,7 @@ impl DiskManager for DefaultDiskManager {
     Returns number of Writes made so far
     */
     fn get_num_writes(&self) -> i32 {
-        self.num_writes
+        self.num_writes.load(Ordering::Relaxed)
     }
 
     /**
@@ -339,14 +351,15 @@ impl DiskManager for DefaultDiskManager {
      * @param f the non-blocking flush check
      */
     fn set_flush_log_future(&mut self, f: Option<Future<()>>) {
-        self.flush_log_f = f;
+        // TODO - change this to not lock
+
+        self.inner.lock().flush_log_f = f;
     }
 
     /** Checks if the non-blocking flush future was set. */
     fn has_flush_log_future(&self) -> bool {
         // return flush_log_f_ != nullptr;
-
-        self.flush_log_f.is_some()
+        // TODO - change this to not lock
+        self.inner.lock().flush_log_f.is_some()
     }
-
 }

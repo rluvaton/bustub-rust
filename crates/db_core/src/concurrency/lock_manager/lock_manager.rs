@@ -4,6 +4,7 @@ use std::sync::atomic::AtomicBool;
 use std::thread::JoinHandle;
 use parking_lot::Mutex;
 use common::config::{TableOID, TxnId};
+use recovery_log_manager::LogManager;
 use rid::RID;
 use crate::concurrency::{LockRequestQueue, TransactionManager};
 
@@ -20,13 +21,25 @@ pub struct LockManager {
     #[allow(unused)]
     row_lock_map: Mutex<HashMap<RID, Arc<LockRequestQueue>>>,
 
-    #[allow(unused)]
-    enable_cycle_detection: AtomicBool,
+    // #[allow(unused)]
+    // enable_cycle_detection: AtomicBool,
 
     #[allow(unused)]
-    cycle_detection_thread: JoinHandle<()>,
+    cycle_detection_thread: Option<JoinHandle<()>>,
 
     /// Waits-for graph representation.
     #[allow(unused)]
     waits_for: Mutex<HashMap<TxnId, Vec<TxnId>>>,
+}
+
+impl LockManager {
+    pub fn new(transaction_manager: Arc<TransactionManager>) -> Self {
+        Self {
+            transaction_manager,
+            table_lock_map: Mutex::new(HashMap::new()),
+            row_lock_map: Mutex::new(HashMap::new()),
+            waits_for: Mutex::new(HashMap::new()),
+            cycle_detection_thread: None
+        }
+    }
 }
