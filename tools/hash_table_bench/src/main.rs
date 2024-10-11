@@ -32,6 +32,13 @@ static GLOBAL: ProfiledAllocator<std::alloc::System> =
 mod cli;
 mod metrics;
 
+// Initial
+// Release:
+// <<< BEGIN
+// write: 65645.28377298161
+// read: 109707.93365307753
+// >>> END
+
 
 type Key = GenericKey<8>;
 type Value = RID;
