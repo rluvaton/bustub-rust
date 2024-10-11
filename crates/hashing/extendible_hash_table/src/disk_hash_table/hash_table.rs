@@ -1,7 +1,12 @@
 use super::errors;
 use super::type_alias_trait::TypeAliases;
 use crate::directory_page::DirectoryPage;
-use crate::disk_hash_table::hash_table_stats::DiskHashTableStats;
+
+#[cfg(feature = "statistics")]
+use crate::disk_hash_table::DiskHashTableStats;
+
+#[cfg(feature = "tracing")]
+use tracy_client::span;
 use crate::header_page::HeaderPage;
 use buffer_common::AccessType;
 use buffer_pool_manager::errors::MapErrorToBufferPoolError;
@@ -82,7 +87,9 @@ where
 
     pub(super) header_page_id: PageId,
 
+    #[cfg(feature = "statistics")]
     pub(super) stats: DiskHashTableStats,
+
     pub(super) phantom_data: PhantomData<(Key, Value, KeyComparator, KeyHasherImpl)>,
 }
 
@@ -134,6 +141,7 @@ where
             directory_max_depth: directory_max_depth.unwrap_or(DirectoryPage::MAX_DEPTH),
             bucket_max_size: bucket_max_size.unwrap_or(BUCKET_MAX_SIZE as u32),
 
+            #[cfg(feature = "statistics")]
             stats: DiskHashTableStats::default(),
 
             phantom_data: PhantomData,
@@ -186,6 +194,11 @@ where
         page.init(Some(header_max_depth));
 
         Ok(())
+    }
+
+    #[cfg(feature = "statistics")]
+    pub fn get_stats(&self) -> &DiskHashTableStats {
+        &self.stats
     }
 }
 

@@ -12,6 +12,12 @@ use buffer_common::AccessType;
 use hashing_common::KeyHasher;
 use transaction::Transaction;
 
+#[cfg(feature = "statistics")]
+use crate::disk_hash_table::{DiskHashTableStats, PageLatchStats};
+
+#[cfg(feature = "tracing")]
+use tracy_client::span;
+
 #[derive(thiserror::Error, Debug, PartialEq, Clone)]
 pub enum InsertionError {
     #[error("Key already exists")]
@@ -36,7 +42,6 @@ where
     KeyComparator: Comparator<Key>,
     KeyHasherImpl: KeyHasher,
 {
-
     /// TODO(P2): Add implementation
     /// Inserts a key-value pair into the hash table.
     ///
@@ -51,6 +56,9 @@ where
     /// TODO - return custom result if inserted or not - NotInsertedError
     ///
     pub fn insert(&self, key: &Key, value: &Value, transaction: Option<Arc<Transaction>>) -> Result<(), InsertionError> {
+        #[cfg(feature = "tracing")]
+        let _insert = span!("[extendible hash table] insert");
+
         // TODO - use transaction
         assert!(transaction.is_none(), "transaction is not none, transactions are not supported at the moment");
 
@@ -61,7 +69,15 @@ where
         let key_hash = self.hash(key);
 
         // 2. Get the header page
-        let mut header = self.bpm.fetch_page_write(self.header_page_id, AccessType::Unknown).map_err_to_buffer_pool_err().context("Hash Table header page must exists when trying to insert")?;
+        let mut header = {
+            #[cfg(feature = "statistics")]
+            let _wait = self.stats.header.waiting_for_write_latch.create_single();
+
+            self.bpm.fetch_page_write(self.header_page_id, AccessType::Unknown).map_err_to_buffer_pool_err().context("Hash Table header page must exists when trying to insert")?
+        };
+
+        #[cfg(feature = "statistics")]
+        let holding_header_latch = self.stats.header.holding_write_latch.create_single();
 
         let header_page = header.cast_mut::<<Self as TypeAliases>::HeaderPage>();
 
@@ -73,7 +89,6 @@ where
 
         // 4. If no directory exists create it
         if directory_page_id == INVALID_PAGE_ID {
-
             directory = self.init_new_directory()
                 .context("Failed to initialize new directory page while trying to insert new entry to the hash table")?;
             directory_page_id = directory.get_page_id();
@@ -86,8 +101,9 @@ where
         }
 
         // 7. Release the header as it is not used anymore
+        #[cfg(feature = "statistics")]
+        drop(holding_header_latch);
         drop(header);
-
 
         let directory_page = directory.cast_mut::<<Self as TypeAliases>::DirectoryPage>();
 
@@ -158,7 +174,7 @@ where
             let increase_result = directory_page.incr_global_depth();
 
             if !increase_result {
-                return Err(InsertionError::BucketIsFull)
+                return Err(InsertionError::BucketIsFull);
             }
         }
 
@@ -187,7 +203,6 @@ where
 
     /// Return the splitted bucket indices
     fn split_local_bucket(&self, mut bucket_index: u32, directory_page: &mut <Self as TypeAliases>::DirectoryPage, bucket_page_to_split: &mut <Self as TypeAliases>::BucketPage, new_bucket_guard: &mut PageWriteGuard) {
-
         let new_bucket_page_id = new_bucket_guard.get_page_id();
         let new_bucket_page = new_bucket_guard.cast_mut::<<Self as TypeAliases>::BucketPage>();
 
@@ -240,6 +255,5 @@ where
 
         Ok(bucket_page)
     }
-
 }
 

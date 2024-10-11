@@ -2,13 +2,14 @@ use stats::{CreateTableOfStatistics, RunningTimeStats};
 use std::fmt::{Display, Formatter, Write};
 
 #[derive(Clone)]
-struct PageLatchStats {
+pub(crate) struct PageLatchStats {
     // TODO - can change for number of read latch request, time waiting and time holding
     pub(crate) holding_read_latch: RunningTimeStats,
     pub(crate) holding_write_latch: RunningTimeStats,
     pub(crate) waiting_for_read_latch: RunningTimeStats,
     pub(crate) waiting_for_write_latch: RunningTimeStats,
 }
+
 
 impl PageLatchStats {
     fn new(name: &'static str) -> Self {
@@ -22,6 +23,8 @@ impl PageLatchStats {
     }
 }
 
+
+// TODO - finish using this
 #[derive(Clone)]
 pub struct DiskHashTableStats {
     pub(crate) header: PageLatchStats,

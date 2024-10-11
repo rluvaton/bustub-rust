@@ -28,6 +28,6 @@ debug = true
 
 [features]
 default = []
-statistics = ["buffer_pool_manager/statistics"]
-tracing = ["tracy-client/enable", "buffer_pool_manager/tracing"]
+statistics = ["buffer_pool_manager/statistics", "extendible_hash_table/statistics"]
+tracing = ["tracy-client/enable", "extendible_hash_table/tracing", "buffer_pool_manager/tracing"]
 tracing-memory-allocation = ["tracing"]

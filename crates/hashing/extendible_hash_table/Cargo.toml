@@ -29,5 +29,14 @@ rand_chacha = "0.3.1"
 
 parking_lot = "0.12.3"
 
+# Profiling
+tracy-client = { version = "0.17.3", default-features = false }
+
+
 [dev-dependencies]
 parking_lot = { version = "0.12.3", features = ["default", "deadlock_detection"] }
+
+[features]
+default = []
+statistics = []
+tracing = ["tracy-client/enable", "buffer_pool_manager/tracing"]
