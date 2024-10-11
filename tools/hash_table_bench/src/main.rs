@@ -221,8 +221,6 @@ fn main() {
                         metrics.tick();
                         metrics.report();
                     } else if key_will_change(key) {
-                        // TODO - not really changing the key value as it's not allowed
-
                         let value = key as PageId;
                         rid.set(value, dist.sample(&mut rng) as u32);
                         index_key.set_from_integer(key as i64);

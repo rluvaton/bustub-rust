@@ -460,7 +460,6 @@ dependencies = [
  "error_utils",
  "generics",
  "hashing_common",
- "num-format",
  "pages",
  "parking_lot",
  "prettytable",

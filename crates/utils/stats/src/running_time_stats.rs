@@ -11,7 +11,7 @@ use crate::traits::CreateTableOfStatistics;
 ///
 /// TODO - should add running recordings in progress to disallow that?
 pub struct RunningTimeStats {
-    name: &'static str,
+    name: String,
     number_of_runs: AtomicU64,
 
     /// Total duration in nanoseconds
@@ -26,7 +26,7 @@ pub struct SingleRun<'a> {
 }
 
 impl RunningTimeStats {
-    pub fn new(name: &'static str) -> Self {
+    pub fn new(name: String) -> Self {
         Self {
             name,
             number_of_runs: AtomicU64::new(0),
@@ -68,8 +68,8 @@ impl RunningTimeStats {
         self.number_of_runs.load(Ordering::SeqCst)
     }
 
-    pub fn get_name(&self) -> &'static str {
-        self.name
+    pub fn get_name(&self) -> &str {
+        self.name.as_str()
     }
 }
 
@@ -81,19 +81,34 @@ impl Display for RunningTimeStats {
 
 impl CreateTableOfStatistics for [&RunningTimeStats] {
     fn create_table(&self) -> Table {
+        self
+            .iter()
+            .map(|&item| Some(item))
+            .collect::<Vec<Option<&RunningTimeStats>>>()
+            .create_table()
+    }
+}
+
+// None will act as an empty row
+impl CreateTableOfStatistics for Vec<Option<&RunningTimeStats>> {
+    fn create_table(&self) -> Table {
         let mut table = Table::new();
 
         table.add_row(row!["name", "total time", "total calls", "average time"]);
 
         for &stat in self {
-            table.add_row(
-                row![
+            if let Some(stat) = stat {
+                table.add_row(
+                    row![
                     stat.name,
                     format!("{:?}", stat.get_total_time()),
                     stat.get_number_of_runs().to_formatted_string(&Locale::en),
                     format!("{:?}", stat.calculate_average())
                 ]
-            );
+                );
+            } else {
+                table.add_empty_row();
+            }
         }
 
         table
@@ -104,7 +119,7 @@ impl Clone for RunningTimeStats {
     /// Should not be cloned while keep adding new to duration
     fn clone(&self) -> Self {
         Self {
-            name: self.name,
+            name: self.name.clone(),
             total_duration: AtomicU64::new(self.total_duration.load(Ordering::SeqCst)),
             number_of_runs: AtomicU64::new(self.number_of_runs.load(Ordering::SeqCst)),
         }
@@ -144,7 +159,7 @@ mod tests {
 
     #[test]
     fn run_time_single_average_should_be_correct() {
-        let r = RunningTimeStats::new("test");
+        let r = RunningTimeStats::new("test".to_string());
 
         {
             let _s = r.create_single();
@@ -160,7 +175,7 @@ mod tests {
 
     #[test]
     fn run_time_average_for_10_ms_should_be_around_10_ms() {
-        let r = RunningTimeStats::new("test");
+        let r = RunningTimeStats::new("test".to_string());
 
         {
             let _s = r.create_single();
@@ -175,7 +190,7 @@ mod tests {
 
     #[test]
     fn run_time_three_average_should_be_correct() {
-        let r = RunningTimeStats::new("test");
+        let r = RunningTimeStats::new("test".to_string());
 
         {
             let _s = r.create_single();
@@ -205,7 +220,7 @@ mod tests {
 
     #[test]
     fn run_time_three_average_should_be_correct_when_in_microseconds() {
-        let r = RunningTimeStats::new("test");
+        let r = RunningTimeStats::new("test".to_string());
 
         {
             let _s = r.create_single();
@@ -235,7 +250,7 @@ mod tests {
     #[ignore]
     #[test]
     fn run_time_three_average_should_be_correct_when_in_nanoseconds() {
-        let r = RunningTimeStats::new("test");
+        let r = RunningTimeStats::new("test".to_string());
 
         {
             let _s = r.create_single();

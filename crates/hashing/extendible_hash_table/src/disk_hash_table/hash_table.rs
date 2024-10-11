@@ -1,18 +1,17 @@
 use super::errors;
 use super::type_alias_trait::TypeAliases;
+use crate::directory_page::DirectoryPage;
+use crate::disk_hash_table::hash_table_stats::DiskHashTableStats;
+use crate::header_page::HeaderPage;
+use buffer_common::AccessType;
+use buffer_pool_manager::errors::MapErrorToBufferPoolError;
 use buffer_pool_manager::{BufferPool, BufferPoolManager};
-use pages::{PageId, INVALID_PAGE_ID};
 use common::{Comparator, PageKey, PageValue};
+use hashing_common::KeyHasher;
+use pages::{PageId, INVALID_PAGE_ID};
 use std::fmt::{Debug, Formatter};
 use std::marker::PhantomData;
 use std::sync::Arc;
-use buffer_common::AccessType;
-use buffer_pool_manager::errors::MapErrorToBufferPoolError;
-use hashing_common::KeyHasher;
-use crate::bucket_array_size;
-use crate::bucket_page::BucketPage;
-use crate::directory_page::DirectoryPage;
-use crate::header_page::HeaderPage;
 
 pub const HEADER_PAGE_ID: PageId = 0;                                             // the header page id
 
@@ -82,6 +81,8 @@ where
     pub(super) bucket_max_size: u32,
 
     pub(super) header_page_id: PageId,
+
+    pub(super) stats: DiskHashTableStats,
     pub(super) phantom_data: PhantomData<(Key, Value, KeyComparator, KeyHasherImpl)>,
 }
 
@@ -132,6 +133,8 @@ where
 
             directory_max_depth: directory_max_depth.unwrap_or(DirectoryPage::MAX_DEPTH),
             bucket_max_size: bucket_max_size.unwrap_or(BUCKET_MAX_SIZE as u32),
+
+            stats: DiskHashTableStats::default(),
 
             phantom_data: PhantomData,
         })

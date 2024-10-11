@@ -1,8 +1,6 @@
 use stats::{CreateTableOfStatistics, RunningTimeStats};
 use std::fmt::{Display, Formatter};
 
-const INDENTATION_STEP: usize = 2;
-
 #[derive(Clone)]
 pub struct BufferPoolManagerStats {
     pub(crate) holding_inner_latch: RunningTimeStats,
@@ -12,8 +10,8 @@ pub struct BufferPoolManagerStats {
 impl Default for BufferPoolManagerStats {
     fn default() -> Self {
         Self {
-            holding_inner_latch: RunningTimeStats::new("Holding inner latch"),
-            waiting_for_inner_latch: RunningTimeStats::new("Waiting for inner latch"),
+            holding_inner_latch: RunningTimeStats::new("Holding inner latch".to_string()),
+            waiting_for_inner_latch: RunningTimeStats::new("Waiting for inner latch".to_string()),
         }
     }
 }

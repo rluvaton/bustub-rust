@@ -8,6 +8,7 @@ edition = "2021"
 hashing_common = {path = "../common"}
 
 common = {path = "../../common"}
+stats = {path = "../../utils/stats"}
 pages = {path = "../../storage/pages"}
 disk_storage = {path = "../../storage/disk"}
 
