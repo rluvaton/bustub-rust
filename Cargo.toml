@@ -1,5 +1,7 @@
 [workspace]
 members = [
+    "tools/shell",
+    "tools/hash_table_bench",
     "tools/bpm_bench",
 
     "crates/common",
@@ -23,7 +25,7 @@ members = [
     "crates/execution/expression",
     "crates/storage/table/tuple",
     "crates/hashing/common",
-    "crates/hashing/extendible_hash_table", "tools/hash_table_bench",
+    "crates/hashing/extendible_hash_table",
 ]
 
 [profile.bench]
