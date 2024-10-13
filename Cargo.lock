@@ -186,6 +186,7 @@ dependencies = [
  "buffer_pool_manager",
  "checkpoint_manager",
  "clap",
+ "comfy-table",
  "common",
  "data_types",
  "db_core",
@@ -502,6 +503,10 @@ dependencies = [
  "rand_chacha",
  "tracy-client",
 ]
+
+[[package]]
+name = "execution_common"
+version = "0.1.0"
 
 [[package]]
 name = "execution_engine"
