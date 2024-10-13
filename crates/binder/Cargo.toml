@@ -31,3 +31,6 @@ anyhow = "1.0.89"
 extendible_hash_table = {path = "../hashing/extendible_hash_table"}
 hashing_common = {path = "../hashing/common"}
 rid = {path = "../rid"}
+
+
+pg_query = "5.1.0"

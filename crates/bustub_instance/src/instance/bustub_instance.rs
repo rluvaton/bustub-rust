@@ -1,8 +1,10 @@
 use std::collections::HashMap;
+use std::ops::Deref;
 use std::path::PathBuf;
 use std::sync::Arc;
 use parking_lot::Mutex;
 use strum::IntoEnumIterator;
+use binder::Binder;
 use buffer_pool_manager::BufferPoolManager;
 use checkpoint_manager::CheckpointManager;
 use common::config::{TxnId, TXN_START_ID};
@@ -213,6 +215,7 @@ impl BustubInstance {
         let mut is_successful = true;
 
         let catalog = self.catalog.lock();
+        let binder = Binder::parse_and_save(catalog.deref());
 
         // let binder = Binder
 

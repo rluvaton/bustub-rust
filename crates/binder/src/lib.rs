@@ -1,7 +1,7 @@
 mod binder;
 mod bound_table_ref;
 mod table_ref;
-mod postgres_parser;
+mod statements;
 
 pub use binder::Binder;
 

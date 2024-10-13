@@ -1,12 +1,14 @@
 use std::sync::Arc;
 use db_core::catalog::Catalog;
 use crate::bound_table_ref::BoundTableRef;
-use crate::postgres_parser::PostgresParser;
 use crate::table_ref::CTEList;
 
-pub struct Binder {
+
+
+
+pub struct Binder<'a> {
     /// Catalog will be used during the binding process
-    catalog: Arc<Catalog>,
+    // catalog: Option<&'a Catalog>,
 
     /// The current scope for resolving column ref, used in binding expressions
     scope: Option<BoundTableRef>,
@@ -17,17 +19,35 @@ pub struct Binder {
     /** Sometimes we will need to assign a name to some unnamed items. This variable gives them a universal ID. */
     universal_id: isize,
 
-    parser: PostgresParser
+    statement_nodes: Vec<pg_query::Node::ast::Node>
 }
 
-impl Binder {
-    pub fn new(catalog: Arc<Catalog>) -> Self {
+impl<'a> Binder<'a> {
+    pub fn new() -> Self {
         Self {
-            catalog,
+            // catalog: Some(catalog),
             scope: None,
             cte_scope: None,
             universal_id: 0,
-            parser: PostgresParser::default()
+            statement_nodes: vec![],
         }
     }
+
+    pub fn parse_and_save(&mut self, catalog: &Catalog, sql: &str) -> error_utils::anyhow::Result<bool> {
+        let parsed = pg_query::parse(sql).map_err(|e| error_utils::anyhow::anyhow!(e))?;
+
+        parsed.
+
+        if parsed.is_empty() {
+            println!("Parser received empty statement");
+
+            return Ok(false)
+        }
+
+        self.statement_nodes = parsed;
+
+        return Ok(true)
+    }
+
+    pub fn bind_statement()
 }

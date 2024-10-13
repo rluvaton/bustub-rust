@@ -27,6 +27,8 @@ transaction = {path = "../concurrency/transaction/core"}
 error_utils = {path = "../utils/error_utils"}
 anyhow = "1.0.89"
 
+binder = {path = "../binder"}
+
 
 
 extendible_hash_table = {path = "../hashing/extendible_hash_table"}
