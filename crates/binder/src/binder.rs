@@ -19,7 +19,7 @@ pub struct Binder<'a> {
     /** Sometimes we will need to assign a name to some unnamed items. This variable gives them a universal ID. */
     universal_id: isize,
 
-    statement_nodes: Vec<pg_query::Node::ast::Node>
+    statement_nodes: Vec<pg_query::NodeRef<'a>>
 }
 
 impl<'a> Binder<'a> {
@@ -33,21 +33,19 @@ impl<'a> Binder<'a> {
         }
     }
 
-    pub fn parse_and_save(&mut self, catalog: &Catalog, sql: &str) -> error_utils::anyhow::Result<bool> {
-        let parsed = pg_query::parse(sql).map_err(|e| error_utils::anyhow::anyhow!(e))?;
+    // pub fn parse_and_save(&mut self, catalog: &Catalog, sql: &str) -> error_utils::anyhow::Result<bool> {
+    //     let parsed = pg_query::parse(sql).map_err(|e| error_utils::anyhow::anyhow!(e))?;
+    //
+    //     if parsed.is_empty() {
+    //         println!("Parser received empty statement");
+    //
+    //         return Ok(false)
+    //     }
+    //
+    //     self.statement_nodes = parsed;
+    //
+    //     return Ok(true)
+    // }
 
-        parsed.
-
-        if parsed.is_empty() {
-            println!("Parser received empty statement");
-
-            return Ok(false)
-        }
-
-        self.statement_nodes = parsed;
-
-        return Ok(true)
-    }
-
-    pub fn bind_statement()
+    // pub fn bind_statement()
 }

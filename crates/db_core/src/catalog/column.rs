@@ -2,7 +2,7 @@ use std::fmt::{Debug, Display, Formatter};
 use data_types::DBTypeId;
 
 // TODO - implement src/include/catalog/column.h
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub struct Column {
     /// Column name.
     column_name: String,

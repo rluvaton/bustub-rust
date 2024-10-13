@@ -25,7 +25,7 @@ data_types = {path = "../data_types"}
 transaction = {path = "../concurrency/transaction/core"}
 error_utils = {path = "../utils/error_utils"}
 anyhow = "1.0.89"
-
+thiserror = "1.0.64"
 
 
 extendible_hash_table = {path = "../hashing/extendible_hash_table"}

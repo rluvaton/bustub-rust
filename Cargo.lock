@@ -144,6 +144,7 @@ dependencies = [
  "rand 0.8.5",
  "recovery_log_manager",
  "rid",
+ "thiserror",
  "tracy-client",
  "transaction",
  "zipf",
