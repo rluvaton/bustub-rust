@@ -1,5 +1,5 @@
 mod instance;
 mod mocks;
-mod result_writer;
+pub mod result_writer;
 
 pub use instance::BustubInstance;

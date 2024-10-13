@@ -1,4 +1,4 @@
-use crate::catalog::Catalog;
+use crate::catalog::{Catalog, TableInfo};
 use common::config::{AtomicTimestamp, AtomicTxnId, SlotOffset, TxnId, TXN_START_ID};
 use parking_lot::Mutex;
 use std::collections::HashMap;
@@ -6,6 +6,7 @@ use std::sync::Arc;
 use std::sync::atomic::Ordering;
 use pages::PageId;
 use transaction::{IsolationLevel, Transaction, TransactionState, VersionUndoLink, Watermark};
+use crate::storage::TableHeap;
 
 pub struct TransactionManager {
     /// protects txn map - All transactions, running or committed
@@ -133,5 +134,28 @@ impl TransactionManager {
 
     pub fn garbage_collection(&self) {
         unimplemented!();
+    }
+
+    pub fn debug(&self, info: String, table_info: Option<Arc<TableInfo>>, table_heap: Option<Arc<TableHeap>>) {
+        // always use stderr for printing logs...
+       eprintln!("debug_hook: {}", info);
+
+        eprintln!("You see this line of text because you have not implemented `TxnMgrDbg`. You should do this once you have \
+        finished task 2. Implementing this helper function will save you a lot of time for debugging in later tasks.");
+
+        // We recommend implementing this function as traversing the table heap and print the version chain. An example output
+        // of our reference solution:
+        //
+        // debug_hook: before verify scan
+        // RID=0/0 ts=txn8 tuple=(1, <NULL>, <NULL>)
+        //   txn8@0 (2, _, _) ts=1
+        // RID=0/1 ts=3 tuple=(3, <NULL>, <NULL>)
+        //   txn5@0 <del> ts=2
+        //   txn3@0 (4, <NULL>, <NULL>) ts=1
+        // RID=0/2 ts=4 <del marker> tuple=(<NULL>, <NULL>, <NULL>)
+        //   txn7@0 (5, <NULL>, <NULL>) ts=3
+        // RID=0/3 ts=txn6 <del marker> tuple=(<NULL>, <NULL>, <NULL>)
+        //   txn6@0 (6, <NULL>, <NULL>) ts=2
+        //   txn3@1 (7, _, _) ts=1
     }
 }

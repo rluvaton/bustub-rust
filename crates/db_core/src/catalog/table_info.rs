@@ -32,4 +32,21 @@ impl TableInfo {
             oid
         }
     }
+
+    pub fn get_table_heap(&self) -> Arc<TableHeap> {
+        self.table.clone()
+    }
+
+    pub fn get_oid(&self) -> TableOID {
+        self.oid
+    }
+
+    pub fn get_name(&self) -> &String {
+        &self.name
+    }
+
+    pub fn get_schema(&self) -> Arc<Schema> {
+        // For debugging in bustub instance
+        self.schema.clone()
+    }
 }

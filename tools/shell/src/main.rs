@@ -4,6 +4,8 @@ use std::path::PathBuf;
 use clap::Parser;
 use rustyline::{Config, DefaultEditor};
 use bustub_instance::BustubInstance;
+use bustub_instance::result_writer::ComfyTableWriter;
+use execution_common::CheckOptions;
 use transaction::TransactionState;
 use crate::cli::Args;
 
@@ -72,6 +74,20 @@ fn main() -> rustyline::Result<()> {
             }
 
             first_line = false;
+
+            let mut writer = ComfyTableWriter::default();
+            let result = bustub.execute_sql(&query, &mut writer, CheckOptions::empty());
+
+            match result {
+                Ok(_) => {
+                    for table in writer.get_tables() {
+                        println!("{}", table);
+                    }
+                }
+                Err(err) => {
+                    eprintln!("{}", err);
+                }
+            }
 
         }
     }

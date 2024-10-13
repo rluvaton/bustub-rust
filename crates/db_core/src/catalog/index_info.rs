@@ -8,7 +8,7 @@ pub struct IndexInfo {
 
     /// The schema for the index key
     #[allow(unused)]
-    key_schema: Schema,
+    key_schema: Arc<Schema>,
 
     /// The name of the index
     #[allow(unused)]
@@ -38,4 +38,24 @@ pub struct IndexInfo {
     /// Default: `IndexType::BPlusTreeIndex`
     #[allow(unused)]
     index_type: IndexType,
+}
+
+impl IndexInfo {
+
+    // -----------------------------
+    // For bustub instance debugging
+    // -----------------------------
+
+
+    pub fn get_index_oid(&self) -> IndexOID {
+        self.index_oid
+    }
+
+    pub fn get_name(&self) -> &String {
+        &self.name
+    }
+
+    pub fn get_key_schema(&self) -> Arc<Schema> {
+        self.key_schema.clone()
+    }
 }

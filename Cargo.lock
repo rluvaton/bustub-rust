@@ -182,6 +182,7 @@ dependencies = [
 name = "bustub_instance"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "buffer_common",
  "buffer_pool_manager",
  "checkpoint_manager",
@@ -191,6 +192,8 @@ dependencies = [
  "data_types",
  "db_core",
  "disk_storage",
+ "error_utils",
+ "execution_common",
  "execution_engine",
  "extendible_hash_table",
  "hashing_common",
@@ -507,6 +510,9 @@ dependencies = [
 [[package]]
 name = "execution_common"
 version = "0.1.0"
+dependencies = [
+ "bitflags",
+]
 
 [[package]]
 name = "execution_engine"
@@ -1142,6 +1148,7 @@ version = "0.1.0"
 dependencies = [
  "bustub_instance",
  "clap",
+ "execution_common",
  "rustyline",
  "shellfish",
  "transaction",

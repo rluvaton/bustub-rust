@@ -7,6 +7,7 @@ default-run = "shell"
 [dependencies]
 bustub_instance = { path = "../../crates/bustub_instance" }
 transaction = {path = "../../crates/concurrency/transaction/core"}
+execution_common = {path = "../../crates/execution/common"}
 
 
 clap = { version = "4.5.16", features = ["derive"] }

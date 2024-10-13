@@ -9,6 +9,7 @@ use common::config::{TxnId, TXN_START_ID};
 use db_core::catalog::Catalog;
 use db_core::concurrency::{LockManager, TransactionManager};
 use disk_storage::{DefaultDiskManager, DiskManager, DiskManagerUnlimitedMemory};
+use execution_common::CheckOptions;
 use execution_engine::ExecutionEngine;
 use recovery_log_manager::LogManager;
 use crate::mocks::MockTableName;
@@ -20,18 +21,18 @@ const LRU_K_REPLACER_K: usize = 10;
 
 
 pub struct BustubInstance {
-    pub disk_manager: Arc<dyn DiskManager>,
-    pub buffer_pool_manager: Arc<BufferPoolManager>,
-    pub lock_manager: Option<Arc<LockManager>>,
-    pub txn_manager: Arc<TransactionManager>,
-    pub log_manager: Option<Arc<LogManager>>,
-    pub checkpoint_manager: Option<Arc<CheckpointManager>>,
-    pub execution_engine: Arc<ExecutionEngine>,
-    pub catalog: Arc<Mutex<Catalog>>,
+    pub(super) disk_manager: Arc<dyn DiskManager>,
+    pub(super) buffer_pool_manager: Arc<BufferPoolManager>,
+    pub(super) lock_manager: Option<Arc<LockManager>>,
+    pub(super) txn_manager: Arc<TransactionManager>,
+    pub(super) log_manager: Option<Arc<LogManager>>,
+    pub(super) checkpoint_manager: Option<Arc<CheckpointManager>>,
+    pub(super) execution_engine: Arc<ExecutionEngine>,
+    pub(super) catalog: Arc<Mutex<Catalog>>,
 
-    session_variables: HashMap<String, String>,
-    current_txn: Option<Arc<Transaction>>,
-    managed_txn_mode: bool,
+    pub(super) session_variables: HashMap<String, String>,
+    pub(super) current_txn: Option<Arc<Transaction>>,
+    pub(super) managed_txn_mode: bool,
 }
 
 impl BustubInstance {
@@ -48,7 +49,6 @@ impl BustubInstance {
     pub fn in_memory(bpm_size: Option<usize>) -> Self {
         Self::create_from_disk_manager(DiskManagerUnlimitedMemory::new(), bpm_size)
     }
-
 
     /// Create bustub instance from provided disk manager
     ///
@@ -158,60 +158,6 @@ impl BustubInstance {
         self.current_txn.clone()
     }
 
-    pub fn cmd_txn<ResultWriterImpl: ResultWriter>(&mut self, params: Vec<String>, writer: &mut ResultWriterImpl) {
-        if !self.managed_txn_mode {
-            writer.one_cell("only supported in managed mode, please use bustub-shell");
-
-            return;
-        }
-
-        if params.len() == 1 {
-            match self.current_txn {
-                Some(_) => self.dump_current_txn(writer, ""),
-                None => writer.one_cell("no active txn, each statement starts a new txn."),
-            }
-
-            return;
-        }
-
-        if params.len() == 2 {
-            let param1 = &params[0];
-
-            if param1 == &"gc".to_string() {
-                self.txn_manager.garbage_collection();
-                writer.one_cell("GC complete");
-
-                return;
-            }
-
-            let txn_id = param1.parse::<TxnId>().expect("param1 must be a transaction id");
-
-            if txn_id == -1 {
-                self.dump_current_txn(writer, "pause current txn ");
-
-                // Remove current transaction
-                self.current_txn = None;
-
-                return;
-            }
-
-            let transaction = self.txn_manager
-                .get_transaction_by_id(txn_id)
-                .or_else(|| self.txn_manager.get_transaction_by_id(txn_id + TXN_START_ID));
-
-            if let Some(transaction) = transaction {
-                self.current_txn = Some(transaction);
-                self.dump_current_txn(writer, "switch to new txn ");
-            } else {
-                writer.one_cell("cannot find txn.");
-            }
-
-            return;
-        }
-
-        writer.one_cell("unsupported txn cmd.");
-    }
-
     pub fn dump_current_txn<ResultWriterImpl: ResultWriter>(&self, writer: &mut ResultWriterImpl, prefix: &'static str) {
         let current_txn = self.current_txn.as_ref().expect("Must have current transaction").clone();
 
@@ -225,6 +171,54 @@ impl BustubInstance {
                     current_txn.get_isolation_level()
             ).as_str());
     }
+
+    pub fn execute_sql<ResultWriterImpl: ResultWriter>(&mut self, sql: &str, writer: &mut ResultWriterImpl, check_options: CheckOptions) -> error_utils::anyhow::Result<bool> {
+        let is_local_txn = self.current_txn.is_some();
+
+        let txn = self.current_txn.clone().unwrap_or_else(|| self.txn_manager.begin(None));
+
+        let result = self.execute_sql_txn(sql, writer, txn.clone(), check_options);
+        if !is_local_txn {
+            let res = self.txn_manager.commit(txn);
+
+            // TODO - change this to return result instead
+            assert!(res, "Failed to commit txn");
+        }
+
+        return result;
+    }
+
+    pub fn execute_sql_txn<ResultWriterImpl: ResultWriter>(&mut self, sql: &str, writer: &mut ResultWriterImpl, txn: Arc<Transaction>, check_options: CheckOptions) -> error_utils::anyhow::Result<bool> {
+        if sql.starts_with("\\") {
+            // Internal meta-commands, like in `psql`.
+
+            match sql {
+                "\\dt" => self.cmd_display_tables(writer),
+                "\\di" => self.cmd_display_indices(writer),
+                "\\help" => Self::cmd_display_help(writer),
+                _ => {
+                    if sql.starts_with("\\dbgmvcc") {
+                        self.cmd_dbg_mvcc(sql.split("").collect(), writer);
+                    } else if sql.starts_with("\\txn") {
+                        self.cmd_txn(sql.split("").collect(), writer);
+                    } else {
+                        return Err(error_utils::anyhow::anyhow!("unsupported internal command: {}", sql))
+                    }
+                }
+            }
+
+            return Ok(true);
+        }
+
+        let mut is_successful = true;
+
+        let catalog = self.catalog.lock();
+
+        // let binder = Binder
+
+        todo!();
+    }
+
 }
 
 impl Drop for BustubInstance {
