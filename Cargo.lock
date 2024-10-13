@@ -1097,6 +1097,11 @@ dependencies = [
 [[package]]
 name = "shell"
 version = "0.1.0"
+dependencies = [
+ "bustub_instance",
+ "clap",
+ "transaction",
+]
 
 [[package]]
 name = "smallvec"

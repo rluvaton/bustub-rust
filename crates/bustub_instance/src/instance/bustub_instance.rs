@@ -8,7 +8,7 @@ use checkpoint_manager::CheckpointManager;
 use common::config::{TxnId, TXN_START_ID};
 use db_core::catalog::Catalog;
 use db_core::concurrency::{LockManager, TransactionManager};
-use disk_storage::{DefaultDiskManager, DiskManager};
+use disk_storage::{DefaultDiskManager, DiskManager, DiskManagerUnlimitedMemory};
 use execution_engine::ExecutionEngine;
 use recovery_log_manager::LogManager;
 use crate::mocks::MockTableName;
@@ -39,9 +39,24 @@ impl BustubInstance {
     ///
     /// the default bpm size is `DEFAULT_BPM_SIZE`
     pub fn from_file(db_file_path: PathBuf, bpm_size: Option<usize>) -> Self {
-        // TODO - add global enable logging
+        Self::create_from_disk_manager(DefaultDiskManager::new(db_file_path).expect("disk manager failed to initialize"), bpm_size)
+    }
 
-        let disk_manager = Arc::new(DefaultDiskManager::new(db_file_path).expect("disk manager failed to initialize"));
+    /// Create bustub instance in memory
+    ///
+    /// the default bpm size is `DEFAULT_BPM_SIZE`
+    pub fn in_memory(bpm_size: Option<usize>) -> Self {
+        Self::create_from_disk_manager(DiskManagerUnlimitedMemory::new(), bpm_size)
+    }
+
+
+    /// Create bustub instance from provided disk manager
+    ///
+    /// the default bpm size is `DEFAULT_BPM_SIZE`
+    fn create_from_disk_manager<DiskManagerImpl: DiskManager>(disk_manager: DiskManagerImpl, bpm_size: Option<usize>) -> Self {
+        // TODO - add global enable logging variable should be false
+
+        let disk_manager = Arc::new(disk_manager);
 
         let mut log_manager: Option<Arc<LogManager>> = None;
 
