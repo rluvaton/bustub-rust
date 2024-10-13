@@ -122,6 +122,10 @@ name = "binary_utils"
 version = "0.1.0"
 
 [[package]]
+name = "binder"
+version = "0.1.0"
+
+[[package]]
 name = "bit-vec"
 version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
