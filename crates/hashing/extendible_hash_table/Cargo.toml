@@ -22,7 +22,7 @@ generics = {path = "../../utils/generics"}
 error_utils = {path = "../../utils/error_utils"}
 
 thiserror = "1.0.64"
-prettytable = "0.10.0"
+comfy-table = "7.1.1"
 
 rand = "0.8"
 rand_chacha = "0.3.1"

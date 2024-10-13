@@ -1,8 +1,8 @@
 mod cli;
 
 use std::path::PathBuf;
-use std::sync::Arc;
 use clap::Parser;
+use rustyline::{Config, DefaultEditor};
 use bustub_instance::BustubInstance;
 use transaction::TransactionState;
 use crate::cli::Args;
@@ -13,8 +13,14 @@ const DEFAULT_PROMPT: &'static str = "bustub> ";
 // The bathtub emoji
 const EMOJI_PROMPT: &'static str = "🛁> ";
 
-fn main() {
+fn main() -> rustyline::Result<()> {
     let args = Args::parse();
+    let mut rl = DefaultEditor::with_config(
+        Config::builder()
+            .max_history_size(1024)?
+            .auto_add_history(!args.disable_tty)
+            .build()
+    )?;
 
     let mut bustub = BustubInstance::from_file(PathBuf::from("test.db"), None);
 
@@ -34,7 +40,7 @@ fn main() {
     let prompt = (if args.emoji_prompt { EMOJI_PROMPT } else { DEFAULT_PROMPT }).to_string();
 
     loop {
-        let mut query: String;
+        let mut query: String = "".to_string();
 
         let mut first_line = true;
 
@@ -51,12 +57,22 @@ fn main() {
 
             let line_prompt = if first_line { context_prompt } else { "... ".to_string() };
 
+            // TODO - Do we need this if as the line prompt should support it
             if !args.disable_tty {
-                // let query_string =
+                query.push_str(rl.readline(line_prompt.as_str())?.as_str());
+
+                if query.ends_with(";") || query.starts_with("\\") {
+                    break;
+                }
+
+                query.push_str(" ");
+            } else {
+                // line prompt should support when no tty
+                unimplemented!()
             }
+
+            first_line = false;
 
         }
     }
-
-
 }

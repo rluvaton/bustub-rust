@@ -1,7 +1,7 @@
 use std::fmt::{Debug, Formatter};
 use pages::{PageId, PAGE_SIZE, INVALID_PAGE_ID};
 use std::mem::size_of;
-use prettytable::{row, Table};
+use comfy_table::{Table};
 use binary_utils::GetNBits;
 
 const PAGE_METADATA_SIZE: usize = size_of::<u32>();
@@ -133,11 +133,11 @@ impl Debug for HeaderPage {
 
         let mut table = Table::new();
 
-        table.add_row(row!["directory_idx", "page_id"]);
+        table.set_header(vec!["directory_idx", "page_id"]);
 
         let max_id = (1 << self.max_depth) as u32;
         for idx in 0..(max_id as usize) {
-            table.add_row(row![idx, self.directory_page_ids[idx]]);
+            table.add_row(vec![idx, self.directory_page_ids[idx] as usize]);
         }
 
         f.write_str(table.to_string().as_str())?;

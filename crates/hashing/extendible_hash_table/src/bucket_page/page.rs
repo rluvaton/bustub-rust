@@ -1,7 +1,7 @@
 use super::errors::InsertionErrors;
 use common::{Comparator, OrdComparator, PageKey, PageValue};
 use pages::PAGE_SIZE;
-use prettytable::{row, Table};
+use comfy_table::{Table};
 use std::cmp::Ordering;
 use std::fmt::{Debug, Formatter};
 use std::marker::PhantomData;
@@ -293,10 +293,10 @@ impl<const ARRAY_SIZE: usize, Key: PageKey, Value: PageValue, KeyComparator: Com
 
         let mut table = Table::new();
 
-        table.add_row(row!["index", "key", "value"]);
+        table.set_header(vec!["index", "key", "value"]);
 
         for idx in 0..self.size {
-            table.add_row(row![idx, self.key_at(idx), self.value_at(idx)]);
+            table.add_row(vec![idx.to_string(), self.key_at(idx).to_string(), self.value_at(idx).to_string()]);
         }
 
         f.write_str(table.to_string().as_str())?;

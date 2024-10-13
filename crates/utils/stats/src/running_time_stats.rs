@@ -2,7 +2,7 @@ use std::fmt::{Debug, Display, Formatter};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{Duration, Instant};
 use num_format::{Locale, ToFormattedString};
-use prettytable::{row, Table};
+use comfy_table::{Table};
 use crate::traits::CreateTableOfStatistics;
 
 /// TODO - should rename to high precision and add unsafe to it so the consumer should make sure not using
@@ -94,20 +94,20 @@ impl CreateTableOfStatistics for Vec<Option<&RunningTimeStats>> {
     fn create_table(&self) -> Table {
         let mut table = Table::new();
 
-        table.add_row(row!["name", "total time", "total calls", "average time"]);
+        table.set_header(vec!["name", "total time", "total calls", "average time"]);
 
         for &stat in self {
             if let Some(stat) = stat {
                 table.add_row(
-                    row![
-                    stat.name,
+                    vec![
+                    stat.name.clone(),
                     format!("{:?}", stat.get_total_time()),
                     stat.get_number_of_runs().to_formatted_string(&Locale::en),
                     format!("{:?}", stat.calculate_average())
                 ]
                 );
             } else {
-                table.add_empty_row();
+                table.add_row::<Vec<_>>(vec!["", "", "", ""]);
             }
         }
 

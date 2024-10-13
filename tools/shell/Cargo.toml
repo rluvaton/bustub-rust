@@ -2,6 +2,7 @@
 name = "shell"
 version = "0.1.0"
 edition = "2021"
+default-run = "shell"
 
 [dependencies]
 bustub_instance = { path = "../../crates/bustub_instance" }
@@ -9,3 +10,6 @@ transaction = {path = "../../crates/concurrency/transaction/core"}
 
 
 clap = { version = "4.5.16", features = ["derive"] }
+shellfish = { version = "0.10.0",  features = ["rustyline", "clap"] }
+rustyline = "14.0.0"
+

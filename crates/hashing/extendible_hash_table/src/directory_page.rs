@@ -1,7 +1,7 @@
 use binary_utils::GetNBits;
 use pages::{PageId, PAGE_SIZE, INVALID_PAGE_ID};
 use generics::GetOr;
-use prettytable::{row, Table};
+use comfy_table::{Table};
 use std::collections::HashMap;
 use std::fmt::{Debug, Formatter};
 use std::mem::size_of;
@@ -362,7 +362,7 @@ impl DirectoryPage {
 
         let mut table = Table::new();
 
-        table.add_row(row!["prefix", "page_id", "local_depth", "keys"]);
+        table.set_header(vec!["prefix", "page_id", "local_depth", "keys"]);
 
         let max_id = (0x1 << self.global_depth) as u32;
         for idx in 0..(max_id as usize) {
@@ -371,10 +371,10 @@ impl DirectoryPage {
 
             let keys_for_bucket = get_keys_for_bucket(page_id);
 
-            table.add_row(row![
+            table.add_row(vec![
                 format_number_in_bits(idx as u64, self.global_depth),
-                page_id,
-                local_depth,
+                page_id.to_string(),
+                local_depth.to_string(),
                 keys_for_bucket.join(", ")
             ]);
         }
@@ -391,14 +391,14 @@ impl Debug for DirectoryPage {
 
         let mut table = Table::new();
 
-        table.add_row(row!["prefix", "page_id", "local_depth"]);
+        table.set_header(vec!["prefix", "page_id", "local_depth"]);
 
         let max_id = (0x1 << self.global_depth) as u32;
         for idx in 0..(max_id as usize) {
             let page_id = self.bucket_page_ids[idx];
             let local_depth = self.local_depths[idx];
 
-            table.add_row(row![format_number_in_bits(idx as u64, self.global_depth), page_id, local_depth]);
+            table.add_row(vec![format_number_in_bits(idx as u64, self.global_depth), page_id.to_string(), local_depth.to_string()]);
         }
 
         f.write_str(table.to_string().as_str())?;
