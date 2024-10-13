@@ -21,10 +21,16 @@ buffer_pool_manager = {path = "../buffer/manager"}
 recovery_log_manager = {path = "../recovery/log_manager"}
 checkpoint_manager = {path = "../recovery/checkpoint_manager"}
 execution_engine = {path = "../execution/engine"}
+data_types = {path = "../data_types"}
+transaction = {path = "../concurrency/transaction/core"}
+
 
 extendible_hash_table = {path = "../hashing/extendible_hash_table"}
 hashing_common = {path = "../hashing/common"}
 rid = {path = "../rid"}
+
+strum = "0.26.3"
+strum_macros = "0.26.3"
 
 [profile.bench]
 debug = true

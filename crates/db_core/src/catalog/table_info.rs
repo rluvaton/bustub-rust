@@ -8,7 +8,7 @@ pub struct TableInfo {
 
     /// The table schema
     #[allow(unused)]
-    schema: Schema,
+    schema: Arc<Schema>,
 
     /// The table name
     #[allow(unused)]
@@ -21,4 +21,15 @@ pub struct TableInfo {
     /// The table OID
     #[allow(unused)]
     oid: TableOID,
+}
+
+impl TableInfo {
+    pub fn new(schema: Arc<Schema>, name: String, table: Arc<TableHeap>, oid: TableOID) -> Self {
+        Self {
+            schema,
+            name,
+            table,
+            oid
+        }
+    }
 }

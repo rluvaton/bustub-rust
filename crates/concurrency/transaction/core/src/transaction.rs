@@ -95,6 +95,7 @@ impl Transaction {
 
     /// Return the transaction state
     pub fn get_transaction_state(&self) -> TransactionState { self.state.load(Ordering::SeqCst) }
+    pub fn set_transaction_state(&self, state: TransactionState)  { self.state.store(state, Ordering::SeqCst) }
 
     /// Return the read ts
     pub fn get_read_ts(&self) -> Timestamp { self.read_ts.load(Ordering::SeqCst) }
