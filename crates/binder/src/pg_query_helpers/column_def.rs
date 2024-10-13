@@ -36,8 +36,13 @@ impl ColumnDefExt for ColumnDef {
             };
 
             let db_type_id = match str.sval.as_str() {
-                "int4" => DBTypeId::INT,
                 "varchar" => DBTypeId::VARCHAR,
+                "bool" => DBTypeId::BOOLEAN,
+                "bpchar" => DBTypeId::TINYINT,
+                "int2" => DBTypeId::SMALLINT,
+                "int4" => DBTypeId::INT,
+                "int8" => DBTypeId::BIGINT,
+                "float8" => DBTypeId::DECIMAL,
                 _ => return None,
             };
 
@@ -45,7 +50,7 @@ impl ColumnDefExt for ColumnDef {
         });
 
         if db_type_id.is_none() {
-            return Err(error_utils::anyhow!("Was unable to find the column type of node {:?}", node_type));
+            return Err(error_utils::anyhow!("Was unable to find the column type of node '{}': {:?}", name, node_type));
         }
 
         let db_type_id = db_type_id.unwrap();

@@ -116,6 +116,77 @@ mod tests {
     }
 
     #[test]
+    fn convert_create_table_statement_with_all_supported_type() {
+        let create_table_sql: String = vec![
+            "CREATE TABLE distributors (",
+            "some_boolean_1 BOOLEAN,",
+            "some_boolean_2 boolean,",
+            "some_boolean_3 BOOL,",
+            "some_boolean_4 bool,",
+
+            // there is no tinyint in postgres, so using char which has the same effect
+            "some_tinyint_1 char,",
+            "some_tinyint_2 CHAR,",
+
+            "some_smallint_1 smallint,",
+            "some_smallint_2 int2,",
+
+            "some_int_1 int,",
+            "some_int_2 int4,",
+            "some_int_3 integer,",
+
+            "some_bigint_1 bigint,",
+            "some_bigint_2 int8,",
+
+            "some_decimal double precision,",
+
+            "some_varchar_1 varchar(10),",
+            "some_varchar_2 character varying(20)",
+
+            // TODO - add timestamp
+
+            ")",
+        ].join("\n");
+
+        let expected_create_statement = CreateStatement::new(
+            "distributors".to_string(),
+            vec![
+
+                Column::new_fixed_size("some_boolean_1".to_string(), DBTypeId::BOOLEAN),
+                Column::new_fixed_size("some_boolean_2".to_string(), DBTypeId::BOOLEAN),
+                Column::new_fixed_size("some_boolean_3".to_string(), DBTypeId::BOOLEAN),
+                Column::new_fixed_size("some_boolean_4".to_string(), DBTypeId::BOOLEAN),
+
+
+                Column::new_fixed_size("some_tinyint_1".to_string(), DBTypeId::TINYINT),
+                Column::new_fixed_size("some_tinyint_2".to_string(), DBTypeId::TINYINT),
+
+                Column::new_fixed_size("some_smallint_1".to_string(), DBTypeId::SMALLINT),
+                Column::new_fixed_size("some_smallint_2".to_string(), DBTypeId::SMALLINT),
+
+                Column::new_fixed_size("some_int_1".to_string(), DBTypeId::INT),
+                Column::new_fixed_size("some_int_2".to_string(), DBTypeId::INT),
+                Column::new_fixed_size("some_int_3".to_string(), DBTypeId::INT),
+
+                Column::new_fixed_size("some_bigint_1".to_string(), DBTypeId::BIGINT),
+                Column::new_fixed_size("some_bigint_2".to_string(), DBTypeId::BIGINT),
+
+                Column::new_fixed_size("some_decimal".to_string(), DBTypeId::DECIMAL),
+
+                Column::new_variable_size("some_varchar_1".to_string(), DBTypeId::VARCHAR, 10),
+                Column::new_variable_size("some_varchar_2".to_string(), DBTypeId::VARCHAR, 20),
+            ],
+            vec![],
+        );
+
+        let result = pg_query::parse(create_table_sql.as_str()).expect("Should parse");
+
+        let actual_create_statement: StatementTryFromResult<CreateStatement> = result.protobuf.nodes()[0].0.try_into();
+
+        assert_eq!(actual_create_statement, Ok(expected_create_statement));
+    }
+
+    #[test]
     fn convert_create_table_to_statement_multiple_primary_keys() {
         let create_table_sql = "CREATE TABLE distributors (
     did     integer,
