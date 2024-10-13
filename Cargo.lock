@@ -124,6 +124,29 @@ version = "0.1.0"
 [[package]]
 name = "binder"
 version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "buffer_common",
+ "buffer_pool_manager",
+ "checkpoint_manager",
+ "common",
+ "data_types",
+ "db_core",
+ "disk_storage",
+ "error_utils",
+ "execution_common",
+ "execution_engine",
+ "extendible_hash_table",
+ "hashing_common",
+ "pages",
+ "parking_lot",
+ "rand 0.8.5",
+ "recovery_log_manager",
+ "rid",
+ "tracy-client",
+ "transaction",
+ "zipf",
+]
 
 [[package]]
 name = "bit-vec"
