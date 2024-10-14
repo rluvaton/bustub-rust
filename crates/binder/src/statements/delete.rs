@@ -1,4 +1,4 @@
-use crate::expressions::{Constant, ExpressionTypeImpl};
+use crate::expressions::{Constant, Expression, ExpressionTypeImpl};
 use crate::sql_parser_helper::{ColumnDefExt, ConstraintExt};
 use crate::statements::traits::Statement;
 use crate::statements::StatementType;
@@ -56,7 +56,7 @@ impl Statement for DeleteStatement {
         binder.scope.replace(table.clone());
 
         let expr: ExpressionTypeImpl = if let Some(selection) = &ast.selection {
-            selection.try_into()?
+            ExpressionTypeImpl::try_parse_from_expr(selection, binder)?
         } else {
             Constant::new(true.into()).into()
         };
