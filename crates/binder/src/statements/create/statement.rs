@@ -4,6 +4,7 @@ use crate::statements::StatementType;
 use crate::try_from_ast_error::{ParseASTResult, TryFromASTError};
 use db_core::catalog::Column;
 use std::fmt::Debug;
+use crate::Binder;
 use super::SqlParserCreateStatementExt;
 
 #[derive(Debug, PartialEq)]
@@ -23,16 +24,12 @@ impl CreateStatement {
     }
 }
 
-impl TryFrom<&sqlparser::ast::Statement> for CreateStatement {
-    type Error = TryFromASTError;
+impl Statement for CreateStatement {
+    const TYPE: StatementType = StatementType::Create;
+    type ASTStatement = sqlparser::ast::CreateTable;
 
-    fn try_from(value: &sqlparser::ast::Statement) -> Result<Self, Self::Error> {
-        let create_table = match value {
-            sqlparser::ast::Statement::CreateTable(create_table) => create_table,
-            _ => return Err(TryFromASTError::IncompatibleType)
-        };
-
-        let columns: ParseASTResult<Vec<Column>> = create_table.columns.iter().map(|item| item.try_convert_into_column()).collect();
+    fn try_parse_ast(ast: &Self::ASTStatement, _binder: &mut Binder) -> ParseASTResult<Self> {
+        let columns: ParseASTResult<Vec<Column>> = ast.columns.iter().map(|item| item.try_convert_into_column()).collect();
         let columns = columns?;
 
         if columns.is_empty() {
@@ -41,15 +38,18 @@ impl TryFrom<&sqlparser::ast::Statement> for CreateStatement {
 
 
         Ok(CreateStatement {
-            table: create_table.name.to_string(),
+            table: ast.name.to_string(),
             columns,
-            primary_key: create_table.try_get_primary_columns()?,
+            primary_key: ast.try_get_primary_columns()?,
         })
     }
-}
 
-impl Statement for CreateStatement {
-    const TYPE: StatementType = StatementType::Create;
+    fn try_parse_from_statement(statement: &sqlparser::ast::Statement, binder: &mut Binder) -> ParseASTResult<Self> {
+        match &statement {
+            sqlparser::ast::Statement::CreateTable(ast) => Self::try_parse_ast(ast, binder),
+            _ => Err(TryFromASTError::IncompatibleType)
+        }
+    }
 }
 
 
@@ -62,10 +62,13 @@ mod tests {
     use crate::try_from_ast_error::TryFromASTError;
     use sqlparser::dialect::GenericDialect;
     use sqlparser::parser::Parser;
+    use crate::Binder;
+    use crate::statements::traits::Statement;
 
     fn parse_create_sql(sql: &str) -> Result<Vec<CreateStatement>, TryFromASTError> {
+        let mut binder = Binder::default();
         let statements = Parser::parse_sql(&GenericDialect {}, sql).unwrap();
-        statements.iter().map(|item| item.try_into()).collect()
+        statements.iter().map(|stmt| CreateStatement::try_parse_from_statement(stmt, &mut binder)).collect()
     }
 
     #[test]

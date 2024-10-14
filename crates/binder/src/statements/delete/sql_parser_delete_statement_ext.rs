@@ -4,11 +4,11 @@ use crate::sql_parser_helper::ColumnDefExt;
 use crate::statements::DeleteStatement;
 use crate::try_from_ast_error::{ParseASTResult, TryFromASTError};
 
-pub(super) trait SqlParserCreateStatementExt {
+pub(super) trait SqlParserDeleteStatementExt {
     fn try_get_primary_columns(&self) -> ParseASTResult<Vec<String>>;
 }
 
-impl SqlParserCreateStatementExt for sqlparser::ast::CreateTable {
+impl SqlParserDeleteStatementExt for sqlparser::ast::CreateTable {
     fn try_get_primary_columns(&self) -> ParseASTResult<Vec<String>> {
 
         let primary_columns_from_column_definition: Vec<String> = {

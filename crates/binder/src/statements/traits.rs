@@ -1,11 +1,15 @@
-use std::fmt::Debug;
-use crate::try_from_ast_error::TryFromASTError;
 use crate::statements::StatementType;
-
-
-pub type StatementTryFromResult<Stmt: Statement> = Result<Stmt, TryFromASTError>;
+use crate::try_from_ast_error::ParseASTResult;
+use crate::Binder;
+use std::fmt::Debug;
 
 /// This is the BoundStatement in Bustub
-pub trait Statement: Debug + for<'a> TryFrom<&'a sqlparser::ast::Statement, Error=TryFromASTError> {
+pub trait Statement: Debug {
     const TYPE: StatementType;
+
+    type ASTStatement;
+
+    fn try_parse_ast(ast: &Self::ASTStatement, binder: &mut Binder) -> ParseASTResult<Self> where Self: Sized;
+
+    fn try_parse_from_statement(statement: &sqlparser::ast::Statement, binder: &mut Binder) -> ParseASTResult<Self> where Self: Sized;
 }

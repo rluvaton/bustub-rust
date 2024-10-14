@@ -55,3 +55,15 @@ impl<'a> Binder<'a> {
 
     // pub fn bind_statement()
 }
+
+impl Default for Binder<'_> {
+    fn default() -> Self {
+        Self {
+            catalog: None,
+            scope: None,
+            cte_scope: None,
+            universal_id: 0,
+            statement_nodes: vec![],
+        }
+    }
+}

@@ -1,5 +1,5 @@
 use crate::statements::traits::Statement;
-use crate::statements::{CreateStatement, SelectStatement, StatementType};
+use crate::statements::{DeleteStatement, SelectStatement, StatementType};
 use crate::table_ref::BaseTableRef;
 use std::fmt::Debug;
 use std::sync::Arc;
