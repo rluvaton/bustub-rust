@@ -1,11 +1,9 @@
-use crate::statements::StatementType;
 use crate::try_from_ast_error::ParseASTResult;
 use crate::Binder;
 use std::fmt::Debug;
 
 /// This is the BoundStatement in Bustub
 pub trait Statement: Debug {
-    const TYPE: StatementType;
 
     type ASTStatement;
 

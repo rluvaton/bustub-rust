@@ -27,7 +27,6 @@ impl DeleteStatement {
 
 
 impl Statement for DeleteStatement {
-    const TYPE: StatementType = StatementType::Delete;
     type ASTStatement = sqlparser::ast::Delete;
 
     fn try_parse_ast(ast: &Self::ASTStatement, binder: &mut Binder) -> ParseASTResult<Self> {

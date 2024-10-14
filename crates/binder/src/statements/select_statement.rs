@@ -7,7 +7,7 @@ use crate::table_ref::{CTEList, ExpressionListRef, TableRef, TableReferenceTypeI
 use std::fmt::Debug;
 use std::sync::Arc;
 use crate::Binder;
-use crate::try_from_ast_error::ParseASTError;
+use crate::try_from_ast_error::{ParseASTError, ParseASTResult};
 
 #[derive(Debug, PartialEq)]
 pub struct SelectStatement {
@@ -70,9 +70,23 @@ impl SelectStatement {
     }
 }
 
-// impl Statement for SelectStatement {
-//     const TYPE: StatementType = StatementType::Select;
-// }
+impl Statement for SelectStatement {
+    type ASTStatement = sqlparser::ast::Query;
+
+    fn try_parse_ast(ast: &Self::ASTStatement, binder: &mut Binder) -> ParseASTResult<Self>
+    where
+        Self: Sized
+    {
+        todo!()
+    }
+
+    fn try_parse_from_statement(statement: &sqlparser::ast::Statement, binder: &mut Binder) -> ParseASTResult<Self> {
+        match &statement {
+            sqlparser::ast::Statement::Query(ast) => Self::try_parse_ast(ast, binder),
+            _ => Err(ParseASTError::IncompatibleType)
+        }
+    }
+}
 
 impl Binder<'_> {
     pub(crate) fn parse_select_statement(&mut self, stmt: &sqlparser::ast::Select) -> Result<SelectStatement, ParseASTError> {

@@ -25,7 +25,6 @@ impl CreateStatement {
 }
 
 impl Statement for CreateStatement {
-    const TYPE: StatementType = StatementType::Create;
     type ASTStatement = sqlparser::ast::CreateTable;
 
     fn try_parse_ast(ast: &Self::ASTStatement, _binder: &mut Binder) -> ParseASTResult<Self> {
