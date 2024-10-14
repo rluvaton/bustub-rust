@@ -1,7 +1,7 @@
 use crate::expressions::{Expression, ExpressionTypeImpl};
 use std::sync::Arc;
 use crate::try_from_ast_error::TryFromASTError;
-use crate::pg_query_helpers::ListExt;
+use crate::sql_parser_helper::ListExt;
 use crate::table_ref::table_reference_type::TableReferenceType;
 use crate::table_ref::TableRef;
 

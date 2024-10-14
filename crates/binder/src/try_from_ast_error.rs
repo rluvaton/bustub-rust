@@ -13,3 +13,5 @@ pub enum TryFromASTError {
     #[error("{0}")]
     Other(String),
 }
+
+pub type ParseASTResult<T> = Result<T, TryFromASTError>;

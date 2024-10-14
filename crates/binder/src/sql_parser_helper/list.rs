@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use crate::expressions::{Expression, ExpressionType, ExpressionTypeImpl};
 use crate::try_from_ast_error::TryFromASTError;
-use crate::pg_query_helpers::node::NodeExt;
+use crate::sql_parser_helper::node::NodeExt;
 
 pub(crate) trait ListExt {
 

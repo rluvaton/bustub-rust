@@ -1,6 +1,6 @@
 use crate::expressions::{ColumnRef, Expression, ExpressionTypeImpl};
 use crate::order_by::OrderBy;
-use crate::pg_query_helpers::{ColumnDefExt, ConstraintExt};
+use crate::sql_parser_helper::{ColumnDefExt, ConstraintExt};
 use crate::statements::traits::{Statement};
 use crate::statements::StatementType;
 use crate::table_ref::{CTEList, ExpressionListRef, TableRef, TableReferenceTypeImpl};

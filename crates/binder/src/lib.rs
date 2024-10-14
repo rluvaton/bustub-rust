@@ -1,7 +1,7 @@
 mod binder;
 mod table_ref;
 mod statements;
-mod pg_query_helpers;
+mod sql_parser_helper;
 mod expressions;
 mod order_by;
 mod try_from_ast_error;
@@ -12,5 +12,5 @@ pub use binder::Binder;
 pub(crate) use expressions::*;
 pub(crate) use statements::*;
 pub(crate) use table_ref::*;
-pub(crate) use pg_query_helpers::*;
+pub(crate) use sql_parser_helper::*;
 pub(crate) use order_by::*;
