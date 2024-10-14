@@ -215,7 +215,8 @@ impl BustubInstance {
         let mut is_successful = true;
 
         let catalog = self.catalog.lock();
-        let binder = Binder::parse_and_save(catalog.deref());
+        let binder = Binder::new(catalog.deref());
+
 
         // let binder = Binder
 

@@ -7,7 +7,7 @@ use crate::statements::SelectStatement;
 use crate::table_ref::table_reference_type::TableReferenceType;
 use crate::table_ref::TableRef;
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct SubqueryRef {
     /// Subquery.
     pub(crate) subquery: SelectStatement,

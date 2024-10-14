@@ -1,4 +1,4 @@
-use crate::{assert_in_range, IntUnderlyingType, IntType, ConversionDBTypeTrait, DBTypeId, DBTypeIdImpl, StorageDBTypeTrait, Value, ComparisonDBTypeTrait, SmallIntType, SmallIntUnderlyingType, BigIntType, BigIntUnderlyingType, DecimalType, DecimalUnderlyingType, TinyIntType, TinyIntUnderlyingType};
+use crate::{assert_in_range, BigIntType, BigIntUnderlyingType, ComparisonDBTypeTrait, ConversionDBTypeTrait, DBTypeId, DBTypeIdImpl, DecimalType, DecimalUnderlyingType, IntType, IntUnderlyingType, SmallIntType, SmallIntUnderlyingType, StorageDBTypeTrait, TinyIntType, TinyIntUnderlyingType, Value};
 use error_utils::anyhow::anyhow;
 
 impl From<IntUnderlyingType> for IntType {
@@ -10,6 +10,26 @@ impl From<IntUnderlyingType> for IntType {
 impl From<&IntUnderlyingType> for IntType {
     fn from(value: &IntUnderlyingType) -> Self {
         IntType::new(*value)
+    }
+}
+
+impl From<Option<IntUnderlyingType>> for IntType {
+    fn from(value: Option<IntUnderlyingType>) -> Self {
+        if let Some(value) = value {
+            return value.into()
+        }
+
+        IntType::new(Self::NULL)
+    }
+}
+
+impl From<&Option<IntUnderlyingType>> for IntType {
+    fn from(value: &Option<IntUnderlyingType>) -> Self {
+        if let Some(value) = value {
+            return value.into()
+        }
+
+        IntType::new(Self::NULL)
     }
 }
 

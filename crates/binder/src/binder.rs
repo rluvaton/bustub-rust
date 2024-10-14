@@ -1,6 +1,7 @@
 use std::sync::Arc;
 use db_core::catalog::Catalog;
 use crate::context_guard::ContextGuard;
+use crate::statements::{StatementType, StatementTypeImpl};
 use crate::table_ref::{CTEList, TableRef, TableReferenceTypeImpl};
 
 
@@ -19,7 +20,7 @@ pub struct Binder<'a> {
     /** Sometimes we will need to assign a name to some unnamed items. This variable gives them a universal ID. */
     pub(crate) universal_id: isize,
 
-    pub(crate) statement_nodes: Vec<sqlparser::ast::Statement>
+    pub(crate) statement_nodes: Vec<StatementTypeImpl>
 }
 
 impl<'a> Binder<'a> {

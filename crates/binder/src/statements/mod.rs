@@ -1,12 +1,12 @@
 mod traits;
 mod statement_type;
-mod select_statement;
 mod create;
 mod delete;
 mod insert;
+mod select;
 
-pub use statement_type::StatementType;
+pub use statement_type::{StatementType, StatementTypeImpl};
 pub use create::*;
-pub use select_statement::SelectStatement;
 pub use delete::*;
 pub use insert::*;
+pub use select::*;

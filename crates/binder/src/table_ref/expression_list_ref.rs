@@ -1,59 +1,55 @@
-use crate::expressions::{Expression, ExpressionTypeImpl};
-use std::sync::Arc;
-use crate::try_from_ast_error::ParseASTError;
-use crate::sql_parser_helper::ListExt;
+use crate::expressions::ExpressionTypeImpl;
 use crate::table_ref::table_reference_type::TableReferenceType;
-use crate::table_ref::TableRef;
+use crate::table_ref::{TableRef, TableReferenceTypeImpl};
+use crate::try_from_ast_error::{ParseASTError, ParseASTResult};
+use crate::Binder;
+use sqlparser::ast::Values;
 
 /// A bound table ref type for `values` clause.
 #[derive(Debug, PartialEq)]
 pub struct ExpressionListRef {
     pub(crate) identifier: String,
-    pub(crate) values: Vec<Vec<Arc<ExpressionTypeImpl>>>,
+    pub(crate) values: Vec<Vec<ExpressionTypeImpl>>,
 }
 
 impl ExpressionListRef {
-    pub fn new(identifier: String, values: Vec<Vec<Arc<ExpressionTypeImpl>>>) -> Self {
+    pub fn new(identifier: Option<String>, values: Vec<Vec<ExpressionTypeImpl>>) -> Self {
         Self {
-            identifier,
+            identifier: identifier.unwrap_or("<unnamed>".to_string()),
             values,
         }
     }
 
-    // pg_query::Node
-    pub fn try_from_nodes(items: &Vec<()>) -> Result<Self, ParseASTError> {
-        todo!()
-        // let mut all_values: Vec<Vec<Arc<dyn Expression>>> = vec![];
-        //
-        // for node in &items {
-        //     if node..node.is_none() {
-        //         continue;
-        //     }
-        //
-        //     let node = node.node.as_ref().unwrap();
-        //
-        //     let values = match node {
-        //         Node::List(l) | Node::IntList(l) | Node::OidList(l) => l.parse_items_as_expressions()?,
-        //         _ => return Err(TryFromASTError::FailedParsing("list item is not another list inside VALUES".to_string()))
-        //     };
-        //
-        //     if !all_values.is_empty() && all_values[0].len() != values.len() {
-        //         return Err(TryFromASTError::FailedParsing("values must have the same length".to_string()));
-        //     }
-        //
-        //     all_values.push(values);
-        // }
-        //
-        // if all_values.is_empty() {
-        //     return Err(TryFromASTError::FailedParsing("at least one row of values should be provided".to_string()))
-        // }
-        //
-        // Ok(ExpressionListRef::new("<unnamed>".to_string(), all_values))
+
+    pub fn try_parse_from_values(identifier: Option<String>, ast: &Values, binder: &mut Binder) -> ParseASTResult<ExpressionListRef> {
+        let parsed_values : ParseASTResult<Vec<Vec<ExpressionTypeImpl>>> = ast.rows.iter().map(|row| ExpressionTypeImpl::parse_expression_list(row, binder)).collect();
+
+        let parsed_values = parsed_values?;
+
+        if parsed_values.is_empty() {
+            return Err(ParseASTError::FailedParsing("At least one row of values should be provided".to_string()))
+        }
+
+        let row_size = parsed_values[0].len();
+
+        let has_different_row_length = parsed_values.iter().any(|row| row.len() != row_size);
+
+        if has_different_row_length {
+            return Err(ParseASTError::FailedParsing("values must have the same length".to_string()));
+        }
+
+        Ok(ExpressionListRef::new(identifier, parsed_values))
     }
 }
 
 impl TableRef for ExpressionListRef {
     const TYPE: TableReferenceType = TableReferenceType::ExpressionList;
+}
+
+impl From<ExpressionListRef> for TableReferenceTypeImpl {
+    fn from(value: ExpressionListRef) -> Self {
+        TableReferenceTypeImpl::ExpressionList(value)
+    }
 }
 
 // impl TryFrom<NodeRef<'_>> for ExpressionListRef {

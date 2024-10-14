@@ -9,7 +9,7 @@ use sqlparser::ast::{FromTable, TableFactor};
 use std::fmt::Debug;
 use std::sync::Arc;
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct InsertStatement {
     pub(crate) table: Arc<TableReferenceTypeImpl>,
     pub(crate) select: SelectStatement,

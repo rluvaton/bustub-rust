@@ -1,5 +1,5 @@
 use crate::expressions::ExpressionTypeImpl;
-use crate::try_from_ast_error::ParseASTError;
+use crate::try_from_ast_error::{ParseASTError, ParseASTResult};
 use crate::Binder;
 use std::fmt::Debug;
 
@@ -10,10 +10,7 @@ pub(crate) trait Expression: Debug + PartialEq + Into<ExpressionTypeImpl> {
     fn has_window_function(&self) -> bool {
         false
     }
+
+    fn try_parse_from_expr(expr: &sqlparser::ast::Expr, binder: &mut Binder) -> ParseASTResult<Self> where Self: Sized;
 }
 
-impl Binder<'_> {
-    pub(crate) fn parse_expression(&mut self, node: &sqlparser::ast::Expr) -> Result<ExpressionTypeImpl, ParseASTError> {
-        todo!()
-    }
-}

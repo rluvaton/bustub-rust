@@ -7,7 +7,7 @@ use std::fmt::Debug;
 use crate::Binder;
 use super::SqlParserCreateStatementExt;
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct CreateStatement {
     pub(crate) table: String,
     pub(crate) columns: Vec<Column>,

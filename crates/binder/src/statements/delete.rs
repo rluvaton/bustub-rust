@@ -9,7 +9,7 @@ use sqlparser::ast::{FromTable, TableFactor};
 use std::fmt::Debug;
 use std::sync::Arc;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct DeleteStatement {
     pub(crate) table: Arc<TableReferenceTypeImpl>,
     pub(crate) expr: ExpressionTypeImpl,
@@ -56,7 +56,7 @@ impl Statement for DeleteStatement {
         binder.scope.replace(table.clone());
 
         let expr: ExpressionTypeImpl = if let Some(selection) = &ast.selection {
-            binder.parse_expression(selection)?
+            selection.try_into()?
         } else {
             Constant::new(true.into()).into()
         };

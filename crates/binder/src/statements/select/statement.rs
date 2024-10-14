@@ -1,15 +1,16 @@
-use crate::expressions::{ColumnRef, Expression, ExpressionTypeImpl};
+use crate::expressions::{ColumnRef, ExpressionTypeImpl};
 use crate::order_by::OrderBy;
 use crate::sql_parser_helper::{ColumnDefExt, ConstraintExt};
-use crate::statements::traits::{Statement};
-use crate::statements::StatementType;
-use crate::table_ref::{CTEList, ExpressionListRef, TableRef, TableReferenceTypeImpl};
+use crate::statements::traits::Statement;
+use crate::table_ref::{CTEList, ExpressionListRef, TableReferenceTypeImpl};
+use crate::try_from_ast_error::{ParseASTError, ParseASTResult};
+use crate::Binder;
 use std::fmt::Debug;
 use std::sync::Arc;
-use crate::Binder;
-use crate::try_from_ast_error::{ParseASTError, ParseASTResult};
+use sqlparser::ast::SetExpr;
+use crate::statements::select::builder::SelectStatementBuilder;
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct SelectStatement {
     /// Bound FROM clause.
     pub(crate) table: Arc<TableReferenceTypeImpl>,
@@ -53,7 +54,7 @@ impl SelectStatement {
         limit_offset: Arc<ExpressionTypeImpl>,
         sort: Vec<Arc<OrderBy>>,
         ctes: CTEList,
-        is_distinct: bool
+        is_distinct: bool,
     ) -> Self {
         Self {
             table,
@@ -68,6 +69,10 @@ impl SelectStatement {
             is_distinct,
         }
     }
+
+    pub(crate) fn builder() -> SelectStatementBuilder {
+        SelectStatementBuilder::default()
+    }
 }
 
 impl Statement for SelectStatement {
@@ -75,23 +80,42 @@ impl Statement for SelectStatement {
 
     fn try_parse_ast(ast: &Self::ASTStatement, binder: &mut Binder) -> ParseASTResult<Self>
     where
-        Self: Sized
+        Self: Sized,
     {
-        todo!()
-    }
+        let ctx_guard = binder.new_context();
 
-    fn try_parse_from_statement(statement: &sqlparser::ast::Statement, binder: &mut Binder) -> ParseASTResult<Self> {
-        match &statement {
-            sqlparser::ast::Statement::Query(ast) => Self::try_parse_ast(ast, binder),
-            _ => Err(ParseASTError::IncompatibleType)
+        match &*ast.body {
+            SetExpr::Select(_) => {}
+            SetExpr::Query(_) => {}
+            SetExpr::SetOperation { .. } => {}
+            SetExpr::Values(values) => {
+                // If have VALUES clause
+                let values_list_name = format!("__values#{}", binder.universal_id);
+                binder.universal_id += 1;
+
+                let value_list: ExpressionListRef = ExpressionListRef::try_parse_from_values(Some(values_list_name.clone()), values, binder)?;
+
+                let exprs: Vec<Arc<ExpressionTypeImpl>> = value_list
+                    .values[0]
+                    .iter()
+                    .enumerate()
+                    .map(|(i, _)| {
+                        let col = ColumnRef::new(vec![values_list_name.clone(), i.to_string()]);
+
+                        Arc::new(col.into())
+                    })
+                    .collect();
+
+                return Self::builder()
+                    .with_table(Arc::new(value_list.into()))
+                    .with_select_list(exprs)
+                    .try_build()
+                    .map_err(|err| ParseASTError::Other(err.to_string()));
+            }
+            SetExpr::Insert(_) => {}
+            SetExpr::Update(_) => {}
+            SetExpr::Table(_) => {}
         }
-    }
-}
-
-impl Binder<'_> {
-    pub(crate) fn parse_select_statement(&mut self, stmt: &sqlparser::ast::Select) -> Result<SelectStatement, ParseASTError> {
-        //
-        // // If have VALUES clause
         // if !stmt.values_lists.is_empty() {
         //     let values_list_name = format!("__values#{}", self.universal_id);
         //     self.universal_id += 1;
@@ -133,7 +157,31 @@ impl Binder<'_> {
 
         // Bind FROM clause
         // let table = stmt.from_clause
+
         todo!()
+    }
+
+    fn try_parse_from_statement(statement: &sqlparser::ast::Statement, binder: &mut Binder) -> ParseASTResult<Self> {
+        match &statement {
+            sqlparser::ast::Statement::Query(ast) => Self::try_parse_ast(ast, binder),
+            _ => Err(ParseASTError::IncompatibleType)
+        }
     }
 }
 
+
+#[cfg(test)]
+mod tests {
+    use crate::statements::select::statement::SelectStatement;
+    use crate::statements::traits::Statement;
+    use crate::try_from_ast_error::ParseASTError;
+    use crate::Binder;
+    use sqlparser::dialect::GenericDialect;
+    use sqlparser::parser::Parser;
+
+    fn parse_select_sql(sql: &str) -> Result<Vec<SelectStatement>, ParseASTError> {
+        let mut binder = Binder::default();
+        let statements = Parser::parse_sql(&GenericDialect {}, sql).unwrap();
+        statements.iter().map(|stmt| SelectStatement::try_parse_from_statement(stmt, &mut binder)).collect()
+    }
+}
