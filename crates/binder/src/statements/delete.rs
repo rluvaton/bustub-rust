@@ -1,7 +1,6 @@
 use crate::expressions::{Constant, Expression, ExpressionTypeImpl};
-use crate::sql_parser_helper::{ColumnDefExt, ConstraintExt};
+use crate::sql_parser_helper::ColumnDefExt;
 use crate::statements::traits::Statement;
-use crate::statements::StatementType;
 use crate::table_ref::{BaseTableRef, TableReferenceTypeImpl};
 use crate::try_from_ast_error::{ParseASTError, ParseASTResult};
 use crate::Binder;
@@ -76,12 +75,12 @@ impl Statement for DeleteStatement {
 
 #[cfg(test)]
 mod tests {
+    use crate::statements::traits::Statement;
     use crate::statements::DeleteStatement;
     use crate::try_from_ast_error::ParseASTError;
     use crate::Binder;
     use sqlparser::dialect::GenericDialect;
     use sqlparser::parser::Parser;
-    use crate::statements::traits::Statement;
 
     fn parse_delete_sql(sql: &str) -> Result<Vec<DeleteStatement>, ParseASTError> {
         let mut binder = Binder::default();

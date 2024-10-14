@@ -1,11 +1,9 @@
-use crate::expressions::{Constant, ExpressionTypeImpl};
-use crate::sql_parser_helper::{ColumnDefExt, ConstraintExt};
+use crate::sql_parser_helper::ColumnDefExt;
 use crate::statements::traits::Statement;
-use crate::statements::{SelectStatement, StatementType};
+use crate::statements::SelectStatement;
 use crate::table_ref::{BaseTableRef, TableReferenceTypeImpl};
 use crate::try_from_ast_error::{ParseASTError, ParseASTResult};
 use crate::Binder;
-use sqlparser::ast::{FromTable, TableFactor};
 use std::fmt::Debug;
 use std::sync::Arc;
 
@@ -60,12 +58,12 @@ impl Statement for InsertStatement {
 
 #[cfg(test)]
 mod tests {
-    use crate::statements::{DeleteStatement, InsertStatement};
+    use crate::statements::traits::Statement;
+    use crate::statements::InsertStatement;
     use crate::try_from_ast_error::ParseASTError;
     use crate::Binder;
     use sqlparser::dialect::GenericDialect;
     use sqlparser::parser::Parser;
-    use crate::statements::traits::Statement;
 
     fn parse_insert_sql(sql: &str) -> Result<Vec<InsertStatement>, ParseASTError> {
         let mut binder = Binder::default();

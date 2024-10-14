@@ -1,16 +1,16 @@
-use crate::expressions::{ColumnRef, Expression, ExpressionTypeImpl};
+use crate::expressions::{Expression, ExpressionTypeImpl};
 use crate::order_by::OrderBy;
-use crate::sql_parser_helper::{ColumnDefExt, ConstraintExt};
-use crate::statements::traits::Statement;
-use crate::table_ref::{CTEList, ExpressionListRef, SubqueryRef, TableReferenceTypeImpl};
-use crate::try_from_ast_error::{ParseASTError, ParseASTResult};
-use crate::Binder;
-use std::fmt::Debug;
-use std::sync::Arc;
-use sqlparser::ast::SetExpr;
+use crate::sql_parser_helper::{ColumnDefExt};
 use crate::statements::select::builder::SelectStatementBuilder;
 use crate::statements::select::select_ext::SelectExt;
 use crate::statements::select::values_ext::ValuesExt;
+use crate::statements::traits::Statement;
+use crate::table_ref::{CTEList, SubqueryRef, TableReferenceTypeImpl};
+use crate::try_from_ast_error::{ParseASTError, ParseASTResult};
+use crate::Binder;
+use sqlparser::ast::SetExpr;
+use std::fmt::Debug;
+use std::sync::Arc;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct SelectStatement {
