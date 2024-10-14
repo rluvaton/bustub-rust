@@ -1,0 +1,48 @@
+use std::sync::Arc;
+use common::config::TableOID;
+use db_core::catalog::Schema;
+use crate::table_ref::table_reference_type::{TableReferenceType, TableReferenceTypeImpl};
+use crate::table_ref::TableRef;
+
+/// A bound table ref type for single table. e.g., `SELECT x FROM y`, where `y` is `BoundBaseTableRef`.
+///
+#[derive(Debug, PartialEq)]
+pub struct BaseTableRef {
+
+    /// The name of the table.
+    pub(crate) table: String,
+
+    // The OID of the table
+    pub(crate) oid: TableOID,
+
+    // The alias of the table
+    pub(crate) alias: Option<String>,
+
+    // The schema of the table
+    pub(crate) schema: Arc<Schema>
+}
+
+impl BaseTableRef {
+    pub fn new(table: String, oid: TableOID, alias: Option<String>, schema: Arc<Schema>) -> Self {
+        Self {
+            table,
+            oid,
+            alias,
+            schema
+        }
+    }
+
+    pub fn get_table_name(&self) -> &String {
+        &self.alias.as_ref().unwrap_or(&self.table)
+    }
+}
+
+impl TableRef for BaseTableRef {
+    const TYPE: TableReferenceType = TableReferenceType::BaseTable;
+}
+
+impl From<BaseTableRef> for TableReferenceTypeImpl {
+    fn from(value: BaseTableRef) -> Self {
+        TableReferenceTypeImpl::BaseTable(value)
+    }
+}

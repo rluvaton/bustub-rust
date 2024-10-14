@@ -5,20 +5,20 @@ use db_core::catalog::Column;
 use pg_query::protobuf::node::Node;
 use pg_query::NodeRef;
 use std::fmt::Debug;
+use std::sync::Arc;
+use crate::table_ref::BoundBaseTableRef;
 
 #[derive(Debug, PartialEq)]
-pub struct CreateStatement {
-    pub(crate) table: String,
-    pub(crate) columns: Vec<Column>,
-    pub(crate) primary_key: Vec<String>,
+pub struct InsertStatement {
+    pub(crate) table: Arc<BoundBaseTableRef>,
+    pub(crate) select: Arc<SelectStatement>,
 }
 
-impl CreateStatement {
-    pub fn new(table: String, columns: Vec<Column>, primary_key: Vec<String>) -> Self {
+impl InsertStatement {
+    pub fn new(table: Arc<BoundBaseTableRef>, select: Arc<SelectStatement>) -> Self {
         Self {
             table,
-            columns,
-            primary_key,
+            select
         }
     }
 }
@@ -32,6 +32,7 @@ impl TryFrom<NodeRef<'_>> for CreateStatement {
     type Error = ParsePgNodeError;
 
     fn try_from(value: NodeRef) -> Result<Self, Self::Error> {
+        println!("{:#?}", value);
         let stmt = match value {
             NodeRef::CreateStmt(stmt) => {
                 stmt
@@ -68,22 +69,12 @@ impl TryFrom<NodeRef<'_>> for CreateStatement {
                     Node::Constraint(constraint) => {
                         if constraint.is_primary_key() {
                             primary_key.append(&mut constraint.get_keys_names());
-                        } else {
-                            return Err(ParsePgNodeError::Unimplemented("Unsupported constraint".to_string()))
                         }
                     }
-                    _ => return Err(ParsePgNodeError::FailedParsing("Unknown column definition".to_string()))
+                    _ => unimplemented!("Unknown column definition {:#?}", node)
                 }
             }
         };
-
-        if primary_key.len() > 1 {
-            return Err(ParsePgNodeError::Unimplemented("Cannot have more than 1 primary key".to_string()))
-        }
-
-        if columns.is_empty() {
-            return Err(ParsePgNodeError::Other("Should have at least 1 column".to_string()))
-        }
 
         Ok(Self {
             table: relation_info.relname.clone(),

@@ -1,36 +1,42 @@
 use std::sync::Arc;
 use db_core::catalog::Catalog;
-use crate::bound_table_ref::BoundTableRef;
-use crate::table_ref::CTEList;
+use crate::context_guard::ContextGuard;
+use crate::table_ref::{CTEList, TableRef};
 
 
 
 
 pub struct Binder<'a> {
     /// Catalog will be used during the binding process
-    // catalog: Option<&'a Catalog>,
+    pub(crate) catalog: Option<&'a Catalog>,
 
     /// The current scope for resolving column ref, used in binding expressions
-    scope: Option<BoundTableRef>,
+    pub(crate) scope: Option<Arc<dyn TableRef>>,
 
     /// The current scope for resolving tables in CTEs, used in binding tables
-    cte_scope: Option<CTEList>,
+    pub(crate) cte_scope: Option<Arc<CTEList>>,
 
     /** Sometimes we will need to assign a name to some unnamed items. This variable gives them a universal ID. */
-    universal_id: isize,
+    pub(crate) universal_id: isize,
 
-    statement_nodes: Vec<pg_query::NodeRef<'a>>
+    pub(crate) statement_nodes: Vec<pg_query::NodeRef<'a>>
 }
 
 impl<'a> Binder<'a> {
-    pub fn new() -> Self {
+    pub fn new(catalog: &'a Catalog) -> Self {
         Self {
-            // catalog: Some(catalog),
+            catalog: Some(catalog),
             scope: None,
             cte_scope: None,
             universal_id: 0,
             statement_nodes: vec![],
         }
+    }
+
+
+    pub(crate) fn new_context(&self) -> ContextGuard {
+        todo!()
+        // ContextGuard::new(self.scope, self.cte_scope)
     }
 
     // pub fn parse_and_save(&mut self, catalog: &Catalog, sql: &str) -> error_utils::anyhow::Result<bool> {

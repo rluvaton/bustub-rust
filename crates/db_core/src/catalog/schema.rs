@@ -6,6 +6,7 @@ use std::sync::Arc;
 use error_utils::ToAnyhowResult;
 
 // TODO - implement src/include/catalog/schema.h
+#[derive(PartialEq)]
 pub struct Schema {
     /** Fixed-length column size, i.e. the number of bytes used by one tuple. */
     length: u32,
