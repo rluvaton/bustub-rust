@@ -1,8 +1,9 @@
-use crate::Binder;
+use sqlparser::ast::{TableFactor, TableWithJoins};
 use crate::expressions::ColumnRef;
-use crate::table_ref::table_reference_type::{TableReferenceType, TableReferenceTypeImpl};
+use crate::table_ref::table_reference_type::TableReferenceTypeImpl;
 use crate::table_ref::TableRef;
 use crate::try_from_ast_error::{ParseASTError, ParseASTResult};
+use crate::Binder;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct CrossProductRef {
@@ -20,6 +21,38 @@ impl CrossProductRef {
             left,
             right
         }
+    }
+
+    pub(crate) fn try_to_parse_tables_with_joins(mut tables: &[TableWithJoins], binder: &mut Binder) -> ParseASTResult<TableReferenceTypeImpl> {
+        // Bind cross join.
+
+        // Extract the first node
+        let (left_node, tables) = tables.split_first().unwrap();
+
+        let left_node = TableReferenceTypeImpl::parse_from_table_with_join(left_node, binder)?;
+
+        tables
+            .iter()
+            .map(|table_to_join| TableReferenceTypeImpl::parse_from_table_with_join(table_to_join, binder))
+
+            // Extract the remaining nodes.
+            //
+            // The result bound tree will be like:
+            //  ```
+            //      O
+            //     / \
+            //    O   3
+            //   / \
+            //  1   2
+            //  ```
+            .try_fold(
+                left_node,
+                |cross_product_ref, table_to_join| {
+                    Ok(CrossProductRef::new(
+                        Box::new(cross_product_ref),
+                        Box::new(table_to_join?),
+                    ).into())
+                })
     }
 }
 
@@ -39,6 +72,11 @@ impl TableRef for CrossProductRef {
         }
 
         Ok(left_column.or(right_column))
+    }
+
+    fn try_from_ast(ast: &TableFactor, binder: &mut Binder) -> ParseASTResult<Self> {
+        // Always incompatible as we need to have table with joins
+        Err(ParseASTError::IncompatibleType)
     }
 }
 

@@ -1,8 +1,9 @@
-use crate::Binder;
+use sqlparser::ast::TableFactor;
 use crate::expressions::ColumnRef;
-use crate::table_ref::table_reference_type::{TableReferenceType, TableReferenceTypeImpl};
+use crate::table_ref::table_reference_type::TableReferenceTypeImpl;
 use crate::table_ref::TableRef;
-use crate::try_from_ast_error::ParseASTResult;
+use crate::try_from_ast_error::{ParseASTError, ParseASTResult};
+use crate::Binder;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct CTERef {
@@ -33,6 +34,11 @@ impl TableRef for CTERef {
         }
 
         unreachable!("CTE not found")
+    }
+
+    fn try_from_ast(ast: &TableFactor, binder: &mut Binder) -> ParseASTResult<Self> {
+        // CTE is manually done
+        Err(ParseASTError::IncompatibleType)
     }
 }
 

@@ -1,6 +1,6 @@
 use sqlparser::ast::Expr;
-use crate::Binder;
-use crate::expressions::{Alias, UnaryOpExpr, ColumnRef, Constant, Expression, BinaryOpExpr, StarExpr, AggCallExpr, FuncCallExpr, WindowExpr};
+use crate::{fallback_on_incompatible_2_args, Binder};
+use crate::expressions::{AliasExpr, UnaryOpExpr, ColumnRef, Constant, Expression, BinaryOpExpr, StarExpr, AggCallExpr, FuncCallExpr, WindowExpr};
 use crate::try_from_ast_error::{ParseASTError, ParseASTResult};
 
 #[derive(Copy, Clone, PartialEq)]
@@ -24,7 +24,7 @@ pub enum ExpressionType {
 pub enum ExpressionTypeImpl {
     ColumnRef(ColumnRef), // < A column in a table.
     Constant(Constant),
-    Alias(Alias),     // < Alias expression type.
+    Alias(AliasExpr),     // < Alias expression type.
     BinaryOp(BinaryOpExpr),
     UnaryOp(UnaryOpExpr),
     Star(StarExpr),
@@ -105,50 +105,17 @@ impl Expression for ExpressionTypeImpl {
     where
         Self: Sized,
     {
-        let mapped = ColumnRef::try_parse_from_expr(expr, binder);
-        if mapped.is_ok() {
-            return mapped.map(|item| item.into());
-        }
-
-        let mapped = Constant::try_parse_from_expr(expr, binder);
-        if mapped.is_ok() {
-            return mapped.map(|item| item.into());
-        }
-
-        let mapped = Alias::try_parse_from_expr(expr, binder);
-        if mapped.is_ok() {
-            return mapped.map(|item| item.into());
-        }
-
-        let mapped = BinaryOpExpr::try_parse_from_expr(expr, binder);
-        if mapped.is_ok() {
-            return mapped.map(|item| item.into());
-        }
-
-        let mapped = UnaryOpExpr::try_parse_from_expr(expr, binder);
-        if mapped.is_ok() {
-            return mapped.map(|item| item.into());
-        }
-
-        let mapped = StarExpr::try_parse_from_expr(expr, binder);
-        if mapped.is_ok() {
-            return mapped.map(|item| item.into());
-        }
-
-        let mapped = WindowExpr::try_parse_from_expr(expr, binder);
-        if mapped.is_ok() {
-            return mapped.map(|item| item.into());
-        }
-
-        let mapped = AggCallExpr::try_parse_from_expr(expr, binder);
-        if mapped.is_ok() {
-            return mapped.map(|item| item.into());
-        }
-
-        let mapped = FuncCallExpr::try_parse_from_expr(expr, binder);
-        if mapped.is_ok() {
-            return mapped.map(|item| item.into());
-        }
+        fallback_on_incompatible_2_args!(try_parse_from_expr, expr, binder, {
+            ColumnRef,
+            Constant,
+            AliasExpr,
+            BinaryOpExpr,
+            UnaryOpExpr,
+            StarExpr,
+            WindowExpr,
+            AggCallExpr,
+            FuncCallExpr
+        });
 
         Err(ParseASTError::IncompatibleType)
     }

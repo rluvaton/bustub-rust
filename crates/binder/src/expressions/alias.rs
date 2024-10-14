@@ -1,12 +1,11 @@
-use std::sync::Arc;
-use sqlparser::ast::Expr;
-use crate::Binder;
-use crate::expressions::{ColumnRef, Expression, ExpressionType, ExpressionTypeImpl};
+use crate::expressions::{Expression, ExpressionTypeImpl};
 use crate::try_from_ast_error::{ParseASTError, ParseASTResult};
+use crate::Binder;
+use sqlparser::ast::Expr;
 
 /// The alias in SELECT list, e.g. `SELECT count(x) AS y`, the `y` is an alias.
 #[derive(Clone, Debug, PartialEq)]
-pub(crate) struct Alias {
+pub(crate) struct AliasExpr {
 
     /// The alias
     pub(crate) alias: String,
@@ -15,7 +14,7 @@ pub(crate) struct Alias {
     pub(crate) child: Box<ExpressionTypeImpl>
 }
 
-impl Alias {
+impl AliasExpr {
 
     pub(crate) fn new(alias: String, child: Box<ExpressionTypeImpl>) -> Self {
         Self {
@@ -25,13 +24,13 @@ impl Alias {
     }
 }
 
-impl Into<ExpressionTypeImpl> for Alias {
+impl Into<ExpressionTypeImpl> for AliasExpr {
     fn into(self) -> ExpressionTypeImpl {
         ExpressionTypeImpl::Alias(self)
     }
 }
 
-impl Expression for Alias {
+impl Expression for AliasExpr {
     fn has_aggregation(&self) -> bool {
         self.child.has_aggregation()
     }
@@ -45,7 +44,7 @@ impl Expression for Alias {
         Self: Sized
     {
         match expr {
-            Expr::Named { name, expr } => Ok(Alias::new(name.to_string(), Box::new(ExpressionTypeImpl::try_parse_from_expr(expr, binder)?))),
+            Expr::Named { name, expr } => Ok(AliasExpr::new(name.to_string(), Box::new(ExpressionTypeImpl::try_parse_from_expr(expr, binder)?))),
             _ => Err(ParseASTError::IncompatibleType)
         }
     }

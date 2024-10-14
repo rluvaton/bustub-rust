@@ -1,19 +1,18 @@
+use crate::expressions::ColumnRef;
+use crate::table_ref::base_table_ref::BaseTableRef;
+use crate::table_ref::table_reference_type::TableReferenceTypeImpl;
+use crate::try_from_ast_error::{ParseASTError, ParseASTResult};
+use crate::Binder;
+use sqlparser::ast::TableFactor;
 use std::fmt::Debug;
 use std::sync::Arc;
-use crate::Binder;
-use crate::context_guard::ContextGuard;
-use crate::expressions::ColumnRef;
-use crate::try_from_ast_error::{ParseASTError, ParseASTResult};
-use crate::table_ref::base_table_ref::BaseTableRef;
-use crate::table_ref::cross_product_ref::CrossProductRef;
-use crate::table_ref::cte_ref::CTERef;
-use crate::table_ref::join_ref::{JoinRef, JoinType};
-use crate::table_ref::table_reference_type::{TableReferenceType, TableReferenceTypeImpl};
 
 /// A bound table reference.
 pub(crate) trait TableRef: Debug + PartialEq + Into<TableReferenceTypeImpl> {
 
     fn resolve_column(&self, col_name: &[String], binder: &Binder) -> ParseASTResult<Option<ColumnRef>>;
+
+    fn try_from_ast(ast: &TableFactor, binder: &mut Binder) -> ParseASTResult<Self>;
 }
 
 

@@ -1,11 +1,12 @@
-use std::sync::Arc;
+use crate::expressions::ColumnRef;
+use crate::table_ref::table_reference_type::TableReferenceTypeImpl;
+use crate::table_ref::TableRef;
+use crate::try_from_ast_error::{ParseASTError, ParseASTResult};
+use crate::Binder;
 use common::config::TableOID;
 use db_core::catalog::Schema;
-use crate::Binder;
-use crate::expressions::ColumnRef;
-use crate::table_ref::table_reference_type::{TableReferenceType, TableReferenceTypeImpl};
-use crate::table_ref::TableRef;
-use crate::try_from_ast_error::{ParseASTResult, ParseASTError};
+use sqlparser::ast::TableFactor;
+use std::sync::Arc;
 
 /// A bound table ref type for single table. e.g., `SELECT x FROM y`, where `y` is `BoundBaseTableRef`.
 ///
@@ -82,6 +83,15 @@ impl TableRef for BaseTableRef {
         }
 
         Ok(strip_resolved_expr.or(direct_resolved_expr))
+    }
+
+    fn try_from_ast(ast: &TableFactor, binder: &mut Binder) -> ParseASTResult<Self> {
+        match ast {
+            TableFactor::Table { alias, name, .. } => {
+                Self::try_parse(name.to_string(), alias.as_ref().map(|a| a.name.value.clone()), binder)
+            }
+            _ => Err(ParseASTError::IncompatibleType)
+        }
     }
 }
 

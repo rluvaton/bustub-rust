@@ -3,7 +3,7 @@ use crate::statements::{SelectStatement, Statement};
 use crate::table_ref::{TableRef, TableReferenceTypeImpl};
 use crate::try_from_ast_error::{ParseASTError, ParseASTResult};
 use crate::Binder;
-use sqlparser::ast::{Cte, With};
+use sqlparser::ast::{Cte, Query, TableAlias, TableFactor, With};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct SubqueryRef {
@@ -30,12 +30,16 @@ impl SubqueryRef {
     }
 
     pub(crate) fn parse_cte(cte: &Cte, binder: &mut Binder) -> ParseASTResult<Self> {
-        let subquery = SelectStatement::try_parse_ast(&*cte.query, binder)?;
+        Self::parse_from_subquery(&cte.query, Some(cte.alias.name.value.clone()), binder)
+    }
+
+    pub(crate) fn parse_from_subquery(subquery: &Box<Query>, alias: Option<String>, binder: &mut Binder) -> ParseASTResult<Self> {
+        let subquery = SelectStatement::try_parse_ast(&*subquery, binder)?;
 
         let select_list_name: Vec<Vec<String>> = subquery.select_list
             .iter()
             .map(|col| {
-                match &*col.clone() {
+                match col {
                     ExpressionTypeImpl::ColumnRef(c) => c.col_name.clone(),
                     ExpressionTypeImpl::Alias(a) => vec![a.alias.clone()],
                     _ => {
@@ -52,9 +56,8 @@ impl SubqueryRef {
         Ok(SubqueryRef {
             subquery,
             select_list_name,
-            alias: cte.alias.name.value.clone()
+            alias: alias.unwrap_or("<unnamed>".to_string())
         })
-
     }
 }
 
@@ -88,6 +91,15 @@ impl TableRef for SubqueryRef {
         }
 
         Ok(strip_resolved_expr.or(direct_resolved_expr))
+    }
+
+    fn try_from_ast(ast: &TableFactor, binder: &mut Binder) -> ParseASTResult<Self> {
+        match ast {
+            TableFactor::Derived { subquery, alias, ..} => {
+                Self::parse_from_subquery(subquery, alias.as_ref().map(|alias| alias.name.value.clone()), binder)
+            },
+            _ => Err(ParseASTError::IncompatibleType)
+        }
     }
 }
 

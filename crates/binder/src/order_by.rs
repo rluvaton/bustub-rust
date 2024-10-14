@@ -54,4 +54,11 @@ impl OrderBy {
             Box::new(ExpressionTypeImpl::try_parse_from_expr(&ast.expr, binder)?)
         ))
     }
+
+    pub(crate) fn parse_from_order_by(ast: &sqlparser::ast::OrderBy, binder: &mut Binder) -> ParseASTResult<Vec<Self>> {
+        ast.exprs
+            .iter()
+            .map(|item| OrderBy::parse_from_ast(item, binder))
+            .collect::<ParseASTResult<Vec<OrderBy>>>()
+    }
 }

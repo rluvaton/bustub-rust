@@ -2,7 +2,7 @@ use crate::expressions::{ColumnRef, ExpressionTypeImpl};
 use crate::table_ref::{TableRef, TableReferenceTypeImpl};
 use crate::try_from_ast_error::{ParseASTError, ParseASTResult};
 use crate::Binder;
-use sqlparser::ast::Values;
+use sqlparser::ast::{TableFactor, Values};
 
 /// A bound table ref type for `values` clause.
 #[derive(Clone, Debug, PartialEq)]
@@ -44,6 +44,11 @@ impl ExpressionListRef {
 impl TableRef for ExpressionListRef {
     fn resolve_column(&self, col_name: &[String], _binder: &Binder) -> ParseASTResult<Option<ColumnRef>> {
         Err(ParseASTError::FailedParsing(format!("cannot resolve column {} in VALUES", col_name.join("."))))
+    }
+
+    fn try_from_ast(ast: &TableFactor, binder: &mut Binder) -> ParseASTResult<Self> {
+        // No table factor matching the expression list
+        Err(ParseASTError::IncompatibleType)
     }
 }
 

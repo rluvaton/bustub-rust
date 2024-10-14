@@ -1,8 +1,8 @@
-use sqlparser::ast::Expr;
-use data_types::{BigIntType, DBTypeIdImpl, IntType, Value};
-use crate::Binder;
-use crate::expressions::{Expression, ExpressionType, ExpressionTypeImpl};
+use crate::expressions::{Expression, ExpressionTypeImpl};
 use crate::try_from_ast_error::{ParseASTError, ParseASTResult};
+use crate::Binder;
+use data_types::{DBTypeIdImpl, IntType, Value};
+use sqlparser::ast::Expr;
 
 /// A bound constant, e.g., `1`.
 #[derive(Clone, Debug, PartialEq)]

@@ -12,25 +12,25 @@ pub(super) struct SelectStatementBuilder {
     table: Option<Arc<TableReferenceTypeImpl>>,
 
     /// Bound SELECT list.
-    select_list: Option<Vec<Arc<ExpressionTypeImpl>>>,
+    select_list: Option<Vec<ExpressionTypeImpl>>,
 
     /// Bound WHERE clause.
-    where_exp: Arc<ExpressionTypeImpl>,
+    where_exp: Option<ExpressionTypeImpl>,
 
     /// Bound GROUP BY clause.
-    group_by: Vec<Arc<ExpressionTypeImpl>>,
+    group_by: Vec<ExpressionTypeImpl>,
 
     /// Bound HAVING clause.
-    having: Arc<ExpressionTypeImpl>,
+    having: Option<ExpressionTypeImpl>,
 
     /// Bound LIMIT clause.
-    limit_count: Arc<ExpressionTypeImpl>,
+    limit_count: Option<ExpressionTypeImpl>,
 
     /// Bound OFFSET clause.
-    limit_offset: Arc<ExpressionTypeImpl>,
+    limit_offset: Option<ExpressionTypeImpl>,
 
     /// Bound ORDER BY clause.
-    sort: Vec<Arc<OrderBy>>,
+    sort: Vec<OrderBy>,
 
     /// Bound CTE
     ctes: Arc<CTEList>,
@@ -43,48 +43,48 @@ pub(super) struct SelectStatementBuilder {
 impl SelectStatementBuilder {
 
     pub(super) fn with_table(mut self, table: Arc<TableReferenceTypeImpl>) -> Self {
-        self.table = Some(table);
+        self.table.replace(table);
 
         self
     }
 
-    pub(super) fn with_select_list(mut self, select_list: Vec<Arc<ExpressionTypeImpl>>) -> Self {
-        self.select_list = Some(select_list);
+    pub(super) fn with_select_list(mut self, select_list: Vec<ExpressionTypeImpl>) -> Self {
+        self.select_list.replace(select_list);
 
         self
     }
 
-    pub(super) fn with_where_exp(mut self, where_exp: Arc<ExpressionTypeImpl>) -> Self {
-        self.where_exp = where_exp;
+    pub(super) fn with_where_exp(mut self, where_exp: ExpressionTypeImpl) -> Self {
+        self.where_exp.replace(where_exp);
 
         self
     }
 
-    pub(super) fn with_group_by(mut self, group_by: Vec<Arc<ExpressionTypeImpl>>) -> Self {
+    pub(super) fn with_group_by(mut self, group_by: Vec<ExpressionTypeImpl>) -> Self {
         self.group_by = group_by;
 
         self
     }
 
-    pub(super) fn with_having(mut self, having: Arc<ExpressionTypeImpl>) -> Self {
-        self.having = having;
+    pub(super) fn with_having(mut self, having: ExpressionTypeImpl) -> Self {
+        self.having.replace(having);
 
         self
     }
 
-    pub(super) fn with_limit_count(mut self, limit_count: Arc<ExpressionTypeImpl>) -> Self {
-        self.limit_count = limit_count;
+    pub(super) fn with_limit_count(mut self, limit_count: ExpressionTypeImpl) -> Self {
+        self.limit_count.replace(limit_count);
 
         self
     }
 
-    pub(super) fn with_limit_offset(mut self, limit_offset: Arc<ExpressionTypeImpl>) -> Self {
-        self.limit_offset = limit_offset;
+    pub(super) fn with_limit_offset(mut self, limit_offset: ExpressionTypeImpl) -> Self {
+        self.limit_offset.replace(limit_offset);
 
         self
     }
 
-    pub(super) fn with_sort(mut self, sort: Vec<Arc<OrderBy>>) -> Self {
+    pub(super) fn with_sort(mut self, sort: Vec<OrderBy>) -> Self {
         self.sort = sort;
 
         self
@@ -136,11 +136,11 @@ impl Default for SelectStatementBuilder {
             table: None,
             select_list: None,
 
-            where_exp: Arc::new(ExpressionTypeImpl::Invalid),
+            where_exp: None,
             group_by: vec![],
-            having: Arc::new(ExpressionTypeImpl::Invalid),
-            limit_count: Arc::new(ExpressionTypeImpl::Invalid),
-            limit_offset: Arc::new(ExpressionTypeImpl::Invalid),
+            having: None,
+            limit_count: None,
+            limit_offset: None,
             sort: vec![],
             ctes: Arc::new(vec![]),
             is_distinct: false,

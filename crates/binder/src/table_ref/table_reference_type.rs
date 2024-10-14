@@ -1,4 +1,5 @@
-use crate::Binder;
+use sqlparser::ast::{TableFactor, TableWithJoins};
+use crate::{fallback_on_incompatible_2_args, Binder};
 use crate::expressions::ColumnRef;
 use crate::table_ref::{ExpressionListRef, SubqueryRef, TableRef};
 use crate::table_ref::base_table_ref::BaseTableRef;
@@ -7,17 +8,6 @@ use crate::table_ref::cte_ref::CTERef;
 use crate::table_ref::join_ref::JoinRef;
 use crate::try_from_ast_error::{ParseASTError, ParseASTResult};
 
-#[derive(Debug, PartialEq)]
-pub enum TableReferenceType {
-    Invalid = 0,         // < Invalid table reference type.
-    BaseTable = 1,      // < Base table reference.
-    Join = 3,            // < Output of join.
-    CrossProduct = 4,   // < Output of cartesian product.
-    ExpressionList = 5, // < Values clause.
-    SubQuery = 6,        // < Subquery.
-    CTE = 7,             // < CTE.
-    Empty = 8            // < Placeholder for empty FROM.
-}
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum TableReferenceTypeImpl {
@@ -28,7 +18,27 @@ pub enum TableReferenceTypeImpl {
     CrossProduct(CrossProductRef),
     SubQuery(SubqueryRef),        // < Subquery.
     CTE(CTERef),
-    Empty            // < Placeholder for empty FROM.
+    Empty,            // < Placeholder for empty FROM.
+}
+
+impl TableReferenceTypeImpl {
+    pub(crate) fn try_to_parse_tables_with_joins(mut tables: &[TableWithJoins], binder: &mut Binder) -> ParseASTResult<TableReferenceTypeImpl> {
+        let ctx_guard = binder.new_context();
+
+        match tables.len() {
+            0 => Ok(TableReferenceTypeImpl::Empty),
+            1 => TableReferenceTypeImpl::parse_from_table_with_join(&tables[0], binder),
+            _ => CrossProductRef::try_to_parse_tables_with_joins(tables, binder)
+        }
+    }
+
+    pub(crate) fn parse_from_table_with_join(ast: &TableWithJoins, binder: &mut Binder) -> ParseASTResult<Self> {
+        if ast.joins.is_empty() {
+            Self::try_from_ast(&ast.relation, binder)
+        } else {
+            JoinRef::parse_from_table_with_join(ast, binder)
+        }
+    }
 }
 
 impl TableRef for TableReferenceTypeImpl {
@@ -43,5 +53,18 @@ impl TableRef for TableReferenceTypeImpl {
             TableReferenceTypeImpl::CTE(b) => b.resolve_column(col_name, binder),
             TableReferenceTypeImpl::Empty => Err(ParseASTError::FailedParsing(format!("column {} not found", col_name.join("."))))
         }
+    }
+
+    fn try_from_ast(ast: &TableFactor, binder: &mut Binder) -> ParseASTResult<Self> {
+        fallback_on_incompatible_2_args!(try_from_ast, ast, binder, {
+            BaseTableRef,
+            JoinRef,
+            ExpressionListRef,
+            CrossProductRef,
+            SubqueryRef,
+            CTERef
+        });
+
+        Err(ParseASTError::IncompatibleType)
     }
 }
