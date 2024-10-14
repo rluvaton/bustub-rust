@@ -1,4 +1,5 @@
-use crate::expressions::{Alias, ColumnRef};
+use std::ops::Deref;
+use crate::expressions::{Alias, ColumnRef, Expression};
 
 #[derive(Copy, Clone, PartialEq)]
 pub enum ExpressionType {
@@ -22,4 +23,36 @@ pub enum ExpressionTypeImpl {
     ColumnRef(ColumnRef), // < A column in a table.
     Alias(Alias),     // < Alias expression type.
     Invalid
+}
+
+impl Expression for ExpressionTypeImpl {
+    const TYPE: ExpressionType = ExpressionType::Invalid;
+
+    fn get_type(&self) -> ExpressionType {
+        match self {
+            ExpressionTypeImpl::ColumnRef(r) => ColumnRef::TYPE,
+            ExpressionTypeImpl::Alias(_) => Alias::TYPE,
+            ExpressionTypeImpl::Invalid => ExpressionType::Invalid
+        }
+    }
+
+    fn has_aggregation(&self) -> bool {
+        match &self {
+            ExpressionTypeImpl::ColumnRef(e) => e.has_aggregation(),
+            ExpressionTypeImpl::Alias(e) => e.has_aggregation(),
+
+            // TODO - throw unreachable
+            ExpressionTypeImpl::Invalid => false,
+        }
+    }
+
+    fn has_window_function(&self) -> bool {
+        match &self {
+            ExpressionTypeImpl::ColumnRef(e) => e.has_window_function(),
+            ExpressionTypeImpl::Alias(e) => e.has_window_function(),
+
+            // TODO - throw unreachable
+            ExpressionTypeImpl::Invalid => false,
+        }
+    }
 }

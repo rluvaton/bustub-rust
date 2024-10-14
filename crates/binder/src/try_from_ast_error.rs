@@ -1,6 +1,6 @@
 
 #[derive(thiserror::Error, Debug, PartialEq, Clone)]
-pub enum ParsePgNodeError {
+pub enum TryFromASTError {
     #[error("node is incompatible")]
     IncompatibleType,
 

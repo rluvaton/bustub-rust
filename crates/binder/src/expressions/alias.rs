@@ -1,5 +1,5 @@
 use std::sync::Arc;
-use crate::expressions::{Expression, ExpressionType};
+use crate::expressions::{Expression, ExpressionType, ExpressionTypeImpl};
 
 /// The alias in SELECT list, e.g. `SELECT count(x) AS y`, the `y` is an alias.
 #[derive(Debug, PartialEq)]
@@ -9,12 +9,12 @@ pub(crate) struct Alias {
     pub(crate) alias: String,
 
     /// The actual expression
-    pub(crate) child: Arc<dyn Expression>
+    pub(crate) child: Arc<ExpressionTypeImpl>
 }
 
 impl Alias {
 
-    pub(crate) fn new(alias: String, child: Arc<dyn Expression>) -> Self {
+    pub(crate) fn new(alias: String, child: Arc<ExpressionTypeImpl>) -> Self {
         Self {
             alias,
             child

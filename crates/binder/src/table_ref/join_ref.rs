@@ -17,10 +17,10 @@ pub struct JoinRef {
     pub(crate) join_type: JoinType,
 
     /// The left side of the join.
-    pub(crate) left: TableReferenceTypeImpl,
+    pub(crate) left: Box<TableReferenceTypeImpl>,
 
     /** The right side of the join. */
-    pub(crate) right: TableReferenceTypeImpl,
+    pub(crate) right: Box<TableReferenceTypeImpl>,
 
     /** Join condition. */
     pub(crate) condition: Option<ExpressionTypeImpl>,
@@ -28,8 +28,8 @@ pub struct JoinRef {
 
 impl JoinRef {
     pub(crate) fn new(join_type: JoinType,
-                      left: TableReferenceTypeImpl,
-                      right: TableReferenceTypeImpl,
+                      left: Box<TableReferenceTypeImpl>,
+                      right: Box<TableReferenceTypeImpl>,
                       condition: Option<ExpressionTypeImpl>) -> Self {
         Self {
             join_type,

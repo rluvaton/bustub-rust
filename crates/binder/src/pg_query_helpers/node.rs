@@ -1,20 +1,21 @@
 use std::sync::Arc;
-use pg_query::Node;
-use crate::expressions::Expression;
-use crate::parse_node_error::ParsePgNodeError;
+use crate::expressions::{Expression, ExpressionTypeImpl};
+use crate::try_from_ast_error::TryFromASTError;
 
 pub(crate) trait NodeExt {
-    fn parse_expression(&self) -> Result<Arc<dyn Expression>, ParsePgNodeError>;
+    fn parse_expression(&self) -> Result<Arc<ExpressionTypeImpl>, TryFromASTError>;
 }
 
-impl NodeExt for Node {
-    fn parse_expression(&self) -> Result<Arc<dyn Expression>, ParsePgNodeError> {
-        if self.node.is_none() {
-            return Err(ParsePgNodeError::FailedParsing("Node is none".to_string()))
-        }
-
-        match self.node.as_ref().unwrap() {
-            _ => unimplemented!()
-        }
+// Node
+impl NodeExt for () {
+    fn parse_expression(&self) -> Result<Arc<ExpressionTypeImpl>, TryFromASTError> {
+        todo!()
+        // if self.node.is_none() {
+        //     return Err(TryFromASTError::FailedParsing("Node is none".to_string()))
+        // }
+        //
+        // match self.node.as_ref().unwrap() {
+        //     _ => unimplemented!()
+        // }
     }
 }

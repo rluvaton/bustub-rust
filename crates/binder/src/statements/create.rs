@@ -1,10 +1,9 @@
 use crate::pg_query_helpers::{ColumnDefExt, ConstraintExt};
-use crate::statements::traits::{ParsePgNodeError, Statement};
+use crate::statements::traits::Statement;
 use crate::statements::StatementType;
 use db_core::catalog::Column;
-use pg_query::protobuf::node::Node;
-use pg_query::NodeRef;
 use std::fmt::Debug;
+use crate::try_from_ast_error::TryFromASTError;
 
 #[derive(Debug, PartialEq)]
 pub struct CreateStatement {
@@ -23,87 +22,41 @@ impl CreateStatement {
     }
 }
 
+impl TryFrom<&sqlparser::ast::Statement> for CreateStatement {
+    type Error = TryFromASTError;
+
+    fn try_from(value: &sqlparser::ast::Statement) -> Result<Self, Self::Error> {
+        let create_table = match value {
+            sqlparser::ast::Statement::CreateTable(create_table) => create_table,
+            _ => return Err(TryFromASTError::IncompatibleType)
+        };
+
+        todo!()
+
+
+
+    }
+}
+
 impl Statement for CreateStatement {
     const TYPE: StatementType = StatementType::Create;
 }
 
 
-impl TryFrom<NodeRef<'_>> for CreateStatement {
-    type Error = ParsePgNodeError;
-
-    fn try_from(value: NodeRef) -> Result<Self, Self::Error> {
-        let stmt = match value {
-            NodeRef::CreateStmt(stmt) => {
-                stmt
-            }
-            _ => return Err(ParsePgNodeError::IncompatibleType),
-        };
-
-        let relation_info = stmt.relation.as_ref();
-
-        if relation_info.is_none() {
-            return Err(ParsePgNodeError::FailedParsing("missing table name".to_string()));
-        }
-
-        let relation_info = relation_info.unwrap();
-
-
-        let table_elts = &stmt.table_elts;
-
-        let mut columns = vec![];
-        let mut primary_key = vec![];
-
-        for node in table_elts {
-            if let Some(node) = &node.node {
-                match node {
-                    Node::ColumnDef(column_def) => {
-                        let column = column_def.try_convert_into_column().map_err(|err| ParsePgNodeError::FailedParsing(err.to_string()))?;
-
-                        if column_def.is_primary_key() {
-                            primary_key.push(column.get_name().clone());
-                        }
-
-                        columns.push(column);
-                    },
-                    Node::Constraint(constraint) => {
-                        if constraint.is_primary_key() {
-                            primary_key.append(&mut constraint.get_keys_names());
-                        } else {
-                            return Err(ParsePgNodeError::Unimplemented("Unsupported constraint".to_string()))
-                        }
-                    }
-                    _ => return Err(ParsePgNodeError::FailedParsing("Unknown column definition".to_string()))
-                }
-            }
-        };
-
-        if primary_key.len() > 1 {
-            return Err(ParsePgNodeError::Unimplemented("Cannot have more than 1 primary key".to_string()))
-        }
-
-        if columns.is_empty() {
-            return Err(ParsePgNodeError::Other("Should have at least 1 column".to_string()))
-        }
-
-        Ok(Self {
-            table: relation_info.relname.clone(),
-            columns,
-            primary_key,
-        })
-    }
-}
 
 #[cfg(test)]
 mod tests {
-    use crate::statements::create_statement::CreateStatement;
+    use crate::statements::create::CreateStatement;
     use crate::statements::traits::StatementTryFromResult;
     use data_types::DBTypeId;
     use db_core::catalog::Column;
-    use pg_query::NodeRef;
+
+    use sqlparser::dialect::GenericDialect;
+    use sqlparser::parser::Parser;
 
     #[test]
     fn convert_create_table_to_statement() {
-        let create_table_sql = "CREATE TABLE distributors (
+        let sql = "CREATE TABLE distributors (
     did     integer PRIMARY KEY,
     name    varchar(40)
 );";
@@ -117,11 +70,13 @@ mod tests {
             vec!["did".to_string()],
         );
 
-        let result = pg_query::parse(create_table_sql).expect("Should parse");
+        let dialect = GenericDialect {}; // or AnsiDialect, or your own dialect ...
 
-        let actual_create_statement: StatementTryFromResult<CreateStatement> = result.protobuf.nodes()[0].0.try_into();
+        let statements = Parser::parse_sql(&dialect, sql).unwrap();
 
-        assert_eq!(actual_create_statement, Ok(expected_create_statement));
+        let actual_create_statement: Vec<StatementTryFromResult<CreateStatement>> = statements.iter().map(|item| item.try_into()).collect();
+
+        assert_eq!(actual_create_statement, vec![Ok(expected_create_statement)]);
     }
 
     #[test]
@@ -188,11 +143,12 @@ mod tests {
             vec![],
         );
 
-        let result = pg_query::parse(create_table_sql.as_str()).expect("Should parse");
-
-        let actual_create_statement: StatementTryFromResult<CreateStatement> = result.protobuf.nodes()[0].0.try_into();
-
-        assert_eq!(actual_create_statement, Ok(expected_create_statement));
+        // let result = pg_query::parse(create_table_sql.as_str()).expect("Should parse");
+        //
+        // let actual_create_statement: StatementTryFromResult<CreateStatement> = result.protobuf.nodes()[0].0.try_into();
+        //
+        // assert_eq!(actual_create_statement, Ok(expected_create_statement));
+        todo!()
     }
 
     #[test]
@@ -212,33 +168,12 @@ CONSTRAINT code_title PRIMARY KEY(did,name)
             vec!["did".to_string(), "name".to_string()],
         );
 
-        let result = pg_query::parse(create_table_sql).expect("Should parse");
-
-        let actual_create_statement: StatementTryFromResult<CreateStatement> = result.protobuf.nodes()[0].0.try_into();
-
-        assert_eq!(actual_create_statement, Ok(expected_create_statement));
+        // let result = pg_query::parse(create_table_sql).expect("Should parse");
+        //
+        // let actual_create_statement: StatementTryFromResult<CreateStatement> = result.protobuf.nodes()[0].0.try_into();
+        //
+        // assert_eq!(actual_create_statement, Ok(expected_create_statement));
+        todo!()
     }
 
-    #[test]
-    fn test() {
-        let create_table_sql = "CREATE TABLE distributors (
-    did     integer PRIMARY KEY,
-    name    varchar(40)
-);";
-        let result = pg_query::parse(create_table_sql);
-        assert!(result.is_ok());
-        let result = result.unwrap();
-        let create_stmt = result.protobuf.nodes()[0].0;
-
-        match create_stmt {
-            NodeRef::CreateStmt(stmt) => {
-                println!("{:#?}", stmt);
-            }
-            _ => unreachable!()
-        }
-
-        // println!("{:?}", create_stmt);
-        // assert_eq!(result.tables(), vec!["contacts"]);
-        // assert!(matches!(result.protobuf.nodes()[0].0, NodeRef::SelectStmt(_)));
-    }
 }

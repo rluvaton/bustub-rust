@@ -140,10 +140,10 @@ dependencies = [
  "hashing_common",
  "pages",
  "parking_lot",
- "pg_query",
  "rand 0.8.5",
  "recovery_log_manager",
  "rid",
+ "sqlparser",
  "thiserror",
  "tracy-client",
  "transaction",
@@ -1080,6 +1080,7 @@ name = "playground"
 version = "0.1.0"
 dependencies = [
  "pg_query",
+ "sqlparser",
 ]
 
 [[package]]
@@ -1482,6 +1483,15 @@ name = "smallvec"
 version = "1.13.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3c5e1a9a646d36c3599cd173a41282daf47c44583ad367b8e6837255952e5c67"
+
+[[package]]
+name = "sqlparser"
+version = "0.51.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5fe11944a61da0da3f592e19a45ebe5ab92dc14a779907ff1f08fbb797bfefc7"
+dependencies = [
+ "log",
+]
 
 [[package]]
 name = "stats"

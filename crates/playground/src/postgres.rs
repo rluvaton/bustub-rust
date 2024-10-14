@@ -3,6 +3,9 @@ mod tests {
     use pg_query::NodeRef;
     use pg_query::protobuf::CreateStmt;
 
+    use sqlparser::dialect::GenericDialect;
+    use sqlparser::parser::Parser;
+
     #[test]
     fn test() {
         let create_table_sql = "CREATE TABLE distributors (
@@ -27,7 +30,18 @@ mod tests {
     }
 
 
-    fn parse_create_stmt(node: CreateStmt) {
-        node.
+    #[test]
+    fn sql_parser() {
+
+        let sql = "CREATE TABLE distributors (
+    did     integer PRIMARY KEY,
+    name    varchar(40)
+);";
+
+        let dialect = GenericDialect {}; // or AnsiDialect, or your own dialect ...
+
+        let ast = Parser::parse_sql(&dialect, sql).unwrap();
+
+        println!("{:#?}", ast);
     }
 }

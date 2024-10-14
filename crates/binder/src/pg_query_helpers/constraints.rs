@@ -1,6 +1,3 @@
-use pg_query::protobuf::a_const::Val;
-use pg_query::protobuf::{ColumnDef, ConstrType, Constraint};
-use pg_query::protobuf::node::Node;
 use data_types::DBTypeId;
 use db_core::catalog::Column;
 
@@ -11,25 +8,29 @@ pub(crate) trait ConstraintExt {
 }
 
 
-impl ConstraintExt for Constraint {
+// Constraint
+impl ConstraintExt for () {
     fn is_primary_key(&self) -> bool {
-        matches!(self.contype(), ConstrType::ConstrPrimary)
+        todo!()
+        // matches!(self.contype(), ConstrType::ConstrPrimary)
     }
 
     fn get_keys_names(&self) -> Vec<String> {
-        self.keys
-            .iter()
-            .map(|node| {
-                if node.node.is_none() {
-                    unreachable!("Node cannot be missing {:#?}", node);
-                }
-
-                match &node.node.as_ref().unwrap() {
-                    Node::String(str_node) => &str_node.sval,
-                    _ => unreachable!("Unknown node type {:#?}", node),
-                }
-            })
-            .cloned()
-            .collect()
+        todo!()
+        //
+        // self.keys
+        //     .iter()
+        //     .map(|node| {
+        //         if node.node.is_none() {
+        //             unreachable!("Node cannot be missing {:#?}", node);
+        //         }
+        //
+        //         match &node.node.as_ref().unwrap() {
+        //             Node::String(str_node) => &str_node.sval,
+        //             _ => unreachable!("Unknown node type {:#?}", node),
+        //         }
+        //     })
+        //     .cloned()
+        //     .collect()
     }
 }

@@ -4,7 +4,7 @@ mod statements;
 mod pg_query_helpers;
 mod expressions;
 mod order_by;
-mod parse_node_error;
+mod try_from_ast_error;
 mod context_guard;
 
 pub use binder::Binder;

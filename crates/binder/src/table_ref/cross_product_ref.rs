@@ -5,14 +5,14 @@ use crate::table_ref::TableRef;
 pub struct CrossProductRef {
 
     /** The left side of the cross product. */
-    pub(crate) left: TableReferenceTypeImpl,
+    pub(crate) left: Box<TableReferenceTypeImpl>,
 
     /** The right side of the cross product. */
-    pub(crate) right: TableReferenceTypeImpl,
+    pub(crate) right: Box<TableReferenceTypeImpl>,
 }
 
 impl CrossProductRef {
-    pub(crate) fn new(left: TableReferenceTypeImpl, right: TableReferenceTypeImpl) -> Self {
+    pub(crate) fn new(left: Box<TableReferenceTypeImpl>, right: Box<TableReferenceTypeImpl>) -> Self {
         Self {
             left,
             right

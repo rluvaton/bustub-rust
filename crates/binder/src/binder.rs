@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use db_core::catalog::Catalog;
 use crate::context_guard::ContextGuard;
-use crate::table_ref::{CTEList, TableRef};
+use crate::table_ref::{CTEList, TableRef, TableReferenceTypeImpl};
 
 
 
@@ -11,7 +11,7 @@ pub struct Binder<'a> {
     pub(crate) catalog: Option<&'a Catalog>,
 
     /// The current scope for resolving column ref, used in binding expressions
-    pub(crate) scope: Option<Arc<dyn TableRef>>,
+    pub(crate) scope: Option<Arc<TableReferenceTypeImpl>>,
 
     /// The current scope for resolving tables in CTEs, used in binding tables
     pub(crate) cte_scope: Option<Arc<CTEList>>,
@@ -19,7 +19,7 @@ pub struct Binder<'a> {
     /** Sometimes we will need to assign a name to some unnamed items. This variable gives them a universal ID. */
     pub(crate) universal_id: isize,
 
-    pub(crate) statement_nodes: Vec<pg_query::NodeRef<'a>>
+    pub(crate) statement_nodes: Vec<sqlparser::ast::Statement>
 }
 
 impl<'a> Binder<'a> {

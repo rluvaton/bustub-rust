@@ -32,5 +32,5 @@ extendible_hash_table = {path = "../hashing/extendible_hash_table"}
 hashing_common = {path = "../hashing/common"}
 rid = {path = "../rid"}
 
+sqlparser = "0.51.0"
 
-pg_query = "5.1.0"

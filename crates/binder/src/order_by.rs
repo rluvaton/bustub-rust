@@ -1,5 +1,5 @@
 use std::sync::Arc;
-use crate::expressions::Expression;
+use crate::expressions::{Expression, ExpressionTypeImpl};
 
 /// All types of order-bys in binder.
 
@@ -20,5 +20,5 @@ impl Default for OrderByType {
 #[derive(Debug, PartialEq)]
 pub(crate) struct OrderBy {
     order_type: OrderByType,
-    expr: Arc<dyn Expression>
+    expr: Arc<ExpressionTypeImpl>
 }
