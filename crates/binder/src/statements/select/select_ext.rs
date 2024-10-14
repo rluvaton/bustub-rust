@@ -1,3 +1,4 @@
+use std::rc::Rc;
 use crate::expressions::{AliasExpr, Expression, ExpressionTypeImpl, StarExpr};
 use crate::statements::select::builder::SelectStatementBuilder;
 use crate::table_ref::TableReferenceTypeImpl;
@@ -15,7 +16,7 @@ impl SelectExt for sqlparser::ast::Select {
         // FROM
         {
             let table = TableReferenceTypeImpl::try_to_parse_tables_with_joins(self.from.as_slice(), binder)?;
-            let table = Arc::new(table);
+            let table = Rc::new(table);
 
             builder = builder.with_table(table.clone());
 

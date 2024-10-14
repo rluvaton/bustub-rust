@@ -1,4 +1,6 @@
-use crate::statements::{CreateStatement, DeleteStatement, InsertStatement, SelectStatement};
+use crate::{fallback_on_incompatible_2_args, Binder};
+use crate::statements::{CreateStatement, DeleteStatement, InsertStatement, SelectStatement, Statement};
+use crate::try_from_ast_error::{ParseASTError, ParseASTResult};
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum StatementType {
@@ -29,4 +31,29 @@ pub enum StatementTypeImpl {
     // VariableSet,   // set variable statement type
     // VariableShow,  // show variable statement type
     // Transaction,    // txn statement type
+}
+
+impl Statement for StatementTypeImpl {
+    type ASTStatement = ();
+
+    fn try_parse_ast(_ast: &Self::ASTStatement, _binder: &mut Binder) -> ParseASTResult<Self>
+    where
+        Self: Sized
+    {
+        unreachable!()
+    }
+
+    fn try_parse_from_statement(statement: &sqlparser::ast::Statement, binder: &mut Binder) -> ParseASTResult<Self>
+    where
+        Self: Sized
+    {
+        fallback_on_incompatible_2_args!(try_parse_from_statement, statement, binder, {
+            SelectStatement,
+            InsertStatement,
+            CreateStatement,
+            DeleteStatement
+        });
+
+        Err(ParseASTError::IncompatibleType)
+    }
 }

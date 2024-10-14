@@ -6,16 +6,19 @@ use crate::try_from_ast_error::{ParseASTError, ParseASTResult};
 use crate::Binder;
 use sqlparser::ast::{FromTable, TableFactor};
 use std::fmt::Debug;
+use std::ops::DerefMut;
+use std::rc::Rc;
 use std::sync::Arc;
+use crate::statements::{CreateStatement, StatementTypeImpl};
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct DeleteStatement {
-    pub(crate) table: Arc<TableReferenceTypeImpl>,
+    pub(crate) table: Rc<TableReferenceTypeImpl>,
     pub(crate) expr: ExpressionTypeImpl,
 }
 
 impl DeleteStatement {
-    pub fn new(table: Arc<TableReferenceTypeImpl>, expr: ExpressionTypeImpl) -> Self {
+    pub fn new(table: Rc<TableReferenceTypeImpl>, expr: ExpressionTypeImpl) -> Self {
         assert!(matches!(*table, TableReferenceTypeImpl::BaseTable(_)), "table reference in delete must be base table");
         Self {
             table,
@@ -24,11 +27,16 @@ impl DeleteStatement {
     }
 }
 
+impl Into<StatementTypeImpl> for DeleteStatement {
+    fn into(self) -> StatementTypeImpl {
+        StatementTypeImpl::Delete(self)
+    }
+}
 
 impl Statement for DeleteStatement {
     type ASTStatement = sqlparser::ast::Delete;
 
-    fn try_parse_ast(ast: &Self::ASTStatement, binder: &mut Binder) -> ParseASTResult<Self> {
+    fn try_parse_ast<'a>(ast: &Self::ASTStatement, binder: &'a mut Binder) -> ParseASTResult<Self> {
         let from = match &ast.from {
             FromTable::WithFromKeyword(with) => with,
             FromTable::WithoutKeyword(_) => return Err(ParseASTError::Unimplemented("From without keyword is not supported".to_string())),
@@ -47,15 +55,15 @@ impl Statement for DeleteStatement {
             _ => return Err(ParseASTError::Unimplemented(format!("From relation is not supported {}", from.relation)))
         };
 
-        let table: Arc<TableReferenceTypeImpl> = Arc::new(table?.into());
+        let table: Rc<TableReferenceTypeImpl> = Rc::new(table?.into());
 
         // TODO - guard
-        let ctx_guard = binder.new_context();
+        let mut ctx_guard = binder.new_context();
 
-        binder.scope.replace(table.clone());
+        ctx_guard.scope.replace(table.clone());
 
         let expr: ExpressionTypeImpl = if let Some(selection) = &ast.selection {
-            ExpressionTypeImpl::try_parse_from_expr(selection, binder)?
+            ExpressionTypeImpl::try_parse_from_expr(selection, ctx_guard.deref_mut())?
         } else {
             Constant::new(true.into()).into()
         };
@@ -64,7 +72,7 @@ impl Statement for DeleteStatement {
     }
 
 
-    fn try_parse_from_statement(statement: &sqlparser::ast::Statement, binder: &mut Binder) -> ParseASTResult<Self> {
+    fn try_parse_from_statement<'a>(statement: &sqlparser::ast::Statement, binder: &'a mut Binder) -> ParseASTResult<Self> {
         match &statement {
             sqlparser::ast::Statement::Delete(ast) => Self::try_parse_ast(ast, binder),
             _ => Err(ParseASTError::IncompatibleType)
@@ -81,9 +89,11 @@ mod tests {
     use crate::Binder;
     use sqlparser::dialect::GenericDialect;
     use sqlparser::parser::Parser;
+    use db_core::catalog::Catalog;
 
     fn parse_delete_sql(sql: &str) -> Result<Vec<DeleteStatement>, ParseASTError> {
-        let mut binder = Binder::default();
+        let catalog = Catalog::new(None, None, None);
+        let mut binder = Binder::new(catalog);
         let statements = Parser::parse_sql(&GenericDialect {}, sql).unwrap();
         statements.iter().map(|stmt| DeleteStatement::try_parse_from_statement(stmt, &mut binder)).collect()
     }

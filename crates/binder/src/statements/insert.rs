@@ -1,6 +1,6 @@
 use crate::sql_parser_helper::ColumnDefExt;
 use crate::statements::traits::Statement;
-use crate::statements::SelectStatement;
+use crate::statements::{CreateStatement, SelectStatement, StatementTypeImpl};
 use crate::table_ref::{BaseTableRef, TableReferenceTypeImpl};
 use crate::try_from_ast_error::{ParseASTError, ParseASTResult};
 use crate::Binder;
@@ -23,11 +23,16 @@ impl InsertStatement {
     }
 }
 
+impl Into<StatementTypeImpl> for InsertStatement {
+    fn into(self) -> StatementTypeImpl {
+        StatementTypeImpl::Insert(self)
+    }
+}
 
 impl Statement for InsertStatement {
     type ASTStatement = sqlparser::ast::Insert;
 
-    fn try_parse_ast(ast: &Self::ASTStatement, binder: &mut Binder) -> ParseASTResult<Self> {
+    fn try_parse_ast<'a>(ast: &Self::ASTStatement, binder: &'a mut Binder) -> ParseASTResult<Self> {
         if !ast.columns.is_empty() {
             return Err(ParseASTError::Unimplemented("insert only supports all columns, don't specify columns".to_string()))
         }
@@ -47,7 +52,7 @@ impl Statement for InsertStatement {
     }
 
 
-    fn try_parse_from_statement(statement: &sqlparser::ast::Statement, binder: &mut Binder) -> ParseASTResult<Self> {
+    fn try_parse_from_statement<'a>(statement: &sqlparser::ast::Statement, binder: &'a mut Binder) -> ParseASTResult<Self> {
         match &statement {
             sqlparser::ast::Statement::Insert(ast) => Self::try_parse_ast(ast, binder),
             _ => Err(ParseASTError::IncompatibleType)
@@ -64,9 +69,11 @@ mod tests {
     use crate::Binder;
     use sqlparser::dialect::GenericDialect;
     use sqlparser::parser::Parser;
+    use db_core::catalog::Catalog;
 
     fn parse_insert_sql(sql: &str) -> Result<Vec<InsertStatement>, ParseASTError> {
-        let mut binder = Binder::default();
+        let catalog = Catalog::new(None, None, None);
+        let mut binder = Binder::new(catalog);
         let statements = Parser::parse_sql(&GenericDialect {}, sql).unwrap();
         statements.iter().map(|stmt| InsertStatement::try_parse_from_statement(stmt, &mut binder)).collect()
     }

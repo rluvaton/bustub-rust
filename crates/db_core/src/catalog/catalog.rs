@@ -10,9 +10,10 @@ use recovery_log_manager::LogManager;
 use transaction::Transaction;
 use crate::storage::TableHeap;
 
+#[derive(Clone)]
 pub struct Catalog {
     #[allow(unused)]
-    bpm: Arc<BufferPoolManager>,
+    bpm: Option<Arc<BufferPoolManager>>,
     #[allow(unused)]
     lock_manager: Option<Arc<LockManager>>,
     #[allow(unused)]
@@ -34,7 +35,7 @@ pub struct Catalog {
     ///
     /// Default: 0
     #[allow(unused)]
-    next_table_oid: AtomicTableOID,
+    next_table_oid: Arc<AtomicTableOID>,
 
     /// Map index identifier -> index metadata.
     ///
@@ -49,22 +50,22 @@ pub struct Catalog {
     /// The next index identifier to be used.
     /// Default: `0`
     #[allow(unused)]
-    next_index_oid: AtomicIndexOID,
+    next_index_oid: Arc<AtomicIndexOID>,
 }
 
 
 impl Catalog {
-    pub fn new(bpm: Arc<BufferPoolManager>, lock_manager: Option<Arc<LockManager>>, log_manager: Option<Arc<LogManager>>) -> Self {
+    pub fn new(bpm: Option<Arc<BufferPoolManager>>, lock_manager: Option<Arc<LockManager>>, log_manager: Option<Arc<LogManager>>) -> Self {
         Self {
             bpm,
             lock_manager,
             log_manager,
             tables: HashMap::new(),
             table_names: HashMap::new(),
-            next_index_oid: AtomicTableOID::new(0),
+            next_index_oid: Arc::new(AtomicTableOID::new(0)),
             indexes: HashMap::new(),
             index_names: HashMap::new(),
-            next_table_oid: AtomicIndexOID::new(0),
+            next_table_oid: Arc::new(AtomicIndexOID::new(0)),
         }
     }
 
@@ -88,7 +89,7 @@ impl Catalog {
         // When create_table_heap == false, it means that we're running binder tests (where no txn will be provided) or
         // we are running shell without buffer pool. We don't need to create TableHeap in this case.
         let table: Arc<TableHeap> = if create_table_heap {
-            Arc::new(TableHeap::new(self.bpm.clone()))
+            Arc::new(TableHeap::new(self.bpm.as_ref().unwrap().clone()))
         } else {
             // Otherwise, create an empty heap only for binder tests
             Arc::new(TableHeap::default())
@@ -154,5 +155,11 @@ impl Catalog {
         }
 
         indexes
+    }
+}
+
+impl Default for Catalog {
+    fn default() -> Self {
+        Self::new(None, None, None)
     }
 }

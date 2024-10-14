@@ -1,3 +1,4 @@
+use std::rc::Rc;
 use std::sync::Arc;
 use crate::Binder;
 use crate::expressions::{ColumnRef, ExpressionTypeImpl};
@@ -11,8 +12,7 @@ pub(super) trait ValuesExt {
 
 impl ValuesExt for sqlparser::ast::Values {
     fn add_values_to_select_builder(&self, builder: SelectStatementBuilder, binder: &mut Binder) -> ParseASTResult<SelectStatementBuilder> {
-        let values_list_name = format!("__values#{}", binder.universal_id);
-        binder.universal_id += 1;
+        let values_list_name = format!("__values#{}", binder.get_and_increment_universal_id());
 
         let value_list: ExpressionListRef = ExpressionListRef::try_parse_from_values(Some(values_list_name.clone()), self, binder)?;
 
@@ -25,7 +25,7 @@ impl ValuesExt for sqlparser::ast::Values {
 
         Ok(
             builder
-                .with_table(Arc::new(value_list.into()))
+                .with_table(Rc::new(value_list.into()))
                 .with_select_list(exprs)
         )
     }

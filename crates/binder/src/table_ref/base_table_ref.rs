@@ -41,13 +41,8 @@ impl BaseTableRef {
     }
 
     pub fn try_parse(table_name: String, alias: Option<String>, binder: &mut Binder) -> ParseASTResult<Self> {
-        if binder.catalog.is_none() {
-            return Err(ParseASTError::FailedParsing("Missing catalog in binder".to_string()))
-        }
 
-        let catalog = binder.catalog.unwrap();
-
-        let table_info = catalog.get_table_by_name(&table_name);
+        let table_info = binder.catalog.get_table_by_name(&table_name);
 
         if table_info.is_none() {
             return Err(ParseASTError::FailedParsing(format!("Invalid table {}", table_name)))

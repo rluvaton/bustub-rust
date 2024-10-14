@@ -18,7 +18,7 @@ pub struct SubqueryRef {
 }
 
 impl SubqueryRef {
-    pub(crate) fn parse_with(with: &With, binder: &mut Binder) -> ParseASTResult<Vec<Self>> {
+    pub(crate) fn parse_with<'a>(with: &With, binder: &'a mut Binder) -> ParseASTResult<Vec<Self>> {
         if with.recursive {
             return Err(ParseASTError::Unimplemented("recursive CTE is not supported".to_string()));
         }
@@ -29,11 +29,11 @@ impl SubqueryRef {
             .collect()
     }
 
-    pub(crate) fn parse_cte(cte: &Cte, binder: &mut Binder) -> ParseASTResult<Self> {
+    pub(crate) fn parse_cte<'a>(cte: &Cte, binder: &'a mut Binder) -> ParseASTResult<Self> {
         Self::parse_from_subquery(&cte.query, Some(cte.alias.name.value.clone()), binder)
     }
 
-    pub(crate) fn parse_from_subquery(subquery: &Box<Query>, alias: Option<String>, binder: &mut Binder) -> ParseASTResult<Self> {
+    pub(crate) fn parse_from_subquery<'a>(subquery: &Box<Query>, alias: Option<String>, binder: &'a mut Binder) -> ParseASTResult<Self> {
         let subquery = SelectStatement::try_parse_ast(&*subquery, binder)?;
 
         let select_list_name: Vec<Vec<String>> = subquery.select_list
@@ -43,9 +43,7 @@ impl SubqueryRef {
                     ExpressionTypeImpl::ColumnRef(c) => c.col_name.clone(),
                     ExpressionTypeImpl::Alias(a) => vec![a.alias.clone()],
                     _ => {
-                        let name = format!("__item#{}", binder.universal_id);
-
-                        binder.universal_id += 1;
+                        let name = format!("__item#{}", binder.get_and_increment_universal_id());
 
                         vec![name]
                     }
@@ -93,89 +91,13 @@ impl TableRef for SubqueryRef {
         Ok(strip_resolved_expr.or(direct_resolved_expr))
     }
 
-    fn try_from_ast(ast: &TableFactor, binder: &mut Binder) -> ParseASTResult<Self> {
+    fn try_from_ast<'a>(ast: &TableFactor, binder: &'a mut Binder) -> ParseASTResult<Self> {
         match ast {
             TableFactor::Derived { subquery, alias, ..} => {
                 Self::parse_from_subquery(subquery, alias.as_ref().map(|alias| alias.name.value.clone()), binder)
             },
             _ => Err(ParseASTError::IncompatibleType)
         }
-    }
-}
-
-
-impl Binder<'_> {
-    pub(crate) fn parse_subquery(&mut self, select_stmt: &sqlparser::ast::Select, alias: String) -> Result<SubqueryRef, ParseASTError> {
-        todo!()
-        // let subquery = self.parse_select_statement(select_stmt)?;
-        // let mut select_list_name: Vec<Vec<String>> = vec![];
-        //
-        // for col in &subquery.select_list {
-        //     match col {
-        //         ExpressionTypeImpl::ColumnRef(col) => {
-        //             select_list_name.push(col.col_name.clone());
-        //         }
-        //         ExpressionTypeImpl::Alias(alias) => {
-        //             select_list_name.push(vec![alias.alias]);
-        //         }
-        //          _ => {
-        //              select_list_name.push(vec![format!("__item#{}", self.universal_id)]);
-        //              self.universal_id += 1;
-        //          }
-        //     }
-        // }
-        //
-        // Ok(SubqueryRef {
-        //     subquery,
-        //     select_list_name,
-        //     alias
-        // })
-    }
-
-    pub(crate) fn convert_with_to_many_subqueries(&mut self, with: &sqlparser::ast::With) -> Result<Vec<SubqueryRef>, ParseASTError> {
-        todo!()
-        // let mut ctes: Vec<SubqueryRef> = vec![];
-        //
-        // for item in with.ctes {
-        //     let item = item.node;
-        //
-        //     if item.is_none() {
-        //         continue;
-        //     }
-        //
-        //     let item = item.unwrap();
-        //     let cte = match item {
-        //         Node::CommonTableExpr(cte) => cte,
-        //         _ => return Err(TryFromASTError::FailedParsing("Item in with clause must be common table expression".to_string()))
-        //     };
-        //
-        //     if cte.ctequery.is_none() {
-        //         return Err(TryFromASTError::FailedParsing("SELECT not found".to_string()));
-        //     }
-        //
-        //     let ctequery = cte.ctequery.as_ref().unwrap();
-        //
-        //     if ctequery.node.is_none() {
-        //         return Err(TryFromASTError::FailedParsing("SELECT not found".to_string()));
-        //     }
-        //
-        //     let ctequery = ctequery.node.unwrap();
-        //
-        //     let select_stmt = match ctequery {
-        //         Node::SelectStmt(stmt) => stmt,
-        //         _ => return Err(TryFromASTError::FailedParsing("SELECT not found".to_string())),
-        //     };
-        //
-        //     if cte.cterecursive {
-        //         return Err(TryFromASTError::Unimplemented("Recursive CTE not supported".to_string()));
-        //     }
-        //
-        //     let subquery = self.create_subquery_ref_from_select_and_alias(&select_stmt, cte.ctename)?;
-        //
-        //     ctes.push(subquery);
-        // }
-        //
-        // Ok(ctes)
     }
 }
 

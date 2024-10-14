@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::ops::Deref;
 use std::path::PathBuf;
+use std::rc::Rc;
 use std::sync::Arc;
 use parking_lot::Mutex;
 use strum::IntoEnumIterator;
@@ -107,7 +108,7 @@ impl BustubInstance {
         let mut checkpoint_mgr: Option<Arc<CheckpointManager>> = None;
 
 
-        let catalog = Arc::new(Mutex::new(Catalog::new(bpm.clone(), lock_manager.clone(), log_manager.clone())));
+        let catalog = Arc::new(Mutex::new(Catalog::new(Some(bpm.clone()), lock_manager.clone(), log_manager.clone())));
         let txn_manager = Arc::new(TransactionManager::new(catalog.clone()));
 
         let execution_engine = Arc::new(ExecutionEngine::new(
@@ -215,7 +216,13 @@ impl BustubInstance {
         let mut is_successful = true;
 
         let catalog = self.catalog.lock();
-        let binder = Binder::new(catalog.deref());
+
+        // TODO - REMOVE THIS!
+        let binder = Binder::new(catalog.clone());
+
+        let parsed = binder.parse(sql);
+
+        drop(catalog);
 
 
         // let binder = Binder

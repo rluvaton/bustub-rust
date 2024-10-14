@@ -4,12 +4,13 @@ use crate::statements::SelectStatement;
 use crate::table_ref::{CTEList, TableReferenceTypeImpl};
 use anyhow::anyhow;
 use std::fmt::Debug;
+use std::rc::Rc;
 use std::sync::Arc;
 
 #[derive(Debug, PartialEq)]
 pub(super) struct SelectStatementBuilder {
     /// Bound FROM clause.
-    table: Option<Arc<TableReferenceTypeImpl>>,
+    table: Option<Rc<TableReferenceTypeImpl>>,
 
     /// Bound SELECT list.
     select_list: Option<Vec<ExpressionTypeImpl>>,
@@ -33,7 +34,7 @@ pub(super) struct SelectStatementBuilder {
     sort: Vec<OrderBy>,
 
     /// Bound CTE
-    ctes: Arc<CTEList>,
+    ctes: Rc<CTEList>,
 
     /// Is SELECT DISTINCT
     is_distinct: bool,
@@ -42,7 +43,7 @@ pub(super) struct SelectStatementBuilder {
 
 impl SelectStatementBuilder {
 
-    pub(super) fn with_table(mut self, table: Arc<TableReferenceTypeImpl>) -> Self {
+    pub(super) fn with_table(mut self, table: Rc<TableReferenceTypeImpl>) -> Self {
         self.table.replace(table);
 
         self
@@ -90,7 +91,7 @@ impl SelectStatementBuilder {
         self
     }
 
-    pub(super) fn with_ctes(mut self, ctes: Arc<CTEList>) -> Self {
+    pub(super) fn with_ctes(mut self, ctes: Rc<CTEList>) -> Self {
         self.ctes = ctes;
 
         self
@@ -142,7 +143,7 @@ impl Default for SelectStatementBuilder {
             limit_count: None,
             limit_offset: None,
             sort: vec![],
-            ctes: Arc::new(vec![]),
+            ctes: Rc::new(vec![]),
             is_distinct: false,
         }
     }

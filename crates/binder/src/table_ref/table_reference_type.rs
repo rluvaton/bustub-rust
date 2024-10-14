@@ -1,3 +1,4 @@
+use std::ops::DerefMut;
 use sqlparser::ast::{TableFactor, TableWithJoins};
 use crate::{fallback_on_incompatible_2_args, Binder};
 use crate::expressions::ColumnRef;
@@ -22,13 +23,13 @@ pub enum TableReferenceTypeImpl {
 }
 
 impl TableReferenceTypeImpl {
-    pub(crate) fn try_to_parse_tables_with_joins(mut tables: &[TableWithJoins], binder: &mut Binder) -> ParseASTResult<TableReferenceTypeImpl> {
-        let ctx_guard = binder.new_context();
+    pub(crate) fn try_to_parse_tables_with_joins<'a>(mut tables: &[TableWithJoins], binder: &'a mut Binder) -> ParseASTResult<TableReferenceTypeImpl> {
+        let mut ctx_guard = binder.new_context();
 
         match tables.len() {
             0 => Ok(TableReferenceTypeImpl::Empty),
-            1 => TableReferenceTypeImpl::parse_from_table_with_join(&tables[0], binder),
-            _ => CrossProductRef::try_to_parse_tables_with_joins(tables, binder)
+            1 => TableReferenceTypeImpl::parse_from_table_with_join(&tables[0], ctx_guard.deref_mut()),
+            _ => CrossProductRef::try_to_parse_tables_with_joins(tables, ctx_guard.deref_mut())
         }
     }
 
