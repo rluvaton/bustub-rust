@@ -1,4 +1,3 @@
-use super::SqlParserDeleteStatementExt;
 use crate::expressions::{Constant, ExpressionTypeImpl};
 use crate::sql_parser_helper::{ColumnDefExt, ConstraintExt};
 use crate::statements::traits::Statement;
