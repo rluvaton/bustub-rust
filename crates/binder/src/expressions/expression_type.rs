@@ -1,6 +1,6 @@
 use sqlparser::ast::Expr;
 use crate::Binder;
-use crate::expressions::{Alias, UnaryOpExpr, ColumnRef, Constant, Expression, BinaryOpExpr};
+use crate::expressions::{Alias, UnaryOpExpr, ColumnRef, Constant, Expression, BinaryOpExpr, StarExpr};
 use crate::try_from_ast_error::{ParseASTError, ParseASTResult};
 
 #[derive(Copy, Clone, PartialEq)]
@@ -27,6 +27,7 @@ pub enum ExpressionTypeImpl {
     Alias(Alias),     // < Alias expression type.
     BinaryOp(BinaryOpExpr),
     UnaryOp(UnaryOpExpr),
+    Star(StarExpr),
     Invalid
 }
 
@@ -45,6 +46,7 @@ impl From<ExpressionTypeImpl> for ExpressionType {
             ExpressionTypeImpl::Invalid => ExpressionType::Invalid,
             ExpressionTypeImpl::BinaryOp(_) => ExpressionType::BinaryOp,
             ExpressionTypeImpl::UnaryOp(_) => ExpressionType::UnaryOp,
+            ExpressionTypeImpl::Star(_) => ExpressionType::Star,
         }
     }
 }
@@ -57,6 +59,7 @@ impl Expression for ExpressionTypeImpl {
             ExpressionTypeImpl::Constant(e) => e.has_aggregation(),
             ExpressionTypeImpl::BinaryOp(e) => e.has_aggregation(),
             ExpressionTypeImpl::UnaryOp(e) => e.has_aggregation(),
+            ExpressionTypeImpl::Star(e) => e.has_aggregation(),
 
             // TODO - throw unreachable
             ExpressionTypeImpl::Invalid => false,
@@ -70,6 +73,7 @@ impl Expression for ExpressionTypeImpl {
             ExpressionTypeImpl::Constant(e) => e.has_window_function(),
             ExpressionTypeImpl::BinaryOp(e) => e.has_window_function(),
             ExpressionTypeImpl::UnaryOp(e) => e.has_window_function(),
+            ExpressionTypeImpl::Star(e) => e.has_window_function(),
 
             // TODO - throw unreachable
             ExpressionTypeImpl::Invalid => false,
@@ -101,6 +105,11 @@ impl Expression for ExpressionTypeImpl {
         }
 
         let mapped = UnaryOpExpr::try_parse_from_expr(expr, binder);
+        if mapped.is_ok() {
+            return mapped.map(|item| item.into())
+        }
+
+        let mapped = StarExpr::try_parse_from_expr(expr, binder);
         if mapped.is_ok() {
             return mapped.map(|item| item.into())
         }
