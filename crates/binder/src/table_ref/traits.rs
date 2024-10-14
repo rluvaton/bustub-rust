@@ -2,7 +2,8 @@ use std::fmt::Debug;
 use std::sync::Arc;
 use crate::Binder;
 use crate::context_guard::ContextGuard;
-use crate::try_from_ast_error::ParseASTError;
+use crate::expressions::ColumnRef;
+use crate::try_from_ast_error::{ParseASTError, ParseASTResult};
 use crate::table_ref::base_table_ref::BaseTableRef;
 use crate::table_ref::cross_product_ref::CrossProductRef;
 use crate::table_ref::cte_ref::CTERef;
@@ -11,6 +12,8 @@ use crate::table_ref::table_reference_type::{TableReferenceType, TableReferenceT
 
 /// A bound table reference.
 pub(crate) trait TableRef: Debug + PartialEq + Into<TableReferenceTypeImpl> {
+
+    fn resolve_column(&self, col_name: &[String], binder: &Binder) -> ParseASTResult<Option<ColumnRef>>;
 }
 
 

@@ -1,8 +1,10 @@
-use crate::expressions::ExpressionTypeImpl;
+use crate::Binder;
+use crate::expressions::{ColumnRef, ExpressionTypeImpl};
 use crate::table_ref::table_reference_type::{TableReferenceType, TableReferenceTypeImpl};
 use crate::table_ref::TableRef;
+use crate::try_from_ast_error::{ParseASTError, ParseASTResult};
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum JoinType {
     Invalid,
     Left,
@@ -11,7 +13,7 @@ pub enum JoinType {
     Outer
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct JoinRef {
     /// Type of join.
     pub(crate) join_type: JoinType,
@@ -41,6 +43,16 @@ impl JoinRef {
 }
 
 impl TableRef for JoinRef {
+    fn resolve_column(&self, col_name: &[String], binder: &Binder) -> ParseASTResult<Option<ColumnRef>> {
+        let left_column = self.left.resolve_column(col_name, binder)?;
+        let right_column = self.right.resolve_column(col_name, binder)?;
+
+        if left_column.is_some() && right_column.is_some() {
+            return Err(ParseASTError::FailedParsing(format!("{} is ambiguous", col_name.join("."))))
+        }
+
+        Ok(left_column.or(right_column))
+    }
 }
 
 impl From<JoinRef> for TableReferenceTypeImpl {

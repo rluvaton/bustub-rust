@@ -1,8 +1,8 @@
 use std::ops::Deref;
 use std::sync::Arc;
 use crate::Binder;
-use crate::expressions::{ExpressionType, ExpressionTypeImpl};
-use crate::try_from_ast_error::ParseASTError;
+use crate::expressions::{ColumnRef, ExpressionType, ExpressionTypeImpl};
+use crate::try_from_ast_error::{ParseASTError, ParseASTResult};
 use crate::statements::SelectStatement;
 use crate::table_ref::table_reference_type::TableReferenceType;
 use crate::table_ref::{TableRef, TableReferenceTypeImpl};
@@ -26,6 +26,30 @@ impl Into<TableReferenceTypeImpl> for SubqueryRef {
 }
 
 impl TableRef for SubqueryRef {
+    fn resolve_column(&self, col_name: &[String], binder: &Binder) -> ParseASTResult<Option<ColumnRef>> {
+        let alias = &self.alias;
+
+        // Firstly, try directly resolve the column name through schema
+        let direct_resolved_expr = ColumnRef::resolve_from_select_list(&self.select_list_name, col_name)?.map(|mut c| c.prepend(alias.clone()));
+
+        let mut strip_resolved_expr: Option<ColumnRef> = None;
+
+        // Then, try strip the prefix and match again
+        if col_name.len() > 1 {
+            // Strip alias and resolve again
+            if &col_name[0] == alias {
+                let strip_column_name = &col_name[1..];
+
+                strip_resolved_expr = ColumnRef::resolve_from_select_list(&self.select_list_name, strip_column_name)?.map(|mut c| c.prepend(alias.clone()));
+            }
+        }
+
+        if strip_resolved_expr.is_some() && direct_resolved_expr.is_some() {
+            return Err(ParseASTError::FailedParsing(format!("{} is ambiguous in subquery {}", col_name.join("."), alias)))
+        }
+
+        Ok(strip_resolved_expr.or(direct_resolved_expr))
+    }
 }
 
 

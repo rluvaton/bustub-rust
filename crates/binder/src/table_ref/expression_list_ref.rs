@@ -1,11 +1,11 @@
-use crate::expressions::ExpressionTypeImpl;
+use crate::expressions::{ColumnRef, ExpressionTypeImpl};
 use crate::table_ref::{TableRef, TableReferenceTypeImpl};
 use crate::try_from_ast_error::{ParseASTError, ParseASTResult};
 use crate::Binder;
 use sqlparser::ast::Values;
 
 /// A bound table ref type for `values` clause.
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct ExpressionListRef {
     pub(crate) identifier: String,
     pub(crate) values: Vec<Vec<ExpressionTypeImpl>>,
@@ -42,6 +42,9 @@ impl ExpressionListRef {
 }
 
 impl TableRef for ExpressionListRef {
+    fn resolve_column(&self, col_name: &[String], _binder: &Binder) -> ParseASTResult<Option<ColumnRef>> {
+        Err(ParseASTError::FailedParsing(format!("cannot resolve column {} in VALUES", col_name.join("."))))
+    }
 }
 
 impl From<ExpressionListRef> for TableReferenceTypeImpl {
@@ -49,18 +52,4 @@ impl From<ExpressionListRef> for TableReferenceTypeImpl {
         TableReferenceTypeImpl::ExpressionList(value)
     }
 }
-
-// impl TryFrom<NodeRef<'_>> for ExpressionListRef {
-//     type Error = TryFromASTError;
-//
-//     fn try_from(value: NodeRef) -> Result<Self, Self::Error> {
-//         let list = match value {
-//             NodeRef::List(list) => list,
-//             _ => return Err(TryFromASTError::IncompatibleType),
-//         };
-//         let nodes: &Vec<pg_query::Node> = &list.items;
-//
-//         ExpressionListRef::try_from_nodes(nodes)
-//     }
-// }
 

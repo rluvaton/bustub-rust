@@ -1,8 +1,11 @@
-use crate::table_ref::{ExpressionListRef, SubqueryRef};
+use crate::Binder;
+use crate::expressions::ColumnRef;
+use crate::table_ref::{ExpressionListRef, SubqueryRef, TableRef};
 use crate::table_ref::base_table_ref::BaseTableRef;
 use crate::table_ref::cross_product_ref::CrossProductRef;
 use crate::table_ref::cte_ref::CTERef;
 use crate::table_ref::join_ref::JoinRef;
+use crate::try_from_ast_error::{ParseASTError, ParseASTResult};
 
 #[derive(Debug, PartialEq)]
 pub enum TableReferenceType {
@@ -16,7 +19,7 @@ pub enum TableReferenceType {
     Empty = 8            // < Placeholder for empty FROM.
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum TableReferenceTypeImpl {
     Invalid,         // < Invalid table reference type.
     BaseTable(BaseTableRef),
@@ -26,4 +29,19 @@ pub enum TableReferenceTypeImpl {
     SubQuery(SubqueryRef),        // < Subquery.
     CTE(CTERef),
     Empty            // < Placeholder for empty FROM.
+}
+
+impl TableRef for TableReferenceTypeImpl {
+    fn resolve_column(&self, col_name: &[String], binder: &Binder) -> ParseASTResult<Option<ColumnRef>> {
+        match &self {
+            TableReferenceTypeImpl::Invalid => panic!("Cant resolve column in invalid scope"),
+            TableReferenceTypeImpl::BaseTable(b) => b.resolve_column(col_name, binder),
+            TableReferenceTypeImpl::Join(b) => b.resolve_column(col_name, binder),
+            TableReferenceTypeImpl::ExpressionList(b) => b.resolve_column(col_name, binder),
+            TableReferenceTypeImpl::CrossProduct(b) => b.resolve_column(col_name, binder),
+            TableReferenceTypeImpl::SubQuery(b) => b.resolve_column(col_name, binder),
+            TableReferenceTypeImpl::CTE(b) => b.resolve_column(col_name, binder),
+            TableReferenceTypeImpl::Empty => Err(ParseASTError::FailedParsing(format!("column {} not found", col_name.join("."))))
+        }
+    }
 }
