@@ -5,6 +5,7 @@ mod delete;
 mod insert;
 mod select;
 
+pub use traits::Statement;
 pub use statement_type::{StatementType, StatementTypeImpl};
 pub use create::*;
 pub use delete::*;

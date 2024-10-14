@@ -2,7 +2,7 @@ use crate::expressions::{ColumnRef, ExpressionTypeImpl};
 use crate::order_by::OrderBy;
 use crate::sql_parser_helper::{ColumnDefExt, ConstraintExt};
 use crate::statements::traits::Statement;
-use crate::table_ref::{CTEList, ExpressionListRef, TableReferenceTypeImpl};
+use crate::table_ref::{CTEList, ExpressionListRef, SubqueryRef, TableReferenceTypeImpl};
 use crate::try_from_ast_error::{ParseASTError, ParseASTResult};
 use crate::Binder;
 use std::fmt::Debug;
@@ -37,7 +37,7 @@ pub struct SelectStatement {
     pub(crate) sort: Vec<Arc<OrderBy>>,
 
     /// Bound CTE
-    pub(crate) ctes: CTEList,
+    pub(crate) ctes: Arc<CTEList>,
 
     /// Is SELECT DISTINCT
     pub(crate) is_distinct: bool,
@@ -53,7 +53,7 @@ impl SelectStatement {
         limit_count: Arc<ExpressionTypeImpl>,
         limit_offset: Arc<ExpressionTypeImpl>,
         sort: Vec<Arc<OrderBy>>,
-        ctes: CTEList,
+        ctes: Arc<CTEList>,
         is_distinct: bool,
     ) -> Self {
         Self {
@@ -127,6 +127,15 @@ impl Statement for SelectStatement {
         //     self.cte_scope = Some(ctes);
         //     // TODO(chi): allow access CTE from multiple levels of scopes
         // }
+        let ctes = if let Some(with) = &ast.with {
+            let ctes = Arc::new(SubqueryRef::parse_with(with, binder)?);
+
+            binder.cte_scope.replace(ctes.clone());
+
+            ctes
+        } else {
+            Arc::new(vec![])
+        };
 
         // Bind FROM clause
         // let table = stmt.from_clause

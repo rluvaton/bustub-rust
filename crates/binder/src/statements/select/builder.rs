@@ -33,7 +33,7 @@ pub(super) struct SelectStatementBuilder {
     sort: Vec<Arc<OrderBy>>,
 
     /// Bound CTE
-    ctes: CTEList,
+    ctes: Arc<CTEList>,
 
     /// Is SELECT DISTINCT
     is_distinct: bool,
@@ -90,7 +90,7 @@ impl SelectStatementBuilder {
         self
     }
 
-    pub(super) fn with_ctes(mut self, ctes: CTEList) -> Self {
+    pub(super) fn with_ctes(mut self, ctes: Arc<CTEList>) -> Self {
         self.ctes = ctes;
 
         self
@@ -142,7 +142,7 @@ impl Default for SelectStatementBuilder {
             limit_count: Arc::new(ExpressionTypeImpl::Invalid),
             limit_offset: Arc::new(ExpressionTypeImpl::Invalid),
             sort: vec![],
-            ctes: vec![],
+            ctes: Arc::new(vec![]),
             is_distinct: false,
         }
     }

@@ -1,11 +1,9 @@
-use std::ops::Deref;
-use std::sync::Arc;
-use crate::Binder;
-use crate::expressions::{ColumnRef, ExpressionType, ExpressionTypeImpl};
-use crate::try_from_ast_error::{ParseASTError, ParseASTResult};
-use crate::statements::SelectStatement;
-use crate::table_ref::table_reference_type::TableReferenceType;
+use crate::expressions::{ColumnRef, ExpressionTypeImpl};
+use crate::statements::{SelectStatement, Statement};
 use crate::table_ref::{TableRef, TableReferenceTypeImpl};
+use crate::try_from_ast_error::{ParseASTError, ParseASTResult};
+use crate::Binder;
+use sqlparser::ast::{Cte, With};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct SubqueryRef {
@@ -17,6 +15,47 @@ pub struct SubqueryRef {
 
     // Alias
     pub(crate) alias: String,
+}
+
+impl SubqueryRef {
+    pub(crate) fn parse_with(with: &With, binder: &mut Binder) -> ParseASTResult<Vec<Self>> {
+        if with.recursive {
+            return Err(ParseASTError::Unimplemented("recursive CTE is not supported".to_string()));
+        }
+
+        with.cte_tables
+            .iter()
+            .map(|cte_ele| Self::parse_cte(cte_ele, binder))
+            .collect()
+    }
+
+    pub(crate) fn parse_cte(cte: &Cte, binder: &mut Binder) -> ParseASTResult<Self> {
+        let subquery = SelectStatement::try_parse_ast(&*cte.query, binder)?;
+
+        let select_list_name: Vec<Vec<String>> = subquery.select_list
+            .iter()
+            .map(|col| {
+                match &*col.clone() {
+                    ExpressionTypeImpl::ColumnRef(c) => c.col_name.clone(),
+                    ExpressionTypeImpl::Alias(a) => vec![a.alias.clone()],
+                    _ => {
+                        let name = format!("__item#{}", binder.universal_id);
+
+                        binder.universal_id += 1;
+
+                        vec![name]
+                    }
+                }
+            })
+            .collect::<Vec<_>>();
+
+        Ok(SubqueryRef {
+            subquery,
+            select_list_name,
+            alias: cte.alias.name.value.clone()
+        })
+
+    }
 }
 
 impl Into<TableReferenceTypeImpl> for SubqueryRef {
