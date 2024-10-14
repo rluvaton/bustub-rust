@@ -1,4 +1,3 @@
-use sqlparser::ast::Expr;
 use crate::table_ref::{ExpressionListRef, SubqueryRef};
 use crate::table_ref::base_table_ref::BaseTableRef;
 use crate::table_ref::cross_product_ref::CrossProductRef;

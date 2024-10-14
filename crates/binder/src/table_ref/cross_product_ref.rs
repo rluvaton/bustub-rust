@@ -20,7 +20,12 @@ impl CrossProductRef {
     }
 }
 
+impl Into<TableReferenceTypeImpl> for CrossProductRef {
+    fn into(self) -> TableReferenceTypeImpl {
+        TableReferenceTypeImpl::CrossProduct(self)
+    }
+}
+
 impl TableRef for CrossProductRef {
-    const TYPE: TableReferenceType = TableReferenceType::CrossProduct;
 }
 

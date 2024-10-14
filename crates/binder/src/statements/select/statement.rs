@@ -82,6 +82,8 @@ impl Statement for SelectStatement {
     where
         Self: Sized,
     {
+
+        let builder = Self::builder();
         let ctx_guard = binder.new_context();
 
         match &*ast.body {
@@ -106,7 +108,7 @@ impl Statement for SelectStatement {
                     })
                     .collect();
 
-                return Self::builder()
+                return builder
                     .with_table(Arc::new(value_list.into()))
                     .with_select_list(exprs)
                     .try_build()
@@ -116,37 +118,8 @@ impl Statement for SelectStatement {
             SetExpr::Update(_) => {}
             SetExpr::Table(_) => {}
         }
-        // if !stmt.values_lists.is_empty() {
-        //     let values_list_name = format!("__values#{}", self.universal_id);
-        //     self.universal_id += 1;
-        //
-        //     let mut value_list: ExpressionListRef = ExpressionListRef::try_from_nodes(&stmt.values_lists)?;
-        //
-        //     value_list.identifier = values_list_name;
-        //
-        //     let mut exprs: Vec<Arc<dyn Expression>> = vec![];
-        //
-        //     for i in 0..value_list.values[0].len() {
-        //         exprs.push(Arc::new(ColumnRef::new(vec![
-        //             values_list_name,
-        //             i.to_string()
-        //         ])));
-        //     }
-        //
-        //     return Ok(SelectStatement {
-        //         table: Arc::new(value_list),
-        //         select_list: exprs,
-        //         where_exp: Arc::new(()),
-        //         group_by: vec![],
-        //         having: Arc::new(()),
-        //         limit_count: Arc::new(()),
-        //         limit_offset: Arc::new(()),
-        //         sort: vec![],
-        //         ctes: vec![],
-        //         is_distinct: false,
-        //     })
-        // }
-        //
+
+
         // // Bind CTEs
         // let mut ctes = vec![];
         // if let Some(with) = &stmt.with_clause {

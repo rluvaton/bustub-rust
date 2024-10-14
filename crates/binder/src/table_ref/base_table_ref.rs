@@ -58,8 +58,9 @@ impl BaseTableRef {
 }
 
 impl TableRef for BaseTableRef {
-    const TYPE: TableReferenceType = TableReferenceType::BaseTable;
 }
+
+
 
 impl From<BaseTableRef> for TableReferenceTypeImpl {
     fn from(value: BaseTableRef) -> Self {

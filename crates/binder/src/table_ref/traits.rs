@@ -10,8 +10,7 @@ use crate::table_ref::join_ref::{JoinRef, JoinType};
 use crate::table_ref::table_reference_type::{TableReferenceType, TableReferenceTypeImpl};
 
 /// A bound table reference.
-pub(crate) trait TableRef: Debug + PartialEq {
-    const TYPE: TableReferenceType;
+pub(crate) trait TableRef: Debug + PartialEq + Into<TableReferenceTypeImpl> {
 }
 
 

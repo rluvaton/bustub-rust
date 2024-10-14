@@ -43,7 +43,6 @@ impl ExpressionListRef {
 }
 
 impl TableRef for ExpressionListRef {
-    const TYPE: TableReferenceType = TableReferenceType::ExpressionList;
 }
 
 impl From<ExpressionListRef> for TableReferenceTypeImpl {

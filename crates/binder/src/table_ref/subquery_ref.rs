@@ -5,7 +5,7 @@ use crate::expressions::{ExpressionType, ExpressionTypeImpl};
 use crate::try_from_ast_error::ParseASTError;
 use crate::statements::SelectStatement;
 use crate::table_ref::table_reference_type::TableReferenceType;
-use crate::table_ref::TableRef;
+use crate::table_ref::{TableRef, TableReferenceTypeImpl};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct SubqueryRef {
@@ -19,8 +19,13 @@ pub struct SubqueryRef {
     pub(crate) alias: String,
 }
 
+impl Into<TableReferenceTypeImpl> for SubqueryRef {
+    fn into(self) -> TableReferenceTypeImpl {
+        TableReferenceTypeImpl::SubQuery(self)
+    }
+}
+
 impl TableRef for SubqueryRef {
-    const TYPE: TableReferenceType = TableReferenceType::SubQuery;
 }
 
 

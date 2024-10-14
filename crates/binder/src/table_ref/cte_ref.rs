@@ -17,7 +17,6 @@ impl CTERef {
 }
 
 impl TableRef for CTERef {
-    const TYPE: TableReferenceType = TableReferenceType::CTE;
 }
 
 impl From<CTERef> for TableReferenceTypeImpl {

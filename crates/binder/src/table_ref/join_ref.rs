@@ -41,7 +41,6 @@ impl JoinRef {
 }
 
 impl TableRef for JoinRef {
-    const TYPE: TableReferenceType = TableReferenceType::Join;
 }
 
 impl From<JoinRef> for TableReferenceTypeImpl {
