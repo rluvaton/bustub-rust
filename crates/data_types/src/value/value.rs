@@ -5,6 +5,7 @@ use crate::types::{BigIntType, BooleanType, ComparisonDBTypeTrait, ConversionDBT
 
 
 // TODO - implement from src/include/type/value.h
+#[derive(Debug)]
 pub struct Value {
     /// The data type
     // type_id: TypeId,
@@ -157,5 +158,12 @@ impl Clone for Value {
         )
     }
 }
+
+impl From<bool> for Value {
+    fn from(value: bool) -> Self {
+        Value::new(DBTypeIdImpl::BOOLEAN(value.into()))
+    }
+}
+
 
 

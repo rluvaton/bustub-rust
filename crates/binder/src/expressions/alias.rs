@@ -1,5 +1,5 @@
 use std::sync::Arc;
-use crate::expressions::{Expression, ExpressionType, ExpressionTypeImpl};
+use crate::expressions::{ColumnRef, Expression, ExpressionType, ExpressionTypeImpl};
 
 /// The alias in SELECT list, e.g. `SELECT count(x) AS y`, the `y` is an alias.
 #[derive(Debug, PartialEq)]
@@ -22,12 +22,13 @@ impl Alias {
     }
 }
 
-impl Expression for Alias {
-    const TYPE: ExpressionType = ExpressionType::ColumnRef;
-
-    fn get_type(&self) -> ExpressionType {
-        Self::TYPE
+impl Into<ExpressionTypeImpl> for Alias {
+    fn into(self) -> ExpressionTypeImpl {
+        ExpressionTypeImpl::Alias(self)
     }
+}
+
+impl Expression for Alias {
 
     fn has_aggregation(&self) -> bool {
         self.child.has_aggregation()

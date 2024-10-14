@@ -2,7 +2,7 @@ use std::ops::Deref;
 use std::sync::Arc;
 use crate::Binder;
 use crate::expressions::{ExpressionType, ExpressionTypeImpl};
-use crate::try_from_ast_error::TryFromASTError;
+use crate::try_from_ast_error::ParseASTError;
 use crate::statements::SelectStatement;
 use crate::table_ref::table_reference_type::TableReferenceType;
 use crate::table_ref::TableRef;
@@ -25,7 +25,7 @@ impl TableRef for SubqueryRef {
 
 
 impl Binder<'_> {
-    pub(crate) fn parse_subquery(&mut self, select_stmt: &sqlparser::ast::Select, alias: String) -> Result<SubqueryRef, TryFromASTError> {
+    pub(crate) fn parse_subquery(&mut self, select_stmt: &sqlparser::ast::Select, alias: String) -> Result<SubqueryRef, ParseASTError> {
         todo!()
         // let subquery = self.parse_select_statement(select_stmt)?;
         // let mut select_list_name: Vec<Vec<String>> = vec![];
@@ -52,7 +52,7 @@ impl Binder<'_> {
         // })
     }
 
-    pub(crate) fn convert_with_to_many_subqueries(&mut self, with: &sqlparser::ast::With) -> Result<Vec<SubqueryRef>, TryFromASTError> {
+    pub(crate) fn convert_with_to_many_subqueries(&mut self, with: &sqlparser::ast::With) -> Result<Vec<SubqueryRef>, ParseASTError> {
         todo!()
         // let mut ctes: Vec<SubqueryRef> = vec![];
         //

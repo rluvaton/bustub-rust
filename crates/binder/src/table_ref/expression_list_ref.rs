@@ -1,6 +1,6 @@
 use crate::expressions::{Expression, ExpressionTypeImpl};
 use std::sync::Arc;
-use crate::try_from_ast_error::TryFromASTError;
+use crate::try_from_ast_error::ParseASTError;
 use crate::sql_parser_helper::ListExt;
 use crate::table_ref::table_reference_type::TableReferenceType;
 use crate::table_ref::TableRef;
@@ -21,7 +21,7 @@ impl ExpressionListRef {
     }
 
     // pg_query::Node
-    pub fn try_from_nodes(items: &Vec<()>) -> Result<Self, TryFromASTError> {
+    pub fn try_from_nodes(items: &Vec<()>) -> Result<Self, ParseASTError> {
         todo!()
         // let mut all_values: Vec<Vec<Arc<dyn Expression>>> = vec![];
         //

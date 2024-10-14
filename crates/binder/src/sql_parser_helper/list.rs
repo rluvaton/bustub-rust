@@ -1,16 +1,16 @@
 use std::sync::Arc;
 use crate::expressions::{Expression, ExpressionType, ExpressionTypeImpl};
-use crate::try_from_ast_error::TryFromASTError;
+use crate::try_from_ast_error::ParseASTError;
 use crate::sql_parser_helper::node::NodeExt;
 
 pub(crate) trait ListExt {
 
-    fn parse_items_as_expressions(&self) -> Result<Vec<Arc<ExpressionTypeImpl>>, TryFromASTError>;
+    fn parse_items_as_expressions(&self) -> Result<Vec<Arc<ExpressionTypeImpl>>, ParseASTError>;
 }
 
 // List
 impl ListExt for () {
-    fn parse_items_as_expressions(&self) -> Result<Vec<Arc<ExpressionTypeImpl>>, TryFromASTError> {
+    fn parse_items_as_expressions(&self) -> Result<Vec<Arc<ExpressionTypeImpl>>, ParseASTError> {
         todo!()
         // let mut select_list = vec![];
         //

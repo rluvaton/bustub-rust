@@ -58,7 +58,7 @@ macro_rules! run_on_numeric_impl {
 }
 
 // Every possible SQL type ID
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum DBTypeIdImpl {
     // INVALID = 0,
     BOOLEAN(BooleanType),

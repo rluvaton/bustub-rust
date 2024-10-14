@@ -1,7 +1,7 @@
 use crate::sql_parser_helper::{ColumnDefExt, ConstraintExt};
 use crate::statements::traits::Statement;
 use crate::statements::StatementType;
-use crate::try_from_ast_error::{ParseASTResult, TryFromASTError};
+use crate::try_from_ast_error::{ParseASTResult, ParseASTError};
 use db_core::catalog::Column;
 use std::fmt::Debug;
 use crate::Binder;
@@ -33,7 +33,7 @@ impl Statement for CreateStatement {
         let columns = columns?;
 
         if columns.is_empty() {
-            return Err(TryFromASTError::FailedParsing("Columns cannot be empty".to_string()))
+            return Err(ParseASTError::FailedParsing("Columns cannot be empty".to_string()))
         }
 
 
@@ -47,7 +47,7 @@ impl Statement for CreateStatement {
     fn try_parse_from_statement(statement: &sqlparser::ast::Statement, binder: &mut Binder) -> ParseASTResult<Self> {
         match &statement {
             sqlparser::ast::Statement::CreateTable(ast) => Self::try_parse_ast(ast, binder),
-            _ => Err(TryFromASTError::IncompatibleType)
+            _ => Err(ParseASTError::IncompatibleType)
         }
     }
 }
@@ -59,13 +59,13 @@ mod tests {
     use data_types::DBTypeId;
     use db_core::catalog::Column;
 
-    use crate::try_from_ast_error::TryFromASTError;
+    use crate::try_from_ast_error::ParseASTError;
     use sqlparser::dialect::GenericDialect;
     use sqlparser::parser::Parser;
     use crate::Binder;
     use crate::statements::traits::Statement;
 
-    fn parse_create_sql(sql: &str) -> Result<Vec<CreateStatement>, TryFromASTError> {
+    fn parse_create_sql(sql: &str) -> Result<Vec<CreateStatement>, ParseASTError> {
         let mut binder = Binder::default();
         let statements = Parser::parse_sql(&GenericDialect {}, sql).unwrap();
         statements.iter().map(|stmt| CreateStatement::try_parse_from_statement(stmt, &mut binder)).collect()

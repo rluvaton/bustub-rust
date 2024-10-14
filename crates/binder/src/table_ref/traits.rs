@@ -2,7 +2,7 @@ use std::fmt::Debug;
 use std::sync::Arc;
 use crate::Binder;
 use crate::context_guard::ContextGuard;
-use crate::try_from_ast_error::TryFromASTError;
+use crate::try_from_ast_error::ParseASTError;
 use crate::table_ref::base_table_ref::BaseTableRef;
 use crate::table_ref::cross_product_ref::CrossProductRef;
 use crate::table_ref::cte_ref::CTERef;
@@ -17,11 +17,11 @@ pub(crate) trait TableRef: Debug + PartialEq {
 
 impl Binder<'_> {
 
-    pub(crate) fn parse_base_table_ref(&mut self, table_name: String, alias: Option<String>) -> Result<BaseTableRef, TryFromASTError> {
+    pub(crate) fn parse_base_table_ref(&mut self, table_name: String, alias: Option<String>) -> Result<BaseTableRef, ParseASTError> {
         let table_info = self.catalog.unwrap().get_table_by_name(&table_name);
 
         if table_info.is_none() {
-            return Err(TryFromASTError::FailedParsing(format!("invalid table {}", table_name)));
+            return Err(ParseASTError::FailedParsing(format!("invalid table {}", table_name)));
         }
 
         let table_info = table_info.unwrap();
@@ -30,7 +30,7 @@ impl Binder<'_> {
     }
 
 
-    pub(crate) fn parse_join_expr(&mut self, table_ref: &sqlparser::ast::Join) -> Result<TableReferenceTypeImpl, TryFromASTError> {
+    pub(crate) fn parse_join_expr(&mut self, table_ref: &sqlparser::ast::Join) -> Result<TableReferenceTypeImpl, ParseASTError> {
         todo!()
         // let _ctx_guard = self.new_context();
         //
@@ -65,7 +65,7 @@ impl Binder<'_> {
     }
 
     // &pg_query::protobuf::RangeVar
-    pub(crate) fn parse_range_var(&mut self, table_ref: ()) -> Result<TableReferenceTypeImpl, TryFromASTError> {
+    pub(crate) fn parse_range_var(&mut self, table_ref: ()) -> Result<TableReferenceTypeImpl, ParseASTError> {
         todo!()
         //
         // if let Some(cte_scope) = &self.cte_scope {
@@ -87,7 +87,7 @@ impl Binder<'_> {
     }
 
     // &pg_query::protobuf::RangeSubselect
-    pub(crate) fn parse_range_subselect(&mut self, range: ()) -> Result<TableReferenceTypeImpl, TryFromASTError> {
+    pub(crate) fn parse_range_subselect(&mut self, range: ()) -> Result<TableReferenceTypeImpl, ParseASTError> {
         todo!()
 
         // if range.lateral {
@@ -120,7 +120,7 @@ impl Binder<'_> {
     }
 
     // &pg_query::protobuf::Node
-    pub(crate) fn create_table_ref(&mut self, node: ()) -> Result<TableReferenceTypeImpl, TryFromASTError> {
+    pub(crate) fn create_table_ref(&mut self, node: ()) -> Result<TableReferenceTypeImpl, ParseASTError> {
         todo!()
         // if node.node.is_none() {
         //     return Err(TryFromASTError::FailedParsing("node is none".to_string()));

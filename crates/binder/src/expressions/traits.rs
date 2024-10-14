@@ -1,13 +1,9 @@
-use std::fmt::Debug;
-use std::sync::Arc;
+use crate::expressions::ExpressionTypeImpl;
+use crate::try_from_ast_error::ParseASTError;
 use crate::Binder;
-use crate::expressions::{ColumnRef, ExpressionType, ExpressionTypeImpl};
-use crate::try_from_ast_error::TryFromASTError;
+use std::fmt::Debug;
 
-pub(crate) trait Expression: Debug + PartialEq {
-    const TYPE: ExpressionType;
-
-    fn get_type(&self) -> ExpressionType;
+pub(crate) trait Expression: Debug + PartialEq + Into<ExpressionTypeImpl> {
 
     fn has_aggregation(&self) -> bool;
 
@@ -17,16 +13,7 @@ pub(crate) trait Expression: Debug + PartialEq {
 }
 
 impl Binder<'_> {
-    pub(crate) fn parse_expression(&self, node: &sqlparser::ast::Expr) -> Result<ExpressionTypeImpl, TryFromASTError> {
+    pub(crate) fn parse_expression(&mut self, node: &sqlparser::ast::Expr) -> Result<ExpressionTypeImpl, ParseASTError> {
         todo!()
-        // if node.node.is_none() {
-        //     return Err(TryFromASTError::FailedParsing("Node is none".to_string()))
-        // }
-        //
-        //
-        //
-        // match node.node.as_ref().unwrap() {
-        //     _ => unimplemented!()
-        // }
     }
 }

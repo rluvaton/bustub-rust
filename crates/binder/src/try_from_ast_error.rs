@@ -1,6 +1,6 @@
 
 #[derive(thiserror::Error, Debug, PartialEq, Clone)]
-pub enum TryFromASTError {
+pub enum ParseASTError {
     #[error("node is incompatible")]
     IncompatibleType,
 
@@ -14,4 +14,4 @@ pub enum TryFromASTError {
     Other(String),
 }
 
-pub type ParseASTResult<T> = Result<T, TryFromASTError>;
+pub type ParseASTResult<T> = Result<T, ParseASTError>;

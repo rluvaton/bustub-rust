@@ -7,7 +7,7 @@ use crate::table_ref::{CTEList, ExpressionListRef, TableRef, TableReferenceTypeI
 use std::fmt::Debug;
 use std::sync::Arc;
 use crate::Binder;
-use crate::try_from_ast_error::TryFromASTError;
+use crate::try_from_ast_error::ParseASTError;
 
 #[derive(Debug, PartialEq)]
 pub struct SelectStatement {
@@ -75,7 +75,7 @@ impl SelectStatement {
 // }
 
 impl Binder<'_> {
-    pub(crate) fn parse_select_statement(&mut self, stmt: &sqlparser::ast::Select) -> Result<SelectStatement, TryFromASTError> {
+    pub(crate) fn parse_select_statement(&mut self, stmt: &sqlparser::ast::Select) -> Result<SelectStatement, ParseASTError> {
         //
         // // If have VALUES clause
         // if !stmt.values_lists.is_empty() {

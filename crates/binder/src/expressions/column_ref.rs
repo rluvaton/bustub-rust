@@ -1,4 +1,4 @@
-use crate::expressions::{Expression, ExpressionType};
+use crate::expressions::{Expression, ExpressionType, ExpressionTypeImpl};
 
 /// A bound column reference, e.g., `y.x` in the SELECT list.
 #[derive(Debug, PartialEq)]
@@ -19,13 +19,13 @@ impl ColumnRef {
     }
 }
 
-impl Expression for ColumnRef {
-    const TYPE: ExpressionType = ExpressionType::ColumnRef;
-
-    fn get_type(&self) -> ExpressionType {
-        Self::TYPE
+impl Into<ExpressionTypeImpl> for ColumnRef {
+    fn into(self) -> ExpressionTypeImpl {
+        ExpressionTypeImpl::ColumnRef(self)
     }
+}
 
+impl Expression for ColumnRef {
     fn has_aggregation(&self) -> bool {
         false
     }

@@ -1,22 +1,24 @@
+use super::SqlParserDeleteStatementExt;
+use crate::expressions::{Constant, ExpressionTypeImpl};
 use crate::sql_parser_helper::{ColumnDefExt, ConstraintExt};
 use crate::statements::traits::Statement;
 use crate::statements::StatementType;
-use crate::try_from_ast_error::{ParseASTResult, TryFromASTError};
-use db_core::catalog::Column;
-use std::fmt::Debug;
+use crate::table_ref::{BaseTableRef, TableReferenceTypeImpl};
+use crate::try_from_ast_error::{ParseASTError, ParseASTResult};
 use crate::Binder;
-use crate::expressions::ExpressionTypeImpl;
-use crate::table_ref::BaseTableRef;
-use super::SqlParserDeleteStatementExt;
+use sqlparser::ast::{FromTable, TableFactor};
+use std::fmt::Debug;
+use std::sync::Arc;
 
 #[derive(Debug, PartialEq)]
 pub struct DeleteStatement {
-    pub(crate) table: BaseTableRef,
-    pub(crate) expr: Box<ExpressionTypeImpl>,
+    pub(crate) table: Arc<TableReferenceTypeImpl>,
+    pub(crate) expr: ExpressionTypeImpl,
 }
 
 impl DeleteStatement {
-    pub fn new(table: BaseTableRef, expr: Box<ExpressionTypeImpl>) -> Self {
+    pub fn new(table: Arc<TableReferenceTypeImpl>, expr: ExpressionTypeImpl) -> Self {
+        assert!(matches!(*table, TableReferenceTypeImpl::BaseTable(_)), "table reference in delete must be base table");
         Self {
             table,
             expr
@@ -25,50 +27,68 @@ impl DeleteStatement {
 }
 
 
-// impl Statement for DeleteStatement {
-//     const TYPE: StatementType = StatementType::Delete;
-//     type ASTStatement = sqlparser::ast::Delete;
-//
-//     fn try_parse(ast: &Self::ASTStatement, binder: &mut Binder) -> ParseASTResult<Self> {
-//         let delete = match ast {
-//             sqlparser::ast::Statement::Delete(delete) => delete,
-//             _ => return Err(TryFromASTError::IncompatibleType)
-//         };
-//
-//         let columns: ParseASTResult<Vec<Column>> = delete.columns.iter().map(|item| item.try_convert_into_column()).collect();
-//         let columns = columns?;
-//
-//         if columns.is_empty() {
-//             return Err(TryFromASTError::FailedParsing("Columns cannot be empty".to_string()))
-//         }
-//
-//
-//         Ok(DeleteStatement {
-//             table: delete.name.to_string(),
-//             columns,
-//             primary_key: delete.try_get_primary_columns()?,
-//         })
-//     }
-// }
+impl Statement for DeleteStatement {
+    const TYPE: StatementType = StatementType::Delete;
+    type ASTStatement = sqlparser::ast::Delete;
+
+    fn try_parse_ast(ast: &Self::ASTStatement, binder: &mut Binder) -> ParseASTResult<Self> {
+        let from = match &ast.from {
+            FromTable::WithFromKeyword(with) => with,
+            FromTable::WithoutKeyword(_) => return Err(ParseASTError::Unimplemented("From without keyword is not supported".to_string())),
+        };
+
+        if from.len() != 1 {
+            return Err(ParseASTError::Unimplemented("From must have only 1 table".to_string()));
+        }
+
+        let from = &from[0];
+
+        let table = match &from.relation {
+            TableFactor::Table { name, alias, .. } => {
+                BaseTableRef::try_parse(name.to_string(), alias.as_ref().map(|alias| alias.to_string()), binder)
+            }
+            _ => return Err(ParseASTError::Unimplemented(format!("From relation is not supported {}", from.relation)))
+        };
+
+        let table: Arc<TableReferenceTypeImpl> = Arc::new(table?.into());
+
+        // TODO - guard
+        let ctx_guard = binder.new_context();
+
+        binder.scope.replace(table.clone());
+
+        let expr: ExpressionTypeImpl = if let Some(selection) = &ast.selection {
+            binder.parse_expression(selection)?
+        } else {
+            Constant::new(true.into()).into()
+        };
+
+        Ok(DeleteStatement::new(table, expr))
+    }
+
+
+    fn try_parse_from_statement(statement: &sqlparser::ast::Statement, binder: &mut Binder) -> ParseASTResult<Self> {
+        match &statement {
+            sqlparser::ast::Statement::Delete(ast) => Self::try_parse_ast(ast, binder),
+            _ => Err(ParseASTError::IncompatibleType)
+        }
+    }
+}
 
 
 #[cfg(test)]
 mod tests {
-    use data_types::DBTypeId;
-    use db_core::catalog::Column;
-
-    use crate::try_from_ast_error::TryFromASTError;
+    use crate::statements::DeleteStatement;
+    use crate::try_from_ast_error::ParseASTError;
+    use crate::Binder;
     use sqlparser::dialect::GenericDialect;
     use sqlparser::parser::Parser;
-    use crate::Binder;
-    use crate::statements::DeleteStatement;
-    use crate::table_ref::BaseTableRef;
+    use crate::statements::traits::Statement;
 
-    fn parse_delete_sql(sql: &str) -> Result<Vec<DeleteStatement>, TryFromASTError> {
-        // let binder = Binder::default();
-        // let statements = Parser::parse_sql(&GenericDialect {}, sql).unwrap();
-        // statements.iter().map(|item| DeleteStatement::try_parse_ast().try_into()).collect()
-        todo!()
+    fn parse_delete_sql(sql: &str) -> Result<Vec<DeleteStatement>, ParseASTError> {
+        let mut binder = Binder::default();
+        let statements = Parser::parse_sql(&GenericDialect {}, sql).unwrap();
+        statements.iter().map(|stmt| DeleteStatement::try_parse_from_statement(stmt, &mut binder)).collect()
     }
 
     // #[test]
