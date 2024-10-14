@@ -1,5 +1,4 @@
 use crate::expressions::ExpressionTypeImpl;
-use crate::table_ref::table_reference_type::TableReferenceType;
 use crate::table_ref::{TableRef, TableReferenceTypeImpl};
 use crate::try_from_ast_error::{ParseASTError, ParseASTResult};
 use crate::Binder;

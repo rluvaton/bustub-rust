@@ -1,6 +1,6 @@
 use sqlparser::ast::Expr;
 use crate::Binder;
-use crate::expressions::{Alias, UnaryOpExpr, ColumnRef, Constant, Expression, BinaryOpExpr, StarExpr};
+use crate::expressions::{Alias, UnaryOpExpr, ColumnRef, Constant, Expression, BinaryOpExpr, StarExpr, AggCallExpr, FuncCallExpr, WindowExpr};
 use crate::try_from_ast_error::{ParseASTError, ParseASTResult};
 
 #[derive(Copy, Clone, PartialEq)]
@@ -28,12 +28,24 @@ pub enum ExpressionTypeImpl {
     BinaryOp(BinaryOpExpr),
     UnaryOp(UnaryOpExpr),
     Star(StarExpr),
-    Invalid
+    FuncCall(FuncCallExpr),
+    AggCall(AggCallExpr),
+    Window(WindowExpr),
+    Invalid,
 }
 
 impl ExpressionTypeImpl {
     pub fn parse_expression_list(list: &Vec<Expr>, binder: &mut Binder) -> ParseASTResult<Vec<ExpressionTypeImpl>> {
-        list.iter().map(|item| Self::try_parse_from_expr(item, binder)).collect()
+        list
+            .iter()
+            .map(|item| Self::try_parse_from_expr(item, binder))
+            .collect()
+    }
+    pub fn parse_boxed_expression_list(list: &Vec<Expr>, binder: &mut Binder) -> ParseASTResult<Vec<Box<ExpressionTypeImpl>>> {
+        list
+            .iter()
+            .map(|item| Self::try_parse_from_expr(item, binder).map(|exp| Box::new(exp)))
+            .collect()
     }
 }
 
@@ -47,6 +59,9 @@ impl From<ExpressionTypeImpl> for ExpressionType {
             ExpressionTypeImpl::BinaryOp(_) => ExpressionType::BinaryOp,
             ExpressionTypeImpl::UnaryOp(_) => ExpressionType::UnaryOp,
             ExpressionTypeImpl::Star(_) => ExpressionType::Star,
+            ExpressionTypeImpl::FuncCall(_) => ExpressionType::FuncCall,
+            ExpressionTypeImpl::AggCall(_) => ExpressionType::AggCall,
+            ExpressionTypeImpl::Window(_) => ExpressionType::Window,
         }
     }
 }
@@ -60,6 +75,9 @@ impl Expression for ExpressionTypeImpl {
             ExpressionTypeImpl::BinaryOp(e) => e.has_aggregation(),
             ExpressionTypeImpl::UnaryOp(e) => e.has_aggregation(),
             ExpressionTypeImpl::Star(e) => e.has_aggregation(),
+            ExpressionTypeImpl::FuncCall(e) => e.has_aggregation(),
+            ExpressionTypeImpl::AggCall(e) => e.has_aggregation(),
+            ExpressionTypeImpl::Window(e) => e.has_aggregation(),
 
             // TODO - throw unreachable
             ExpressionTypeImpl::Invalid => false,
@@ -74,6 +92,9 @@ impl Expression for ExpressionTypeImpl {
             ExpressionTypeImpl::BinaryOp(e) => e.has_window_function(),
             ExpressionTypeImpl::UnaryOp(e) => e.has_window_function(),
             ExpressionTypeImpl::Star(e) => e.has_window_function(),
+            ExpressionTypeImpl::FuncCall(e) => e.has_window_function(),
+            ExpressionTypeImpl::AggCall(e) => e.has_window_function(),
+            ExpressionTypeImpl::Window(e) => e.has_window_function(),
 
             // TODO - throw unreachable
             ExpressionTypeImpl::Invalid => false,
@@ -82,36 +103,51 @@ impl Expression for ExpressionTypeImpl {
 
     fn try_parse_from_expr(expr: &Expr, binder: &mut Binder) -> ParseASTResult<Self>
     where
-        Self: Sized
+        Self: Sized,
     {
         let mapped = ColumnRef::try_parse_from_expr(expr, binder);
         if mapped.is_ok() {
-            return mapped.map(|item| item.into())
+            return mapped.map(|item| item.into());
         }
 
         let mapped = Constant::try_parse_from_expr(expr, binder);
         if mapped.is_ok() {
-            return mapped.map(|item| item.into())
+            return mapped.map(|item| item.into());
         }
 
         let mapped = Alias::try_parse_from_expr(expr, binder);
         if mapped.is_ok() {
-            return mapped.map(|item| item.into())
+            return mapped.map(|item| item.into());
         }
 
         let mapped = BinaryOpExpr::try_parse_from_expr(expr, binder);
         if mapped.is_ok() {
-            return mapped.map(|item| item.into())
+            return mapped.map(|item| item.into());
         }
 
         let mapped = UnaryOpExpr::try_parse_from_expr(expr, binder);
         if mapped.is_ok() {
-            return mapped.map(|item| item.into())
+            return mapped.map(|item| item.into());
         }
 
         let mapped = StarExpr::try_parse_from_expr(expr, binder);
         if mapped.is_ok() {
-            return mapped.map(|item| item.into())
+            return mapped.map(|item| item.into());
+        }
+
+        let mapped = WindowExpr::try_parse_from_expr(expr, binder);
+        if mapped.is_ok() {
+            return mapped.map(|item| item.into());
+        }
+
+        let mapped = AggCallExpr::try_parse_from_expr(expr, binder);
+        if mapped.is_ok() {
+            return mapped.map(|item| item.into());
+        }
+
+        let mapped = FuncCallExpr::try_parse_from_expr(expr, binder);
+        if mapped.is_ok() {
+            return mapped.map(|item| item.into());
         }
 
         Err(ParseASTError::IncompatibleType)
