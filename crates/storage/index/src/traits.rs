@@ -17,7 +17,7 @@ use tuple::Tuple;
 /// only supports conjunction, and may or may not be optimized depending on
 /// the type of expressions inside the predicate.
 ///
-pub trait Index {
+pub trait Index where Self: 'static {
     /// Insert an entry into the index.
     ///
     /// # Arguments
@@ -45,5 +45,10 @@ pub trait Index {
     ///
     /// returns `Vec<RID>`: The collection of RIDs with the search results
     fn scan_key(&self, key: &Tuple, transaction: Option<Arc<Transaction>>) -> error_utils::anyhow::Result<Vec<RID>>;
+
+
+    fn to_dyn_arc(self) -> Arc<dyn Index> where Self: Sized {
+        Arc::new(self)
+    }
 }
 

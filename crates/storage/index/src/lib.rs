@@ -10,5 +10,6 @@ pub use generic_key::GenericKey;
 pub use index_metadata::IndexMetadata;
 pub use index_with_metadata::IndexWithMetadata;
 pub use traits::Index;
+pub use impls::*;
 
 

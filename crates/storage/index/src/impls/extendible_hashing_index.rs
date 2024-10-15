@@ -4,7 +4,7 @@ use buffer_pool_manager::BufferPoolManager;
 use common::{Comparator, PageKey};
 use error_utils::ToAnyhow;
 use extendible_hash_table::{DiskExtendibleHashTable, bucket_array_size};
-use hashing_common::KeyHasher;
+use hashing_common::{DefaultKeyHasher, KeyHasher};
 use rid::RID;
 use std::sync::Arc;
 use transaction::Transaction;
@@ -24,22 +24,22 @@ struct ExtendibleHashingIndex<const BUCKET_MAX_SIZE: usize, Key: PageKey, KeyCom
 macro_rules! impl_extendible_hashing_index_for_generic_key {
     ($($helper_type:ident, $key_size:literal)+) => ($(
 
-pub type $helper_type<KeyHasherImpl: KeyHasher> = ExtendibleHashingIndex<{ bucket_array_size::<GenericKey<$key_size>, RID>() }, GenericKey<$key_size>, GenericComparator<$key_size>, KeyHasherImpl>;
+pub type $helper_type = ExtendibleHashingIndex<{ bucket_array_size::<GenericKey<$key_size>, RID>() }, GenericKey<$key_size>, GenericComparator<$key_size>, DefaultKeyHasher>;
 
-impl<KeyHasherImpl: KeyHasher> ExtendibleHashingIndex<{ bucket_array_size::<GenericKey<$key_size>, RID>() }, GenericKey<$key_size>, GenericComparator<$key_size>, KeyHasherImpl> {
-    pub fn new(metadata: Arc<IndexMetadata>, bpm: Arc<BufferPoolManager>) -> Result<Self, extendible_hash_table::errors::InitError> {
-        Ok(Self(DiskExtendibleHashTable::new(
+impl ExtendibleHashingIndex<{ bucket_array_size::<GenericKey<$key_size>, RID>() }, GenericKey<$key_size>, GenericComparator<$key_size>, DefaultKeyHasher> {
+    pub fn new(metadata: Arc<IndexMetadata>, bpm: Arc<BufferPoolManager>) -> Result<Arc<dyn Index>, extendible_hash_table::errors::InitError> {
+        DiskExtendibleHashTable::new(
             metadata.get_name().to_string(),
             bpm,
             GenericComparator::<$key_size>::from(metadata.get_key_schema()),
             None,
             None,
             None
-        )?))
+        ).map(|h| Self(h).to_dyn_arc())
     }
 }
 
-impl<KeyHasherImpl: KeyHasher> Index for ExtendibleHashingIndex<{ bucket_array_size::<GenericKey<$key_size>, RID>() }, GenericKey<$key_size>, GenericComparator<$key_size>, KeyHasherImpl> {
+impl Index for ExtendibleHashingIndex<{ bucket_array_size::<GenericKey<$key_size>, RID>() }, GenericKey<$key_size>, GenericComparator<$key_size>, DefaultKeyHasher> {
     fn insert_entry(&mut self, key: &Tuple, rid: RID, transaction: Option<Arc<Transaction>>) -> error_utils::anyhow::Result<()> {
         self.0.insert(&GenericKey::from(key), &rid, transaction).map_err(|err| err.to_anyhow())
     }
@@ -67,13 +67,13 @@ impl_extendible_hashing_index_for_generic_key! {
     ExtendibleHashingIndex64, 64
 }
 
-pub fn create_index_based_on_key_size(key_size: usize, metadata: Arc<IndexMetadata>, bpm: Arc<BufferPoolManager>) -> Arc<dyn Index> {
+pub fn create_extendible_hashing_index(key_size: usize, metadata: Arc<IndexMetadata>, bpm: Arc<BufferPoolManager>) -> Result<Arc<dyn Index>, extendible_hash_table::errors::InitError> {
     match key_size {
-        4 => Arc::new(ExtendibleHashingIndex4::new(metadata, bpm)),
-        8 => Arc::new(ExtendibleHashingIndex8::new(metadata, bpm)),
-        16 => Arc::new(ExtendibleHashingIndex16::new(metadata, bpm)),
-        32 => Arc::new(ExtendibleHashingIndex32::new(metadata, bpm)),
-        64 => Arc::new(ExtendibleHashingIndex64::new(metadata, bpm)),
+        4 => ExtendibleHashingIndex4::new(metadata, bpm),
+        8 => ExtendibleHashingIndex8::new(metadata, bpm),
+        16 => ExtendibleHashingIndex16::new(metadata, bpm),
+        32 => ExtendibleHashingIndex32::new(metadata, bpm),
+        64 => ExtendibleHashingIndex64::new(metadata, bpm),
         _ => panic!("Unimplemented extendible hash index for key size {}", key_size)
     }
 }
