@@ -1,12 +1,10 @@
+use crate::concurrency::{LockRequestQueue, TransactionManager};
+use common::config::{TableOID, TxnId};
+use parking_lot::Mutex;
+use rid::RID;
 use std::collections::HashMap;
 use std::sync::Arc;
-use std::sync::atomic::AtomicBool;
 use std::thread::JoinHandle;
-use parking_lot::Mutex;
-use common::config::{TableOID, TxnId};
-use recovery_log_manager::LogManager;
-use rid::RID;
-use crate::concurrency::{LockRequestQueue, TransactionManager};
 
 pub struct LockManager {
 
