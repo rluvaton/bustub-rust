@@ -4,9 +4,9 @@ use std::thread;
 use atomic::Atomic;
 use parking_lot::Mutex;
 use common::config::{AtomicTimestamp, TableOID, Timestamp, TxnId, INVALID_TIMESTAMP, TXN_START_ID};
+use expression::ExpressionType;
 use rid::RID;
 use crate::{IsolationLevel, TransactionState, UndoLink, UndoLog};
-use expression::AbstractExpressionRef;
 
 /// Transaction tracks information related to a transaction.
 pub struct Transaction {
@@ -48,7 +48,7 @@ struct TransactionData {
     write_set: HashMap<TableOID, HashSet<RID>>,
 
     /// store all scan predicates
-    scan_predicates: HashMap<TableOID, Vec<AbstractExpressionRef>>,
+    scan_predicates: HashMap<TableOID, Vec<ExpressionType>>,
 }
 
 impl Transaction {
@@ -133,7 +133,7 @@ impl Transaction {
         // guard.write_set
     }
 
-    pub fn append_scan_predicate(&self, t: &TableOID, predicate: AbstractExpressionRef) {
+    pub fn append_scan_predicate(&self, t: &TableOID, predicate: ExpressionType) {
         let mut guard = self.latch.lock();
         if !guard.scan_predicates.contains_key(t) {
             guard.scan_predicates.insert(*t, vec![]);
@@ -142,7 +142,7 @@ impl Transaction {
     }
 
 
-    pub fn get_scan_predicates(&self) -> HashMap<TableOID, Vec<AbstractExpressionRef>> {
+    pub fn get_scan_predicates(&self) -> HashMap<TableOID, Vec<ExpressionType>> {
         // It's behind a lock, should get a guard instead
         unimplemented!()
         // let guard = self.latch.lock();

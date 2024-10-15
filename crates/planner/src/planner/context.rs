@@ -1,6 +1,6 @@
 use std::rc::Rc;
 use binder::{CTEList, ExpressionTypeImpl};
-use expression::{AbstractExpression, AbstractExpressionRef};
+use expression::ExpressionType;
 
 /**
  * The context for the planner. Used for planning aggregation calls.
@@ -26,7 +26,7 @@ pub(crate) struct Context {
      * an aggregation plan node. The expressions in the vector should be used over the output from the
      * aggregation plan node.
      */
-    pub(crate) expr_in_agg: Vec<AbstractExpressionRef>,
+    pub(crate) expr_in_agg: Vec<ExpressionType>,
 
     /**
      * CTE in scope.

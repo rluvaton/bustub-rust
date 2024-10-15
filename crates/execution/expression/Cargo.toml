@@ -4,3 +4,6 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+data_types = {path = "../../data_types"}
+tuple = {path = "../../storage/table/tuple"}
+catalog_schema = {path = "../../catalog/schema"}

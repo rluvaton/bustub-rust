@@ -3,7 +3,6 @@ use std::rc::Rc;
 use std::sync::Arc;
 use catalog_schema::Schema;
 use common::config::TableOID;
-use expression::ExpressionRef;
 use crate::plan_nodes::{PlanNode, PlanType};
 
 /**
@@ -22,7 +21,7 @@ pub struct FilterPlan {
     children: Vec<Rc<PlanType>>,
 
     /** The predicate that all returned tuples must satisfy */
-    predicate: ExpressionRef,
+    predicate: Rc<PlanType>,
 }
 
 impl FilterPlan {
@@ -32,7 +31,7 @@ impl FilterPlan {
      * @param predicate The predicate applied during the scan operation
      * @param child The child plan node
      */
-    pub fn new(output: Arc<Schema>, predicate: ExpressionRef, child: Rc<PlanType>) -> Self {
+    pub fn new(output: Arc<Schema>, predicate: Rc<PlanType>, child: Rc<PlanType>) -> Self {
         Self {
             output_schema: output,
             children: vec![child],
@@ -41,7 +40,7 @@ impl FilterPlan {
     }
 
     /** @return The predicate to test tuples against; tuples should only be returned if they evaluate to true */
-    pub fn get_predicate(&self) -> &ExpressionRef { &self.predicate }
+    pub fn get_predicate(&self) -> &PlanType { &self.predicate }
 
     /** @return The child plan providing tuples to be deleted */
     pub fn get_child_plan(&self) -> &PlanType {

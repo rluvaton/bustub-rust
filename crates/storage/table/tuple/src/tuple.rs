@@ -29,7 +29,7 @@ impl Tuple {
 
 
     // constructor for creating a new tuple based on input value
-    pub fn from_value(values: Vec<Value>, schema: Arc<Schema>) -> Self {
+    pub fn from_value(values: Vec<Value>, schema: &Schema) -> Self {
         assert_eq!(values.len(), schema.get_column_count());
 
         // 1. Calculate the size of the tuple.
@@ -104,7 +104,7 @@ impl Tuple {
 
     // Get the value of a specified column (const)
     // checks the schema to see how to return the Value.
-    pub fn get_value(&self, schema: Arc<Schema>, column_idx: usize) -> Value {
+    pub fn get_value(&self, schema: &Schema, column_idx: usize) -> Value {
         let column_type = schema.get_column(column_idx).get_type();
         let data_ptr = self.get_data_ptr(schema, column_idx);
         // the third parameter "is_inlined" is unused
@@ -112,7 +112,7 @@ impl Tuple {
     }
 
     // Generates a key tuple given schemas and attributes
-    pub fn key_from_tuple(&self, schema: Arc<Schema>, key_schema: Arc<Schema>, key_attrs: &[u32]) -> Self {
+    pub fn key_from_tuple(&self, schema: &Schema, key_schema: &Schema, key_attrs: &[u32]) -> Self {
         Self::from_value(
             key_attrs
                 .iter()
@@ -123,12 +123,12 @@ impl Tuple {
     }
 
     // Is the column value null ?
-    pub fn is_null(&self, schema: Arc<Schema>, column_idx: usize) -> bool {
+    pub fn is_null(&self, schema: &Schema, column_idx: usize) -> bool {
         let value = self.get_value(schema, column_idx);
         value.is_null()
     }
 
-    pub fn to_string(&self, schema: Arc<Schema>) -> String {
+    pub fn to_string(&self, schema: &Schema) -> String {
         let column_count = schema.get_column_count();
 
         // TODO - change to use formatter
@@ -156,7 +156,7 @@ impl Tuple {
     pub fn is_tuple_content_equal(a: &Self, b: &Self) -> bool { a.data == b.data }
 
     // Get the starting storage address of specific column
-    fn get_data_ptr(&self, schema: Arc<Schema>, column_idx: usize) -> &[u8] {
+    fn get_data_ptr(&self, schema: &Schema, column_idx: usize) -> &[u8] {
         let col = schema.get_column(column_idx);
 
         // For inline type, data is stored where it is.

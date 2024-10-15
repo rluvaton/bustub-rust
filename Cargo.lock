@@ -650,6 +650,11 @@ dependencies = [
 [[package]]
 name = "expression"
 version = "0.1.0"
+dependencies = [
+ "catalog_schema",
+ "data_types",
+ "tuple",
+]
 
 [[package]]
 name = "extendible_hash_table"
