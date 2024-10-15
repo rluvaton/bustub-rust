@@ -7,7 +7,9 @@ mod agg_call_expr;
 mod func_call_expr;
 mod window_expr;
 mod binary_op;
+mod expr_impl;
 
+pub use expr_impl::*;
 pub use column_ref::*;
 pub use alias::*;
 pub use constant::*;
