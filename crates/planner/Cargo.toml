@@ -22,5 +22,7 @@ lock_manager = {path = "../concurrency/lock_manager"}
 transaction = {path = "../concurrency/transaction/core"}
 index = {path = "../storage/index"}
 binder = {path = "../binder"}
+catalog_schema = {path = "../catalog/schema" }
+
 error_utils = {path = "../utils/error_utils"}
 anyhow = "1.0.89"

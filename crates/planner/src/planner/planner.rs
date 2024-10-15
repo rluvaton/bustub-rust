@@ -3,7 +3,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use parking_lot::Mutex;
 use binder::StatementTypeImpl;
 use crate::planner::{Context, ContextGuard};
-use crate::plans::AbstractPlanNodeRef;
+use crate::plan_nodes::AbstractPlanNodeRef;
 
 pub struct Planner<'a> {
     /// Catalog will be used during the binding process

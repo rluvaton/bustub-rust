@@ -1134,6 +1134,7 @@ dependencies = [
  "binder",
  "buffer_common",
  "buffer_pool_manager",
+ "catalog_schema",
  "checkpoint_manager",
  "common",
  "data_types",
