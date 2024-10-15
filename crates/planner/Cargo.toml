@@ -4,3 +4,23 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+parking_lot = "0.12.3"
+
+db_core = {path = "../db_core" }
+common = {path = "../common"}
+pages = {path = "../storage/pages"}
+disk_storage = {path = "../storage/disk"}
+buffer_common = {path = "../buffer/common"}
+buffer_pool_manager = {path = "../buffer/manager"}
+recovery_log_manager = {path = "../recovery/log_manager"}
+checkpoint_manager = {path = "../recovery/checkpoint_manager"}
+execution_common = {path = "../execution/common"}
+expression = {path = "../execution/expression"}
+execution_engine = {path = "../execution/engine"}
+data_types = {path = "../data_types"}
+lock_manager = {path = "../concurrency/lock_manager"}
+transaction = {path = "../concurrency/transaction/core"}
+index = {path = "../storage/index"}
+binder = {path = "../binder"}
+error_utils = {path = "../utils/error_utils"}
+anyhow = "1.0.89"

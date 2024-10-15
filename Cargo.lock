@@ -1129,6 +1129,27 @@ checksum = "bda66fc9667c18cb2758a2ac84d1167245054bcf85d5d1aaa6923f45801bdd02"
 [[package]]
 name = "planner"
 version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "binder",
+ "buffer_common",
+ "buffer_pool_manager",
+ "checkpoint_manager",
+ "common",
+ "data_types",
+ "db_core",
+ "disk_storage",
+ "error_utils",
+ "execution_common",
+ "execution_engine",
+ "expression",
+ "index",
+ "lock_manager",
+ "pages",
+ "parking_lot",
+ "recovery_log_manager",
+ "transaction",
+]
 
 [[package]]
 name = "playground"

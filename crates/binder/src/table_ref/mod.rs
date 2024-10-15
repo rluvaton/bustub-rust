@@ -9,7 +9,7 @@ mod join_ref;
 
 pub use subquery_ref::{SubqueryRef, CTEList};
 pub use base_table_ref::BaseTableRef;
-pub(crate) use expression_list_ref::ExpressionListRef;
+pub use expression_list_ref::ExpressionListRef;
 
-pub(crate) use traits::*;
-pub(crate) use table_reference_type::*;
+pub  use traits::*;
+pub use table_reference_type::*;
