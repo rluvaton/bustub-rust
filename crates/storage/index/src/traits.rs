@@ -26,7 +26,7 @@ pub trait Index {
     /// - `transaction` The transaction context
     ///
     /// returns `bool`: whether insertion is successful
-    fn insert_entry(&mut self, key: &Tuple, rid: RID, transaction: Arc<Transaction>) -> bool;
+    fn insert_entry(&mut self, key: &Tuple, rid: RID, transaction: Option<Arc<Transaction>>) -> error_utils::anyhow::Result<()>;
 
     /// Delete an index entry by key.
     ///
@@ -35,7 +35,7 @@ pub trait Index {
     /// - `rid` The RID associated with the key (unused)
     /// - `transaction` The transaction context
     ///
-    fn delete_entry(&mut self, key: &Tuple, rid: RID, transaction: Arc<Transaction>);
+    fn delete_entry(&mut self, key: &Tuple, rid: RID, transaction: Option<Arc<Transaction>>) -> error_utils::anyhow::Result<()>;
 
     /// Search the index for the provided key.
     ///
@@ -44,6 +44,6 @@ pub trait Index {
     /// - `transaction` The transaction context
     ///
     /// returns `Vec<RID>`: The collection of RIDs with the search results
-    fn scan_key(&self, key: &Tuple, transaction: Arc<Transaction>) -> Vec<RID>;
+    fn scan_key(&self, key: &Tuple, transaction: Option<Arc<Transaction>>) -> error_utils::anyhow::Result<Vec<RID>>;
 }
 

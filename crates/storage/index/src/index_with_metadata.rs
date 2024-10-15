@@ -19,7 +19,6 @@ use tuple::Tuple;
 /// only supports conjunction, and may or may not be optimized depending on
 /// the type of expressions inside the predicate.
 ///
-// TODO - this should be a trait and not a struct
 pub struct IndexWithMetadata {
     /// The Index structure owns its metadata
     metadata: Arc<IndexMetadata>,
@@ -59,45 +58,21 @@ impl IndexWithMetadata {
         self.metadata.get_key_attrs()
     }
 
-    ///////////////////////////////////////////////////////////////////
-    // Point Modification
-    ///////////////////////////////////////////////////////////////////
+}
 
-    /// Insert an entry into the index.
-    ///
-    /// # Arguments
-    /// - `key` The index key
-    /// - `rid` The RID associated with the key
-    /// - `transaction` The transaction context
-    ///
-    /// returns `bool`: whether insertion is successful
-    pub fn insert_entry(&mut self, key: &Tuple, rid: RID, transaction: Arc<Transaction>) -> bool {
+impl Index for IndexWithMetadata {
+    fn insert_entry(&mut self, key: &Tuple, rid: RID, transaction: Option<Arc<Transaction>>) -> error_utils::anyhow::Result<()> {
         self.index.insert_entry(key, rid, transaction)
     }
 
-    /// Delete an index entry by key.
-    ///
-    /// # Arguments
-    /// - `key` The index key
-    /// - `rid` The RID associated with the key (unused)
-    /// - `transaction` The transaction context
-    ///
-    fn delete_entry(&mut self, key: &Tuple, rid: RID, transaction: Arc<Transaction>) {
+    fn delete_entry(&mut self, key: &Tuple, rid: RID, transaction: Option<Arc<Transaction>>) -> error_utils::anyhow::Result<()> {
         self.index.delete_entry(key, rid, transaction)
     }
 
-    /// Search the index for the provided key.
-    ///
-    /// # Arguments
-    /// - `key` The index key
-    /// - `transaction` The transaction context
-    ///
-    /// returns `Vec<RID>`: The collection of RIDs with the search results
-    fn scan_key(&self, key: &Tuple, transaction: Arc<Transaction>) -> Vec<RID> {
+    fn scan_key(&self, key: &Tuple, transaction: Option<Arc<Transaction>>) -> error_utils::anyhow::Result<Vec<RID>> {
         self.index.scan_key(key, transaction)
     }
 }
-
 
 impl Debug for IndexWithMetadata {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {

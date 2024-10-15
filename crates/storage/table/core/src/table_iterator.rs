@@ -26,7 +26,7 @@ impl<'a> TableIterator<'a> {
 }
 
 
-impl Iterator for TableIterator {
+impl Iterator for TableIterator<'_> {
     type Item = (TupleMeta, Tuple);
 
     fn next(&mut self) -> Option<Self::Item> {

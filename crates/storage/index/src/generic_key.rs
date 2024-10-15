@@ -95,6 +95,18 @@ impl<const KEY_SIZE: usize> Default for GenericKey<KEY_SIZE> {
     }
 }
 
+impl<const KEY_SIZE: usize> From<&Tuple> for GenericKey<KEY_SIZE> {
+    fn from(value: &Tuple) -> Self {
+        // initialize to 0
+        let mut data = [0; KEY_SIZE];
+        data[..value.get_length() as usize].copy_from_slice(value.get_data());
+
+        Self {
+            data
+        }
+    }
+}
+
 impl<const KEY_SIZE: usize> PageKey for GenericKey<KEY_SIZE> {}
 
 #[cfg(test)]
