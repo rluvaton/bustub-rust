@@ -19,6 +19,7 @@ use std::sync::Arc;
 use error_utils::ToAnyhow;
 use index::TWO_INTEGER_SIZE;
 use lock_manager::LockManager;
+use planner::Planner;
 use transaction::{Transaction, TransactionManager as TransactionManagerTrait};
 use crate::instance::ddl::StatementHandler;
 
@@ -239,8 +240,23 @@ impl BustubInstance {
                     self.create_table(txn.clone(), stmt, writer);
                     continue;
                 },
-                StatementTypeImpl::Delete(_) => {}
+                StatementTypeImpl::Delete(_) => {
+                    is_delete = true
+                }
             }
+
+            let catalog = self.catalog.lock();
+
+            // Plan the query
+            let plan = Planner::new(catalog.deref()).plan(stmt);
+
+            // Optimize the query
+            // TODO - add back
+
+            drop(catalog);
+
+            // Execute the query.
+            // TODO - add executor
 
             unimplemented!()
         }

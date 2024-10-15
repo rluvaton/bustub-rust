@@ -36,7 +36,7 @@ impl<'a> Planner<'a> {
         ContextGuard::new(self)
     }
 
-    pub fn plan(self, statement: StatementTypeImpl)-> PlanNodeRef {
+    pub fn plan(self, statement: &StatementTypeImpl)-> PlanNodeRef {
         statement.plan(&self)
     }
 

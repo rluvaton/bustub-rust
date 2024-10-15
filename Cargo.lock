@@ -256,6 +256,7 @@ dependencies = [
  "lock_manager",
  "pages",
  "parking_lot",
+ "planner",
  "rand 0.8.5",
  "recovery_log_manager",
  "rid",
