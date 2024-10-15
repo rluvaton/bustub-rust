@@ -5,7 +5,7 @@ use catalog_schema::mocks::MockTableName;
 use catalog_schema::Schema;
 use checkpoint_manager::CheckpointManager;
 use data_types::DBTypeId;
-use db_core::catalog::Catalog;
+use db_core::catalog::{Catalog, IndexInfo, IndexType};
 use db_core::concurrency::{TransactionManager};
 use disk_storage::{DefaultDiskManager, DiskManager, DiskManagerUnlimitedMemory};
 use execution_common::CheckOptions;
@@ -15,6 +15,7 @@ use recovery_log_manager::LogManager;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
+use index::TWO_INTEGER_SIZE;
 use lock_manager::LockManager;
 use transaction::{Transaction, TransactionManager as TransactionManagerTrait};
 
@@ -247,14 +248,14 @@ impl BustubInstance {
         let mut catalog_guard = self.catalog.lock();
 
         let info = catalog_guard.create_table(
-            txn,
+            txn.clone(),
             stmt.table.clone(),
             Arc::new(Schema::new(stmt.columns.clone())),
             None,
         ).expect("Should create table");
 
         // TODO - ()
-        let mut index_info = ();
+        let mut index_info: Option<Arc<IndexInfo>> = None;
 
 
         if !stmt.primary_key.is_empty() {
@@ -280,12 +281,24 @@ impl BustubInstance {
                 unimplemented!("only support creating index with exactly one or two columns");
             }
 
-            // index_info = catalog_guard.create_table(txn.clone(), stmt.table + "_pk")
-            //
-            // index = catalog_->CreateIndex<IntegerKeyType, IntegerValueType, IntegerComparatorType>(
-            //     txn, stmt.table_ + "_pk", stmt.table_, info->schema_, key_schema, col_ids, TWO_INTEGER_SIZE,
-            // IntegerHashFunctionType{}, true);
-            todo!()
+            index_info = catalog_guard.create_index(
+                Some(txn),
+                (stmt.table.clone() + "_pk").as_str(),
+                stmt.table.as_str(),
+                info.get_schema(),
+                Arc::new(key_schema),
+                col_ids.as_slice(),
+                TWO_INTEGER_SIZE,
+                true,
+                IndexType::HashTableIndex,
+            );
+        }
+
+        drop(catalog_guard);
+
+        match index_info {
+            None => writer.one_cell(format!("Table created with id = {}", info.get_oid()).as_str()),
+            Some(index) => writer.one_cell(format!("Table created with id = {}, Primary key index created with id = {}", info.get_oid(), index.get_index_oid()).as_str()),
         }
 
 

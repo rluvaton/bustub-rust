@@ -159,7 +159,7 @@ impl TableHeap {
       * pipeline breaker, you may use `MakeEagerIterator` to test whether the update executor is implemented correctly.
       * There should be no difference between this function and `MakeEagerIterator` in project 4 if everything is
       * implemented correctly. */
-    fn iter(&self) -> TableIterator {
+    pub fn iter(&self) -> TableIterator {
         // Lock get value and unlock
         let last_page_id = *self.last_page_id.lock();
 
@@ -173,7 +173,7 @@ impl TableHeap {
     }
 
     /** @return the iterator of this table. The iterator will stop at the last tuple at the time of iterating. */
-    fn eager_iter(&self) -> TableIterator {
+    pub fn eager_iter(&self) -> TableIterator {
         TableIterator::new(self, RID::new(self.first_page_id, 0), RID::new(INVALID_PAGE_ID, 0))
     }
 

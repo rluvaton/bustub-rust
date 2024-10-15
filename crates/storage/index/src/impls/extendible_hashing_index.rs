@@ -40,11 +40,11 @@ impl ExtendibleHashingIndex<{ bucket_array_size::<GenericKey<$key_size>, RID>() 
 }
 
 impl Index for ExtendibleHashingIndex<{ bucket_array_size::<GenericKey<$key_size>, RID>() }, GenericKey<$key_size>, GenericComparator<$key_size>, DefaultKeyHasher> {
-    fn insert_entry(&mut self, key: &Tuple, rid: RID, transaction: Option<Arc<Transaction>>) -> error_utils::anyhow::Result<()> {
+    fn insert_entry(&self, key: &Tuple, rid: RID, transaction: Option<Arc<Transaction>>) -> error_utils::anyhow::Result<()> {
         self.0.insert(&GenericKey::from(key), &rid, transaction).map_err(|err| err.to_anyhow())
     }
 
-    fn delete_entry(&mut self, key: &Tuple, _rid: RID, transaction: Option<Arc<Transaction>>) -> error_utils::anyhow::Result<()> {
+    fn delete_entry(&self, key: &Tuple, _rid: RID, transaction: Option<Arc<Transaction>>) -> error_utils::anyhow::Result<()> {
         self.0.remove(&GenericKey::from(key), transaction)
             .map(|_| ())
             .map_err(|err| err.to_anyhow())
@@ -60,20 +60,26 @@ impl Index for ExtendibleHashingIndex<{ bucket_array_size::<GenericKey<$key_size
 }
 
 impl_extendible_hashing_index_for_generic_key! {
-    ExtendibleHashingIndex4, 4
-    ExtendibleHashingIndex8, 8
-    ExtendibleHashingIndex16, 16
-    ExtendibleHashingIndex32, 32
-    ExtendibleHashingIndex64, 64
+    ExtendibleHashingIndex8, 1
+    ExtendibleHashingIndex16, 2
+    ExtendibleHashingIndex32, 4
+    ExtendibleHashingIndex64, 8
 }
 
 pub fn create_extendible_hashing_index(key_size: usize, metadata: Arc<IndexMetadata>, bpm: Arc<BufferPoolManager>) -> Result<Arc<dyn Index>, extendible_hash_table::errors::InitError> {
     match key_size {
-        4 => ExtendibleHashingIndex4::new(metadata, bpm),
-        8 => ExtendibleHashingIndex8::new(metadata, bpm),
-        16 => ExtendibleHashingIndex16::new(metadata, bpm),
-        32 => ExtendibleHashingIndex32::new(metadata, bpm),
-        64 => ExtendibleHashingIndex64::new(metadata, bpm),
+        1 => ExtendibleHashingIndex8::new(metadata, bpm),
+        2 => ExtendibleHashingIndex16::new(metadata, bpm),
+        4 => ExtendibleHashingIndex32::new(metadata, bpm),
+        8 => ExtendibleHashingIndex64::new(metadata, bpm),
         _ => panic!("Unimplemented extendible hash index for key size {}", key_size)
     }
 }
+
+
+// this match i64/u64
+pub const TWO_INTEGER_SIZE: usize = 8;
+pub type IntegerKeyType = GenericKey<TWO_INTEGER_SIZE>;
+pub type IntegerValueType = RID;
+pub type IntegerComparatorType = GenericComparator<TWO_INTEGER_SIZE>;
+pub type HashTableIndexForTwoIntegerColumn = ExtendibleHashingIndex64;

@@ -8,7 +8,7 @@ use recovery_log_manager::LogManager;
 use std::collections::HashMap;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
-use index::{IndexMetadata, IndexWithMetadata};
+use index::{create_extendible_hashing_index, Index, IndexMetadata, IndexWithMetadata};
 use table::TableHeap;
 use transaction::Transaction;
 
@@ -82,7 +82,7 @@ impl Catalog {
     ///
     pub fn create_table(&mut self, txn: Arc<Transaction>, table_name: String, schema: Arc<Schema>, create_table_heap: Option<bool>) -> Option<Arc<TableInfo>> {
         if !self.table_names.contains_key(&table_name) {
-            return None
+            return None;
         }
 
         let create_table_heap = create_table_heap.unwrap_or(true);
@@ -118,7 +118,7 @@ impl Catalog {
         if let Some(table_oid) = self.table_names.get(table_name) {
             let meta = self.tables.get(table_oid).expect("Broken Invariant");
 
-            return Some(meta.clone())
+            return Some(meta.clone());
         }
 
         // Table not found
@@ -172,8 +172,8 @@ impl Catalog {
      * @param hash_function The hash function for the index
      * @return A (non-owning) pointer to the metadata of the new table
      */
-    fn create_index(&mut self,
-                    txn: Arc<Transaction>,
+    pub fn create_index(&mut self,
+                    txn: Option<Arc<Transaction>>,
                     index_name: &str,
                     table_name: &str,
                     schema: Arc<Schema>,
@@ -182,83 +182,79 @@ impl Catalog {
                     keysize: usize,
                     // hash_function: HashFunction<KeyType>,
                     is_primary_key: bool,
-                    index_type: IndexType
+                    index_type: IndexType,
     ) -> Option<Arc<IndexInfo>> {
-    // Reject the creation request for nonexistent table
+        // Reject the creation request for nonexistent table
         if !self.table_names.contains_key(table_name) {
             return None;
         }
 
-    // If the table exists, an entry for the table should already be present in index_names_
+        // If the table exists, an entry for the table should already be present in index_names_
         assert!(self.index_names.contains_key(table_name), "Broken Invariant");
 
-    // Determine if the requested index already exists for this table
+        // Determine if the requested index already exists for this table
         let table_indexes = self.index_names.get(table_name).unwrap();
         if table_indexes.contains_key(index_name) {
             // The requested index already exists for this table
-
             return None;
         }
 
-    // Construct index metadata
+        // Construct index metadata
         let meta = Arc::new(IndexMetadata::new(
             index_name.to_string(),
             table_name.to_string(),
             schema.clone(),
             key_attrs,
-            is_primary_key
+            is_primary_key,
         ));
 
-    // Construct the index, take ownership of metadata
-    // TODO(Kyle): We should update the API for create_index
-    // to allow specification of the index type itself, not
-    // just the key, value, and comparator types
+        // Construct the index, take ownership of metadata
+        // TODO(Kyle): We should update the API for create_index
+        // to allow specification of the index type itself, not
+        // just the key, value, and comparator types
 
-    // TODO(chi): support both hash index and btree index
-    //     let index: Arc<IndexWithMetadata> = match index_type {
-    //         IndexType::HashTableIndex => {
-    //             match keysize {
-    //                 _ => {}
-    //             }
-    //         }
-    //     }
-        todo!();
-        //
-        // index = match index_type {
-        //     IndexType::HashTableIndex => {
-        //         // Arc::new(DiskHashTable::new())
-        //     },
-        //     _ => unimplemented!("Unsupported index type", index_type)
-        // };
-    // if (index_type == IndexType::HashTableIndex) {
-    // index = std::make_unique<ExtendibleHashTableIndex<KeyType, ValueType, KeyComparator>>(std::move(meta), bpm_,
-    // hash_function);
-    // } else {
-    // BUSTUB_ASSERT(index_type == IndexType::BPlusTreeIndex, "Unsupported Index Type");
-    // index = std::make_unique<BPlusTreeIndex<KeyType, ValueType, KeyComparator>>(std::move(meta), bpm_);
-    // }
+        // TODO(chi): support both hash index and btree index
 
-    // Populate the index with all tuples in table heap
-    let table_meta = self.get_table_by_name(table_name);
-    // for (auto iter = table_meta->table_->MakeIterator(); !iter.IsEnd(); ++iter) {
-    // auto [meta, tuple] = iter.get_tuple();
-    // // we have to silently ignore the error here for a lot of reasons...
-    // index->InsertEntry(tuple.key_from_tuple(schema, key_schema, key_attrs), tuple.GetRid(), txn);
-    // }
-    //
-    // // Get the next OID for the new index
-    // const auto index_oid = next_index_oid_.fetch_add(1);
-    //
-    // // Construct index information; IndexInfo takes ownership of the Index itself
-    // auto index_info = std::make_unique<IndexInfo>(key_schema, index_name, std::move(index), index_oid, table_name,
-    // keysize, is_primary_key);
-    // auto *tmp = index_info.get();
-    //
-    // // Update internal tracking
-    // indexes_.emplace(index_oid, std::move(index_info));
-    // table_indexes.emplace(index_name, index_oid);
-    //
-    // return tmp;
+        let mut index = {
+            let index: Arc<dyn Index> = match index_type {
+                // TODO - return result instead of expect
+                IndexType::HashTableIndex => create_extendible_hashing_index(keysize, meta.clone(), self.bpm.as_ref().expect("Must have bpm").clone()).expect("Should be able to create index"),
+            };
+
+            Arc::new(IndexWithMetadata::new(index, meta))
+        };
+
+
+        // Populate the index with all tuples in table heap
+        let table_meta = self.get_table_by_name(table_name).expect("Should have table");
+        for (meta, tuple) in table_meta.get_table_heap().iter() {
+            index.insert_entry(
+                &tuple.key_from_tuple(schema.clone(), key_schema.clone(), key_attrs),
+                tuple.get_rid(),
+                txn.clone()
+            ).expect("Should insert entry");
+        }
+
+        // Get the next OID for the new index
+        let index_oid = self.next_index_oid.fetch_add(1, Ordering::SeqCst);
+
+        // Construct index information; IndexInfo takes ownership of the Index itself
+        let index_info = Arc::new(IndexInfo::new(
+            key_schema,
+            index_name.to_string(),
+            index,
+            index_oid,
+            table_name.to_string(),
+            keysize,
+            is_primary_key,
+            index_type
+        ));
+
+        // Update internal tracking
+        self.indexes.insert(index_oid, index_info.clone());
+        self.index_names.get_mut(table_name).unwrap().insert(index_name.to_string(), index_oid);
+
+        Some(index_info)
     }
 }
 

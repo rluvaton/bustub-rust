@@ -25,6 +25,7 @@ execution_engine = {path = "../execution/engine"}
 data_types = {path = "../data_types"}
 lock_manager = {path = "../concurrency/lock_manager"}
 transaction = {path = "../concurrency/transaction/core"}
+index = {path = "../storage/index"}
 error_utils = {path = "../utils/error_utils"}
 anyhow = "1.0.89"
 

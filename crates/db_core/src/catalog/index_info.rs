@@ -6,42 +6,53 @@ use index::IndexWithMetadata;
 
 /// The IndexInfo class maintains metadata about a index.
 pub struct IndexInfo {
-
     /// The schema for the index key
-    #[allow(unused)]
     key_schema: Arc<Schema>,
 
     /// The name of the index
-    #[allow(unused)]
     name: String,
 
     /// An owning pointer to the index
-    #[allow(unused)]
     index: Arc<IndexWithMetadata>,
 
     /// The unique OID for the index
-    #[allow(unused)]
     index_oid: IndexOID,
 
     /// The name of the table on which the index is created
-    #[allow(unused)]
     table_name: String,
 
     /// The size of the index key, in bytes
-    #[allow(unused)]
     key_size: usize,
 
     /// Is primary key index?
-    #[allow(unused)]
     is_primary_key: bool,
 
     /// The index type
-    /// Default: `IndexType::BPlusTreeIndex`
-    #[allow(unused)]
     index_type: IndexType,
 }
 
 impl IndexInfo {
+    pub fn new(
+        key_schema: Arc<Schema>,
+        name: String,
+        index: Arc<IndexWithMetadata>,
+        index_oid: IndexOID,
+        table_name: String,
+        key_size: usize,
+        is_primary_key: bool,
+        index_type: IndexType,
+    ) -> Self {
+        Self {
+            key_schema,
+            name,
+            index,
+            index_oid,
+            table_name,
+            key_size,
+            is_primary_key,
+            index_type,
+        }
+    }
 
     // -----------------------------
     // For bustub instance debugging

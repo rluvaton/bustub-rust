@@ -22,11 +22,11 @@ use tuple::Tuple;
 pub struct IndexWithMetadata {
     /// The Index structure owns its metadata
     metadata: Arc<IndexMetadata>,
-    index: Box<dyn Index>
+    index: Arc<dyn Index>
 }
 
 impl IndexWithMetadata {
-    pub fn new(index: Box<dyn Index>, metadata: Arc<IndexMetadata>) -> Self {
+    pub fn new(index: Arc<dyn Index>, metadata: Arc<IndexMetadata>) -> Self {
         Self {
             index,
             metadata,
@@ -61,11 +61,11 @@ impl IndexWithMetadata {
 }
 
 impl Index for IndexWithMetadata {
-    fn insert_entry(&mut self, key: &Tuple, rid: RID, transaction: Option<Arc<Transaction>>) -> error_utils::anyhow::Result<()> {
+    fn insert_entry(&self, key: &Tuple, rid: RID, transaction: Option<Arc<Transaction>>) -> error_utils::anyhow::Result<()> {
         self.index.insert_entry(key, rid, transaction)
     }
 
-    fn delete_entry(&mut self, key: &Tuple, rid: RID, transaction: Option<Arc<Transaction>>) -> error_utils::anyhow::Result<()> {
+    fn delete_entry(&self, key: &Tuple, rid: RID, transaction: Option<Arc<Transaction>>) -> error_utils::anyhow::Result<()> {
         self.index.delete_entry(key, rid, transaction)
     }
 

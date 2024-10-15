@@ -26,7 +26,7 @@ pub trait Index where Self: 'static {
     /// - `transaction` The transaction context
     ///
     /// returns `bool`: whether insertion is successful
-    fn insert_entry(&mut self, key: &Tuple, rid: RID, transaction: Option<Arc<Transaction>>) -> error_utils::anyhow::Result<()>;
+    fn insert_entry(&self, key: &Tuple, rid: RID, transaction: Option<Arc<Transaction>>) -> error_utils::anyhow::Result<()>;
 
     /// Delete an index entry by key.
     ///
@@ -35,7 +35,7 @@ pub trait Index where Self: 'static {
     /// - `rid` The RID associated with the key (unused)
     /// - `transaction` The transaction context
     ///
-    fn delete_entry(&mut self, key: &Tuple, rid: RID, transaction: Option<Arc<Transaction>>) -> error_utils::anyhow::Result<()>;
+    fn delete_entry(&self, key: &Tuple, rid: RID, transaction: Option<Arc<Transaction>>) -> error_utils::anyhow::Result<()>;
 
     /// Search the index for the provided key.
     ///

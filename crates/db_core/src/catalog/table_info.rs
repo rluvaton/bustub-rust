@@ -7,19 +7,15 @@ use table::TableHeap;
 pub struct TableInfo {
 
     /// The table schema
-    #[allow(unused)]
     schema: Arc<Schema>,
 
     /// The table name
-    #[allow(unused)]
     name: String,
 
     /// An owning pointer to the table heap
-    #[allow(unused)]
     table: Arc<TableHeap>,
 
     /// The table OID
-    #[allow(unused)]
     oid: TableOID,
 }
 
