@@ -8,7 +8,7 @@ use std::fmt::Debug;
 use std::sync::Arc;
 
 /// A bound table reference.
-pub(crate) trait TableRef: Debug + PartialEq + Into<TableReferenceTypeImpl> {
+pub trait TableRef: Debug + PartialEq + Into<TableReferenceTypeImpl> {
 
     fn resolve_column(&self, col_name: &[String], binder: &Binder) -> ParseASTResult<Option<ColumnRef>>;
 

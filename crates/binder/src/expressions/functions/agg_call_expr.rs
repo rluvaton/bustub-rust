@@ -7,15 +7,15 @@ use crate::expressions::functions::utils::is_aggregation_function_name;
 
 /// A bound aggregate call, e.g., `sum(x)`.
 #[derive(Clone, Debug, PartialEq)]
-pub(crate) struct AggCallExpr {
+pub struct AggCallExpr {
     // The function name
-    pub(crate) func: String,
+    pub func: String,
 
     /// function arguments
-    pub(crate) args: Vec<Box<ExpressionTypeImpl>>,
+    pub args: Vec<Box<ExpressionTypeImpl>>,
 
     /// Is distinct aggregation
-    pub(crate) is_distinct: bool,
+    pub is_distinct: bool,
 }
 
 impl AggCallExpr {

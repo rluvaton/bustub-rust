@@ -1,3 +1,5 @@
+use crate::plan_nodes::DeletePlan;
+
 /** PlanType represents the types of plans that we have in our system. */
 
 #[derive(Clone, Debug, PartialEq)]
@@ -6,7 +8,7 @@ pub enum PlanType {
     // IndexScan,
     // Insert,
     // Update,
-    // Delete,
+    Delete(DeletePlan),
     // Aggregation,
     // Limit,
     // NestedLoopJoin,

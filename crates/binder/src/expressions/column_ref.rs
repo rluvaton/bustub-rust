@@ -9,8 +9,8 @@ use crate::table_ref::{TableRef, TableReferenceTypeImpl};
 
 /// A bound column reference, e.g., `y.x` in the SELECT list.
 #[derive(Clone, Debug, PartialEq)]
-pub(crate) struct ColumnRef {
-    pub(crate) col_name: Vec<String>
+pub struct ColumnRef {
+    pub col_name: Vec<String>
 }
 
 impl ColumnRef {

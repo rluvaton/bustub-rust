@@ -6,15 +6,15 @@ use sqlparser::ast::Expr;
 
 /// A bound binary operator, e.g., `a+b`.
 #[derive(Clone, Debug, PartialEq)]
-pub(crate) struct BinaryOpExpr {
+pub struct BinaryOpExpr {
     /// Operator name.
-    pub(crate) op: BinaryOp,
+    pub op: BinaryOp,
 
     /// Left argument of the op.
-    pub(crate) larg: Box<ExpressionTypeImpl>,
+    pub larg: Box<ExpressionTypeImpl>,
 
     /// Right argument of the op.
-    pub(crate) rarg: Box<ExpressionTypeImpl>,
+    pub rarg: Box<ExpressionTypeImpl>,
 }
 
 impl BinaryOpExpr {

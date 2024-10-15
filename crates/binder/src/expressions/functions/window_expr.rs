@@ -61,17 +61,17 @@ impl WindowBoundary {
 
 /// A bound aggregate call, e.g., `sum(x)`.
 #[derive(Clone, Debug, PartialEq)]
-pub(crate) struct WindowExpr {
+pub struct WindowExpr {
     // The function name
-    pub(crate) func: String,
+    pub func: String,
 
     /// function arguments
-    pub(crate) args: Vec<Box<ExpressionTypeImpl>>,
+    pub args: Vec<Box<ExpressionTypeImpl>>,
 
-    pub(crate) partition_by: Vec<Box<ExpressionTypeImpl>>,
-    pub(crate) order_bys: Vec<Box<OrderBy>>,
-    pub(crate) start: Option<WindowBoundary>,
-    pub(crate) end: Option<WindowBoundary>,
+    pub partition_by: Vec<Box<ExpressionTypeImpl>>,
+    pub order_bys: Vec<Box<OrderBy>>,
+    pub start: Option<WindowBoundary>,
+    pub end: Option<WindowBoundary>,
 }
 
 impl WindowExpr {

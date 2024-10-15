@@ -5,13 +5,13 @@ use sqlparser::ast::Expr;
 
 /// The alias in SELECT list, e.g. `SELECT count(x) AS y`, the `y` is an alias.
 #[derive(Clone, Debug, PartialEq)]
-pub(crate) struct AliasExpr {
+pub struct AliasExpr {
 
     /// The alias
-    pub(crate) alias: String,
+    pub alias: String,
 
     /// The actual expression
-    pub(crate) child: Box<ExpressionTypeImpl>
+    pub child: Box<ExpressionTypeImpl>
 }
 
 impl AliasExpr {

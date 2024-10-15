@@ -6,7 +6,7 @@ use sqlparser::ast::Expr;
 
 /// The star in SELECT list, e.g. `SELECT * FROM x`.
 #[derive(Clone, PartialEq)]
-pub(crate) struct StarExpr;
+pub struct StarExpr;
 
 impl StarExpr {
     pub(crate) fn new() -> Self {

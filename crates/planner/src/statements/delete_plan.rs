@@ -13,7 +13,7 @@ use crate::statements::traits::StatementPlan;
  *
  * NOTE: To simplify the assignment, DeletePlanNode has at most one child.
  */
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct DeletePlan {
     /**
      * The schema for the output of this plan node. In the volcano model, every plan node will spit out tuples,
@@ -73,7 +73,7 @@ impl PlanNode for DeletePlan {
 impl StatementPlan for DeletePlan {
     type Statement = DeleteStatement;
 
-    fn create_node<'a>(statement: Self::Statement, planner: &'a Planner<'a>) -> Self {
+    fn plan<'a>(statement: Self::Statement, planner: &'a Planner<'a>) -> Self {
         todo!()
     }
 }

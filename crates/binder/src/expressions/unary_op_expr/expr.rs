@@ -6,12 +6,12 @@ use sqlparser::ast::Expr;
 
 /// A bound unary operator, e.g., `not a`.
 #[derive(Clone, Debug, PartialEq)]
-pub(crate) struct UnaryOpExpr {
+pub struct UnaryOpExpr {
     /// Operator name.
-    pub(crate) op: UnaryOp,
+    pub op: UnaryOp,
 
     /// argument for the operator
-    pub(crate) arg: Box<ExpressionTypeImpl>,
+    pub arg: Box<ExpressionTypeImpl>,
 }
 
 impl UnaryOpExpr {

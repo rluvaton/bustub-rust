@@ -6,12 +6,12 @@ use crate::expressions::functions::function_ext::FunctionExt;
 
 /// A bound binary operator, e.g., `a+b`.
 #[derive(Clone, Debug, PartialEq)]
-pub(crate) struct FuncCallExpr {
+pub struct FuncCallExpr {
     // The function name
-    pub(crate) func: String,
+    pub func: String,
 
     /// function arguments
-    pub(crate) args: Vec<Box<ExpressionTypeImpl>>,
+    pub args: Vec<Box<ExpressionTypeImpl>>,
 }
 
 impl FuncCallExpr {

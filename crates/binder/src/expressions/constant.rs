@@ -6,8 +6,8 @@ use sqlparser::ast::Expr;
 
 /// A bound constant, e.g., `1`.
 #[derive(Clone, Debug, PartialEq)]
-pub(crate) struct Constant {
-    pub(crate) value: Value
+pub struct Constant {
+    pub value: Value
 }
 
 impl Constant {
