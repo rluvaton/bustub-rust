@@ -14,16 +14,16 @@ use catalog_schema::Schema;
 pub struct BaseTableRef {
 
     /// The name of the table.
-    pub(crate) table: String,
+    pub table: String,
 
     // The OID of the table
-    pub(crate) oid: TableOID,
+    pub oid: TableOID,
 
     // The alias of the table
-    pub(crate) alias: Option<String>,
+    pub alias: Option<String>,
 
     // The schema of the table
-    pub(crate) schema: Arc<Schema>
+    pub schema: Arc<Schema>
 }
 
 impl BaseTableRef {

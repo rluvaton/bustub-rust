@@ -1,4 +1,5 @@
 use std::fmt::{Display, Formatter};
+use std::rc::Rc;
 use std::sync::Arc;
 use catalog_schema::Schema;
 use common::config::TableOID;
@@ -19,7 +20,7 @@ pub struct DeletePlan {
     output_schema: Arc<Schema>,
 
     /** The children of this plan node. */
-    children: Vec<PlanType>,
+    children: Vec<Rc<PlanType>>,
 
     /** The identifier of the table from which tuples are deleted */
     table_oid: TableOID,
@@ -31,7 +32,7 @@ impl DeletePlan {
      * @param child The child plan to obtain tuple from
      * @param table_oid The identifier of the table from which tuples are deleted
      */
-    pub fn new(output: Arc<Schema>, child: PlanType, table_oid: TableOID) -> Self {
+    pub fn new(output: Arc<Schema>, child: Rc<PlanType>, table_oid: TableOID) -> Self {
         Self {
             output_schema: output,
             children: vec![child],
@@ -57,12 +58,18 @@ impl Display for DeletePlan {
     }
 }
 
+impl Into<PlanType> for DeletePlan {
+    fn into(self)-> PlanType {
+        PlanType::Delete(self)
+    }
+}
+
 impl PlanNode for DeletePlan {
-    fn output_schema(&self) -> Arc<Schema> {
+    fn get_output_schema(&self) -> Arc<Schema> {
         self.output_schema.clone()
     }
 
-    fn get_children(&self) -> &Vec<PlanType> {
+    fn get_children(&self) -> &Vec<Rc<PlanType>> {
         &self.children
     }
 }

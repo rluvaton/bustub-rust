@@ -1,3 +1,4 @@
+use std::rc::Rc;
 use db_core::catalog::Catalog;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use parking_lot::Mutex;
@@ -34,7 +35,7 @@ impl<'a> Planner<'a> {
         ContextGuard::new(self)
     }
 
-    pub fn plan(mut self, statement: StatementTypeImpl) -> PlanType {
+    pub fn plan(mut self, statement: StatementTypeImpl)-> Rc<PlanType> {
         todo!()
     }
 

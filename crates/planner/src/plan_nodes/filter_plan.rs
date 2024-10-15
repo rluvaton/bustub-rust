@@ -1,4 +1,5 @@
 use std::fmt::{Display, Formatter};
+use std::rc::Rc;
 use std::sync::Arc;
 use catalog_schema::Schema;
 use common::config::TableOID;
@@ -9,7 +10,7 @@ use crate::plan_nodes::{PlanNode, PlanType};
  * It retains any tuple that satisfies the predicate in the child.
  */
 #[derive(Clone, Debug, PartialEq)]
-pub struct FilterPlanNode {
+pub struct FilterPlan {
     /**
      * The schema for the output of this plan node. In the volcano model, every plan node will spit out tuples,
      * and this tells you what schema this plan node's tuples will have.
@@ -17,19 +18,19 @@ pub struct FilterPlanNode {
     output_schema: Arc<Schema>,
 
     /** The children of this plan node. */
-    children: Vec<PlanType>,
+    children: Vec<Rc<PlanType>>,
 
     /** The predicate that all returned tuples must satisfy */
-    predicate: PlanType,
+    predicate: Rc<PlanType>,
 }
 
-impl FilterPlanNode {
+impl FilterPlan {
     /**
      * Construct a new DeletePlanNode.
      * @param child The child plan to obtain tuple from
      * @param table_oid The identifier of the table from which tuples are deleted
      */
-    pub fn new(output: Arc<Schema>, child: PlanType, predicate: PlanType) -> Self {
+    pub fn new(output: Arc<Schema>, child: Rc<PlanType>, predicate: Rc<PlanType>) -> Self {
         Self {
             output_schema: output,
             children: vec![child],
@@ -47,7 +48,7 @@ impl FilterPlanNode {
     }
 }
 
-impl Display for FilterPlanNode {
+impl Display for FilterPlan {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Filter")
             .field("predicate", &self.predicate)
@@ -55,12 +56,18 @@ impl Display for FilterPlanNode {
     }
 }
 
-impl PlanNode for FilterPlanNode {
-    fn output_schema(&self) -> Arc<Schema> {
+impl Into<PlanType> for FilterPlan {
+    fn into(self)-> PlanType {
+        PlanType::Filter(self)
+    }
+}
+
+impl PlanNode for FilterPlan {
+    fn get_output_schema(&self) -> Arc<Schema> {
         self.output_schema.clone()
     }
 
-    fn get_children(&self) -> &Vec<PlanType> {
+    fn get_children(&self) -> &Vec<Rc<PlanType>> {
         &self.children
     }
 }

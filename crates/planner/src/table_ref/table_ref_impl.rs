@@ -1,10 +1,11 @@
+use std::rc::Rc;
 use crate::plan_nodes::PlanType;
 use crate::traits::Plan;
 use crate::Planner;
 use binder::TableReferenceTypeImpl;
 
 impl Plan for TableReferenceTypeImpl {
-    fn plan<'a>(&self, planner: &'a Planner<'a>) -> PlanType {
+    fn plan<'a>(&self, planner: &'a Planner<'a>)-> Rc<PlanType> {
         match self {
             TableReferenceTypeImpl::Invalid => panic!("Invalid table ref"),
             TableReferenceTypeImpl::BaseTable(t) => t.plan(planner),

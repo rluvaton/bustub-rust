@@ -1,10 +1,11 @@
+use std::rc::Rc;
 use binder::ExpressionTypeImpl;
 use crate::expressions::traits::PlanExpression;
 use crate::plan_nodes::PlanType;
 use crate::Planner;
 
 impl PlanExpression for ExpressionTypeImpl {
-    fn plan<'a>(&self, children: Vec<PlanType>, planner: &'a Planner<'a>) -> (String, PlanType) {
+    fn plan<'a>(&self, children: Vec<Rc<PlanType>>, planner: &'a Planner<'a>) -> (String, PlanType) {
         match self {
             ExpressionTypeImpl::ColumnRef(e) => e.plan(children, planner),
             ExpressionTypeImpl::Constant(e) => e.plan(children, planner),

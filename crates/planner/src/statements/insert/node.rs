@@ -1,6 +1,7 @@
 use crate::plan_nodes::{PlanNode, PlanType};
 use catalog_schema::Schema;
 use std::fmt::{Display, Formatter};
+use std::rc::Rc;
 use std::sync::Arc;
 
 #[derive(Clone, Debug, PartialEq)]
@@ -12,12 +13,12 @@ pub struct InsertPlan {
     output_schema: Arc<Schema>,
 
     /** The children of this plan node. */
-    children: Vec<PlanType>,
+    children: Vec<Rc<PlanType>>,
 
 }
 
 impl InsertPlan {
-    pub fn new(output: Arc<Schema>, child: PlanType) -> Self {
+    pub fn new(output: Arc<Schema>, child: Rc<PlanType>) -> Self {
         Self {
             output_schema: output,
             children: vec![child],
@@ -33,12 +34,18 @@ impl Display for InsertPlan {
     }
 }
 
+impl Into<PlanType> for InsertPlan {
+    fn into(self)-> PlanType {
+        PlanType::Insert(self)
+    }
+}
+
 impl PlanNode for InsertPlan {
-    fn output_schema(&self) -> Arc<Schema> {
+    fn get_output_schema(&self) -> Arc<Schema> {
         self.output_schema.clone()
     }
 
-    fn get_children(&self) -> &Vec<PlanType> {
+    fn get_children(&self) -> &Vec<Rc<PlanType>> {
         &self.children
     }
 }

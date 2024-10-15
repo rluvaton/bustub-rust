@@ -13,7 +13,7 @@ use crate::statements::{CreateStatement, StatementTypeImpl};
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct DeleteStatement {
-    pub table: Rc<TableReferenceTypeImpl>,
+    pub(crate) table: Rc<TableReferenceTypeImpl>,
     pub expr: ExpressionTypeImpl,
 }
 
@@ -23,6 +23,13 @@ impl DeleteStatement {
         Self {
             table,
             expr
+        }
+    }
+
+    pub fn get_table(&self) -> &BaseTableRef {
+        match &*self.table {
+            TableReferenceTypeImpl::BaseTable(t) => t,
+            _ => panic!("Invalid table ref in delete")
         }
     }
 }
