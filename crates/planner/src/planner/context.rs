@@ -34,6 +34,13 @@ pub(crate) struct Context {
     pub(crate) cte_list: Option<CTEList>,
 }
 
+impl Context {
+    pub(crate) fn add_aggregations(&mut self, expr: Rc<ExpressionTypeImpl>) {
+        assert!(self.allow_aggregation, "AggCall not allowed in this position");
+        self.aggregations.push(expr);
+    }
+}
+
 impl Default for Context {
     fn default() -> Self {
         Self {
