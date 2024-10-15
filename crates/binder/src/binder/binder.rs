@@ -11,6 +11,7 @@ pub struct Binder<'a> {
     /// Catalog will be used during the binding process
     pub(crate) catalog: &'a Catalog,
 
+    // TODO - replace with Cow?
     pub(crate) context: Mutex<Context>,
 
     /** Sometimes we will need to assign a name to some unnamed items. This variable gives them a universal ID. */
