@@ -32,7 +32,7 @@ const _: () = {
 
 const PAGE_METADATA_SIZE: usize = size_of::<u32>() * 2;
 
-pub const fn bucket_array_size<Key: PageKey, Value: PageValue>() -> usize {
+pub const fn bucket_array_size<Key, Value>() -> usize {
     (PAGE_SIZE - PAGE_METADATA_SIZE) / size_of::<MappingType<Key, Value>>()
 }
 

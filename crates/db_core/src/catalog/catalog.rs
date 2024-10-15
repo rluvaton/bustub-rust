@@ -8,7 +8,7 @@ use recovery_log_manager::LogManager;
 use std::collections::HashMap;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
-use index::IndexMetadata;
+use index::{IndexMetadata, IndexWithMetadata};
 use table::TableHeap;
 use transaction::Transaction;
 
@@ -200,7 +200,7 @@ impl Catalog {
             return None;
         }
 
-    // Construct index metdata
+    // Construct index metadata
         let meta = Arc::new(IndexMetadata::new(
             index_name.to_string(),
             table_name.to_string(),
@@ -215,8 +215,13 @@ impl Catalog {
     // just the key, value, and comparator types
 
     // TODO(chi): support both hash index and btree index
-        let index: Arc<IndexMetadata>;
-
+    //     let index: Arc<IndexWithMetadata> = match index_type {
+    //         IndexType::HashTableIndex => {
+    //             match keysize {
+    //                 _ => {}
+    //             }
+    //         }
+    //     }
         todo!();
         //
         // index = match index_type {

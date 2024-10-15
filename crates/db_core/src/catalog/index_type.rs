@@ -1,5 +1,5 @@
 
 pub enum IndexType {
-    BPlusTreeIndex,
+    // BPlusTreeIndex,
     HashTableIndex
 }
