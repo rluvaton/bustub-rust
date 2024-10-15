@@ -1,15 +1,15 @@
-use std::collections::HashMap;
-use std::sync::Arc;
-use std::sync::atomic::Ordering;
-use common::config::{AtomicIndexOID, AtomicTableOID, IndexOID, TableOID};
+use crate::catalog::table_info::TableInfo;
+use crate::catalog::{IndexInfo, IndexType};
+use crate::storage::{IndexMetadata, TableHeap};
 use buffer_pool_manager::BufferPoolManager;
 use catalog_schema::Schema;
+use common::config::{AtomicIndexOID, AtomicTableOID, IndexOID, TableOID};
 use lock_manager::LockManager;
-use crate::catalog::{IndexInfo, IndexType};
-use crate::catalog::table_info::TableInfo;
 use recovery_log_manager::LogManager;
+use std::collections::HashMap;
+use std::sync::atomic::Ordering;
+use std::sync::Arc;
 use transaction::Transaction;
-use crate::storage::{Index, IndexMetadata, TableHeap};
 
 #[derive(Clone)]
 pub struct Catalog {
