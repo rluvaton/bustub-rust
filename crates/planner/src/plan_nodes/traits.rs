@@ -4,6 +4,8 @@ use std::sync::Arc;
 use catalog_schema::Schema;
 use crate::plan_nodes::PlanType;
 
+pub type PlanNodeRef = Rc<PlanType>;
+
 pub trait PlanNode: Clone + Display + Debug + Into<PlanType> {
 
     /** @return the schema for the output of this plan node */
@@ -18,7 +20,7 @@ pub trait PlanNode: Clone + Display + Debug + Into<PlanType> {
         &self.get_children()[child_idx]
     }
 
-    fn into_rc_plan_type(self) -> Rc<PlanType> {
+    fn into_ref(self) -> PlanNodeRef {
         Rc::new(self.into())
     }
 }

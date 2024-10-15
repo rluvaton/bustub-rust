@@ -3,9 +3,10 @@ use std::sync::Arc;
 use crate::plan_nodes::{FilterPlan, PlanNode, PlanType, ValuesPlanNode};
 use crate::traits::Plan;
 use crate::Planner;
-use binder::{SelectStatement, TableReferenceTypeImpl};
+use binder::{Expression, SelectStatement, TableReferenceTypeImpl};
 use catalog_schema::Schema;
 use crate::expressions::PlanExpression;
+use crate::statements::select::plan_window::PlanWindow;
 
 impl Plan for SelectStatement {
     fn plan<'a>(&self, planner: &'a Planner<'a>)-> Rc<PlanType> {
@@ -17,7 +18,7 @@ impl Plan for SelectStatement {
 
         let mut plan: Rc<PlanType> = match &*self.table {
             TableReferenceTypeImpl::Empty => {
-                ValuesPlanNode::new(Arc::new(Schema::new(vec![])), vec![vec![]]).into_rc_plan_type()
+                ValuesPlanNode::new(Arc::new(Schema::new(vec![])), vec![vec![]]).into_ref()
             }
             _ => {
                 self.table.plan(planner)
@@ -28,7 +29,24 @@ impl Plan for SelectStatement {
             let schema = plan.get_output_schema();
 
             let (_, expr) = where_expr.plan(vec![plan.clone()], planner);
-            plan = FilterPlan::new(schema, expr, plan).into_rc_plan_type();
+            plan = FilterPlan::new(schema, expr, plan).into_ref();
+        }
+
+        // Binder already checked that normal aggregations and window aggregations cannot coexist.
+        let (has_agg, has_window_agg) = {
+            let expr = self.select_list.iter().find(|e| e.has_aggregation() || e.has_window_function());
+
+            (
+                expr.map(|e| e.has_aggregation()).unwrap_or(false),
+                expr.map(|e| e.has_window_function()).unwrap_or(false),
+            )
+        };
+
+        if has_window_agg {
+            assert_eq!(self.having, None, "HAVING on window function is not supported yet.");
+            assert_eq!(self.group_by.is_empty(), true, "Group by is not allowed to use with window function.");
+
+            plan = self.plan_window(plan, planner);
         }
 
         todo!()

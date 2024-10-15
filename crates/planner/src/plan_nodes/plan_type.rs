@@ -3,7 +3,22 @@ use std::rc::Rc;
 use std::sync::Arc;
 use catalog_schema::Schema;
 use crate::plan_nodes::{FilterPlan, PlanNode, ValuesPlanNode};
+use crate::plan_nodes::window_plan_node::WindowFunctionPlanNode;
 use crate::statements::{DeletePlan, InsertPlan};
+
+// Helper to avoid duplicating deref on each variant
+macro_rules! call_each_variant {
+    ($enum_val:expr, $name:ident, $func:expr) => {
+        match $enum_val {
+            PlanType::Insert($name) => $func,
+            PlanType::Delete($name) => $func,
+            PlanType::Filter($name) => $func,
+            PlanType::Values($name) => $func,
+            PlanType::Window($name) => $func,
+            // Add match arms for other variants as necessary
+        }
+    };
+}
 
 /** PlanType represents the types of plans that we have in our system. */
 
@@ -27,45 +42,33 @@ pub enum PlanType {
     // TopNPerGroup,
     // MockScan,
     // InitCheck,
-    // Window
+    Window(WindowFunctionPlanNode)
 }
 
 impl Display for PlanType {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match self {
-            PlanType::Insert(p) => p.fmt(f),
-            PlanType::Delete(p) => p.fmt(f),
-            PlanType::Filter(p) => p.fmt(f),
-            PlanType::Values(p) => p.fmt(f),
-        }
+        call_each_variant!(self, p, {
+            p.fmt(f)
+        })
     }
 }
 
 impl PlanNode for PlanType {
     fn get_output_schema(&self) -> Arc<Schema> {
-        match self {
-            PlanType::Insert(p) => p.get_output_schema(),
-            PlanType::Delete(p) => p.get_output_schema(),
-            PlanType::Filter(p) => p.get_output_schema(),
-            PlanType::Values(p) => p.get_output_schema(),
-        }
+        call_each_variant!(self, p, {
+            p.get_output_schema()
+        })
     }
 
     fn get_children(&self) -> &[Rc<PlanType>] {
-        match self {
-            PlanType::Insert(p) => p.get_children(),
-            PlanType::Delete(p) => p.get_children(),
-            PlanType::Filter(p) => p.get_children(),
-            PlanType::Values(p) => p.get_children(),
-        }
+        call_each_variant!(self, p, {
+            p.get_children()
+        })
     }
 
     fn get_child_at(&self, child_idx: usize) -> &Rc<PlanType> {
-        match self {
-            PlanType::Insert(p) => p.get_child_at(child_idx),
-            PlanType::Delete(p) => p.get_child_at(child_idx),
-            PlanType::Filter(p) => p.get_child_at(child_idx),
-            PlanType::Values(p) => p.get_child_at(child_idx),
-        }
+        call_each_variant!(self, p, {
+            p.get_child_at(child_idx)
+        })
     }
 }

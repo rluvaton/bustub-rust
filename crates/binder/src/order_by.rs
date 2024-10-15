@@ -7,7 +7,7 @@ use crate::try_from_ast_error::ParseASTResult;
 /// All types of order-bys in binder.
 
 #[derive(Copy, Clone, Debug, PartialEq)]
-pub(crate) enum OrderByType {
+pub enum OrderByType {
     Invalid,
     Default,
     Asc,
@@ -21,7 +21,7 @@ impl Default for OrderByType {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub(crate) struct OrderBy {
+pub struct OrderBy {
     /// The order by type
     order_type: OrderByType,
 

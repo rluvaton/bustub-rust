@@ -20,6 +20,6 @@ impl Plan for DeleteStatement {
             Column::new_fixed_size("__bustub_internal.delete_rows".to_string(), DBTypeId::INT)
         ]));
 
-        DeletePlan::new(delete_schema, filter.into_rc_plan_type(), self.get_table().oid).into_rc_plan_type()
+        DeletePlan::new(delete_schema, filter.into_ref(), self.get_table().oid).into_ref()
     }
 }
