@@ -9,8 +9,8 @@ use std::sync::Arc;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct InsertStatement {
-    pub(crate) table: Arc<TableReferenceTypeImpl>,
-    pub(crate) select: SelectStatement,
+    table: Arc<TableReferenceTypeImpl>,
+    pub select: SelectStatement,
 }
 
 impl InsertStatement {
@@ -19,6 +19,13 @@ impl InsertStatement {
         Self {
             table,
             select
+        }
+    }
+
+    pub fn get_table(&self) -> &BaseTableRef {
+        match &*self.table {
+            TableReferenceTypeImpl::BaseTable(t) => t,
+            _ => panic!("Invalid table ref in insert")
         }
     }
 }

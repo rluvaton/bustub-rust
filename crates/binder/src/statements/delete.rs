@@ -1,6 +1,7 @@
 use crate::expressions::{Constant, Expression, ExpressionTypeImpl};
 use crate::sql_parser_helper::ColumnDefExt;
 use crate::statements::traits::Statement;
+use crate::statements::StatementTypeImpl;
 use crate::table_ref::{BaseTableRef, TableReferenceTypeImpl};
 use crate::try_from_ast_error::{ParseASTError, ParseASTResult};
 use crate::Binder;
@@ -8,8 +9,6 @@ use sqlparser::ast::{FromTable, TableFactor};
 use std::fmt::Debug;
 use std::ops::DerefMut;
 use std::rc::Rc;
-use std::sync::Arc;
-use crate::statements::{CreateStatement, StatementTypeImpl};
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct DeleteStatement {
@@ -22,7 +21,7 @@ impl DeleteStatement {
         assert!(matches!(*table, TableReferenceTypeImpl::BaseTable(_)), "table reference in delete must be base table");
         Self {
             table,
-            expr
+            expr,
         }
     }
 
@@ -90,17 +89,15 @@ impl Statement for DeleteStatement {
 
 #[cfg(test)]
 mod tests {
-    use parking_lot::Mutex;
     use crate::statements::traits::Statement;
     use crate::statements::DeleteStatement;
     use crate::try_from_ast_error::ParseASTError;
     use crate::Binder;
+    use db_core::catalog::Catalog;
     use sqlparser::dialect::GenericDialect;
     use sqlparser::parser::Parser;
-    use db_core::catalog::Catalog;
 
     fn parse_delete_sql(sql: &str) -> Result<Vec<DeleteStatement>, ParseASTError> {
-
         let catalog = Catalog::new(None, None, None);
         let mut binder = Binder::new(&catalog);
         let statements = Parser::parse_sql(&GenericDialect {}, sql).unwrap();

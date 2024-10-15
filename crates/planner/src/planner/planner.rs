@@ -3,8 +3,9 @@ use db_core::catalog::Catalog;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use parking_lot::Mutex;
 use binder::StatementTypeImpl;
-use crate::plan_nodes::PlanType;
+use crate::plan_nodes::{PlanNodeRef, PlanType};
 use crate::planner::{Context, ContextGuard};
+use crate::traits::Plan;
 
 pub struct Planner<'a> {
     /// Catalog will be used during the binding process
@@ -35,8 +36,8 @@ impl<'a> Planner<'a> {
         ContextGuard::new(self)
     }
 
-    pub fn plan(mut self, statement: StatementTypeImpl)-> Rc<PlanType> {
-        todo!()
+    pub fn plan(self, statement: StatementTypeImpl)-> PlanNodeRef {
+        statement.plan(&self)
     }
 
     pub fn get_and_increment_universal_id(&self) -> usize {
