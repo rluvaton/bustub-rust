@@ -1,3 +1,4 @@
+use std::fs::Metadata;
 use crate::{GenericComparator, GenericKey, Index, IndexMetadata};
 use buffer_pool_manager::BufferPoolManager;
 use common::{Comparator, PageKey};
@@ -66,6 +67,13 @@ impl_extendible_hashing_index_for_generic_key! {
     ExtendibleHashingIndex64, 64
 }
 
-pub fn create_index_based_on_key_size(keysize: usize) {
-
+pub fn create_index_based_on_key_size(key_size: usize, metadata: Arc<IndexMetadata>, bpm: Arc<BufferPoolManager>) -> Arc<dyn Index> {
+    match key_size {
+        4 => Arc::new(ExtendibleHashingIndex4::new(metadata, bpm)),
+        8 => Arc::new(ExtendibleHashingIndex8::new(metadata, bpm)),
+        16 => Arc::new(ExtendibleHashingIndex16::new(metadata, bpm)),
+        32 => Arc::new(ExtendibleHashingIndex32::new(metadata, bpm)),
+        64 => Arc::new(ExtendibleHashingIndex64::new(metadata, bpm)),
+        _ => panic!("Unimplemented extendible hash index for key size {}", key_size)
+    }
 }
