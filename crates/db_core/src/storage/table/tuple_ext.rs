@@ -1,8 +1,6 @@
-use std::fmt::{Debug, Display, Formatter};
-use std::hash::{Hash, Hasher};
-use common::PageKey;
 use data_types::Value;
-use rid::RID;
+use std::fmt::{Debug, Display};
+use std::hash::Hash;
 
 
 pub trait TupleExt {
