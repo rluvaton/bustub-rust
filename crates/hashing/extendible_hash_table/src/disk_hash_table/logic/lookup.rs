@@ -95,7 +95,7 @@ where
             // 9. Lookup the value for the key in the target bucket
             found_value = bucket_page.lookup(key, &self.cmp)
                 // Clone the value before releasing the page guard as we hold reference to something that will be freed
-                .copied();
+                .cloned();
         } // Drop bucket page guard
 
 

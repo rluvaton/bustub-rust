@@ -1,6 +1,6 @@
 mod page;
-mod index;
 mod table;
+mod index;
 
 pub use page::*;
 pub use index::*;

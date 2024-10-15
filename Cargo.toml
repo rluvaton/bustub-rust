@@ -1,9 +1,9 @@
 [workspace]
 members = [
+    "crates/playground",
     "tools/shell",
     "tools/hash_table_bench",
     "tools/bpm_bench",
-
     "crates/common",
     "crates/primer",
     "crates/db_core",
@@ -14,7 +14,6 @@ members = [
     "crates/utils/error_utils",
     "crates/data_structures",
     "crates/rid",
-
     "crates/storage/pages",
     "crates/storage/disk",
     "crates/recovery/log_manager",
@@ -25,7 +24,12 @@ members = [
     "crates/execution/expression",
     "crates/storage/table/tuple",
     "crates/hashing/common",
-    "crates/hashing/extendible_hash_table", "crates/bustub_instance", "crates/recovery/checkpoint_manager", "crates/execution/engine", "crates/execution/common", "crates/binder", "crates/playground", "crates/storage/index",
+    "crates/hashing/extendible_hash_table",
+    "crates/bustub_instance",
+    "crates/recovery/checkpoint_manager",
+    "crates/execution/engine",
+    "crates/execution/common",
+    "crates/binder",
 ]
 
 [profile.bench]

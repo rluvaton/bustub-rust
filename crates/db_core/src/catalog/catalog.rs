@@ -214,7 +214,7 @@ impl Catalog {
     // just the key, value, and comparator types
 
     // TODO(chi): support both hash index and btree index
-        let index: Arc<Index>;
+        let index: Arc<IndexMetadata>;
 
         todo!();
         //

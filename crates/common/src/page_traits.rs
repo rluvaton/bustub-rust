@@ -2,8 +2,8 @@ use std::fmt::{Debug, Display};
 use std::hash::Hash;
 
 // TODO - should this be in common?
-pub trait PageKey: Sized + Copy + Clone + Display + Debug + Hash {}
-pub trait PageValue: Sized + Copy + Clone + Display + Debug + PartialEq {}
+pub trait PageKey: Sized + Clone + Display + Debug + Hash {}
+pub trait PageValue: Sized + Clone + Display + Debug + PartialEq {}
 
 macro_rules! page_key_value_impl {
     ($($t:ty)+) => ($(

@@ -1,5 +1,5 @@
 use crate::catalog::{IndexType, Schema};
-use crate::storage::Index;
+use crate::storage::{Index, IndexWithMetadata};
 use common::config::IndexOID;
 use std::sync::Arc;
 
@@ -16,7 +16,7 @@ pub struct IndexInfo {
 
     /// An owning pointer to the index
     #[allow(unused)]
-    index: Arc<Index>,
+    index: Arc<IndexWithMetadata>,
 
     /// The unique OID for the index
     #[allow(unused)]

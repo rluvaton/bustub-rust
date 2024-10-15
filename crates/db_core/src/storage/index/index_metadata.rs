@@ -2,6 +2,7 @@ use std::fmt::{Debug, Formatter};
 use std::sync::Arc;
 use crate::catalog::Schema;
 
+#[derive(Debug)]
 pub struct IndexMetadata {
     /// The name of the index
     name: String,
@@ -67,11 +68,5 @@ impl IndexMetadata {
     /// @return is primary key
     pub fn is_primary_key(&self) -> bool {
         self.is_primary_key
-    }
-}
-
-impl Debug for IndexMetadata {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "IndexMetadata[Name = {}, Type = B+Tree, Table name = {} ] :: {}", self.name, self.table_name, self.key_schema)
     }
 }

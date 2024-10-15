@@ -224,6 +224,7 @@ where
         // 5. Rehash all current bucket page content and find the correct bucket
         let (new_bucket_items, current_bucket_items): (Vec<(Key, Value)>, Vec<(Key, Value)>) = bucket_page_to_split
             .iter()
+            .cloned()
             .partition(|(key, _)| directory_page.hash_to_bucket_index(self.hash(key)) == new_bucket_index);
 
         // 6. set the current bucket items in the new location

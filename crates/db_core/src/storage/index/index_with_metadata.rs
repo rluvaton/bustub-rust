@@ -1,10 +1,11 @@
-use std::fmt::{Debug, Formatter};
-use crate::storage::{IndexMetadata};
-use std::sync::Arc;
+use crate::catalog::Schema;
+use crate::storage::index::traits::Index;
+use crate::storage::IndexMetadata;
 use rid::RID;
+use std::fmt::{Debug, Formatter};
+use std::sync::Arc;
 use transaction::Transaction;
 use tuple::Tuple;
-use crate::catalog::Schema;
 
 /// class Index - Base class for derived indices of different types
 ///
@@ -20,18 +21,19 @@ use crate::catalog::Schema;
 /// the type of expressions inside the predicate.
 ///
 // TODO - this should be a trait and not a struct
-pub struct Index {
+pub struct IndexWithMetadata {
     /// The Index structure owns its metadata
     metadata: Arc<IndexMetadata>,
+    index: Box<dyn Index>
 }
 
-impl Index {
-    pub fn new(metadata: Arc<IndexMetadata>) -> Self {
+impl IndexWithMetadata {
+    pub fn new(index: Box<dyn Index>, metadata: Arc<IndexMetadata>) -> Self {
         Self {
+            index,
             metadata,
         }
     }
-
 
     /// A non-owning pointer to the metadata object associated with the index
     pub fn get_metadata(&self) -> Arc<IndexMetadata> {
@@ -70,8 +72,8 @@ impl Index {
     /// - `transaction` The transaction context
     ///
     /// returns `bool`: whether insertion is successful
-    pub fn insert_entry(&mut self, _key: &Tuple, _rid: RID, _transaction: &Transaction) -> bool {
-        unimplemented!()
+    pub fn insert_entry(&mut self, key: &Tuple, rid: RID, transaction: Arc<Transaction>) -> bool {
+        self.index.insert_entry(key, rid, transaction)
     }
 
     /// Delete an index entry by key.
@@ -81,8 +83,8 @@ impl Index {
     /// - `rid` The RID associated with the key (unused)
     /// - `transaction` The transaction context
     ///
-    pub fn delete_entry(&mut self, _key: &Tuple, _rid: RID, _transaction: &Transaction) {
-        unimplemented!()
+    fn delete_entry(&mut self, key: &Tuple, rid: RID, transaction: Arc<Transaction>) {
+        self.index.delete_entry(key, rid, transaction)
     }
 
     /// Search the index for the provided key.
@@ -92,14 +94,14 @@ impl Index {
     /// - `transaction` The transaction context
     ///
     /// returns `Vec<RID>`: The collection of RIDs with the search results
-    pub fn scan_key(&self, _key: &Tuple, _transaction: &Transaction) -> Vec<RID> {
-        unimplemented!()
+    fn scan_key(&self, key: &Tuple, transaction: Arc<Transaction>) -> Vec<RID> {
+        self.index.scan_key(key, transaction)
     }
 }
 
 
-impl Debug for Index {
+impl Debug for IndexWithMetadata {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "INDEX: ({}) {:?}", self.get_name(), self.metadata)
+        write!(f, "INDEX: ({}) {:?}", self.get_name(), self.get_metadata())
     }
 }

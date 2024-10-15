@@ -170,7 +170,7 @@ where
                 return false;
             }
 
-            self.array[bucket_index].1 = *new_value;
+            self.array[bucket_index].1 = new_value.clone();
 
 
             return true;
@@ -247,7 +247,7 @@ where
         assert!(self.max_size as usize >= new_items.len(), "can't insert more items than bucket can hold");
 
         // TODO - should do swap to the memory or something for better perf?
-        self.array[0..new_items.len()].copy_from_slice(new_items);
+        self.array[0..new_items.len()].clone_from_slice(new_items);
 
         self.size = new_items.len() as u32;
     }
