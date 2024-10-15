@@ -6,9 +6,8 @@ use common::config::TableOID;
 use lock_manager::LockManager;
 use rid::RID;
 use transaction::Transaction;
-use tuple::{Tuple, TupleMeta};
 use crate::table_iterator::TableIterator;
-use crate::TablePage;
+use crate::{TablePage, Tuple, TupleMeta};
 
 /// TODO - implement more from src/include/storage/table/table_heap.h
 pub struct TableHeap {
