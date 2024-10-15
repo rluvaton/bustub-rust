@@ -9,7 +9,7 @@ impl Clone for TimestampType {
 }
 
 impl StorageDBTypeTrait for TimestampType {
-    const SIZE: u64 = size_of::<TimestampUnderlyingType>() as u64;
+    const SIZE: usize = size_of::<TimestampUnderlyingType>();
 
     fn is_inlined(&self) -> bool {
         true
@@ -19,7 +19,7 @@ impl StorageDBTypeTrait for TimestampType {
         unimplemented!()
     }
 
-    fn get_length(&self) -> u32 {
+    fn len(&self) -> u32 {
         unimplemented!()
     }
 

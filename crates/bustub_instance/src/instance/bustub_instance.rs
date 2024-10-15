@@ -263,7 +263,7 @@ impl BustubInstance {
                 .map(|col| info.get_schema().get_col_idx(col.to_string()) as u32)
                 .collect();
 
-            let has_unsupported_index = col_ids.iter().any(|col_idx| info.get_schema().get_column(col_idx.clone()).get_type() != DBTypeId::INT);
+            let has_unsupported_index = col_ids.iter().any(|&col_idx| info.get_schema().get_column(col_idx as usize).get_type() != DBTypeId::INT);
 
             if has_unsupported_index {
                 unimplemented!("only support creating index on integer column");

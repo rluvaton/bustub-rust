@@ -8,7 +8,7 @@ impl Clone for IntType {
 }
 
 impl StorageDBTypeTrait for IntType {
-    const SIZE: u64 = size_of::<IntUnderlyingType>() as u64;
+    const SIZE: usize = size_of::<IntUnderlyingType>();
 
     fn is_inlined(&self) -> bool {
         true
@@ -18,7 +18,7 @@ impl StorageDBTypeTrait for IntType {
         unimplemented!()
     }
 
-    fn get_length(&self) -> u32 {
+    fn len(&self) -> u32 {
         unimplemented!()
     }
 

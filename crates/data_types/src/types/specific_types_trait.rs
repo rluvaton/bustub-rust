@@ -76,7 +76,7 @@ pub trait FormatDBTypeTrait: Display + Debug {
 
 pub trait StorageDBTypeTrait: Sized + Clone {
     /// Get the size of this data type in bytes
-    const SIZE: u64;
+    const SIZE: usize;
 
     // Is the data inlined into this classes storage space, or must it be accessed
     // through an indirection/pointer?
@@ -86,7 +86,7 @@ pub trait StorageDBTypeTrait: Sized + Clone {
     fn get_data(&self) -> &[u8];
 
     // Get the length of the variable length data
-    fn get_length(&self) -> u32;
+    fn len(&self) -> u32;
 
     /// Access the raw varlen data stored from the tuple storage
     fn get_data_from_slice(storage: &[u8]) -> &[u8];

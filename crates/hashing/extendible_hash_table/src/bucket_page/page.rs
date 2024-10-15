@@ -296,7 +296,7 @@ impl<const ARRAY_SIZE: usize, Key: PageKey, Value: PageValue, KeyComparator: Com
         table.set_header(vec!["index", "key", "value"]);
 
         for idx in 0..self.size {
-            table.add_row(vec![idx.to_string(), self.key_at(idx).to_string(), self.value_at(idx).to_string()]);
+            table.add_row(vec![idx.to_string(), format!("{:?}", self.key_at(idx)), self.value_at(idx).to_string()]);
         }
 
         f.write_str(table.to_string().as_str())?;

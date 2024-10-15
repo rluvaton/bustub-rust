@@ -87,8 +87,8 @@ impl Schema {
     /// * `col_idx`: index of requested column
     ///
     /// returns: &Column requested column
-    pub fn get_column(&self, col_idx: u32) -> &Column {
-        &self.columns[col_idx as usize]
+    pub fn get_column(&self, col_idx: usize) -> &Column {
+        &self.columns[col_idx]
     }
 
 
@@ -123,13 +123,13 @@ impl Schema {
     pub fn get_unlined_columns(&self) -> &Vec<u32> { &self.uninlined_columns }
 
     /// return the number of columns in the schema for the tuple
-    pub fn get_column_count(&self) -> u32 {
-        self.columns.len() as u32
+    pub fn get_column_count(&self) -> usize {
+        self.columns.len()
     }
 
     /// return the number of non-inlined columns
-    pub fn get_unlined_column_count(&self) -> u32 {
-        self.uninlined_columns.len() as u32
+    pub fn get_unlined_column_count(&self) -> usize {
+        self.uninlined_columns.len()
     }
 
     /// the number of bytes used by one tuple

@@ -8,7 +8,7 @@ impl Clone for DecimalType {
 }
 
 impl StorageDBTypeTrait for DecimalType {
-    const SIZE: u64 = size_of::<DecimalUnderlyingType>() as u64;
+    const SIZE: usize = size_of::<DecimalUnderlyingType>();
 
     fn is_inlined(&self) -> bool {
         true
@@ -18,7 +18,7 @@ impl StorageDBTypeTrait for DecimalType {
         unimplemented!()
     }
 
-    fn get_length(&self) -> u32 {
+    fn len(&self) -> u32 {
         unimplemented!()
     }
 

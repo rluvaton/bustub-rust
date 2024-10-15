@@ -44,7 +44,7 @@ impl<const KEY_SIZE: usize> GenericKey<KEY_SIZE> {
         generic_key
     }
 
-    pub(crate) fn to_value(&self, schema: &Schema, column_idx: u32) -> Value {
+    pub(crate) fn to_value(&self, schema: &Schema, column_idx: usize) -> Value {
         let data_slice: &[u8];
         let col = schema.get_column(column_idx);
         let column_type: DBTypeId = col.get_type();

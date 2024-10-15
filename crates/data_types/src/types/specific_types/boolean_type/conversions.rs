@@ -78,7 +78,7 @@ impl ConversionDBTypeTrait for BooleanType {
     }
 
     fn serialize_to(&self, storage: &mut [u8]) {
-        storage[0..Self::SIZE as usize].copy_from_slice(self.value.to_ne_bytes().as_slice())
+        storage[0..Self::SIZE].copy_from_slice(self.value.to_ne_bytes().as_slice())
     }
 
     fn deserialize_from(storage: &[u8]) -> Self {

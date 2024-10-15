@@ -17,7 +17,7 @@ pub enum DBTypeId {
 
 impl DBTypeId {
     /// Return the size in bytes of the type
-    pub fn get_size(&self) -> u64 {
+    pub fn get_size(&self) -> usize {
         // TODO - change this to the type
         match self {
             DBTypeId::INVALID => unreachable!("Cannot get size of invalid type"),

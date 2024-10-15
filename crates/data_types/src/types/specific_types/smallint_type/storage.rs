@@ -9,7 +9,7 @@ impl Clone for SmallIntType {
 }
 
 impl StorageDBTypeTrait for SmallIntType {
-    const SIZE: u64 = size_of::<SmallIntUnderlyingType>() as u64;
+    const SIZE: usize = size_of::<SmallIntUnderlyingType>();
 
     fn is_inlined(&self) -> bool {
         true
@@ -19,7 +19,7 @@ impl StorageDBTypeTrait for SmallIntType {
         unimplemented!()
     }
 
-    fn get_length(&self) -> u32 {
+    fn len(&self) -> u32 {
         unimplemented!()
     }
 

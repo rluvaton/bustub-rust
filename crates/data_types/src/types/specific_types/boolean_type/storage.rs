@@ -8,7 +8,7 @@ impl Clone for BooleanType {
 }
 
 impl StorageDBTypeTrait for BooleanType {
-    const SIZE: u64 = size_of::<BooleanUnderlyingType>() as u64;
+    const SIZE: usize = size_of::<BooleanUnderlyingType>();
 
     fn is_inlined(&self) -> bool {
         true
@@ -18,7 +18,7 @@ impl StorageDBTypeTrait for BooleanType {
         unimplemented!()
     }
 
-    fn get_length(&self) -> u32 {
+    fn len(&self) -> u32 {
         unimplemented!()
     }
 

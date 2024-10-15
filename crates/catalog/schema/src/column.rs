@@ -100,8 +100,8 @@ impl Column {
     }
 
     /// get column's offset in the tuple
-    pub fn get_offset(&self) -> u32 {
-        self.column_offset
+    pub fn get_offset(&self) -> usize {
+        self.column_offset as usize
     }
 
     /// get column type

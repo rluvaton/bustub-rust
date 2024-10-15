@@ -236,7 +236,7 @@ impl<const BUCKET_MAX_SIZE: usize, Key: PageKey, Value: PageValue, KeyComparator
 
                     bucket
                         .iter()
-                        .map(|(key, _)| format!("{}", key))
+                        .map(|(key, _)| format!("{:?}", key))
                         .collect()
                 })?
             } else {

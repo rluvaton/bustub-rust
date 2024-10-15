@@ -1,5 +1,6 @@
 // TODO - should probably be trait
 
+use std::fmt::{Display, Formatter};
 use crate::run_on_impl;
 use crate::types::{BigIntType, BooleanType, ComparisonDBTypeTrait, ConversionDBTypeTrait, DBTypeId, DBTypeIdImpl, DecimalType, IntType, SmallIntType, StorageDBTypeTrait, TimestampType, TinyIntType};
 
@@ -110,7 +111,7 @@ impl Value {
     }
 
     #[allow(unused)]
-    fn serialize_to(&self, storage: &mut [u8]) {
+    pub fn serialize_to(&self, storage: &mut [u8]) {
         run_on_impl!(&self.value, v, {
             v.serialize_to(storage)
         })
@@ -133,9 +134,17 @@ impl Value {
     }
 
     #[allow(unused)]
-    fn get_length(&self) -> u32 {
+    pub fn len(&self) -> u32 {
         run_on_impl!(self.value, v, {
-            v.get_length()
+            v.len()
+        })
+    }
+}
+
+impl Display for Value {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        run_on_impl!(&self.value, v, {
+            f.write_str(v.as_string().as_str())
         })
     }
 }
