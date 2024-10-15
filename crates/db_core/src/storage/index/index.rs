@@ -1,10 +1,10 @@
 use std::fmt::{Debug, Formatter};
 use crate::storage::{IndexMetadata};
 use std::sync::Arc;
+use catalog_schema::Schema;
 use rid::RID;
 use transaction::Transaction;
 use tuple::Tuple;
-use crate::catalog::Schema;
 
 /// class Index - Base class for derived indices of different types
 ///
