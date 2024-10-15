@@ -12,7 +12,7 @@ pub(crate) trait TableRef: Debug + PartialEq + Into<TableReferenceTypeImpl> {
 
     fn resolve_column(&self, col_name: &[String], binder: &Binder) -> ParseASTResult<Option<ColumnRef>>;
 
-    fn try_from_ast<'a>(ast: &TableFactor, binder: &'a mut Binder) -> ParseASTResult<Self>;
+    fn try_from_ast<'a>(ast: &TableFactor, binder: &'a Binder) -> ParseASTResult<Self>;
 }
 
 

@@ -71,7 +71,7 @@ impl Expression for ColumnRef {
         false
     }
 
-    fn try_parse_from_expr(expr: &Expr, binder: &mut Binder) -> ParseASTResult<Self>
+    fn try_parse_from_expr(expr: &Expr, binder: &Binder) -> ParseASTResult<Self>
     where
         Self: Sized
     {
@@ -90,7 +90,7 @@ impl Expression for ColumnRef {
             _ => return Err(ParseASTError::IncompatibleType)
         };
 
-        if let Some(scope) = &binder.scope {
+        if let Some(scope) = &binder.context.lock().scope {
             let column = scope.resolve_column(col_name.as_slice(), binder)?;
 
             if let Some(column) = column {

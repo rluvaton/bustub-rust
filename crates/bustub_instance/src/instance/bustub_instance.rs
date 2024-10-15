@@ -13,6 +13,7 @@ use execution_engine::ExecutionEngine;
 use parking_lot::Mutex;
 use recovery_log_manager::LogManager;
 use std::collections::HashMap;
+use std::ops::Deref;
 use std::path::PathBuf;
 use std::sync::Arc;
 use error_utils::ToAnyhow;
@@ -222,8 +223,7 @@ impl BustubInstance {
 
             let catalog = self.catalog.lock();
 
-            // TODO - REMOVE THIS!
-            let binder = Binder::new(catalog.clone());
+            let binder = Binder::new(catalog.deref());
 
             binder.parse(sql).map_err(|err| err.to_anyhow())?
         };

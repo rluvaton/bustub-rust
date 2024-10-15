@@ -8,7 +8,7 @@ pub trait Statement: Debug + Into<StatementTypeImpl> {
 
     type ASTStatement;
 
-    fn try_parse_ast<'a>(ast: &Self::ASTStatement, binder: &'a mut Binder) -> ParseASTResult<Self>;
+    fn try_parse_ast<'a>(ast: &Self::ASTStatement, binder: &'a Binder<'a>) -> ParseASTResult<Self>;
 
-    fn try_parse_from_statement<'a>(statement: &sqlparser::ast::Statement, binder: &'a mut Binder) -> ParseASTResult<Self>;
+    fn try_parse_from_statement<'a>(statement: &sqlparser::ast::Statement, binder: &'a Binder<'a>) -> ParseASTResult<Self>;
 }

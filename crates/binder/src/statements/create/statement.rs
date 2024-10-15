@@ -33,7 +33,7 @@ impl Into<StatementTypeImpl> for CreateStatement {
 impl Statement for CreateStatement {
     type ASTStatement = sqlparser::ast::CreateTable;
 
-    fn try_parse_ast(ast: &Self::ASTStatement, _binder: &mut Binder) -> ParseASTResult<Self> {
+    fn try_parse_ast(ast: &Self::ASTStatement, _binder: &Binder) -> ParseASTResult<Self> {
         let columns: ParseASTResult<Vec<Column>> = ast.columns.iter().map(|item| item.try_convert_into_column()).collect();
         let columns = columns?;
 
@@ -49,7 +49,7 @@ impl Statement for CreateStatement {
         })
     }
 
-    fn try_parse_from_statement<'a>(statement: &sqlparser::ast::Statement, binder: &'a mut Binder) -> ParseASTResult<Self> {
+    fn try_parse_from_statement<'a>(statement: &sqlparser::ast::Statement, binder: &'a Binder) -> ParseASTResult<Self> {
         match &statement {
             sqlparser::ast::Statement::CreateTable(ast) => Self::try_parse_ast(ast, binder),
             _ => Err(ParseASTError::IncompatibleType)
@@ -62,6 +62,7 @@ impl Statement for CreateStatement {
 mod tests {
     use std::rc::Rc;
     use std::sync::Arc;
+    use parking_lot::Mutex;
     use crate::statements::create::CreateStatement;
     use data_types::DBTypeId;
     use db_core::catalog::{Catalog};
@@ -75,9 +76,9 @@ mod tests {
 
     fn parse_create_sql(sql: &str) -> Result<Vec<CreateStatement>, ParseASTError> {
         let catalog = Catalog::new(None, None, None);
-        let mut binder = Binder::new(catalog);
+        let mut binder = Binder::new(&catalog);
         let statements = Parser::parse_sql(&GenericDialect {}, sql).unwrap();
-        statements.iter().map(|stmt| CreateStatement::try_parse_from_statement(stmt, &mut binder)).collect()
+        statements.iter().map(|stmt| CreateStatement::try_parse_from_statement(stmt, &binder)).collect()
     }
 
     #[test]

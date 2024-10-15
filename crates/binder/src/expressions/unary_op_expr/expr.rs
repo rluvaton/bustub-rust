@@ -38,7 +38,7 @@ impl Expression for UnaryOpExpr {
         self.arg.has_aggregation()
     }
 
-    fn try_parse_from_expr(expr: &Expr, binder: &mut Binder) -> ParseASTResult<Self>
+    fn try_parse_from_expr(expr: &Expr, binder: &Binder) -> ParseASTResult<Self>
     where
         Self: Sized
     {

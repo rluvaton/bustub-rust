@@ -24,7 +24,7 @@ impl TableRef for CTERef {
     fn resolve_column(&self, col_name: &[String], binder: &Binder) -> ParseASTResult<Option<ColumnRef>> {
 
         // TODO - should move the CTE scope in this ref?
-        let cte_scope = binder.cte_scope.as_ref().expect("CTE not found").clone();
+        let cte_scope = binder.context.lock().cte_scope.as_ref().expect("CTE not found").clone();
 
         for cte in cte_scope.iter() {
             if cte.alias == self.alias {
@@ -36,7 +36,7 @@ impl TableRef for CTERef {
         unreachable!("CTE not found")
     }
 
-    fn try_from_ast(ast: &TableFactor, binder: &mut Binder) -> ParseASTResult<Self> {
+    fn try_from_ast(ast: &TableFactor, binder: &Binder) -> ParseASTResult<Self> {
         // CTE is manually done
         Err(ParseASTError::IncompatibleType)
     }

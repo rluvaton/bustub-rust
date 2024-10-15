@@ -19,7 +19,7 @@ pub enum WindowBoundary {
 }
 
 impl WindowBoundary {
-    fn from_window_frame(units: &WindowFrameUnits, bounds: &WindowFrameBound, binder: &mut Binder) -> ParseASTResult<WindowBoundary> {
+    fn from_window_frame(units: &WindowFrameUnits, bounds: &WindowFrameBound, binder: &Binder) -> ParseASTResult<WindowBoundary> {
         Ok(match (units, bounds) {
             (WindowFrameUnits::Rows, WindowFrameBound::CurrentRow) => WindowBoundary::CurrentRowRows,
             (WindowFrameUnits::Range, WindowFrameBound::CurrentRow) => WindowBoundary::CurrentRowRange,
@@ -114,7 +114,7 @@ impl Expression for WindowExpr {
         true
     }
 
-    fn try_parse_from_expr(expr: &Expr, binder: &mut Binder) -> ParseASTResult<Self>
+    fn try_parse_from_expr(expr: &Expr, binder: &Binder) -> ParseASTResult<Self>
     where
         Self: Sized,
     {

@@ -1,40 +1,37 @@
-use std::rc::Rc;
-use std::sync::Arc;
-use std::sync::atomic::{AtomicUsize, Ordering};
-use parking_lot::MutexGuard;
-use sqlparser::parser::Parser;
-use db_core::catalog::Catalog;
-use crate::context_guard::ContextGuard;
-use crate::statements::{Statement, StatementType, StatementTypeImpl};
-use crate::table_ref::{CTEList, TableRef, TableReferenceTypeImpl};
+use crate::binder::context_guard::ContextGuard;
+use crate::binder::Context;
+use crate::statements::{Statement, StatementTypeImpl};
 use crate::try_from_ast_error::ParseASTResult;
+use db_core::catalog::Catalog;
+use parking_lot::Mutex;
+use sqlparser::parser::Parser;
+use std::sync::atomic::{AtomicUsize, Ordering};
 
-pub struct Binder {
+pub struct Binder<'a> {
     /// Catalog will be used during the binding process
-    pub(crate) catalog: Catalog,
+    pub(crate) catalog: &'a Catalog,
 
-    /// The current scope for resolving column ref, used in binding expressions
-    pub(crate) scope: Option<Rc<TableReferenceTypeImpl>>,
-
-    /// The current scope for resolving tables in CTEs, used in binding tables
-    pub(crate) cte_scope: Option<Rc<CTEList>>,
+    // TODO - replace with Cow?
+    pub(crate) context: Mutex<Context>,
 
     /** Sometimes we will need to assign a name to some unnamed items. This variable gives them a universal ID. */
     pub(crate) universal_id: AtomicUsize,
 }
 
-impl<'a> Binder {
-    pub fn new(catalog: Catalog) -> Self {
+impl<'a> Binder<'a> {
+    pub fn new(catalog: &'a Catalog) -> Self {
         Self {
             catalog,
-            scope: None,
-            cte_scope: None,
+            context: Mutex::new(Context {
+                scope: None,
+                cte_scope: None,
+            }),
             universal_id: AtomicUsize::new(0),
         }
     }
 
 
-    pub(crate) fn new_context(&'a mut self) -> ContextGuard<'a> {
+    pub(crate) fn new_context(&'a self) -> ContextGuard<'a> {
         ContextGuard::new(self)
     }
 

@@ -38,8 +38,7 @@ impl Expression for FuncCallExpr {
         false
     }
 
-
-    fn try_parse_from_expr(expr: &Expr, binder: &mut Binder) -> ParseASTResult<Self>
+    fn try_parse_from_expr(expr: &Expr, binder: &Binder) -> ParseASTResult<Self>
     where
         Self: Sized
     {

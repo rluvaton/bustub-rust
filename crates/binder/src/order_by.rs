@@ -40,7 +40,7 @@ impl OrderBy {
         }
     }
 
-    pub(crate) fn parse_from_ast(ast: &OrderByExpr, binder: &mut Binder) -> ParseASTResult<Self> {
+    pub(crate) fn parse_from_ast(ast: &OrderByExpr, binder: &Binder) -> ParseASTResult<Self> {
         let order_by: OrderByType = if let Some(asc) = ast.asc {
             if asc {
                 OrderByType::Asc
@@ -55,7 +55,7 @@ impl OrderBy {
         ))
     }
 
-    pub(crate) fn parse_from_order_by(ast: &sqlparser::ast::OrderBy, binder: &mut Binder) -> ParseASTResult<Vec<Self>> {
+    pub(crate) fn parse_from_order_by(ast: &sqlparser::ast::OrderBy, binder: &Binder) -> ParseASTResult<Vec<Self>> {
         ast.exprs
             .iter()
             .map(|item| OrderBy::parse_from_ast(item, binder))
