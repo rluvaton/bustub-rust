@@ -1,5 +1,5 @@
-use std::sync::Arc;
 use rid::RID;
+use std::sync::Arc;
 use transaction::Transaction;
 use tuple::Tuple;
 

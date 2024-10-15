@@ -1,6 +1,6 @@
-use std::fmt::{Debug, Formatter};
-use std::sync::Arc;
 use catalog_schema::Schema;
+use std::fmt::Debug;
+use std::sync::Arc;
 
 #[derive(Debug)]
 pub struct IndexMetadata {
