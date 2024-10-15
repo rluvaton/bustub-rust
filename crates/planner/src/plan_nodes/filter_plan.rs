@@ -26,11 +26,12 @@ pub struct FilterPlan {
 
 impl FilterPlan {
     /**
-     * Construct a new DeletePlanNode.
-     * @param child The child plan to obtain tuple from
-     * @param table_oid The identifier of the table from which tuples are deleted
+     * Construct a new FilterPlanNode instance.
+     * @param output The output schema of this filter plan node
+     * @param predicate The predicate applied during the scan operation
+     * @param child The child plan node
      */
-    pub fn new(output: Arc<Schema>, child: Rc<PlanType>, predicate: Rc<PlanType>) -> Self {
+    pub fn new(output: Arc<Schema>, predicate: Rc<PlanType>, child: Rc<PlanType>) -> Self {
         Self {
             output_schema: output,
             children: vec![child],
@@ -39,7 +40,7 @@ impl FilterPlan {
     }
 
     /** @return The predicate to test tuples against; tuples should only be returned if they evaluate to true */
-    pub fn get(&self) -> &PlanType { &self.predicate }
+    pub fn get_predicate(&self) -> &PlanType { &self.predicate }
 
     /** @return The child plan providing tuples to be deleted */
     pub fn get_child_plan(&self) -> &PlanType {
@@ -67,7 +68,7 @@ impl PlanNode for FilterPlan {
         self.output_schema.clone()
     }
 
-    fn get_children(&self) -> &Vec<Rc<PlanType>> {
+    fn get_children(&self) -> &[Rc<PlanType>] {
         &self.children
     }
 }

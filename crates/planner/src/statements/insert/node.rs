@@ -63,7 +63,7 @@ impl PlanNode for InsertPlan {
         self.output_schema.clone()
     }
 
-    fn get_children(&self) -> &Vec<Rc<PlanType>> {
+    fn get_children(&self) -> &[Rc<PlanType>] {
         &self.children
     }
 }

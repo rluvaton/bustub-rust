@@ -6,7 +6,7 @@ use binder::{BinaryOpExpr, UnaryOpExpr};
 use crate::expressions::traits::PlanExpression;
 
 impl PlanExpression for UnaryOpExpr {
-    fn plan<'a>(&self, children: Vec<Rc<PlanType>>, planner: &'a Planner<'a>) -> (String, PlanType) {
+    fn plan<'a>(&self, children: Vec<Rc<PlanType>>, planner: &'a Planner<'a>) -> (String, Rc<PlanType>) {
         todo!()
     }
 }

@@ -10,12 +10,16 @@ pub trait PlanNode: Clone + Display + Debug + Into<PlanType> {
     fn get_output_schema(&self) -> Arc<Schema>;
 
     /** @return the children of this plan node */
-    fn get_children(&self) -> &Vec<Rc<PlanType>>;
+    fn get_children(&self) -> &[Rc<PlanType>];
 
 
     /** @return the child of this plan node at index child_idx */
     fn get_child_at(&self, child_idx: usize) -> &Rc<PlanType> {
         &self.get_children()[child_idx]
+    }
+
+    fn into_rc_plan_type(self) -> Rc<PlanType> {
+        Rc::new(self.into())
     }
 }
 

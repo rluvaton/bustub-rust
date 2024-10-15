@@ -18,34 +18,34 @@ use crate::statements::{CreateStatement, StatementTypeImpl};
 #[derive(Clone, Debug, PartialEq)]
 pub struct SelectStatement {
     /// Bound FROM clause.
-    pub(crate) table: Rc<TableReferenceTypeImpl>,
+    pub table: Rc<TableReferenceTypeImpl>,
 
     /// Bound SELECT list.
-    pub(crate) select_list: Vec<ExpressionTypeImpl>,
+    pub select_list: Vec<ExpressionTypeImpl>,
 
     /// Bound WHERE clause.
-    pub(crate) where_exp: Option<ExpressionTypeImpl>,
+    pub where_exp: Option<ExpressionTypeImpl>,
 
     /// Bound GROUP BY clause.
-    pub(crate) group_by: Vec<ExpressionTypeImpl>,
+    pub group_by: Vec<ExpressionTypeImpl>,
 
     /// Bound HAVING clause.
-    pub(crate) having: Option<ExpressionTypeImpl>,
+    pub having: Option<ExpressionTypeImpl>,
 
     /// Bound LIMIT clause.
-    pub(crate) limit_count: Option<ExpressionTypeImpl>,
+    pub limit_count: Option<ExpressionTypeImpl>,
 
     /// Bound OFFSET clause.
-    pub(crate) limit_offset: Option<ExpressionTypeImpl>,
+    pub limit_offset: Option<ExpressionTypeImpl>,
 
     /// Bound ORDER BY clause.
-    pub(crate) sort: Vec<OrderBy>,
+    pub sort: Vec<OrderBy>,
 
     /// Bound CTE
-    pub(crate) ctes: Rc<CTEList>,
+    pub ctes: Rc<CTEList>,
 
     /// Is SELECT DISTINCT
-    pub(crate) is_distinct: bool,
+    pub is_distinct: bool,
 }
 
 impl SelectStatement {

@@ -31,7 +31,7 @@ pub(crate) struct Context {
     /**
      * CTE in scope.
      */
-    pub(crate) cte_list: Option<CTEList>,
+    pub(crate) cte_list: Option<Rc<CTEList>>,
 }
 
 impl Context {

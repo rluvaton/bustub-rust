@@ -6,7 +6,7 @@ use binder::{AggCallExpr, BinaryOpExpr};
 use crate::expressions::traits::PlanExpression;
 
 impl PlanExpression for AggCallExpr {
-    fn plan<'a>(&self, children: Vec<Rc<PlanType>>, planner: &'a Planner<'a>) -> (String, PlanType) {
+    fn plan<'a>(&self, children: Vec<Rc<PlanType>>, planner: &'a Planner<'a>) -> (String, Rc<PlanType>) {
         todo!()
     }
 }

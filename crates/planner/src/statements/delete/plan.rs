@@ -15,11 +15,11 @@ impl Plan for DeleteStatement {
 
         let (_, condition) = self.expr.plan(vec![table.clone()], planner);
 
-        let filter = FilterPlan::new(table.get_output_schema(), condition.into(), table);
+        let filter = FilterPlan::new(table.get_output_schema(), condition, table);
         let delete_schema = Arc::new(Schema::new(vec![
             Column::new_fixed_size("__bustub_internal.delete_rows".to_string(), DBTypeId::INT)
         ]));
 
-        Rc::new(DeletePlan::new(delete_schema, Rc::new(filter.into()), self.get_table().oid).into())
+        DeletePlan::new(delete_schema, filter.into_rc_plan_type(), self.get_table().oid).into_rc_plan_type()
     }
 }

@@ -6,7 +6,7 @@ use binder::ColumnRef;
 use crate::expressions::traits::PlanExpression;
 
 impl PlanExpression for ColumnRef {
-    fn plan<'a>(&self, children: Vec<Rc<PlanType>>, planner: &'a Planner<'a>) -> (String, PlanType) {
+    fn plan<'a>(&self, children: Vec<Rc<PlanType>>, planner: &'a Planner<'a>) -> (String, Rc<PlanType>) {
         todo!()
     }
 }
