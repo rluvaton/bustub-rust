@@ -1,9 +1,6 @@
-use std::ops::{Deref, DerefMut};
-use std::rc::Rc;
-use std::sync::Arc;
 use crate::Binder;
-use crate::binder::Context;
-use crate::table_ref::{CTEList, TableRef, TableReferenceTypeImpl};
+use std::ops::Deref;
+use crate::binder::context::Context;
 
 pub(crate) struct ContextGuard<'a> {
     old_context: Context,

@@ -1,13 +1,11 @@
-use std::rc::Rc;
-use std::sync::Arc;
-use std::sync::atomic::{AtomicUsize, Ordering};
-use parking_lot::{Mutex, MutexGuard};
-use sqlparser::parser::Parser;
-use db_core::catalog::Catalog;
-use crate::context_guard::ContextGuard;
-use crate::statements::{Statement, StatementType, StatementTypeImpl};
-use crate::table_ref::{CTEList, TableRef, TableReferenceTypeImpl};
+use crate::binder::context_guard::ContextGuard;
+use crate::binder::Context;
+use crate::statements::{Statement, StatementTypeImpl};
 use crate::try_from_ast_error::ParseASTResult;
+use db_core::catalog::Catalog;
+use parking_lot::Mutex;
+use sqlparser::parser::Parser;
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 pub struct Binder<'a> {
     /// Catalog will be used during the binding process
@@ -17,16 +15,6 @@ pub struct Binder<'a> {
 
     /** Sometimes we will need to assign a name to some unnamed items. This variable gives them a universal ID. */
     pub(crate) universal_id: AtomicUsize,
-}
-
-#[derive(Clone)]
-pub(crate) struct Context {
-
-    /// The current scope for resolving column ref, used in binding expressions
-    pub(crate) scope: Option<Rc<TableReferenceTypeImpl>>,
-
-    /// The current scope for resolving tables in CTEs, used in binding tables
-    pub(crate) cte_scope: Option<Rc<CTEList>>,
 }
 
 impl<'a> Binder<'a> {
