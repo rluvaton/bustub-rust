@@ -25,7 +25,7 @@ members = [
     "crates/execution/expression",
     "crates/storage/table/tuple",
     "crates/hashing/common",
-    "crates/hashing/extendible_hash_table", "crates/bustub_instance", "crates/recovery/checkpoint_manager", "crates/execution/engine", "crates/execution/common", "crates/binder", "crates/playground",
+    "crates/hashing/extendible_hash_table", "crates/bustub_instance", "crates/recovery/checkpoint_manager", "crates/execution/engine", "crates/execution/common", "crates/binder", "crates/playground", "crates/storage/index",
 ]
 
 [profile.bench]
