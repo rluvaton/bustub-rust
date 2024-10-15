@@ -20,7 +20,7 @@ pub struct AggCallExpr {
 
 impl AggCallExpr {
 
-    pub(crate) fn new(
+    pub fn new(
         func: String,
         args: Vec<Box<ExpressionTypeImpl>>,
         is_distinct: bool,

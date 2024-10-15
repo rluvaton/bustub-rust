@@ -1,15 +1,17 @@
 use std::rc::Rc;
 use std::sync::Arc;
-use crate::plan_nodes::{FilterPlan, PlanNode, PlanNodeRef, PlanType, ValuesPlanNode};
+use crate::plan_nodes::{FilterPlan, PlanNode, PlanNodeRef, PlanType, ProjectionPlanNode, ValuesPlanNode};
 use crate::traits::Plan;
 use crate::Planner;
 use binder::{Expression, SelectStatement, TableReferenceTypeImpl};
 use catalog_schema::Schema;
+use expression::ExpressionRef;
 use crate::expressions::PlanExpression;
+use crate::statements::select::plan_aggregation::PlanAggregation;
 use crate::statements::select::plan_window::PlanWindow;
 
 impl Plan for SelectStatement {
-    fn plan<'a>(&self, planner: &'a Planner<'a>)-> Rc<PlanType> {
+    fn plan<'a>(&self, planner: &'a Planner<'a>)-> PlanNodeRef {
         let ctx_guard = planner.new_context();
 
         if !self.ctes.is_empty() {
@@ -47,8 +49,43 @@ impl Plan for SelectStatement {
             assert_eq!(self.group_by.is_empty(), true, "Group by is not allowed to use with window function.");
 
             plan = self.plan_window(plan, planner);
+        } else if self.having.is_some() || !self.group_by.is_empty() || has_agg {
+            // Plan aggregation
+            plan = self.plan_aggregation(plan, planner);
+        } else {
+            // Plan normal select
+            let (column_names, exprs): (Vec<String>, Vec<ExpressionRef>) = self.select_list
+                .iter()
+                .map(|item| item.plan(vec![plan.clone()], planner))
+                .unzip();
+
+            plan = ProjectionPlanNode::new(
+                Arc::new(ProjectionPlanNode::rename_schema(
+                    ProjectionPlanNode::infer_projection_schema(exprs.as_slice()),
+                    column_names.as_slice()
+                )),
+                exprs,
+                plan
+            ).into_ref();
         }
 
-        todo!()
+        // Plan DISTINCT as group agg
+
+        if self.is_distinct {
+            unimplemented!();
+        }
+
+        // Plan ORDER BY
+        if !self.sort.is_empty() {
+            unimplemented!()
+        }
+
+        // Plan LIMIT and OFFSET
+        if self.limit_count.is_some() || self.limit_offset.is_some() {
+            unimplemented!()
+        }
+
+
+        plan
     }
 }
