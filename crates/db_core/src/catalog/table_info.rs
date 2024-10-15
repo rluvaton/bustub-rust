@@ -1,6 +1,6 @@
 use std::sync::Arc;
+use catalog_schema::Schema;
 use common::config::TableOID;
-use crate::catalog::Schema;
 use crate::storage::TableHeap;
 
 /// The TableInfo class maintains metadata about a table.

@@ -4,7 +4,7 @@ use crate::expressions::{Expression, ExpressionTypeImpl};
 use crate::try_from_ast_error::{ParseASTError, ParseASTResult};
 use crate::Binder;
 use sqlparser::ast::Expr;
-use db_core::catalog::Schema;
+use catalog_schema::Schema;
 use crate::table_ref::{TableRef, TableReferenceTypeImpl};
 
 /// A bound column reference, e.g., `y.x` in the SELECT list.

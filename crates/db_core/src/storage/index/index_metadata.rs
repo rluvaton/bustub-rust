@@ -1,6 +1,6 @@
 use std::fmt::{Debug, Formatter};
 use std::sync::Arc;
-use crate::catalog::Schema;
+use catalog_schema::Schema;
 
 pub struct IndexMetadata {
     /// The name of the index

@@ -128,6 +128,7 @@ dependencies = [
  "anyhow",
  "buffer_common",
  "buffer_pool_manager",
+ "catalog_schema",
  "checkpoint_manager",
  "common",
  "data_types",
@@ -238,6 +239,7 @@ dependencies = [
  "binder",
  "buffer_common",
  "buffer_pool_manager",
+ "catalog_schema",
  "checkpoint_manager",
  "clap",
  "comfy-table",
@@ -255,8 +257,6 @@ dependencies = [
  "rand 0.8.5",
  "recovery_log_manager",
  "rid",
- "strum",
- "strum_macros",
  "tracy-client",
  "transaction",
  "zipf",
@@ -281,8 +281,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "428d9aa8fbc0670b7b8d6030a7fadd0f86151cae55e4dbbece15f3780a3dfaf3"
 
 [[package]]
-name = "catalog_column"
+name = "catalog_schema"
 version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "data_types",
+ "error_utils",
+ "strum",
+ "strum_macros",
+ "thiserror",
+]
 
 [[package]]
 name = "cc"
@@ -493,6 +501,7 @@ version = "0.1.0"
 dependencies = [
  "buffer_common",
  "buffer_pool_manager",
+ "catalog_schema",
  "common",
  "data_types",
  "error_utils",
@@ -751,6 +760,7 @@ version = "0.1.0"
 dependencies = [
  "buffer_common",
  "buffer_pool_manager",
+ "catalog_schema",
  "clap",
  "common",
  "db_core",

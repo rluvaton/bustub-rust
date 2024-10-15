@@ -22,6 +22,7 @@ buffer_pool_manager = {path = "../../crates/buffer/manager"}
 extendible_hash_table = {path = "../../crates/hashing/extendible_hash_table"}
 hashing_common = {path = "../../crates/hashing/common"}
 rid = {path = "../../crates/rid"}
+catalog_schema = {path = "../../crates/catalog/schema"}
 
 [profile.bench]
 debug = true

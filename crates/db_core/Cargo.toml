@@ -20,6 +20,8 @@ rid = {path = "../rid"}
 data_types = {path = "../data_types"}
 error_utils = {path = "../utils/error_utils"}
 
+catalog_schema = {path = "../catalog/schema" }
+
 thiserror = "1.0.64"
 
 parking_lot = "0.12.3"

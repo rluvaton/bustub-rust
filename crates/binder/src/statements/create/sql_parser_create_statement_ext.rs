@@ -1,5 +1,4 @@
 use sqlparser::ast::{Ident, TableConstraint};
-use db_core::catalog::Column;
 use crate::sql_parser_helper::ColumnDefExt;
 use crate::statements::DeleteStatement;
 use crate::try_from_ast_error::{ParseASTResult, ParseASTError};

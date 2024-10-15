@@ -1,9 +1,9 @@
 use crate::sql_parser_helper::{ColumnDefExt};
 use crate::statements::traits::Statement;
-use crate::statements::{StatementType, StatementTypeImpl};
+use crate::statements::{StatementTypeImpl};
 use crate::try_from_ast_error::{ParseASTResult, ParseASTError};
-use db_core::catalog::Column;
 use std::fmt::Debug;
+use catalog_schema::Column;
 use crate::Binder;
 use super::SqlParserCreateStatementExt;
 
@@ -64,11 +64,12 @@ mod tests {
     use std::sync::Arc;
     use crate::statements::create::CreateStatement;
     use data_types::DBTypeId;
-    use db_core::catalog::{Catalog, Column};
+    use db_core::catalog::{Catalog};
 
     use crate::try_from_ast_error::ParseASTError;
     use sqlparser::dialect::GenericDialect;
     use sqlparser::parser::Parser;
+    use catalog_schema::Column;
     use crate::Binder;
     use crate::statements::traits::Statement;
 
