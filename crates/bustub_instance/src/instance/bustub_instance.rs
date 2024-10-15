@@ -5,11 +5,12 @@ use std::rc::Rc;
 use std::sync::Arc;
 use parking_lot::Mutex;
 use strum::IntoEnumIterator;
-use binder::Binder;
+use binder::{Binder, CreateStatement, StatementTypeImpl};
 use buffer_pool_manager::BufferPoolManager;
 use checkpoint_manager::CheckpointManager;
 use common::config::{TxnId, TXN_START_ID};
-use db_core::catalog::Catalog;
+use data_types::DBTypeId;
+use db_core::catalog::{Catalog, Schema};
 use db_core::concurrency::{LockManager, TransactionManager};
 use disk_storage::{DefaultDiskManager, DiskManager, DiskManagerUnlimitedMemory};
 use execution_common::CheckOptions;
@@ -219,16 +220,79 @@ impl BustubInstance {
 
         // TODO - REMOVE THIS!
         let binder = Binder::new(catalog.clone());
-
-        let parsed = binder.parse(sql);
-
-        drop(catalog);
+        //
+        // let parsed = binder.parse(sql).map_err(|err|
+        //     return Err(error_utils::anyhow::anyhow!("{}", sql))
+        // )?;
+        //
+        // drop(catalog);
+        //
+        // for stmt in &parsed {
+        //     let mut is_delete = false;
+        //
+        //     match stmt {
+        //         StatementTypeImpl::Invalid => break,
+        //         StatementTypeImpl::Select(_) => {}
+        //         StatementTypeImpl::Insert(_) => {}
+        //         StatementTypeImpl::Create(stmt) => self.handle_create_statement(txn.clone(), stmt, writer),
+        //         StatementTypeImpl::Delete(_) => {}
+        //     }
+        // }
 
 
         // let binder = Binder
 
         todo!();
     }
+
+    pub fn handle_create_statement<ResultWriterImpl: ResultWriter>(&self, txn: Arc<Transaction>, stmt: &CreateStatement, writer: &mut ResultWriterImpl)  {
+        let mut catalog_guard = self.catalog.lock();
+
+        let info = catalog_guard.create_table(
+            txn,
+            stmt.table.clone(),
+            Arc::new(Schema::new(stmt.columns.clone())),
+            None,
+        ).expect("Should create table");
+
+        // TODO - ()
+        let mut index_info = ();
+
+
+        if !stmt.primary_key.is_empty() {
+            let col_ids: Vec<u32> = stmt.primary_key
+                .iter()
+                .map(|col| info.get_schema().get_col_idx(col.to_string()) as u32)
+                .collect();
+
+            let has_unsupported_index = col_ids.iter().any(|col_idx| info.get_schema().get_column(col_idx.clone()).get_type() != DBTypeId::INT);
+
+            if has_unsupported_index {
+                unimplemented!("only support creating index on integer column");
+            }
+
+            let key_schema = Schema::copy_schema(&info.get_schema(), &col_ids);
+
+            // TODO(spring2023): If you want to support composite index key for leaderboard optimization, remove this assertion
+            // and create index with different key type that can hold multiple keys based on number of index columns.
+            //
+            // You can also create clustered index that directly stores value inside the index by modifying the value type.
+
+            if col_ids.is_empty() || col_ids.len() > 2 {
+                unimplemented!("only support creating index with exactly one or two columns");
+            }
+
+            // index_info = catalog_guard.create_table(txn.clone(), stmt.table + "_pk")
+            //
+            // index = catalog_->CreateIndex<IntegerKeyType, IntegerValueType, IntegerComparatorType>(
+            //     txn, stmt.table_ + "_pk", stmt.table_, info->schema_, key_schema, col_ids, TWO_INTEGER_SIZE,
+            // IntegerHashFunctionType{}, true);
+            todo!()
+        }
+
+
+    }
+
 
 }
 

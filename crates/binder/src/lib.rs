@@ -10,7 +10,7 @@ mod context_guard;
 pub use binder::Binder;
 
 pub(crate) use expressions::*;
-pub(crate) use statements::*;
+pub use statements::*;
 pub(crate) use table_ref::*;
 pub(crate) use sql_parser_helper::*;
 pub(crate) use order_by::*;

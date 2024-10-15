@@ -29,12 +29,12 @@ impl IndexMetadata {
     /// - `key_attrs`: The mapping from indexed columns to base table columns
     ///
     pub fn new(index_name: String, table_name: String, tuple_schema: Arc<Schema>,
-               key_attrs: Vec<u32>, is_primary_key: bool) -> Self {
+               key_attrs: &[u32], is_primary_key: bool) -> Self {
         Self {
             name: index_name,
             table_name,
-            key_schema: Arc::new(tuple_schema.copy_schema(key_attrs.clone())),
-            key_attrs,
+            key_schema: Arc::new(tuple_schema.copy_schema(key_attrs)),
+            key_attrs: key_attrs.to_vec(),
             is_primary_key,
         }
     }

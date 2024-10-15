@@ -9,9 +9,9 @@ use super::SqlParserCreateStatementExt;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct CreateStatement {
-    pub(crate) table: String,
-    pub(crate) columns: Vec<Column>,
-    pub(crate) primary_key: Vec<String>,
+    pub table: String,
+    pub columns: Vec<Column>,
+    pub primary_key: Vec<String>,
 }
 
 impl CreateStatement {

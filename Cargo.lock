@@ -492,6 +492,8 @@ dependencies = [
  "common",
  "data_types",
  "error_utils",
+ "extendible_hash_table",
+ "hashing_common",
  "pages",
  "parking_lot",
  "recovery_log_manager",
