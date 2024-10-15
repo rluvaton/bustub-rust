@@ -16,5 +16,5 @@ pub trait PlanNode: Clone + Display + Debug {
     fn get_child_at(&self, child_idx: usize) -> &PlanType {
         &self.get_children()[child_idx]
     }
-
 }
+

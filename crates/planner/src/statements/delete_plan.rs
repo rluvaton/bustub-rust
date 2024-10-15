@@ -1,9 +1,11 @@
 use std::fmt::{Display, Formatter};
 use std::sync::Arc;
+use binder::{DeleteStatement, Statement};
 use catalog_schema::Schema;
 use common::config::TableOID;
 use crate::plan_nodes::{PlanNode, PlanType};
-
+use crate::Planner;
+use crate::statements::traits::StatementPlan;
 
 /**
  * The DeletePlanNode identifies a table from which tuples should be deleted.
@@ -65,5 +67,13 @@ impl PlanNode for DeletePlan {
 
     fn get_children(&self) -> &Vec<PlanType> {
         &self.children
+    }
+}
+
+impl StatementPlan for DeletePlan {
+    type Statement = DeleteStatement;
+
+    fn create_node<'a>(statement: Self::Statement, planner: &'a Planner<'a>) -> Self {
+        todo!()
     }
 }
