@@ -5,7 +5,7 @@ use binder::{BinaryOpExpr, FuncCallExpr};
 use crate::expressions::traits::PlanExpression;
 
 impl PlanExpression for FuncCallExpr {
-    fn plan<'a>(&self, planner: &'a Planner<'a>) -> (String, PlanType) {
+    fn plan<'a>(&self, children: Vec<PlanType>, planner: &'a Planner<'a>) -> (String, PlanType) {
         todo!()
     }
 }

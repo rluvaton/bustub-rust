@@ -10,6 +10,7 @@ mod binary_op;
 mod expr_impl;
 mod traits;
 
+pub use traits::*;
 pub use expr_impl::*;
 pub use column_ref::*;
 pub use alias::*;
