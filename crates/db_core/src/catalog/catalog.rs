@@ -236,7 +236,7 @@ impl Catalog {
     // Populate the index with all tuples in table heap
     let table_meta = self.get_table_by_name(table_name);
     // for (auto iter = table_meta->table_->MakeIterator(); !iter.IsEnd(); ++iter) {
-    // auto [meta, tuple] = iter.GetTuple();
+    // auto [meta, tuple] = iter.get_tuple();
     // // we have to silently ignore the error here for a lot of reasons...
     // index->InsertEntry(tuple.key_from_tuple(schema, key_schema, key_attrs), tuple.GetRid(), txn);
     // }

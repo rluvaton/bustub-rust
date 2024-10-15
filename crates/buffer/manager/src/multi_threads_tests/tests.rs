@@ -21,7 +21,7 @@ struct BustubBenchPageHeader {
     page_id: u64,
 
     // Until end of page data
-    data: &'static [u8],
+    data: [u8; 0]
 }
 
 fn modify_page(page: &mut PageData, page_idx: usize, seed: u64) {

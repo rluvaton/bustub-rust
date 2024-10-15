@@ -1,7 +1,8 @@
 use std::sync::Arc;
 use parking_lot::Mutex;
+use buffer_common::AccessType;
 use pages::{PageId, INVALID_PAGE_ID};
-use buffer_pool_manager::{BufferPoolManager, PageReadGuard, PageWriteGuard};
+use buffer_pool_manager::{BufferPool, BufferPoolManager, PageReadGuard, PageWriteGuard};
 use common::config::TableOID;
 use lock_manager::LockManager;
 use rid::RID;
@@ -27,11 +28,18 @@ pub struct TableHeap {
 impl TableHeap {
 
     /// Create a table heap without a transaction. (open table)
-    pub fn new(buffer_pool_manager: Arc<BufferPoolManager>) -> Self {
+    pub fn new(bpm: Arc<BufferPoolManager>) -> Self {
+        // Initialize the first table page.
+        // TODO - return result here
+        let mut guard = bpm.new_page(AccessType::default()).expect("Couldn't create a page for the table heap. Have you completed the buffer pool manager project?");
+        let first_page_id = guard.get_page_id();
+        let first_page = guard.cast_mut::<TablePage>();
+        first_page.init();
+
         Self {
-            bpm: Some(buffer_pool_manager),
-            first_page_id: INVALID_PAGE_ID,
-            last_page_id: Mutex::new(INVALID_PAGE_ID)
+            bpm: Some(bpm),
+            first_page_id,
+            last_page_id: Mutex::new(first_page_id)
         }
     }
 

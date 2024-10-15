@@ -12,7 +12,6 @@ use std::sync::Arc;
 /// | FIXED-SIZE or VARIED-SIZED OFFSET | PAYLOAD OF VARIED-SIZED FIELD |
 /// ---------------------------------------------------------------------
 ///
-/// TODO - implement src/include/storage/table/tuple.h
 #[derive(Clone, Debug, Hash)]
 pub struct Tuple {
     rid: RID,
@@ -90,7 +89,7 @@ impl Tuple {
     }
 
     // set RID of current tuple
-    pub fn et_rid(&mut self, rid: RID) {
+    pub fn set_rid(&mut self, rid: RID) {
         self.rid = rid;
     }
 

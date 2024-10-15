@@ -8,6 +8,7 @@ edition = "2021"
 common = {path = "../../../common"}
 pages = {path = "../../pages"}
 tuple = {path = "../tuple"}
+buffer_common = {path = "../../../buffer/common"}
 buffer_pool_manager = {path = "../../../buffer/manager"}
 lock_manager = {path = "../../../concurrency/lock_manager"}
 transaction = {path = "../../../concurrency/transaction/core"}

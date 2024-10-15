@@ -5,11 +5,12 @@ const _: () = {
     assert!(size_of::<TupleMeta>() == 16);
 };
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
+#[repr(C)]
 pub struct TupleMeta {
     /// the ts / txn_id of this tuple. In project 3, simply set it to 0.
-    ts: Timestamp,
+    pub ts: Timestamp,
 
     /// marks whether this tuple is marked removed from table heap.
-    is_deleted: bool,
+    pub is_deleted: bool,
 }
