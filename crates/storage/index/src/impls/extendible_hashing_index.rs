@@ -2,7 +2,7 @@ use crate::{GenericComparator, GenericKey, Index, IndexMetadata};
 use buffer_pool_manager::BufferPoolManager;
 use common::{Comparator, PageKey};
 use error_utils::ToAnyhow;
-use extendible_hash_table::DiskExtendibleHashTable;
+use extendible_hash_table::{DiskExtendibleHashTable, bucket_array_size};
 use hashing_common::KeyHasher;
 use rid::RID;
 use std::sync::Arc;
@@ -23,9 +23,9 @@ struct ExtendibleHashingIndex<const BUCKET_MAX_SIZE: usize, Key: PageKey, KeyCom
 macro_rules! impl_extendible_hashing_index_for_generic_key {
     ($($helper_type:ident, $key_size:literal)+) => ($(
 
-pub type $helper_type<KeyHasherImpl: KeyHasher> = ExtendibleHashingIndex<$key_size, GenericKey<$key_size>, GenericComparator<$key_size>, KeyHasherImpl>;
+pub type $helper_type<KeyHasherImpl: KeyHasher> = ExtendibleHashingIndex<{ bucket_array_size::<GenericKey<$key_size>, RID>() }, GenericKey<$key_size>, GenericComparator<$key_size>, KeyHasherImpl>;
 
-impl<KeyHasherImpl: KeyHasher> ExtendibleHashingIndex<$key_size, GenericKey<$key_size>, GenericComparator<$key_size>, KeyHasherImpl> {
+impl<KeyHasherImpl: KeyHasher> ExtendibleHashingIndex<{ bucket_array_size::<GenericKey<$key_size>, RID>() }, GenericKey<$key_size>, GenericComparator<$key_size>, KeyHasherImpl> {
     pub fn new(metadata: Arc<IndexMetadata>, bpm: Arc<BufferPoolManager>) -> Result<Self, extendible_hash_table::errors::InitError> {
         Ok(Self(DiskExtendibleHashTable::new(
             metadata.get_name().to_string(),
@@ -38,7 +38,7 @@ impl<KeyHasherImpl: KeyHasher> ExtendibleHashingIndex<$key_size, GenericKey<$key
     }
 }
 
-impl<KeyHasherImpl: KeyHasher> Index for ExtendibleHashingIndex<$key_size, GenericKey<$key_size>, GenericComparator<$key_size>, KeyHasherImpl> {
+impl<KeyHasherImpl: KeyHasher> Index for ExtendibleHashingIndex<{ bucket_array_size::<GenericKey<$key_size>, RID>() }, GenericKey<$key_size>, GenericComparator<$key_size>, KeyHasherImpl> {
     fn insert_entry(&mut self, key: &Tuple, rid: RID, transaction: Option<Arc<Transaction>>) -> error_utils::anyhow::Result<()> {
         self.0.insert(&GenericKey::from(key), &rid, transaction).map_err(|err| err.to_anyhow())
     }
@@ -64,4 +64,8 @@ impl_extendible_hashing_index_for_generic_key! {
     ExtendibleHashingIndex16, 16
     ExtendibleHashingIndex32, 32
     ExtendibleHashingIndex64, 64
+}
+
+pub fn create_index_based_on_key_size(keysize: usize) {
+
 }
