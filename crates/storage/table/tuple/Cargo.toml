@@ -6,3 +6,6 @@ edition = "2021"
 [dependencies]
 common = {path = "../../../common"}
 rid = {path = "../../../rid"}
+
+catalog_schema = {path = "../../../catalog/schema"}
+data_types = {path = "../../../data_types"}

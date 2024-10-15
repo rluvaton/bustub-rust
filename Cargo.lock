@@ -1768,7 +1768,9 @@ dependencies = [
 name = "tuple"
 version = "0.1.0"
 dependencies = [
+ "catalog_schema",
  "common",
+ "data_types",
  "rid",
 ]
 
