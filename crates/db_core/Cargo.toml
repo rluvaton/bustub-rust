@@ -35,3 +35,5 @@ tempdir = "0.3.7"
 
 [features]
 default = []
+checkpoint_manager = []
+lock_manager = ["table/lock_manager"]

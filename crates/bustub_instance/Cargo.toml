@@ -46,7 +46,7 @@ debug = true
 [features]
 default = ["checkpoint_manager"]
 checkpoint_manager = []
-lock_manager = []
+lock_manager = ["db_core/lock_manager"]
 
 statistics = ["buffer_pool_manager/statistics", "extendible_hash_table/statistics"]
 tracing = ["tracy-client/enable", "extendible_hash_table/tracing", "buffer_pool_manager/tracing"]

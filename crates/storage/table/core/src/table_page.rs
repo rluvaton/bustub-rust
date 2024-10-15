@@ -147,7 +147,7 @@ impl TablePage {
     /**
      * Update a tuple in place.
      */
-    pub unsafe fn update_tuple_in_place(&mut self, meta: &TupleMeta, tuple: &Tuple, rid: RID) {
+    pub unsafe fn update_tuple_in_place(&mut self, meta: &TupleMeta, tuple: &Tuple, rid: &RID) {
         let tuple_id = rid.get_slot_num();
         assert!(tuple_id < self.num_tuples as u32, "Tuple ID out of range");
         let (offset, size, old_meta) = self.tuple_info[tuple_id as usize];

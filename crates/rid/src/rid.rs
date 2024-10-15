@@ -46,6 +46,10 @@ impl RID {
         self.slot_num = slot_num;
     }
 
+    pub fn set_slot_num(&mut self, slot_num: u32) {
+        self.slot_num = slot_num;
+    }
+
     pub fn is_invalid(&self) -> bool {
         self.page_id == INVALID_PAGE_ID
     }

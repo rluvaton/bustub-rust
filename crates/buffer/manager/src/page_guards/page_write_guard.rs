@@ -5,7 +5,7 @@ use pages::{PageAndGuard, PageAndWriteGuard,PageData, PageId};
 use std::mem;
 use std::sync::Arc;
 
-/// Read guard on page that will also unpin on drop
+/// Write guard on page that will also unpin on drop
 #[clippy::has_significant_drop]
 #[must_use = "if unused the PageWriteGuard will immediately unpin and release write guard"]
 pub struct PageWriteGuard<'a> {

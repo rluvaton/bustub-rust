@@ -18,3 +18,7 @@ data_types = {path = "../../../data_types"}
 thiserror = "1.0.64"
 
 parking_lot = "0.12.3"
+
+
+[features]
+lock_manager = []

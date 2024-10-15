@@ -89,6 +89,7 @@ impl Tuple {
     }
 
     // set RID of current tuple
+    #[inline(always)]
     pub fn set_rid(&mut self, rid: RID) {
         self.rid = rid;
     }
