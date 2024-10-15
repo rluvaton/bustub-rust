@@ -24,6 +24,7 @@ execution_engine = {path = "../execution/engine"}
 data_types = {path = "../data_types"}
 transaction = {path = "../concurrency/transaction/core"}
 error_utils = {path = "../utils/error_utils"}
+catalog_schema = {path = "../catalog/schema" }
 anyhow = "1.0.89"
 thiserror = "1.0.64"
 

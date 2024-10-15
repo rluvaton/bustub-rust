@@ -1,24 +1,22 @@
-use std::collections::HashMap;
-use std::ops::Deref;
-use std::path::PathBuf;
-use std::rc::Rc;
-use std::sync::Arc;
-use parking_lot::Mutex;
-use strum::IntoEnumIterator;
-use binder::{Binder, CreateStatement, StatementTypeImpl};
+use crate::result_writer::ResultWriter;
+use binder::{Binder, CreateStatement};
 use buffer_pool_manager::BufferPoolManager;
+use catalog_schema::mocks::MockTableName;
+use catalog_schema::Schema;
 use checkpoint_manager::CheckpointManager;
-use common::config::{TxnId, TXN_START_ID};
 use data_types::DBTypeId;
-use db_core::catalog::{Catalog, Schema};
-use db_core::concurrency::{LockManager, TransactionManager};
+use db_core::catalog::Catalog;
+use db_core::concurrency::{TransactionManager};
 use disk_storage::{DefaultDiskManager, DiskManager, DiskManagerUnlimitedMemory};
 use execution_common::CheckOptions;
 use execution_engine::ExecutionEngine;
+use parking_lot::Mutex;
 use recovery_log_manager::LogManager;
-use crate::mocks::MockTableName;
-use transaction::{Transaction};
-use crate::result_writer::ResultWriter;
+use std::collections::HashMap;
+use std::path::PathBuf;
+use std::sync::Arc;
+use lock_manager::LockManager;
+use transaction::{Transaction, TransactionManager as TransactionManagerTrait};
 
 const DEFAULT_BPM_SIZE: usize = 128;
 const LRU_K_REPLACER_K: usize = 10;
@@ -143,7 +141,7 @@ impl BustubInstance {
 
         let mut catalog_guard = self.catalog.lock();
 
-        for table_name in MockTableName::iter() {
+        for table_name in MockTableName::create_iter() {
             let _ = catalog_guard.create_table(txn.clone(), table_name.to_string(), Arc::new(table_name.get_schema()), Some(false));
         }
 

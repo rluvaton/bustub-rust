@@ -2,7 +2,7 @@ use std::fmt::{Debug, Display, Formatter};
 use strum::IntoEnumIterator;
 use strum_macros::EnumIter;
 use data_types::DBTypeId;
-use db_core::catalog::{Column, Schema};
+use crate::{Column, Schema};
 
 #[derive(EnumIter)]
 pub enum MockTableName {
@@ -128,6 +128,10 @@ impl MockTableName {
         };
 
         Schema::new(columns)
+    }
+
+    pub fn create_iter() -> MockTableNameIter {
+        MockTableName::iter()
     }
 }
 

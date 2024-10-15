@@ -23,9 +23,12 @@ checkpoint_manager = {path = "../recovery/checkpoint_manager"}
 execution_common = {path = "../execution/common"}
 execution_engine = {path = "../execution/engine"}
 data_types = {path = "../data_types"}
+lock_manager = {path = "../concurrency/lock_manager"}
 transaction = {path = "../concurrency/transaction/core"}
 error_utils = {path = "../utils/error_utils"}
 anyhow = "1.0.89"
+
+catalog_schema = {path = "../catalog/schema" }
 
 binder = {path = "../binder"}
 
@@ -34,9 +37,6 @@ binder = {path = "../binder"}
 extendible_hash_table = {path = "../hashing/extendible_hash_table"}
 hashing_common = {path = "../hashing/common"}
 rid = {path = "../rid"}
-
-strum = "0.26.3"
-strum_macros = "0.26.3"
 
 comfy-table = "7.1.1"
 

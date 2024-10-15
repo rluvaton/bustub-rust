@@ -1,0 +1,14 @@
+[package]
+name = "catalog_schema"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+data_types = {path = "../../data_types"}
+error_utils = {path = "../../utils/error_utils"}
+anyhow = "1.0.89"
+thiserror = "1.0.64"
+
+
+strum = "0.26.3"
+strum_macros = "0.26.3"

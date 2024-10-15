@@ -1,6 +1,6 @@
 use sqlparser::ast::{CharLengthUnits, CharacterLength, ColumnOption, DataType};
+use catalog_schema::Column;
 use data_types::DBTypeId;
-use db_core::catalog::Column;
 use crate::try_from_ast_error::{ParseASTResult, ParseASTError};
 
 pub(crate) trait ColumnDefExt {

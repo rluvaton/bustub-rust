@@ -1,8 +1,8 @@
 use error_utils::anyhow::anyhow;
-use crate::catalog::Column;
 use data_types::DBTypeId;
 use std::fmt::{Debug, Display, Formatter};
 use std::sync::Arc;
+use crate::Column;
 use error_utils::ToAnyhowResult;
 
 // TODO - implement src/include/catalog/schema.h

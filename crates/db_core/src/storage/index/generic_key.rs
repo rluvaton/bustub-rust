@@ -1,6 +1,6 @@
-use crate::catalog::Schema;
 use data_types::{DBTypeId, Value};
 use std::fmt::{Debug, Display, Formatter};
+use catalog_schema::Schema;
 use common::PageKey;
 use tuple::Tuple;
 

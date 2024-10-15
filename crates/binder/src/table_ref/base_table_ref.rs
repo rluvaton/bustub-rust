@@ -4,9 +4,9 @@ use crate::table_ref::TableRef;
 use crate::try_from_ast_error::{ParseASTError, ParseASTResult};
 use crate::Binder;
 use common::config::TableOID;
-use db_core::catalog::Schema;
 use sqlparser::ast::TableFactor;
 use std::sync::Arc;
+use catalog_schema::Schema;
 
 /// A bound table ref type for single table. e.g., `SELECT x FROM y`, where `y` is `BoundBaseTableRef`.
 ///

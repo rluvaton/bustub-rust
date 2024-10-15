@@ -30,6 +30,7 @@ members = [
     "crates/execution/engine",
     "crates/execution/common",
     "crates/binder",
+    "crates/catalog/schema", "crates/concurrency/lock_manager",
 ]
 
 [profile.bench]
