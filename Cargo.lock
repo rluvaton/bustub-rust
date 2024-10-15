@@ -508,6 +508,7 @@ dependencies = [
  "error_utils",
  "extendible_hash_table",
  "hashing_common",
+ "index",
  "lock_manager",
  "pages",
  "parking_lot",
@@ -769,6 +770,7 @@ dependencies = [
  "disk_storage",
  "extendible_hash_table",
  "hashing_common",
+ "index",
  "pages",
  "parking_lot",
  "rand 0.8.5",
@@ -820,6 +822,21 @@ checksum = "b9e0384b61958566e926dc50660321d12159025e767c18e043daf26b70104c39"
 [[package]]
 name = "index"
 version = "0.1.0"
+dependencies = [
+ "buffer_common",
+ "buffer_pool_manager",
+ "catalog_schema",
+ "common",
+ "data_types",
+ "error_utils",
+ "extendible_hash_table",
+ "hashing_common",
+ "parking_lot",
+ "rid",
+ "thiserror",
+ "transaction",
+ "tuple",
+]
 
 [[package]]
 name = "indexmap"

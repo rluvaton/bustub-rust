@@ -1,14 +1,14 @@
-pub fn add(left: u64, right: u64) -> u64 {
-    left + right
-}
+mod generic_key;
+mod generic_comparator;
+mod index_metadata;
+mod traits;
+mod index_with_metadata;
+mod impls;
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+pub use generic_key::GenericKey;
+pub use generic_comparator::GenericComparator;
+pub use traits::Index;
+pub use index_with_metadata::IndexWithMetadata;
+pub use index_metadata::IndexMetadata;
 
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
-    }
-}
+

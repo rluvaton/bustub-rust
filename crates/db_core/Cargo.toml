@@ -22,6 +22,7 @@ data_types = {path = "../data_types"}
 error_utils = {path = "../utils/error_utils"}
 
 catalog_schema = {path = "../catalog/schema" }
+index = {path = "../storage/index"}
 
 thiserror = "1.0.64"
 

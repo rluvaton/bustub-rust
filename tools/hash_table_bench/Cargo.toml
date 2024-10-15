@@ -23,6 +23,7 @@ extendible_hash_table = {path = "../../crates/hashing/extendible_hash_table"}
 hashing_common = {path = "../../crates/hashing/common"}
 rid = {path = "../../crates/rid"}
 catalog_schema = {path = "../../crates/catalog/schema"}
+index = {path = "../../crates/storage/index"}
 
 [profile.bench]
 debug = true

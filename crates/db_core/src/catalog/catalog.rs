@@ -1,6 +1,6 @@
 use crate::catalog::table_info::TableInfo;
 use crate::catalog::{IndexInfo, IndexType};
-use crate::storage::{IndexMetadata, TableHeap};
+use crate::storage::{TableHeap};
 use buffer_pool_manager::BufferPoolManager;
 use catalog_schema::Schema;
 use common::config::{AtomicIndexOID, AtomicTableOID, IndexOID, TableOID};
@@ -9,6 +9,7 @@ use recovery_log_manager::LogManager;
 use std::collections::HashMap;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
+use index::IndexMetadata;
 use transaction::Transaction;
 
 #[derive(Clone)]

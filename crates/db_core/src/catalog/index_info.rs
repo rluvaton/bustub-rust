@@ -1,8 +1,8 @@
 use crate::catalog::IndexType;
-use crate::storage::IndexWithMetadata;
 use catalog_schema::Schema;
 use common::config::IndexOID;
 use std::sync::Arc;
+use index::IndexWithMetadata;
 
 /// The IndexInfo class maintains metadata about a index.
 pub struct IndexInfo {

@@ -4,3 +4,24 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+
+common = {path = "../../common"}
+
+buffer_common = {path = "../../buffer/common"}
+buffer_pool_manager = {path = "../../buffer/manager"}
+transaction = {path = "../../concurrency/transaction/core"}
+
+
+tuple = {path = "../table/tuple"}
+extendible_hash_table = {path = "../../hashing/extendible_hash_table"}
+hashing_common = {path = "../../hashing/common"}
+
+rid = {path = "../../rid"}
+data_types = {path = "../../data_types"}
+error_utils = {path = "../../utils/error_utils"}
+
+catalog_schema = {path = "../../catalog/schema" }
+
+thiserror = "1.0.64"
+
+parking_lot = "0.12.3"

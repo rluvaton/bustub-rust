@@ -15,13 +15,13 @@ use std::thread;
 use std::thread::JoinHandle;
 
 use crate::metrics::total_metrics::TotalMetrics;
-use db_core::storage::{GenericComparator, GenericKey};
 use extendible_hash_table::{bucket_array_size, DiskHashTable};
 use hashing_common::DefaultKeyHasher;
 use rid::RID;
 #[cfg(feature = "tracing")]
 use tracy_client::*;
 use catalog_schema::Schema;
+use index::{GenericComparator, GenericKey};
 
 // Tracking Memory usage
 #[cfg(feature = "tracing-memory-allocation")]
