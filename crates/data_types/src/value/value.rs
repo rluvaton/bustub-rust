@@ -22,11 +22,11 @@ impl Value {
     }
 
     #[inline]
-    pub(crate) fn get_db_type_id(&self) -> DBTypeId {
+    pub fn get_db_type_id(&self) -> DBTypeId {
         self.value.db_type_id()
     }
 
-    pub(crate) fn get_value(&self) -> &DBTypeIdImpl {
+    pub fn get_value(&self) -> &DBTypeIdImpl {
         &self.value
     }
 

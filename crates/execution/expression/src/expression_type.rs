@@ -1,9 +1,8 @@
 use crate::traits::{Expression, ExpressionRef};
-use crate::{ArithmeticExpression, ColumnValueExpression, ComparisonExpression};
+use crate::{ArithmeticExpression, ColumnValueExpression, ComparisonExpression, ConstantValueExpression, LogicExpression, StringExpression};
 use catalog_schema::Schema;
 use data_types::{DBTypeId, Value};
 use std::fmt::{Display, Formatter};
-use std::sync::Arc;
 use tuple::Tuple;
 
 // Helper to avoid duplicating deref on each variant
@@ -13,6 +12,9 @@ macro_rules! call_each_variant {
             ExpressionType::ColumnValue($name) => $func,
             ExpressionType::Arithmetic($name) => $func,
             ExpressionType::Comparison($name) => $func,
+            ExpressionType::Constant($name) => $func,
+            ExpressionType::Logic($name) => $func,
+            ExpressionType::String($name) => $func,
             // Add match arms for other variants as necessary
         }
     };
@@ -24,6 +26,9 @@ pub enum ExpressionType {
     ColumnValue(ColumnValueExpression),
     Arithmetic(ArithmeticExpression),
     Comparison(ComparisonExpression),
+    Constant(ConstantValueExpression),
+    Logic(LogicExpression),
+    String(StringExpression),
 }
 
 impl Display for ExpressionType {

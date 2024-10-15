@@ -87,7 +87,7 @@ impl Expression for ArithmeticExpression {
     }
 
     fn get_children(&self) -> &[ExpressionRef] {
-        NO_CHILDREN
+        self.children.as_slice()
     }
 
     fn get_return_type(&self) -> DBTypeId {
