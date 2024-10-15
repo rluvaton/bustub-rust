@@ -10,7 +10,7 @@ use crate::try_from_ast_error::{ParseASTError, ParseASTResult};
 use crate::Binder;
 use sqlparser::ast::SetExpr;
 use std::fmt::Debug;
-use std::ops::DerefMut;
+use std::ops::{Deref, DerefMut};
 use std::rc::Rc;
 use std::sync::Arc;
 use crate::statements::{CreateStatement, StatementTypeImpl};
@@ -63,7 +63,7 @@ impl Into<StatementTypeImpl> for SelectStatement {
 impl Statement for SelectStatement {
     type ASTStatement = sqlparser::ast::Query;
 
-    fn try_parse_ast<'a>(ast: &Self::ASTStatement, binder: &'a mut Binder) -> ParseASTResult<Self>
+    fn try_parse_ast<'a>(ast: &Self::ASTStatement, binder: &'a Binder) -> ParseASTResult<Self>
     where
         Self: Sized,
     {
@@ -73,9 +73,9 @@ impl Statement for SelectStatement {
 
         // // Bind CTEs
         let ctes = if let Some(with) = &ast.with {
-            let ctes = Rc::new(SubqueryRef::parse_with(with, ctx_guard.deref_mut())?);
+            let ctes = Rc::new(SubqueryRef::parse_with(with, ctx_guard.deref())?);
 
-            ctx_guard.cte_scope.replace(ctes.clone());
+            ctx_guard.context.lock().cte_scope.replace(ctes.clone());
             // TODO(chi): allow access CTE from multiple levels of scopes
 
             ctes
@@ -87,12 +87,12 @@ impl Statement for SelectStatement {
 
         builder = match &*ast.body {
             SetExpr::Select(s) => {
-                s.add_select_to_select_builder(builder, ctx_guard.deref_mut())?
+                s.add_select_to_select_builder(builder, ctx_guard.deref())?
             }
             SetExpr::Values(values) => {
                 // If have VALUES clause
                 values
-                    .add_values_to_select_builder(builder, ctx_guard.deref_mut())?
+                    .add_values_to_select_builder(builder, ctx_guard.deref())?
             }
             SetExpr::Query(_) => return Err(ParseASTError::Unimplemented("Unsupported sub query".to_string())),
             SetExpr::SetOperation { .. } => return Err(ParseASTError::Unimplemented("Set operations are not supported".to_string())),
@@ -103,17 +103,17 @@ impl Statement for SelectStatement {
 
         // LIMIT
         if let Some(limit) = &ast.limit {
-            builder = builder.with_limit_count(ExpressionTypeImpl::try_parse_from_expr(limit, ctx_guard.deref_mut())?)
+            builder = builder.with_limit_count(ExpressionTypeImpl::try_parse_from_expr(limit, ctx_guard.deref())?)
         }
 
         // OFFSET
         if let Some(offset) = &ast.offset {
-            builder = builder.with_limit_offset(ExpressionTypeImpl::try_parse_from_expr(&offset.value, ctx_guard.deref_mut())?)
+            builder = builder.with_limit_offset(ExpressionTypeImpl::try_parse_from_expr(&offset.value, ctx_guard.deref())?)
         }
 
         // ORDER BY
         if let Some(order_by) = &ast.order_by {
-            builder = builder.with_sort(OrderBy::parse_from_order_by(order_by, ctx_guard.deref_mut())?)
+            builder = builder.with_sort(OrderBy::parse_from_order_by(order_by, ctx_guard.deref())?)
         }
 
         builder
@@ -121,7 +121,7 @@ impl Statement for SelectStatement {
             .map_err(|err| ParseASTError::Other(err.to_string()))
     }
 
-    fn try_parse_from_statement(statement: &sqlparser::ast::Statement, binder: &mut Binder) -> ParseASTResult<Self> {
+    fn try_parse_from_statement(statement: &sqlparser::ast::Statement, binder: &Binder) -> ParseASTResult<Self> {
         match &statement {
             sqlparser::ast::Statement::Query(ast) => Self::try_parse_ast(ast, binder),
             _ => Err(ParseASTError::IncompatibleType)
@@ -132,6 +132,7 @@ impl Statement for SelectStatement {
 
 #[cfg(test)]
 mod tests {
+    use parking_lot::Mutex;
     use crate::statements::select::statement::SelectStatement;
     use crate::statements::traits::Statement;
     use crate::try_from_ast_error::ParseASTError;
@@ -141,8 +142,8 @@ mod tests {
     use db_core::catalog::Catalog;
 
     fn parse_select_sql(sql: &str) -> Result<Vec<SelectStatement>, ParseASTError> {
-        let catalog = Catalog::new(None, None, None);
-        let mut binder = Binder::new(catalog);
+        let catalog = Mutex::new(Catalog::new(None, None, None));
+        let mut binder = Binder::new(catalog.lock());
         let statements = Parser::parse_sql(&GenericDialect {}, sql).unwrap();
         statements.iter().map(|stmt| SelectStatement::try_parse_from_statement(stmt, &mut binder)).collect()
     }

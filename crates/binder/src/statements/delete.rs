@@ -36,7 +36,7 @@ impl Into<StatementTypeImpl> for DeleteStatement {
 impl Statement for DeleteStatement {
     type ASTStatement = sqlparser::ast::Delete;
 
-    fn try_parse_ast<'a>(ast: &Self::ASTStatement, binder: &'a mut Binder) -> ParseASTResult<Self> {
+    fn try_parse_ast<'a>(ast: &Self::ASTStatement, binder: &'a Binder<'a>) -> ParseASTResult<Self> {
         let from = match &ast.from {
             FromTable::WithFromKeyword(with) => with,
             FromTable::WithoutKeyword(_) => return Err(ParseASTError::Unimplemented("From without keyword is not supported".to_string())),
@@ -60,10 +60,10 @@ impl Statement for DeleteStatement {
         // TODO - guard
         let mut ctx_guard = binder.new_context();
 
-        ctx_guard.scope.replace(table.clone());
+        ctx_guard.context.lock().scope.replace(table.clone());
 
         let expr: ExpressionTypeImpl = if let Some(selection) = &ast.selection {
-            ExpressionTypeImpl::try_parse_from_expr(selection, ctx_guard.deref_mut())?
+            ExpressionTypeImpl::try_parse_from_expr(selection, &*ctx_guard)?
         } else {
             Constant::new(true.into()).into()
         };
@@ -72,7 +72,7 @@ impl Statement for DeleteStatement {
     }
 
 
-    fn try_parse_from_statement<'a>(statement: &sqlparser::ast::Statement, binder: &'a mut Binder) -> ParseASTResult<Self> {
+    fn try_parse_from_statement<'a>(statement: &sqlparser::ast::Statement, binder: &'a Binder) -> ParseASTResult<Self> {
         match &statement {
             sqlparser::ast::Statement::Delete(ast) => Self::try_parse_ast(ast, binder),
             _ => Err(ParseASTError::IncompatibleType)
@@ -83,6 +83,7 @@ impl Statement for DeleteStatement {
 
 #[cfg(test)]
 mod tests {
+    use parking_lot::Mutex;
     use crate::statements::traits::Statement;
     use crate::statements::DeleteStatement;
     use crate::try_from_ast_error::ParseASTError;
@@ -92,8 +93,9 @@ mod tests {
     use db_core::catalog::Catalog;
 
     fn parse_delete_sql(sql: &str) -> Result<Vec<DeleteStatement>, ParseASTError> {
-        let catalog = Catalog::new(None, None, None);
-        let mut binder = Binder::new(catalog);
+
+        let catalog = Mutex::new(Catalog::new(None, None, None));
+        let mut binder = Binder::new(catalog.lock());
         let statements = Parser::parse_sql(&GenericDialect {}, sql).unwrap();
         statements.iter().map(|stmt| DeleteStatement::try_parse_from_statement(stmt, &mut binder)).collect()
     }

@@ -36,14 +36,14 @@ pub enum StatementTypeImpl {
 impl Statement for StatementTypeImpl {
     type ASTStatement = ();
 
-    fn try_parse_ast(_ast: &Self::ASTStatement, _binder: &mut Binder) -> ParseASTResult<Self>
+    fn try_parse_ast(_ast: &Self::ASTStatement, _binder: &Binder) -> ParseASTResult<Self>
     where
         Self: Sized
     {
         unreachable!()
     }
 
-    fn try_parse_from_statement(statement: &sqlparser::ast::Statement, binder: &mut Binder) -> ParseASTResult<Self>
+    fn try_parse_from_statement(statement: &sqlparser::ast::Statement, binder: &Binder) -> ParseASTResult<Self>
     where
         Self: Sized
     {

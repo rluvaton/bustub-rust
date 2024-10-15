@@ -23,7 +23,7 @@ impl CrossProductRef {
         }
     }
 
-    pub(crate) fn try_to_parse_tables_with_joins(mut tables: &[TableWithJoins], binder: &mut Binder) -> ParseASTResult<TableReferenceTypeImpl> {
+    pub(crate) fn try_to_parse_tables_with_joins(mut tables: &[TableWithJoins], binder: &Binder) -> ParseASTResult<TableReferenceTypeImpl> {
         // Bind cross join.
 
         // Extract the first node
@@ -74,7 +74,7 @@ impl TableRef for CrossProductRef {
         Ok(left_column.or(right_column))
     }
 
-    fn try_from_ast(ast: &TableFactor, binder: &mut Binder) -> ParseASTResult<Self> {
+    fn try_from_ast(ast: &TableFactor, binder: &Binder) -> ParseASTResult<Self> {
         // Always incompatible as we need to have table with joins
         Err(ParseASTError::IncompatibleType)
     }

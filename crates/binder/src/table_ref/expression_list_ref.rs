@@ -20,7 +20,7 @@ impl ExpressionListRef {
     }
 
 
-    pub fn try_parse_from_values(identifier: Option<String>, ast: &Values, binder: &mut Binder) -> ParseASTResult<ExpressionListRef> {
+    pub fn try_parse_from_values(identifier: Option<String>, ast: &Values, binder: &Binder) -> ParseASTResult<ExpressionListRef> {
         let parsed_values : ParseASTResult<Vec<Vec<ExpressionTypeImpl>>> = ast.rows.iter().map(|row| ExpressionTypeImpl::parse_expression_list(row, binder)).collect();
 
         let parsed_values = parsed_values?;
@@ -46,7 +46,7 @@ impl TableRef for ExpressionListRef {
         Err(ParseASTError::FailedParsing(format!("cannot resolve column {} in VALUES", col_name.join("."))))
     }
 
-    fn try_from_ast(ast: &TableFactor, binder: &mut Binder) -> ParseASTResult<Self> {
+    fn try_from_ast(ast: &TableFactor, binder: &Binder) -> ParseASTResult<Self> {
         // No table factor matching the expression list
         Err(ParseASTError::IncompatibleType)
     }

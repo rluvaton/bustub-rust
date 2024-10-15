@@ -35,13 +35,13 @@ pub enum ExpressionTypeImpl {
 }
 
 impl ExpressionTypeImpl {
-    pub fn parse_expression_list(list: &Vec<Expr>, binder: &mut Binder) -> ParseASTResult<Vec<ExpressionTypeImpl>> {
+    pub fn parse_expression_list(list: &Vec<Expr>, binder: &Binder) -> ParseASTResult<Vec<ExpressionTypeImpl>> {
         list
             .iter()
             .map(|item| Self::try_parse_from_expr(item, binder))
             .collect()
     }
-    pub fn parse_boxed_expression_list(list: &Vec<Expr>, binder: &mut Binder) -> ParseASTResult<Vec<Box<ExpressionTypeImpl>>> {
+    pub fn parse_boxed_expression_list(list: &Vec<Expr>, binder: &Binder) -> ParseASTResult<Vec<Box<ExpressionTypeImpl>>> {
         list
             .iter()
             .map(|item| Self::try_parse_from_expr(item, binder).map(|exp| Box::new(exp)))
@@ -101,7 +101,7 @@ impl Expression for ExpressionTypeImpl {
         }
     }
 
-    fn try_parse_from_expr(expr: &Expr, binder: &mut Binder) -> ParseASTResult<Self>
+    fn try_parse_from_expr(expr: &Expr, binder: &Binder) -> ParseASTResult<Self>
     where
         Self: Sized,
     {

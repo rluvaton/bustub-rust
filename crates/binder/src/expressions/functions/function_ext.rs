@@ -4,12 +4,12 @@ use crate::expressions::{Expression, ExpressionTypeImpl, StarExpr};
 use crate::try_from_ast_error::{ParseASTError, ParseASTResult};
 
 pub(crate) trait FunctionExt {
-    fn parse_args(&self, binder: &mut Binder) -> ParseASTResult<Vec<Box<ExpressionTypeImpl>>>;
+    fn parse_args(&self, binder: &Binder) -> ParseASTResult<Vec<Box<ExpressionTypeImpl>>>;
     fn is_distinct(&self) -> bool;
 }
 
 impl FunctionExt for sqlparser::ast::Function {
-    fn parse_args(&self, binder: &mut Binder) -> ParseASTResult<Vec<Box<ExpressionTypeImpl>>> {
+    fn parse_args(&self, binder: &Binder) -> ParseASTResult<Vec<Box<ExpressionTypeImpl>>> {
         let arg_list = match &self.args {
             FunctionArguments::None => return Ok(vec![]),
             FunctionArguments::List(l) => l,

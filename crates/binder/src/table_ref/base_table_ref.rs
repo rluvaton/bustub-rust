@@ -40,7 +40,7 @@ impl BaseTableRef {
         &self.alias.as_ref().unwrap_or(&self.table)
     }
 
-    pub fn try_parse(table_name: String, alias: Option<String>, binder: &mut Binder) -> ParseASTResult<Self> {
+    pub fn try_parse(table_name: String, alias: Option<String>, binder: &Binder) -> ParseASTResult<Self> {
 
         let table_info = binder.catalog.get_table_by_name(&table_name);
 
@@ -80,7 +80,7 @@ impl TableRef for BaseTableRef {
         Ok(strip_resolved_expr.or(direct_resolved_expr))
     }
 
-    fn try_from_ast(ast: &TableFactor, binder: &mut Binder) -> ParseASTResult<Self> {
+    fn try_from_ast(ast: &TableFactor, binder: &Binder) -> ParseASTResult<Self> {
         match ast {
             TableFactor::Table { alias, name, .. } => {
                 Self::try_parse(name.to_string(), alias.as_ref().map(|a| a.name.value.clone()), binder)

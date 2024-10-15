@@ -18,7 +18,7 @@ pub struct SubqueryRef {
 }
 
 impl SubqueryRef {
-    pub(crate) fn parse_with<'a>(with: &With, binder: &'a mut Binder) -> ParseASTResult<Vec<Self>> {
+    pub(crate) fn parse_with<'a>(with: &With, binder: &'a Binder<'a>) -> ParseASTResult<Vec<Self>> {
         if with.recursive {
             return Err(ParseASTError::Unimplemented("recursive CTE is not supported".to_string()));
         }
@@ -29,11 +29,11 @@ impl SubqueryRef {
             .collect()
     }
 
-    pub(crate) fn parse_cte<'a>(cte: &Cte, binder: &'a mut Binder) -> ParseASTResult<Self> {
+    pub(crate) fn parse_cte<'a>(cte: &Cte, binder: &'a Binder<'a>) -> ParseASTResult<Self> {
         Self::parse_from_subquery(&cte.query, Some(cte.alias.name.value.clone()), binder)
     }
 
-    pub(crate) fn parse_from_subquery<'a>(subquery: &Box<Query>, alias: Option<String>, binder: &'a mut Binder) -> ParseASTResult<Self> {
+    pub(crate) fn parse_from_subquery<'a>(subquery: &Box<Query>, alias: Option<String>, binder: &'a Binder<'a>) -> ParseASTResult<Self> {
         let subquery = SelectStatement::try_parse_ast(&*subquery, binder)?;
 
         let select_list_name: Vec<Vec<String>> = subquery.select_list
@@ -91,7 +91,7 @@ impl TableRef for SubqueryRef {
         Ok(strip_resolved_expr.or(direct_resolved_expr))
     }
 
-    fn try_from_ast<'a>(ast: &TableFactor, binder: &'a mut Binder) -> ParseASTResult<Self> {
+    fn try_from_ast<'a>(ast: &TableFactor, binder: &'a Binder) -> ParseASTResult<Self> {
         match ast {
             TableFactor::Derived { subquery, alias, ..} => {
                 Self::parse_from_subquery(subquery, alias.as_ref().map(|alias| alias.name.value.clone()), binder)

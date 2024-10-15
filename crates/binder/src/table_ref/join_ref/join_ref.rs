@@ -38,7 +38,7 @@ impl JoinRef {
     }
 
 
-    pub(crate) fn parse_from_table_with_join(ast: &TableWithJoins, binder: &mut Binder) -> ParseASTResult<TableReferenceTypeImpl> {
+    pub(crate) fn parse_from_table_with_join(ast: &TableWithJoins, binder: &Binder) -> ParseASTResult<TableReferenceTypeImpl> {
         if ast.joins.is_empty() {
             return Err(ParseASTError::IncompatibleType);
         }
@@ -52,7 +52,7 @@ impl JoinRef {
             .try_fold(TableReferenceTypeImpl::Join(join_ref), |left, join| Self::parse_from_table_and_join(left, join, binder).map(|r| r.into()))
     }
 
-    fn parse_from_table_and_join(table_ref: TableReferenceTypeImpl, join: &Join, binder: &mut Binder) -> ParseASTResult<Self> {
+    fn parse_from_table_and_join(table_ref: TableReferenceTypeImpl, join: &Join, binder: &Binder) -> ParseASTResult<Self> {
         let (join_type, join_constraint) = match &join.join_operator {
             JoinOperator::Inner(join_constraint) => (JoinType::Inner, join_constraint),
             JoinOperator::LeftOuter(join_constraint) => (JoinType::Left, join_constraint),
@@ -82,7 +82,7 @@ impl TableRef for JoinRef {
         Ok(left_column.or(right_column))
     }
 
-    fn try_from_ast(ast: &TableFactor, binder: &mut Binder) -> ParseASTResult<Self> {
+    fn try_from_ast(ast: &TableFactor, binder: &Binder) -> ParseASTResult<Self> {
         // Always incompatible as we need to have table with joins
         Err(ParseASTError::IncompatibleType)
     }

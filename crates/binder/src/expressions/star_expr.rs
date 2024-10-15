@@ -25,7 +25,7 @@ impl Expression for StarExpr {
         unreachable!("`HasAggregation` should not have been called on `StarExpr`.");
     }
 
-    fn try_parse_from_expr(expr: &Expr, _binder: &mut Binder) -> ParseASTResult<Self>
+    fn try_parse_from_expr(expr: &Expr, _binder: &Binder) -> ParseASTResult<Self>
     where
         Self: Sized
     {

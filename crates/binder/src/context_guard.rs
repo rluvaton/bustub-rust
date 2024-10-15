@@ -2,16 +2,16 @@ use std::ops::{Deref, DerefMut};
 use std::rc::Rc;
 use std::sync::Arc;
 use crate::Binder;
+use crate::binder::Context;
 use crate::table_ref::{CTEList, TableRef, TableReferenceTypeImpl};
 
 pub(crate) struct ContextGuard<'a> {
-    old_scope: Option<Rc<TableReferenceTypeImpl>>,
-    old_cte_scope: Option<Rc<CTEList>>,
-    binder: &'a mut Binder
+    old_context: Context,
+    binder: &'a Binder<'a>
 }
 
 impl<'a> ContextGuard<'a> {
-    pub(crate) fn new(binder: &'a mut Binder) -> Self {
+    pub(crate) fn new(binder: &'a Binder) -> Self {
         // Self {
         //     // do not reset CTE scope because we want to use those from parents
         //     old_scope: (*scope).take(),
@@ -20,34 +20,32 @@ impl<'a> ContextGuard<'a> {
         //     cte_scope,
         // }
 
-        Self {
-            // Take the scope from binder and reset it
-            old_scope: binder.scope.take(),
+        let context = binder.context.lock();
+        let mut old_context = context.clone();
 
-            // do not reset CTE scope because we want to use those from parents
-            old_cte_scope: binder.cte_scope.clone(),
+        // Reset the scope
+        old_context.scope.take();
+
+        // do not reset CTE scope because we want to use those from parents
+
+        Self {
+            old_context,
             binder,
         }
     }
 }
 
 impl<'a> Deref for ContextGuard<'a> {
-    type Target = Binder;
+    type Target = Binder<'a>;
 
     fn deref(&self) -> &Self::Target {
         self.binder
     }
 }
 
-impl<'a> DerefMut for ContextGuard<'a> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        self.binder
-    }
-}
-
 impl Drop for ContextGuard<'_> {
     fn drop(&mut self) {
-        self.binder.scope = self.old_scope.clone();
-        self.binder.cte_scope = self.old_cte_scope.clone();
+        let mut c = self.binder.context.lock();
+        *c = self.old_context.clone()
     }
 }

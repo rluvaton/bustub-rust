@@ -1,4 +1,4 @@
-use std::ops::DerefMut;
+use std::ops::{Deref, DerefMut};
 use sqlparser::ast::{TableFactor, TableWithJoins};
 use crate::{fallback_on_incompatible_2_args, Binder};
 use crate::expressions::ColumnRef;
@@ -23,17 +23,17 @@ pub enum TableReferenceTypeImpl {
 }
 
 impl TableReferenceTypeImpl {
-    pub(crate) fn try_to_parse_tables_with_joins<'a>(mut tables: &[TableWithJoins], binder: &'a mut Binder) -> ParseASTResult<TableReferenceTypeImpl> {
+    pub(crate) fn try_to_parse_tables_with_joins<'a>(mut tables: &[TableWithJoins], binder: &'a Binder<'a>) -> ParseASTResult<TableReferenceTypeImpl> {
         let mut ctx_guard = binder.new_context();
 
         match tables.len() {
             0 => Ok(TableReferenceTypeImpl::Empty),
-            1 => TableReferenceTypeImpl::parse_from_table_with_join(&tables[0], ctx_guard.deref_mut()),
-            _ => CrossProductRef::try_to_parse_tables_with_joins(tables, ctx_guard.deref_mut())
+            1 => TableReferenceTypeImpl::parse_from_table_with_join(&tables[0], ctx_guard.deref()),
+            _ => CrossProductRef::try_to_parse_tables_with_joins(tables, ctx_guard.deref())
         }
     }
 
-    pub(crate) fn parse_from_table_with_join(ast: &TableWithJoins, binder: &mut Binder) -> ParseASTResult<Self> {
+    pub(crate) fn parse_from_table_with_join(ast: &TableWithJoins, binder: &Binder) -> ParseASTResult<Self> {
         if ast.joins.is_empty() {
             Self::try_from_ast(&ast.relation, binder)
         } else {
@@ -56,7 +56,7 @@ impl TableRef for TableReferenceTypeImpl {
         }
     }
 
-    fn try_from_ast(ast: &TableFactor, binder: &mut Binder) -> ParseASTResult<Self> {
+    fn try_from_ast(ast: &TableFactor, binder: &Binder) -> ParseASTResult<Self> {
         fallback_on_incompatible_2_args!(try_from_ast, ast, binder, {
             BaseTableRef,
             JoinRef,

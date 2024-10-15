@@ -8,11 +8,11 @@ use sqlparser::ast::{Distinct, GroupByExpr, RenameSelectItem, SelectItem};
 use std::sync::Arc;
 
 pub(super) trait SelectExt {
-    fn add_select_to_select_builder(&self, builder: SelectStatementBuilder, binder: &mut Binder) -> ParseASTResult<SelectStatementBuilder>;
+    fn add_select_to_select_builder(&self, builder: SelectStatementBuilder, binder: &Binder) -> ParseASTResult<SelectStatementBuilder>;
 }
 
 impl SelectExt for sqlparser::ast::Select {
-    fn add_select_to_select_builder(&self, mut builder: SelectStatementBuilder, binder: &mut Binder) -> ParseASTResult<SelectStatementBuilder> {
+    fn add_select_to_select_builder(&self, mut builder: SelectStatementBuilder, binder: &Binder) -> ParseASTResult<SelectStatementBuilder> {
         // FROM
         {
             let table = TableReferenceTypeImpl::try_to_parse_tables_with_joins(self.from.as_slice(), binder)?;
@@ -20,7 +20,7 @@ impl SelectExt for sqlparser::ast::Select {
 
             builder = builder.with_table(table.clone());
 
-            binder.scope.replace(table);
+            binder.context.lock().scope.replace(table);
         }
 
         // DISTINCT
