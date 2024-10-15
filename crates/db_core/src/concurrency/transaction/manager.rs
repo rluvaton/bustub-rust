@@ -1,5 +1,4 @@
 use crate::catalog::{Catalog, TableInfo};
-use crate::storage::TableHeap;
 use common::config::{AtomicTimestamp, AtomicTxnId, SlotOffset, Timestamp, TxnId, TXN_START_ID};
 use pages::PageId;
 use parking_lot::Mutex;
@@ -7,6 +6,7 @@ use rid::RID;
 use std::collections::HashMap;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
+use table::TableHeap;
 use transaction::{CheckUndoLink, CheckVersionUndoLink, IsolationLevel, Transaction, TransactionManager as TransactionManagerTrait, TransactionState, UndoLink, UndoLog, VersionUndoLink, Watermark};
 
 pub struct TransactionManager {

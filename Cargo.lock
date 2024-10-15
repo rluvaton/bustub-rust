@@ -514,6 +514,7 @@ dependencies = [
  "parking_lot",
  "recovery_log_manager",
  "rid",
+ "table",
  "tempdir",
  "thiserror",
  "transaction",
@@ -1600,6 +1601,25 @@ dependencies = [
 [[package]]
 name = "table"
 version = "0.1.0"
+dependencies = [
+ "buffer_common",
+ "buffer_pool_manager",
+ "catalog_schema",
+ "common",
+ "data_types",
+ "error_utils",
+ "extendible_hash_table",
+ "hashing_common",
+ "index",
+ "lock_manager",
+ "pages",
+ "parking_lot",
+ "recovery_log_manager",
+ "rid",
+ "thiserror",
+ "transaction",
+ "tuple",
+]
 
 [[package]]
 name = "tempdir"

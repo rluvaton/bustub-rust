@@ -13,6 +13,7 @@ buffer_pool_manager = {path = "../buffer/manager"}
 recovery_log_manager = {path = "../recovery/log_manager"}
 lock_manager = {path = "../concurrency/lock_manager"}
 transaction = {path = "../concurrency/transaction/core"}
+table = {path = "../storage/table/core"}
 tuple = {path = "../storage/table/tuple"}
 extendible_hash_table = {path = "../hashing/extendible_hash_table"}
 hashing_common = {path = "../hashing/common"}
