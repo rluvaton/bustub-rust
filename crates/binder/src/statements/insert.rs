@@ -73,8 +73,8 @@ mod tests {
     use db_core::catalog::Catalog;
 
     fn parse_insert_sql(sql: &str) -> Result<Vec<InsertStatement>, ParseASTError> {
-        let catalog = Mutex::new(Catalog::new(None, None, None));
-        let mut binder = Binder::new(catalog.lock());
+        let catalog = Catalog::new(None, None, None);
+        let mut binder = Binder::new(&catalog);
         let statements = Parser::parse_sql(&GenericDialect {}, sql).unwrap();
         statements.iter().map(|stmt| InsertStatement::try_parse_from_statement(stmt, &mut binder)).collect()
     }

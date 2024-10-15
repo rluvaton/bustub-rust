@@ -94,8 +94,8 @@ mod tests {
 
     fn parse_delete_sql(sql: &str) -> Result<Vec<DeleteStatement>, ParseASTError> {
 
-        let catalog = Mutex::new(Catalog::new(None, None, None));
-        let mut binder = Binder::new(catalog.lock());
+        let catalog = Catalog::new(None, None, None);
+        let mut binder = Binder::new(&catalog);
         let statements = Parser::parse_sql(&GenericDialect {}, sql).unwrap();
         statements.iter().map(|stmt| DeleteStatement::try_parse_from_statement(stmt, &mut binder)).collect()
     }

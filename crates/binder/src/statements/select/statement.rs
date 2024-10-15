@@ -142,8 +142,8 @@ mod tests {
     use db_core::catalog::Catalog;
 
     fn parse_select_sql(sql: &str) -> Result<Vec<SelectStatement>, ParseASTError> {
-        let catalog = Mutex::new(Catalog::new(None, None, None));
-        let mut binder = Binder::new(catalog.lock());
+        let catalog = Catalog::new(None, None, None);
+        let mut binder = Binder::new(&catalog);
         let statements = Parser::parse_sql(&GenericDialect {}, sql).unwrap();
         statements.iter().map(|stmt| SelectStatement::try_parse_from_statement(stmt, &mut binder)).collect()
     }

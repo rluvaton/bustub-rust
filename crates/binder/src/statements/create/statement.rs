@@ -75,8 +75,8 @@ mod tests {
     use crate::statements::traits::Statement;
 
     fn parse_create_sql(sql: &str) -> Result<Vec<CreateStatement>, ParseASTError> {
-        let catalog = Mutex::new(Catalog::new(None, None, None));
-        let mut binder = Binder::new(catalog.lock());
+        let catalog = Catalog::new(None, None, None);
+        let mut binder = Binder::new(&catalog);
         let statements = Parser::parse_sql(&GenericDialect {}, sql).unwrap();
         statements.iter().map(|stmt| CreateStatement::try_parse_from_statement(stmt, &binder)).collect()
     }

@@ -11,7 +11,7 @@ use crate::try_from_ast_error::ParseASTResult;
 
 pub struct Binder<'a> {
     /// Catalog will be used during the binding process
-    pub(crate) catalog: MutexGuard<'a, Catalog>,
+    pub(crate) catalog: &'a Catalog,
 
     pub(crate) context: Mutex<Context>,
 
@@ -30,7 +30,7 @@ pub(crate) struct Context {
 }
 
 impl<'a> Binder<'a> {
-    pub fn new(catalog: MutexGuard<'a, Catalog>) -> Self {
+    pub fn new(catalog: &'a Catalog) -> Self {
         Self {
             catalog,
             context: Mutex::new(Context {
