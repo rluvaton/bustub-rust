@@ -8,6 +8,7 @@ mod func_call_expr;
 mod window_expr;
 mod binary_op;
 mod expr_impl;
+mod traits;
 
 pub use expr_impl::*;
 pub use column_ref::*;

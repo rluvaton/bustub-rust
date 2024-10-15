@@ -13,8 +13,8 @@ use crate::statements::{CreateStatement, StatementTypeImpl};
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct DeleteStatement {
-    pub(crate) table: Rc<TableReferenceTypeImpl>,
-    pub(crate) expr: ExpressionTypeImpl,
+    pub table: Rc<TableReferenceTypeImpl>,
+    pub expr: ExpressionTypeImpl,
 }
 
 impl DeleteStatement {

@@ -5,6 +5,8 @@ use crate::traits::Plan;
 
 impl Plan for DeleteStatement {
     fn plan<'a>(&self, planner: &'a Planner<'a>) -> PlanType {
-        todo!()
+        let table = self.table.plan(planner);
+
+        todo!();
     }
 }

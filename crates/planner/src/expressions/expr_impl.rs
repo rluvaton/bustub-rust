@@ -1,10 +1,11 @@
 use binder::ExpressionTypeImpl;
+use crate::expressions::traits::PlanExpression;
 use crate::plan_nodes::PlanType;
 use crate::Planner;
 use crate::traits::Plan;
 
-impl Plan for ExpressionTypeImpl {
-    fn plan<'a>(&self, planner: &'a Planner<'a>) -> PlanType {
+impl PlanExpression for ExpressionTypeImpl {
+    fn plan<'a>(&self, planner: &'a Planner<'a>) -> (String, PlanType) {
         match self {
             ExpressionTypeImpl::ColumnRef(e) => e.plan(planner),
             ExpressionTypeImpl::Constant(e) => e.plan(planner),
