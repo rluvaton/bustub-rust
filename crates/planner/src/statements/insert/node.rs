@@ -3,7 +3,13 @@ use catalog_schema::Schema;
 use std::fmt::{Display, Formatter};
 use std::rc::Rc;
 use std::sync::Arc;
+use common::config::TableOID;
 
+/**
+ * The InsertPlanNode identifies a table into which tuples are inserted.
+ *
+ * The values to be inserted will come from the child of the node.
+ */
 #[derive(Clone, Debug, PartialEq)]
 pub struct InsertPlan {
     /**
@@ -15,21 +21,33 @@ pub struct InsertPlan {
     /** The children of this plan node. */
     children: Vec<Rc<PlanType>>,
 
+    /** The identifier of the table from which tuples are inserted into */
+    table_oid: TableOID,
 }
 
 impl InsertPlan {
-    pub fn new(output: Arc<Schema>, child: Rc<PlanType>) -> Self {
+    pub fn new(output: Arc<Schema>, child: Rc<PlanType>, table_oid: TableOID) -> Self {
         Self {
             output_schema: output,
             children: vec![child],
+            table_oid,
         }
+    }
+
+    /** @return The identifier of the table into which tuples are inserted */
+    pub fn get_table_oid(&self) -> TableOID { self.table_oid }
+
+    /** @return the child plan providing tuples to be inserted */
+    pub fn get_child_plan(&self) -> &PlanType {
+        assert_eq!(self.children.len(), 1, "insert should have only one child plan.");
+        &self.children[0]
     }
 }
 
 impl Display for InsertPlan {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Insert")
-            // .field("table_oid", &self.table_oid)
+            .field("table_oid", &self.table_oid)
             .finish()
     }
 }
