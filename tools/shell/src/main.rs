@@ -74,21 +74,20 @@ fn main() -> rustyline::Result<()> {
             }
 
             first_line = false;
+        }
 
-            let mut writer = ComfyTableWriter::default();
-            let result = bustub.execute_sql(&query, &mut writer, CheckOptions::empty());
+        let mut writer = ComfyTableWriter::default();
+        let result = bustub.execute_sql(&query, &mut writer, CheckOptions::empty());
 
-            match result {
-                Ok(_) => {
-                    for table in writer.get_tables() {
-                        println!("{}", table);
-                    }
-                }
-                Err(err) => {
-                    eprintln!("{}", err);
+        match result {
+            Ok(_) => {
+                for table in writer.get_tables() {
+                    println!("{}", table);
                 }
             }
-
+            Err(err) => {
+                eprintln!("{}", err);
+            }
         }
     }
 }

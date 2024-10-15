@@ -67,8 +67,6 @@ impl BufferPoolManagerBuilder {
     }
 
     pub fn with_log_manager(mut self, log_manager: Option<Arc<LogManager>>) -> Self {
-        assert!(self.pool_size.is_none(), "Log manager is already set");
-
         self.log_manager = log_manager;
 
         self

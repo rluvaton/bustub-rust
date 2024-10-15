@@ -125,7 +125,7 @@ impl TransactionManagerTrait for TransactionManager {
 
         // TODO(fall2023): acquire commit ts!
 
-        assert_ne!(txn.get_transaction_state(), TransactionState::Running, "txn not in running state");
+        assert_eq!(txn.get_transaction_state(), TransactionState::Running, "txn not in running state");
 
         if txn.get_isolation_level() == IsolationLevel::Serializable {
             if !self.verify_txn(txn.clone()) {
@@ -151,8 +151,7 @@ impl TransactionManagerTrait for TransactionManager {
 
     fn abort(&self, txn: Arc<Transaction>) {
         let txn_state = txn.get_transaction_state();
-        assert_ne!(txn_state, TransactionState::Running, "Transaction not in running state");
-        assert_ne!(txn_state, TransactionState::Tainted, "Transaction not in tainted state");
+        assert!(txn_state == TransactionState::Running || txn_state == TransactionState::Tainted, "Transaction not in running/tainted state");
 
         // TODO(fall2023): Implement the abort logic!
 

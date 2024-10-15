@@ -1,5 +1,5 @@
 use crate::result_writer::ResultWriter;
-use binder::{Binder, CreateStatement};
+use binder::{Binder, CreateStatement, StatementTypeImpl};
 use buffer_pool_manager::BufferPoolManager;
 use catalog_schema::mocks::MockTableName;
 use catalog_schema::Schema;
@@ -15,6 +15,7 @@ use recovery_log_manager::LogManager;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
+use error_utils::ToAnyhow;
 use index::TWO_INTEGER_SIZE;
 use lock_manager::LockManager;
 use transaction::{Transaction, TransactionManager as TransactionManagerTrait};
@@ -192,6 +193,8 @@ impl BustubInstance {
     }
 
     pub fn execute_sql_txn<ResultWriterImpl: ResultWriter>(&mut self, sql: &str, writer: &mut ResultWriterImpl, txn: Arc<Transaction>, check_options: CheckOptions) -> error_utils::anyhow::Result<bool> {
+        println!("sql: {}", sql);
+
         if sql.starts_with("\\") {
             // Internal meta-commands, like in `psql`.
 
@@ -215,33 +218,36 @@ impl BustubInstance {
 
         let mut is_successful = true;
 
-        let catalog = self.catalog.lock();
 
-        // TODO - REMOVE THIS!
-        let binder = Binder::new(catalog.clone());
-        //
-        // let parsed = binder.parse(sql).map_err(|err|
-        //     return Err(error_utils::anyhow::anyhow!("{}", sql))
-        // )?;
-        //
-        // drop(catalog);
-        //
-        // for stmt in &parsed {
-        //     let mut is_delete = false;
-        //
-        //     match stmt {
-        //         StatementTypeImpl::Invalid => break,
-        //         StatementTypeImpl::Select(_) => {}
-        //         StatementTypeImpl::Insert(_) => {}
-        //         StatementTypeImpl::Create(stmt) => self.handle_create_statement(txn.clone(), stmt, writer),
-        //         StatementTypeImpl::Delete(_) => {}
-        //     }
-        // }
+        let parsed = {
+
+            let catalog = self.catalog.lock();
+
+            // TODO - REMOVE THIS!
+            let binder = Binder::new(catalog.clone());
+
+            binder.parse(sql).map_err(|err| err.to_anyhow())?
+        };
+
+        for stmt in &parsed {
+            let mut is_delete = false;
+
+            match &stmt {
+                StatementTypeImpl::Invalid => break,
+                StatementTypeImpl::Select(_) => {}
+                StatementTypeImpl::Insert(_) => {}
+                StatementTypeImpl::Create(stmt) => {
+                    self.handle_create_statement(txn.clone(), stmt, writer);
+                    continue;
+                },
+                StatementTypeImpl::Delete(_) => {}
+            }
+
+            unimplemented!()
+        }
 
 
-        // let binder = Binder
-
-        todo!();
+        Ok(is_successful)
     }
 
     pub fn handle_create_statement<ResultWriterImpl: ResultWriter>(&self, txn: Arc<Transaction>, stmt: &CreateStatement, writer: &mut ResultWriterImpl)  {

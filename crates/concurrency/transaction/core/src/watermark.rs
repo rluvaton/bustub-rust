@@ -19,15 +19,13 @@ impl Watermark {
     }
 
     pub fn add_txn(&self, read_ts: Timestamp) {
-        assert!(read_ts < self.commit_ts.load(Ordering::SeqCst), "read timestamp must be greater than or equal to commit timestamp");
+        assert!(read_ts >= self.commit_ts.load(Ordering::SeqCst), "read timestamp must be greater than or equal to commit timestamp");
 
         // TODO(fall2023): implement me!
-        todo!()
     }
 
     pub fn remove_txn(&self, _read_ts: Timestamp) {
         // TODO(fall2023): implement me!
-        todo!()
     }
 
 
