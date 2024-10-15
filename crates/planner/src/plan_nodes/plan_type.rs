@@ -2,7 +2,7 @@ use std::fmt::{Display, Formatter};
 use std::rc::Rc;
 use std::sync::Arc;
 use catalog_schema::Schema;
-use crate::plan_nodes::{FilterPlan, PlanNode, ValuesPlanNode};
+use crate::plan_nodes::{FilterPlan, PlanNode, ProjectionPlanNode, ValuesPlanNode};
 use crate::plan_nodes::window_plan_node::WindowFunctionPlanNode;
 use crate::statements::{DeletePlan, InsertPlan};
 
@@ -15,6 +15,7 @@ macro_rules! call_each_variant {
             PlanType::Filter($name) => $func,
             PlanType::Values($name) => $func,
             PlanType::Window($name) => $func,
+            PlanType::Projection($name) => $func,
             // Add match arms for other variants as necessary
         }
     };
@@ -36,7 +37,7 @@ pub enum PlanType {
     // HashJoin,
     Filter(FilterPlan),
     Values(ValuesPlanNode),
-    // Projection,
+    Projection(ProjectionPlanNode),
     // Sort,
     // TopN,
     // TopNPerGroup,

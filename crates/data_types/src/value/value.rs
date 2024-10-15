@@ -175,4 +175,11 @@ impl From<bool> for Value {
 }
 
 
+impl From<i32> for Value {
+    fn from(value: i32) -> Self {
+        Value::new(DBTypeIdImpl::INT(value.into()))
+    }
+}
+
+
 

@@ -23,10 +23,10 @@ impl Default for OrderByType {
 #[derive(Clone, Debug, PartialEq)]
 pub struct OrderBy {
     /// The order by type
-    order_type: OrderByType,
+    pub order_type: OrderByType,
 
     /// The order by expression
-    expr: Box<ExpressionTypeImpl>
+    pub expr: Box<ExpressionTypeImpl>
 }
 
 impl OrderBy {

@@ -240,3 +240,9 @@ impl Debug for Schema {
         )
     }
 }
+
+impl<I: Iterator<Item=Column>> From<I> for Schema {
+    fn from(value: I) -> Self {
+        Schema::new(value.collect::<Vec<Column>>())
+    }
+}

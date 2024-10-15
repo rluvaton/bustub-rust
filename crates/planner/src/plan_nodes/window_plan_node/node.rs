@@ -3,7 +3,10 @@ use std::fmt::{Display, Formatter};
 use std::rc::Rc;
 use std::sync::Arc;
 use binder::OrderByType;
-use catalog_schema::Schema;
+use catalog_schema::{Column, Schema};
+use data_types::DBTypeId;
+use expression::{Expression, ExpressionRef};
+use crate::constants::UNNAMED_COLUMN;
 use crate::plan_nodes::{PlanNode, PlanNodeRef, PlanType, WindowFunctionType};
 use crate::plan_nodes::window_plan_node::window_function::WindowFunction;
 
@@ -19,7 +22,7 @@ pub struct WindowFunctionPlanNode {
     children: Vec<Rc<PlanType>>,
 
     /** all columns expressions */
-    columns: Vec<Rc<PlanType>>,
+    columns: Vec<ExpressionRef>,
 
     window_functions: HashMap<usize, WindowFunction>,
 }
@@ -55,10 +58,10 @@ impl WindowFunctionPlanNode {
         output_schema: Arc<Schema>,
         child: PlanNodeRef,
         window_func_indexes: Vec<usize>,
-        columns: Vec<PlanNodeRef>,
-        partition_bys: Vec<Vec<PlanNodeRef>>,
-        order_bys: Vec<Vec<(OrderByType, PlanNodeRef)>>,
-        functions: Vec<PlanNodeRef>,
+        columns: Vec<ExpressionRef>,
+        partition_bys: Vec<Vec<ExpressionRef>>,
+        order_bys: Vec<Vec<(OrderByType, ExpressionRef)>>,
+        functions: Vec<ExpressionRef>,
         window_func_types: Vec<WindowFunctionType>,
     ) -> Self {
         let window_functions = HashMap::from_iter(
@@ -91,16 +94,20 @@ impl WindowFunctionPlanNode {
         &self.children[0]
     }
 
-    // pub fn infer_window_schema(columns: Vec<Rc<PlanType>>) -> Schema {
-    //     // TODO(avery): correctly infer window call return type
-    //     let output = columns
-    //         .iter()
-    //         .map(|column| {
-    //             // TODO(chi): correctly process VARCHAR column
-    //
-    //             if column.ge
-    //         })
-    // }
+    pub fn infer_window_schema(columns: &[ExpressionRef]) -> Schema {
+        // TODO(avery): correctly infer window call return type
+        columns
+            .iter()
+            .map(|column| {
+                // TODO(chi): correctly process VARCHAR column
+                if column.get_return_type() == DBTypeId::VARCHAR {
+                    Column::new_variable_size(UNNAMED_COLUMN.to_string(), column.get_return_type(), 128)
+                } else {
+                    Column::new_fixed_size(UNNAMED_COLUMN.to_string(), column.get_return_type())
+                }
+            })
+            .into()
+    }
 }
 
 impl Display for WindowFunctionPlanNode {

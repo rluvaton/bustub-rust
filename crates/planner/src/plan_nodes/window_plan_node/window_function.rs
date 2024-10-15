@@ -1,14 +1,14 @@
-use crate::plan_nodes::window_plan_node::window_function_type::WindowFunctionType;
-use crate::plan_nodes::PlanNodeRef;
 use binder::OrderByType;
+use expression::ExpressionRef;
 use std::fmt::{Display, Formatter};
+use crate::plan_nodes::WindowFunctionType;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct WindowFunction {
-    pub function: PlanNodeRef,
+    pub function: ExpressionRef,
     pub fn_type: WindowFunctionType,
-    pub partition_by: Vec<PlanNodeRef>,
-    pub order_by: Vec<(OrderByType, PlanNodeRef)>,
+    pub partition_by: Vec<ExpressionRef>,
+    pub order_by: Vec<(OrderByType, ExpressionRef)>,
 }
 
 impl Display for WindowFunction {

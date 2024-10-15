@@ -7,7 +7,7 @@ use crate::Planner;
 use crate::traits::Plan;
 
 impl PlanExpression for AliasExpr {
-    fn plan<'a>(&self, children: Vec<Rc<PlanType>>, planner: &'a Planner<'a>) -> (Option<String>, ExpressionRef) {
+    fn plan<'a>(&self, children: Vec<Rc<PlanType>>, planner: &'a Planner<'a>) -> (String, ExpressionRef) {
         todo!()
     }
 }

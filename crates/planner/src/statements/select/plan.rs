@@ -1,6 +1,6 @@
 use std::rc::Rc;
 use std::sync::Arc;
-use crate::plan_nodes::{FilterPlan, PlanNode, PlanType, ValuesPlanNode};
+use crate::plan_nodes::{FilterPlan, PlanNode, PlanNodeRef, PlanType, ValuesPlanNode};
 use crate::traits::Plan;
 use crate::Planner;
 use binder::{Expression, SelectStatement, TableReferenceTypeImpl};
@@ -16,7 +16,7 @@ impl Plan for SelectStatement {
             ctx_guard.context.lock().cte_list.replace(self.ctes.clone());
         }
 
-        let mut plan: Rc<PlanType> = match &*self.table {
+        let mut plan: PlanNodeRef = match &*self.table {
             TableReferenceTypeImpl::Empty => {
                 ValuesPlanNode::new(Arc::new(Schema::new(vec![])), vec![vec![]]).into_ref()
             }
