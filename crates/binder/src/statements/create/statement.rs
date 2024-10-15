@@ -82,6 +82,7 @@ mod tests {
 
     #[test]
     fn convert_create_table_to_statement() {
+        // "CREATE TABLE A (did integer PRIMARY KEY);"
         let sql = "CREATE TABLE distributors (
     did     integer PRIMARY KEY,
     name    varchar(40)

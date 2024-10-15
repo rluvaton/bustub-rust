@@ -193,8 +193,6 @@ impl BustubInstance {
     }
 
     pub fn execute_sql_txn<ResultWriterImpl: ResultWriter>(&mut self, sql: &str, writer: &mut ResultWriterImpl, txn: Arc<Transaction>, check_options: CheckOptions) -> error_utils::anyhow::Result<bool> {
-        println!("sql: {}", sql);
-
         if sql.starts_with("\\") {
             // Internal meta-commands, like in `psql`.
 
@@ -260,7 +258,6 @@ impl BustubInstance {
             None,
         ).expect("Should create table");
 
-        // TODO - ()
         let mut index_info: Option<Arc<IndexInfo>> = None;
 
 

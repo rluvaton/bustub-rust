@@ -26,7 +26,7 @@ impl LogManager {
     }
 
     pub fn stop_flush_thread(&self) {
-        unimplemented!()
+        // unimplemented!()
     }
 
     pub fn append_log_record(&mut self, _log_record: &LogRecord) -> LSN {

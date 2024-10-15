@@ -80,8 +80,9 @@ impl Catalog {
     /// @param create_table_heap whether to create a table heap for the new table
     /// @return A (non-owning) pointer to the metadata for the table
     ///
+    /// TODO - change return value to result
     pub fn create_table(&mut self, txn: Arc<Transaction>, table_name: String, schema: Arc<Schema>, create_table_heap: Option<bool>) -> Option<Arc<TableInfo>> {
-        if !self.table_names.contains_key(&table_name) {
+        if self.table_names.contains_key(&table_name) {
             return None;
         }
 
