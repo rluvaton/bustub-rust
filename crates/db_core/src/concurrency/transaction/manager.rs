@@ -1,12 +1,13 @@
 use crate::catalog::{Catalog, TableInfo};
-use common::config::{AtomicTimestamp, AtomicTxnId, SlotOffset, TxnId, TXN_START_ID};
-use parking_lot::Mutex;
-use std::collections::HashMap;
-use std::sync::Arc;
-use std::sync::atomic::Ordering;
-use pages::PageId;
-use transaction::{IsolationLevel, Transaction, TransactionState, VersionUndoLink, Watermark};
 use crate::storage::TableHeap;
+use common::config::{AtomicTimestamp, AtomicTxnId, SlotOffset, Timestamp, TxnId, TXN_START_ID};
+use pages::PageId;
+use parking_lot::Mutex;
+use rid::RID;
+use std::collections::HashMap;
+use std::sync::atomic::Ordering;
+use std::sync::Arc;
+use transaction::{CheckUndoLink, CheckVersionUndoLink, IsolationLevel, Transaction, TransactionManager as TransactionManagerTrait, TransactionState, UndoLink, UndoLog, VersionUndoLink, Watermark};
 
 pub struct TransactionManager {
     /// protects txn map - All transactions, running or committed
@@ -65,7 +66,45 @@ impl TransactionManager {
         }
     }
 
-    pub fn begin(&self, isolation_level: Option<IsolationLevel>) -> Arc<Transaction> {
+    pub fn verify_txn(&self, txn: Arc<Transaction>) -> bool {
+        // TODO - implement
+        true
+    }
+
+    pub fn get_transaction_by_id(&self, txn_id: TxnId) -> Option<Arc<Transaction>> {
+        self.txn_map.lock().get(&txn_id).cloned()
+    }
+
+    pub fn debug(&self, info: String, table_info: Option<Arc<TableInfo>>, table_heap: Option<Arc<TableHeap>>) {
+        // always use stderr for printing logs...
+       eprintln!("debug_hook: {}", info);
+
+        eprintln!("You see this line of text because you have not implemented `TxnMgrDbg`. You should do this once you have \
+        finished task 2. Implementing this helper function will save you a lot of time for debugging in later tasks.");
+
+        // We recommend implementing this function as traversing the table heap and print the version chain. An example output
+        // of our reference solution:
+        //
+        // debug_hook: before verify scan
+        // RID=0/0 ts=txn8 tuple=(1, <NULL>, <NULL>)
+        //   txn8@0 (2, _, _) ts=1
+        // RID=0/1 ts=3 tuple=(3, <NULL>, <NULL>)
+        //   txn5@0 <del> ts=2
+        //   txn3@0 (4, <NULL>, <NULL>) ts=1
+        // RID=0/2 ts=4 <del marker> tuple=(<NULL>, <NULL>, <NULL>)
+        //   txn7@0 (5, <NULL>, <NULL>) ts=3
+        // RID=0/3 ts=txn6 <del marker> tuple=(<NULL>, <NULL>, <NULL>)
+        //   txn6@0 (6, <NULL>, <NULL>) ts=2
+        //   txn3@1 (7, _, _) ts=1
+    }
+}
+
+impl TransactionManagerTrait for TransactionManager {
+    fn get_watermark(&self) -> Timestamp {
+        todo!()
+    }
+
+    fn begin(&self, isolation_level: Option<IsolationLevel>) -> Arc<Transaction> {
         let mut txn_map_guard = self.txn_map.lock();
 
         let txn_id = self.next_txn_id.fetch_add(1, Ordering::SeqCst);
@@ -80,12 +119,7 @@ impl TransactionManager {
         txn
     }
 
-    pub fn verify_txn(&self, txn: Arc<Transaction>) -> bool {
-        // TODO - implement
-        true
-    }
-
-    pub fn commit(&self, txn: Arc<Transaction>) -> bool {
+    fn commit(&self, txn: Arc<Transaction>) -> bool {
         let mut commit_lock = self.commit_mutex.lock();
 
 
@@ -115,7 +149,7 @@ impl TransactionManager {
         true
     }
 
-    pub fn abort(&self, txn: Arc<Transaction>) {
+    fn abort(&self, txn: Arc<Transaction>) {
         let txn_state = txn.get_transaction_state();
         assert_ne!(txn_state, TransactionState::Running, "Transaction not in running state");
         assert_ne!(txn_state, TransactionState::Tainted, "Transaction not in tainted state");
@@ -128,34 +162,31 @@ impl TransactionManager {
         self.running_txns.remove_txn(txn.get_read_ts())
     }
 
-    pub fn get_transaction_by_id(&self, txn_id: TxnId) -> Option<Arc<Transaction>> {
-        self.txn_map.lock().get(&txn_id).cloned()
+    fn garbage_collection(&self) {
+        todo!()
     }
 
-    pub fn garbage_collection(&self) {
-        unimplemented!();
+    fn update_undo_link(&mut self, rid: RID, prev_link: Option<UndoLink>, check: Option<&dyn CheckUndoLink>) -> bool {
+        todo!()
     }
 
-    pub fn debug(&self, info: String, table_info: Option<Arc<TableInfo>>, table_heap: Option<Arc<TableHeap>>) {
-        // always use stderr for printing logs...
-       eprintln!("debug_hook: {}", info);
+    fn update_version_link(&mut self, rid: RID, prev_version: Option<VersionUndoLink>, check: Option<&dyn CheckVersionUndoLink>) -> bool {
+        todo!()
+    }
 
-        eprintln!("You see this line of text because you have not implemented `TxnMgrDbg`. You should do this once you have \
-        finished task 2. Implementing this helper function will save you a lot of time for debugging in later tasks.");
+    fn get_undo_link(&self, rid: RID) -> Option<UndoLink> {
+        todo!()
+    }
 
-        // We recommend implementing this function as traversing the table heap and print the version chain. An example output
-        // of our reference solution:
-        //
-        // debug_hook: before verify scan
-        // RID=0/0 ts=txn8 tuple=(1, <NULL>, <NULL>)
-        //   txn8@0 (2, _, _) ts=1
-        // RID=0/1 ts=3 tuple=(3, <NULL>, <NULL>)
-        //   txn5@0 <del> ts=2
-        //   txn3@0 (4, <NULL>, <NULL>) ts=1
-        // RID=0/2 ts=4 <del marker> tuple=(<NULL>, <NULL>, <NULL>)
-        //   txn7@0 (5, <NULL>, <NULL>) ts=3
-        // RID=0/3 ts=txn6 <del marker> tuple=(<NULL>, <NULL>, <NULL>)
-        //   txn6@0 (6, <NULL>, <NULL>) ts=2
-        //   txn3@1 (7, _, _) ts=1
+    fn get_version_link(&self, rid: RID) -> Option<VersionUndoLink> {
+        todo!()
+    }
+
+    fn get_undo_log(&self, link: UndoLink) -> Option<UndoLog> {
+        todo!()
+    }
+
+    unsafe fn get_undo_log_unchecked(&self, link: UndoLink) -> UndoLog {
+        todo!()
     }
 }

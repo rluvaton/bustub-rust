@@ -23,6 +23,7 @@ checkpoint_manager = {path = "../recovery/checkpoint_manager"}
 execution_common = {path = "../execution/common"}
 execution_engine = {path = "../execution/engine"}
 data_types = {path = "../data_types"}
+lock_manager = {path = "../concurrency/lock_manager"}
 transaction = {path = "../concurrency/transaction/core"}
 error_utils = {path = "../utils/error_utils"}
 anyhow = "1.0.89"

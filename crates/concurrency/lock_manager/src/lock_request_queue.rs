@@ -2,7 +2,7 @@ use std::collections::LinkedList;
 use std::sync::Arc;
 use parking_lot::{Condvar, Mutex};
 use common::config::{TxnId, INVALID_TXN_ID};
-use crate::concurrency::LockRequest;
+use crate::LockRequest;
 
 pub struct LockRequestQueue {
 

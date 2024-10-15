@@ -252,6 +252,7 @@ dependencies = [
  "execution_engine",
  "extendible_hash_table",
  "hashing_common",
+ "lock_manager",
  "pages",
  "parking_lot",
  "rand 0.8.5",
@@ -507,6 +508,7 @@ dependencies = [
  "error_utils",
  "extendible_hash_table",
  "hashing_common",
+ "lock_manager",
  "pages",
  "parking_lot",
  "recovery_log_manager",
@@ -893,6 +895,12 @@ dependencies = [
 [[package]]
 name = "lock_manager"
 version = "0.1.0"
+dependencies = [
+ "common",
+ "parking_lot",
+ "rid",
+ "transaction",
+]
 
 [[package]]
 name = "log"

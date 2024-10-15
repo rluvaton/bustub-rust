@@ -1,15 +1,16 @@
-use crate::concurrency::{LockRequestQueue, TransactionManager};
 use common::config::{TableOID, TxnId};
 use parking_lot::Mutex;
 use rid::RID;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::thread::JoinHandle;
+use transaction::TransactionManager;
+use crate::LockRequestQueue;
 
 pub struct LockManager {
 
     #[allow(unused)]
-    transaction_manager: Arc<TransactionManager>,
+    transaction_manager: Arc<dyn TransactionManager>,
 
     /// Structure that holds lock requests for a given table oid
     #[allow(unused)]
@@ -31,7 +32,7 @@ pub struct LockManager {
 }
 
 impl LockManager {
-    pub fn new(transaction_manager: Arc<TransactionManager>) -> Self {
+    pub fn new(transaction_manager: Arc<dyn TransactionManager>) -> Self {
         Self {
             transaction_manager,
             table_lock_map: Mutex::new(HashMap::new()),

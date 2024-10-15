@@ -6,7 +6,7 @@ use catalog_schema::Schema;
 use checkpoint_manager::CheckpointManager;
 use data_types::DBTypeId;
 use db_core::catalog::Catalog;
-use db_core::concurrency::{LockManager, TransactionManager};
+use db_core::concurrency::{TransactionManager};
 use disk_storage::{DefaultDiskManager, DiskManager, DiskManagerUnlimitedMemory};
 use execution_common::CheckOptions;
 use execution_engine::ExecutionEngine;
@@ -15,7 +15,8 @@ use recovery_log_manager::LogManager;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
-use transaction::Transaction;
+use lock_manager::LockManager;
+use transaction::{Transaction, TransactionManager as TransactionManagerTrait};
 
 const DEFAULT_BPM_SIZE: usize = 128;
 const LRU_K_REPLACER_K: usize = 10;
