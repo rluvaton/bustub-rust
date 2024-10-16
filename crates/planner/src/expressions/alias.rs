@@ -1,13 +1,12 @@
-use std::rc::Rc;
-use binder::AliasExpr;
-use expression::ExpressionRef;
 use crate::expressions::traits::PlanExpression;
 use crate::plan_nodes::PlanType;
 use crate::Planner;
-use crate::traits::Plan;
+use binder::AliasExpr;
+use expression::ExpressionRef;
+use std::rc::Rc;
 
 impl PlanExpression for AliasExpr {
     fn plan<'a>(&self, children: &Vec<Rc<PlanType>>, planner: &'a Planner<'a>) -> (String, ExpressionRef) {
-        todo!()
+        (self.alias.clone(), self.child.plan(children, planner).1)
     }
 }

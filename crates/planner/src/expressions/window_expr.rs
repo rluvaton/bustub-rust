@@ -1,13 +1,12 @@
-use std::rc::Rc;
-use crate::plan_nodes::PlanType;
-use crate::traits::Plan;
-use crate::Planner;
-use binder::{BinaryOpExpr, WindowExpr};
-use expression::ExpressionRef;
 use crate::expressions::traits::PlanExpression;
+use crate::plan_nodes::PlanType;
+use crate::Planner;
+use binder::WindowExpr;
+use expression::ExpressionRef;
+use std::rc::Rc;
 
 impl PlanExpression for WindowExpr {
-    fn plan<'a>(&self, children: &Vec<Rc<PlanType>>, planner: &'a Planner<'a>) -> (String, ExpressionRef) {
-        todo!()
+    fn plan<'a>(&self, _children: &Vec<Rc<PlanType>>, _planner: &'a Planner<'a>) -> (String, ExpressionRef) {
+        unreachable!("should not parse window expressions here")
     }
 }

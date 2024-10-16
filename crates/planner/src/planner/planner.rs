@@ -11,7 +11,7 @@ pub struct Planner<'a> {
     /// Catalog will be used during the binding process
     pub(crate) catalog: &'a Catalog,
 
-    // TODO - replace with Cow?
+    // TODO - replace with Cow? as this is single threaded and can't have 2 places changing in the same time
     pub(crate) context: Mutex<Context>,
 
     /** Sometimes we will need to assign a name to some unnamed items. This variable gives them a universal ID. */
