@@ -3,6 +3,7 @@ use std::sync::Arc;
 use catalog_schema::Schema;
 use data_types::{BooleanType, DBTypeId, DBTypeIdImpl, Value};
 use tuple::Tuple;
+use crate::ComparisonType;
 use crate::expression_type::ExpressionType;
 use crate::traits::{Expression, ExpressionRef, NO_CHILDREN};
 
@@ -10,6 +11,34 @@ use crate::traits::{Expression, ExpressionRef, NO_CHILDREN};
 /** ArithmeticType represents the type of logic operation that we want to perform. */
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum LogicType { And, Or }
+
+impl LogicType {
+    fn cmp(&self, lhs: Value, rhs: Value) -> Value {
+        let (lhs, rhs) = match (lhs.get_value(), rhs.get_value()) {
+            (DBTypeIdImpl::BOOLEAN(lhs_bool), DBTypeIdImpl::BOOLEAN(rhs_bool)) => (lhs_bool.get_as_bool(), rhs_bool.get_as_bool()),
+            (_, _) => unreachable!("We already check the values are boolean")
+        };
+
+        let value = match self {
+            LogicType::And => {
+                match (lhs, rhs) {
+                    (Some(false), _) | (_, Some(false)) => Some(false),
+                    (Some(true), Some(true)) => Some(true),
+                    (None, _) | (_, None) => None,
+                }
+            }
+            LogicType::Or => {
+                match (lhs, rhs) {
+                    (Some(false), Some(false)) => Some(false),
+                    (Some(true), _) | (_, Some(true)) => Some(true),
+                    (None, _) | (_, None) => None,
+                }
+            }
+        };
+
+        BooleanType::from(value).into()
+    }
+}
 
 impl Display for LogicType {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
@@ -45,33 +74,6 @@ impl LogicExpression {
         }
     }
 
-
-    fn cmp_bools(&self, lhs: &Value, rhs: &Value) -> Value {
-        let (lhs, rhs) = match (lhs.get_value(), rhs.get_value()) {
-            (DBTypeIdImpl::BOOLEAN(lhs_bool), DBTypeIdImpl::BOOLEAN(rhs_bool)) => (lhs_bool.get_as_bool(), rhs_bool.get_as_bool()),
-            (_, _) => unreachable!("We already check the values are boolean")
-        };
-
-        let value = match self.logic_type {
-            LogicType::And => {
-                match (lhs, rhs) {
-                    (Some(false), _) | (_, Some(false)) => Some(false),
-                    (Some(true), Some(true)) => Some(true),
-                    (None, _) | (_, None) => None,
-                }
-            }
-            LogicType::Or => {
-                match (lhs, rhs) {
-                    (Some(false), Some(false)) => Some(false),
-                    (Some(true), _) | (_, Some(true)) => Some(true),
-                    (None, _) | (_, None) => None,
-                }
-            }
-        };
-
-        BooleanType::from(value).into()
-    }
-
 }
 
 
@@ -92,14 +94,14 @@ impl Expression for LogicExpression {
         let lhs = self.children[0].evaluate(tuple, schema);
         let rhs = self.children[1].evaluate(tuple, schema);
 
-        self.cmp_bools(&lhs, &rhs)
+        self.logic_type.cmp(lhs, rhs)
     }
 
     fn evaluate_join(&self, left_tuple: &Tuple, left_schema: &Schema, right_tuple: &Tuple, right_schema: &Schema) -> Value {
         let lhs = self.children[0].evaluate_join(left_tuple, left_schema, right_tuple, right_schema);
         let rhs = self.children[1].evaluate_join(left_tuple, left_schema, right_tuple, right_schema);
 
-        self.cmp_bools(&lhs, &rhs)
+        self.logic_type.cmp(lhs, rhs)
     }
 
     fn get_children(&self) -> &[ExpressionRef] {

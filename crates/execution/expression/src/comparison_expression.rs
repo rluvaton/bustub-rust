@@ -1,15 +1,34 @@
-use std::fmt::{Debug, Display, Formatter};
-use std::sync::Arc;
+use crate::expression_type::ExpressionType;
+use crate::traits::{Expression, ExpressionRef};
 use catalog_schema::Schema;
 use data_types::{DBTypeId, Value};
+use std::fmt::{Debug, Display, Formatter};
 use tuple::Tuple;
-use crate::expression_type::ExpressionType;
-use crate::traits::{Expression, ExpressionRef, NO_CHILDREN};
 
 
 /** ComparisonType represents the type of comparison that we want to perform. */
 #[derive(Clone, Copy, Debug, PartialEq)]
-pub enum ComparisonType { Equal, NotEqual, LessThan, LessThanOrEqual, GreaterThan, GreaterThanOrEqual }
+pub enum ComparisonType {
+    Equal,
+    NotEqual,
+    LessThan,
+    LessThanOrEqual,
+    GreaterThan,
+    GreaterThanOrEqual,
+}
+
+impl ComparisonType {
+    fn cmp(&self, lhs: Value, rhs: Value) -> Value {
+        match self {
+            ComparisonType::Equal => (lhs == rhs).into(),
+            ComparisonType::NotEqual => (lhs != rhs).into(),
+            ComparisonType::LessThan => (lhs < rhs).into(),
+            ComparisonType::LessThanOrEqual => (lhs <= rhs).into(),
+            ComparisonType::GreaterThan => (lhs > rhs).into(),
+            ComparisonType::GreaterThanOrEqual => (lhs >= rhs).into(),
+        }
+    }
+}
 
 impl Display for ComparisonType {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
@@ -50,7 +69,6 @@ impl ComparisonExpression {
             comp_type,
         }
     }
-
 }
 
 
@@ -71,28 +89,14 @@ impl Expression for ComparisonExpression {
         let lhs = self.children[0].evaluate(tuple, schema);
         let rhs = self.children[1].evaluate(tuple, schema);
 
-        match self.comp_type {
-            ComparisonType::Equal => (lhs == rhs).into(),
-            ComparisonType::NotEqual => (lhs != rhs).into(),
-            ComparisonType::LessThan => (lhs < rhs).into(),
-            ComparisonType::LessThanOrEqual => (lhs <= rhs).into(),
-            ComparisonType::GreaterThan => (lhs > rhs).into(),
-            ComparisonType::GreaterThanOrEqual => (lhs >= rhs).into(),
-        }
+        self.comp_type.cmp(lhs, rhs)
     }
 
     fn evaluate_join(&self, left_tuple: &Tuple, left_schema: &Schema, right_tuple: &Tuple, right_schema: &Schema) -> Value {
         let lhs = self.children[0].evaluate_join(left_tuple, left_schema, right_tuple, right_schema);
         let rhs = self.children[1].evaluate_join(left_tuple, left_schema, right_tuple, right_schema);
 
-        match self.comp_type {
-            ComparisonType::Equal => (lhs == rhs).into(),
-            ComparisonType::NotEqual => (lhs != rhs).into(),
-            ComparisonType::LessThan => (lhs < rhs).into(),
-            ComparisonType::LessThanOrEqual => (lhs <= rhs).into(),
-            ComparisonType::GreaterThan => (lhs > rhs).into(),
-            ComparisonType::GreaterThanOrEqual => (lhs >= rhs).into(),
-        }
+        self.comp_type.cmp(lhs, rhs)
     }
 
     fn get_children(&self) -> &[ExpressionRef] {

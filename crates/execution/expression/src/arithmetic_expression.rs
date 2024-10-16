@@ -9,13 +9,39 @@ use crate::traits::{Expression, ExpressionRef, NO_CHILDREN};
 
 /** ArithmeticType represents the type of computation that we want to perform. */
 #[derive(Clone, Copy, Debug, PartialEq)]
-pub enum ArithmeticExpressionType { Plus, Minus }
+pub enum ArithmeticExpressionType {
+    /// Plus, e.g. `a + b`
+    Plus,
+    /// Minus, e.g. `a - b`
+    Minus,
+    /// Multiply, e.g. `a * b`
+    Multiply,
+    /// Divide, e.g. `a / b`
+    Divide,
+    /// Modulo, e.g. `a % b`
+    Modulo,
+}
+
+impl ArithmeticExpressionType {
+    fn calc(&self, lhs: Value, rhs: Value) -> Value {
+        match self {
+            ArithmeticExpressionType::Plus => lhs + rhs,
+            ArithmeticExpressionType::Minus => lhs - rhs,
+            ArithmeticExpressionType::Multiply => lhs * rhs,
+            ArithmeticExpressionType::Divide => lhs / rhs,
+            ArithmeticExpressionType::Modulo => lhs % rhs
+        }
+    }
+}
 
 impl Display for ArithmeticExpressionType {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             ArithmeticExpressionType::Plus => write!(f, "+"),
             ArithmeticExpressionType::Minus => write!(f, "-"),
+            ArithmeticExpressionType::Multiply => write!(f, "*"),
+            ArithmeticExpressionType::Divide => write!(f, "/"),
+            ArithmeticExpressionType::Modulo => write!(f, "%"),
         }
     }
 }
@@ -70,20 +96,14 @@ impl Expression for ArithmeticExpression {
         let lhs = self.children[0].evaluate(tuple, schema.clone());
         let rhs = self.children[1].evaluate(tuple, schema);
 
-        match self.compute_type {
-            ArithmeticExpressionType::Plus => lhs + rhs,
-            ArithmeticExpressionType::Minus => lhs - rhs
-        }
+        self.compute_type.calc(lhs, rhs)
     }
 
     fn evaluate_join(&self, left_tuple: &Tuple, left_schema: &Schema, right_tuple: &Tuple, right_schema: &Schema) -> Value {
         let lhs = self.children[0].evaluate_join(left_tuple, left_schema, right_tuple, right_schema);
         let rhs = self.children[1].evaluate_join(left_tuple, left_schema, right_tuple, right_schema);
 
-        match self.compute_type {
-            ArithmeticExpressionType::Plus => lhs + rhs,
-            ArithmeticExpressionType::Minus => lhs - rhs
-        }
+        self.compute_type.calc(lhs, rhs)
     }
 
     fn get_children(&self) -> &[ExpressionRef] {
