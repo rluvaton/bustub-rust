@@ -32,7 +32,7 @@ impl PlanWindow for SelectStatement {
         for (index, item) in self.select_list.iter().enumerate() {
             if !item.has_window_function() {
                 // Normal select
-                let (mut name, expr) = item.plan(vec![child.clone()], planner);
+                let (mut name, expr) = item.plan(&vec![child.clone()], planner);
                 columns.push(expr);
 
                 if name == UNNAMED_COLUMN {
@@ -72,7 +72,7 @@ impl PlanWindow for SelectStatement {
             partition_by_exprs.push(
                 window_call.partition_by
                     .iter()
-                    .map(|item| item.plan(vec![child.clone()], planner).1)
+                    .map(|item| item.plan(&vec![child.clone()], planner).1)
                     .collect::<Vec<_>>()
             );
 
@@ -81,11 +81,11 @@ impl PlanWindow for SelectStatement {
             order_by_exprs.push(
                 window_call.order_bys
                     .iter()
-                    .map(|item| (item.order_type, item.expr.plan(vec![child.clone()], planner).1))
+                    .map(|item| (item.order_type, item.expr.plan(&vec![child.clone()], planner).1))
                     .collect::<Vec<(OrderByType, ExpressionRef)>>()
             );
 
-            let raw_args = window_call.args.iter().map(|item| item.plan(vec![child.clone()], planner).1).collect::<Vec<_>>();
+            let raw_args = window_call.args.iter().map(|item| item.plan(&vec![child.clone()], planner).1).collect::<Vec<_>>();
 
             let (window_func_type, clean_args) = get_window_agg_call(window_call.func.as_str(), raw_args);
             window_func_types.push(window_func_type);

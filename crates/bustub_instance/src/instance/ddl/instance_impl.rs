@@ -26,7 +26,7 @@ impl StatementHandler for BustubInstance {
         if !stmt.primary_key.is_empty() {
             let col_ids: Vec<u32> = stmt.primary_key
                 .iter()
-                .map(|col| info.get_schema().get_col_idx(col.to_string()) as u32)
+                .map(|col| info.get_schema().get_col_idx(col) as u32)
                 .collect();
 
             let has_unsupported_index = col_ids.iter().any(|&col_idx| info.get_schema().get_column(col_idx as usize).get_type() != DBTypeId::INT);

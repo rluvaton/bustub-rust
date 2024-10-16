@@ -34,7 +34,7 @@ impl PlanExpression for FuncCallExpr {
 
                 StringExpression::new(arg, StringExpressionType::Upper).into_ref()
             },
-            _ => unimplemented!(format!("Function {} not supported yet", self.func))
+            _ => unimplemented!("Function {} not supported yet", self.func)
         };
 
         (UNNAMED_COLUMN.to_string(), expr)

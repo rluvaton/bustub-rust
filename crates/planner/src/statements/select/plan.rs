@@ -30,7 +30,7 @@ impl Plan for SelectStatement {
         if let Some(where_expr) = &self.where_exp {
             let schema = plan.get_output_schema();
 
-            let (_, expr) = where_expr.plan(vec![plan.clone()], planner);
+            let (_, expr) = where_expr.plan(&vec![plan.clone()], planner);
             plan = FilterPlan::new(schema, expr, plan).into_ref();
         }
 
@@ -56,7 +56,7 @@ impl Plan for SelectStatement {
             // Plan normal select
             let (column_names, exprs): (Vec<String>, Vec<ExpressionRef>) = self.select_list
                 .iter()
-                .map(|item| item.plan(vec![plan.clone()], planner))
+                .map(|item| item.plan(&vec![plan.clone()], planner))
                 .unzip();
 
             plan = ProjectionPlanNode::new(

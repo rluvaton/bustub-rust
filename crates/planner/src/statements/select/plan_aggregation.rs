@@ -55,7 +55,7 @@ impl PlanAggregation for SelectStatement {
         let mut output_col_names: Vec<String> = vec![];
 
         for expr in &self.group_by {
-            let (col_name, abstract_expr) = expr.plan(vec![child.clone()], planner);
+            let (col_name, abstract_expr) = expr.plan(&vec![child.clone()], planner);
 
             output_col_names.push(col_name);
             group_by_exprs.push(abstract_expr);

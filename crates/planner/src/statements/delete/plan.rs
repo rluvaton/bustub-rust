@@ -13,7 +13,7 @@ impl Plan for DeleteStatement {
     fn plan<'a>(&self, planner: &'a Planner<'a>) -> Rc<PlanType> {
         let table = self.get_table().plan(planner);
 
-        let (_, condition) = self.expr.plan(vec![table.clone()], planner);
+        let (_, condition) = self.expr.plan(&vec![table.clone()], planner);
 
         let filter = FilterPlan::new(table.get_output_schema(), condition, table);
         let delete_schema = Arc::new(Schema::new(vec![

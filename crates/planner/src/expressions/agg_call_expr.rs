@@ -9,7 +9,7 @@ use crate::expressions::traits::PlanExpression;
 
 impl PlanExpression for AggCallExpr {
     fn plan<'a>(&self, _children: &Vec<Rc<PlanType>>, planner: &'a Planner<'a>) -> (String, ExpressionRef) {
-        let ctx = planner.context.lock();
+        let mut ctx = planner.context.lock();
 
         assert!(ctx.next_aggregation < ctx.expr_in_agg.len(), "unexpected agg call");
 

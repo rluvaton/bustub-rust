@@ -1,3 +1,4 @@
+use std::fmt::{Display, Formatter};
 use std::sync::Arc;
 use std::thread::Scope;
 use crate::expressions::{Expression, ExpressionTypeImpl};
@@ -101,5 +102,11 @@ impl Expression for ColumnRef {
         } else {
             Err(ParseASTError::FailedParsing("no scope".to_string()))
         }
+    }
+}
+
+impl Display for ColumnRef {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.col_name.join("."))
     }
 }

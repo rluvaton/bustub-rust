@@ -100,7 +100,7 @@ impl Schema {
     /// * `col_name` - name of column to look for
     ///
     /// returns: usize The index of a column with the given name, panic if not exists
-    pub fn get_col_idx(&self, col_name: String) -> usize {
+    pub fn get_col_idx(&self, col_name: &str) -> usize {
         self.try_get_col_idx(col_name).expect("Column must exist")
     }
 
@@ -114,7 +114,7 @@ impl Schema {
     ///
     /// returns: Option<usize> The index of a column with the given name, `None` if missing
     ///
-    pub fn try_get_col_idx(&self, col_name: String) -> Option<usize> {
+    pub fn try_get_col_idx(&self, col_name: &str) -> Option<usize> {
         self.columns.iter().position(|col| *col.get_name() == col_name)
     }
 
