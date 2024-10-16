@@ -1,8 +1,12 @@
 mod cli;
 
+use std::{panic, process};
 use std::path::PathBuf;
+use std::rc::Rc;
+use std::sync::{Arc, Mutex};
 use clap::Parser;
 use rustyline::{Config, DefaultEditor};
+use rustyline::history::{FileHistory, History};
 use bustub_instance::BustubInstance;
 use bustub_instance::result_writer::ComfyTableWriter;
 use execution_common::CheckOptions;
@@ -17,12 +21,34 @@ const EMOJI_PROMPT: &'static str = "🛁> ";
 
 fn main() -> rustyline::Result<()> {
     let args = Args::parse();
-    let mut rl = DefaultEditor::with_config(
+
+    let file_history = FileHistory::with_config(
         Config::builder()
             .max_history_size(1024)?
             .auto_add_history(!args.disable_tty)
             .build()
-    )?;
+
+    );
+
+    let mut rl = Arc::new(Mutex::new(DefaultEditor::with_history(
+        Config::builder()
+            .max_history_size(1024)?
+            .auto_add_history(!args.disable_tty)
+            .build(),
+        file_history
+    )?));
+    if rl.lock().unwrap().load_history("history.txt").is_err() {
+        println!("No previous history.");
+    }
+
+    let rl_clone = rl.clone();
+    let orig_hook = panic::take_hook();
+    panic::set_hook(Box::new(move |panic_info| {
+        orig_hook(panic_info);
+        rl_clone.lock().unwrap().append_history("history.txt").expect("should append history");
+        process::exit(1);
+    }));
+
 
     let mut bustub = BustubInstance::from_file(PathBuf::from("test.db"), None);
 
@@ -61,7 +87,16 @@ fn main() -> rustyline::Result<()> {
 
             // TODO - Do we need this if as the line prompt should support it
             if !args.disable_tty {
-                query.push_str(rl.readline(line_prompt.as_str())?.as_str());
+                let res = rl.lock().unwrap().readline(line_prompt.as_str());
+
+                let res = match res {
+                    Ok(a) => Ok(a),
+                    Err(err) => {
+                        rl.lock().unwrap().append_history("history.txt").expect("should append history");
+                        Err(err)
+                    }
+                }?;
+                query.push_str(res.as_str());
 
                 if query.ends_with(";") || query.starts_with("\\") {
                     break;

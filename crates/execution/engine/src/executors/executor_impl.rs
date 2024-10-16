@@ -16,7 +16,7 @@ macro_rules! call_each_variant {
 }
 
 #[derive(Debug)]
-pub(crate) enum ExecutorImpl<E: Executor> {
+pub(crate) enum ExecutorImpl {
     // SeqScan,
     // IndexScan,
     // Insert(InsertPlan),
@@ -27,7 +27,7 @@ pub(crate) enum ExecutorImpl<E: Executor> {
     // NestedLoopJoin,
     // NestedIndexJoin,
     // HashJoin,
-    Filter(FilterExecutor<E>),
+    Filter(FilterExecutor),
     // Values(ValuesPlanNode),
     // Projection(ProjectionPlanNode),
     // Sort,
@@ -39,7 +39,7 @@ pub(crate) enum ExecutorImpl<E: Executor> {
 }
 
 
-impl<E: Executor> ExecutorMetadata for ExecutorImpl<E> {
+impl ExecutorMetadata for ExecutorImpl {
     fn get_output_schema(&self) -> Arc<Schema> {
         call_each_variant!(self, e, {
             e.get_output_schema()
@@ -53,7 +53,7 @@ impl<E: Executor> ExecutorMetadata for ExecutorImpl<E> {
     }
 }
 
-impl<E: Executor> Iterator for ExecutorImpl<E> {
+impl Iterator for ExecutorImpl {
     type Item = ExecutorItem;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -63,4 +63,4 @@ impl<E: Executor> Iterator for ExecutorImpl<E> {
     }
 }
 
-impl<E: Executor> Executor for ExecutorImpl<E> {}
+impl Executor for ExecutorImpl {}

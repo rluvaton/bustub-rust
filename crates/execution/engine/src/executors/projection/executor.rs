@@ -2,57 +2,59 @@ use crate::context::ExecutorContext;
 use crate::executors::{Executor, ExecutorItem, ExecutorMetadata, ExecutorRef};
 use catalog_schema::Schema;
 use expression::Expression;
-use planner::{FilterPlan, PlanNode};
+use planner::{FilterPlan, PlanNode, ProjectionPlanNode};
 use std::fmt;
 use std::fmt::Debug;
 use std::ops::Deref;
 use std::sync::Arc;
+use tuple::Tuple;
 
 #[must_use = "iterators are lazy and do nothing unless consumed"]
-pub struct FilterExecutor {
-
-
+pub struct ProjectionExecutor {
     /// The executor context in which the executor runs
     ctx: Arc<ExecutorContext>,
 
     // ----
 
     /** The filter plan node to be executed */
-    plan: FilterPlan,
+    plan: ProjectionPlanNode,
 
     /** The child executor from which tuples are obtained */
     child_executor: ExecutorRef,
 }
 
-pub(crate) fn create_filter(child_executor: ExecutorRef, plan: FilterPlan, ctx: Arc<ExecutorContext>) -> FilterExecutor {
-    FilterExecutor {
+pub(crate) fn create_projection(child_executor: ExecutorRef, plan: ProjectionPlanNode, ctx: Arc<ExecutorContext>) -> ProjectionExecutor {
+    ProjectionExecutor {
         plan,
         child_executor,
         ctx,
     }
 }
 
-impl Debug for FilterExecutor {
+impl Debug for ProjectionExecutor {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("Filter").field("iter", &self.child_executor).finish()
+        f.debug_struct("Projection").field("iter", &self.child_executor).finish()
     }
 }
 
 
-impl Iterator for FilterExecutor
+impl Iterator for ProjectionExecutor
 {
     type Item = ExecutorItem;
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
-        let filter_expr = self.plan.get_predicate();
-        let output_schema = self.child_executor.get_output_schema();
+        let (tuple, rid) = self.child_executor.next()?;
 
-        self.child_executor.find(move |(tuple, _) | {
-            let value = filter_expr.evaluate(tuple, output_schema.deref());
+        let values = self.plan.get_expressions()
+            .iter()
+            .map(|expr| expr.evaluate(&tuple, &*self.child_executor.get_output_schema().clone()))
+            .collect::<Vec<_>>();
 
-            value.try_into().is_ok_and(|val: Option<bool>| val.is_some_and(|b| b))
-        })
+        Some((
+            Tuple::from_value(values, &*self.plan.get_output_schema()),
+            rid
+        ))
     }
 
     #[inline]
@@ -62,7 +64,7 @@ impl Iterator for FilterExecutor
     }
 }
 
-impl ExecutorMetadata for FilterExecutor {
+impl<> ExecutorMetadata for ProjectionExecutor {
     fn get_output_schema(&self) -> Arc<Schema> {
         self.plan.get_output_schema()
     }
@@ -73,7 +75,4 @@ impl ExecutorMetadata for FilterExecutor {
 }
 
 
-
-impl Executor for FilterExecutor {
-
-}
+impl Executor for ProjectionExecutor {}

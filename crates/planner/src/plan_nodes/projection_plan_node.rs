@@ -47,9 +47,9 @@ impl ProjectionPlanNode {
     pub fn get_expressions(&self) -> &Vec<ExpressionRef> { &self.expressions }
 
     /** @return The child plan providing tuples to be deleted */
-    pub fn get_child_plan(&self) -> &PlanType {
+    pub fn get_child_plan(&self) -> PlanNodeRef {
         assert_eq!(self.children.len(), 1, "Projection should have exactly one child plan.");
-        &self.children[0]
+        self.children[0].clone()
     }
 
     pub fn infer_projection_schema(expressions: &[ExpressionRef]) -> Schema {

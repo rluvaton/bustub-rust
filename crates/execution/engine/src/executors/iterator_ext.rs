@@ -1,17 +1,26 @@
+use std::sync::Arc;
 use crate::context::ExecutorContext;
-use crate::executors::{create_filter, Executor, FilterExecutor};
-use planner::FilterPlan;
+use crate::executors::{create_filter, create_projection, Executor, ExecutorRef, FilterExecutor, ProjectionExecutor};
+use planner::{FilterPlan, ProjectionPlanNode};
 
-trait IteratorExt {
+pub trait IteratorExt {
     #[inline]
-    fn filter_exec<E>(self, plan: FilterPlan, ctx: ExecutorContext) -> FilterExecutor<Self>
-    where
-        Self: Sized + Executor,
+    fn filter_exec(self, plan: FilterPlan, ctx: Arc<ExecutorContext>) -> FilterExecutor;
+
+    #[inline]
+    fn projection_exec(self, plan: ProjectionPlanNode, ctx: Arc<ExecutorContext>) -> ProjectionExecutor;
+}
+
+impl  IteratorExt for Box<dyn Executor> {
+    #[inline]
+    fn filter_exec(self, plan: FilterPlan, ctx: Arc<ExecutorContext>) -> FilterExecutor
     {
         create_filter(self, plan, ctx)
     }
-}
 
-impl<E: Executor> IteratorExt for E {
-
+    #[inline]
+    fn projection_exec(self, plan: ProjectionPlanNode, ctx: Arc<ExecutorContext>) -> ProjectionExecutor
+    {
+        create_projection(self, plan, ctx)
+    }
 }

@@ -4,6 +4,7 @@ use planner::PlanType;
 use std::fmt::Display;
 use std::rc::Rc;
 use std::sync::Arc;
+use crate::executors::iterator_ext::IteratorExt;
 
 // Helper to avoid duplicating deref on each variant
 macro_rules! call_each_variant {
@@ -36,16 +37,22 @@ impl CreateExecutor for PlanType {
             // PlanType::Insert(_) => {}
             // PlanType::Delete(_) => {}
             // PlanType::Aggregation(_) => {}
-            // PlanType::Filter(f) => {
-            //     f.create_executor()
-            // },
+            PlanType::Filter(f) => {
+                let child = f.get_child_plan().create_executor(ctx.clone());
+
+                child.filter_exec(f.clone(), ctx.clone()).into_ref()
+            },
             // PlanType::Values(_) => {}
-            // PlanType::Projection(_) => {}
+            PlanType::Projection(d) => {
+                let child = d.get_child_plan().create_executor(ctx.clone());
+
+                child.projection_exec(d.clone(), ctx.clone()).into_ref()
+            }
             PlanType::MockScan(_) => {
                 MockScanExecutor::new(self, ctx).into_ref()
             },
             // PlanType::Window(_) => {}
-            _ => unimplemented!()
+            _ => unimplemented!("{:#?}", self)
         }
     }
 }
