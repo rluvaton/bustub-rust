@@ -1,10 +1,9 @@
-use std::fmt::{Debug, Display, Formatter};
-use std::sync::Arc;
+use crate::expression_type::ExpressionType;
+use crate::traits::{Expression, ExpressionRef};
 use catalog_schema::Schema;
 use data_types::{DBTypeId, Value};
+use std::fmt::{Debug, Display, Formatter};
 use tuple::Tuple;
-use crate::expression_type::ExpressionType;
-use crate::traits::{Expression, ExpressionRef, NO_CHILDREN};
 
 
 /** ArithmeticType represents the type of computation that we want to perform. */

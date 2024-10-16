@@ -7,7 +7,7 @@ use expression::ExpressionRef;
 use crate::expressions::traits::PlanExpression;
 
 impl PlanExpression for AggCallExpr {
-    fn plan<'a>(&self, children: Vec<Rc<PlanType>>, planner: &'a Planner<'a>) -> (String, ExpressionRef) {
+    fn plan<'a>(&self, children: &Vec<Rc<PlanType>>, planner: &'a Planner<'a>) -> (String, ExpressionRef) {
         todo!()
     }
 }
