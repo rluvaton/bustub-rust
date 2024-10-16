@@ -5,6 +5,8 @@ mod values_plan;
 mod window_plan_node;
 mod projection_plan_node;
 mod aggregation_plan_node;
+mod mock_scan_plan_node;
+mod seq_scan_plan_node;
 
 pub use plan_type::*;
 pub use window_plan_node::*;
@@ -13,4 +15,6 @@ pub use filter_plan::*;
 pub use values_plan::*;
 pub use projection_plan_node::*;
 pub use aggregation_plan_node::*;
+pub use mock_scan_plan_node::*;
+pub use seq_scan_plan_node::*;
 

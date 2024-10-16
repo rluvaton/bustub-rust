@@ -1,7 +1,6 @@
-use std::iter::Filter;
-use planner::FilterPlan;
 use crate::context::ExecutorContext;
-use crate::executors::{create_filter, Executor, ExecutorItem, FilterExecutor};
+use crate::executors::{create_filter, Executor, FilterExecutor};
+use planner::FilterPlan;
 
 trait IteratorExt {
     #[inline]

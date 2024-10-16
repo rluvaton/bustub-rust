@@ -3,6 +3,8 @@ use std::rc::Rc;
 use std::sync::Arc;
 use catalog_schema::Schema;
 use crate::plan_nodes::{AggregationPlanNode, FilterPlan, PlanNode, ProjectionPlanNode, ValuesPlanNode};
+use crate::plan_nodes::mock_scan_plan_node::MockScanPlanNode;
+use crate::plan_nodes::seq_scan_plan_node::SeqScanPlanNode;
 use crate::plan_nodes::window_plan_node::WindowFunctionPlanNode;
 use crate::statements::{DeletePlan, InsertPlan};
 
@@ -17,6 +19,8 @@ macro_rules! call_each_variant {
             PlanType::Window($name) => $func,
             PlanType::Projection($name) => $func,
             PlanType::Aggregation($name) => $func,
+            PlanType::MockScan($name) => $func,
+            PlanType::SeqScan($name) => $func,
             // Add match arms for other variants as necessary
         }
     };
@@ -26,7 +30,7 @@ macro_rules! call_each_variant {
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum PlanType {
-    // SeqScan,
+    SeqScan(SeqScanPlanNode),
     // IndexScan,
     Insert(InsertPlan),
     // Update,
@@ -42,7 +46,7 @@ pub enum PlanType {
     // Sort,
     // TopN,
     // TopNPerGroup,
-    // MockScan,
+    MockScan(MockScanPlanNode),
     // InitCheck,
     Window(WindowFunctionPlanNode)
 }

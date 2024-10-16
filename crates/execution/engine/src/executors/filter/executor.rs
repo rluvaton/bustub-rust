@@ -1,12 +1,12 @@
 use crate::context::ExecutorContext;
-use crate::executors::{Executor, ExecutorItem, ExecutorMetadata, ExecutorRef};
+use crate::executors::{Executor, ExecutorItem, ExecutorMetadata};
 use catalog_schema::Schema;
+use expression::Expression;
 use planner::{FilterPlan, PlanNode};
 use std::fmt;
 use std::fmt::Debug;
 use std::ops::Deref;
 use std::sync::Arc;
-use expression::Expression;
 
 #[must_use = "iterators are lazy and do nothing unless consumed"]
 pub struct FilterExecutor<E> {
