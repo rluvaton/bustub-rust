@@ -1,14 +1,13 @@
-use std::rc::Rc;
-use std::sync::Arc;
-use crate::plan_nodes::{FilterPlan, PlanNode, PlanNodeRef, PlanType, ProjectionPlanNode, ValuesPlanNode};
-use crate::traits::Plan;
-use crate::Planner;
-use binder::{Expression, SelectStatement, TableReferenceTypeImpl};
-use catalog_schema::Schema;
-use expression::ExpressionRef;
 use crate::expressions::PlanExpression;
+use crate::plan_nodes::{AggregationPlanNode, FilterPlan, PlanNode, PlanNodeRef, ProjectionPlanNode, ValuesPlanNode};
 use crate::statements::select::plan_aggregation::PlanAggregation;
 use crate::statements::select::plan_window::PlanWindow;
+use crate::traits::Plan;
+use crate::Planner;
+use binder::{Expression as BinderExpression, SelectStatement, TableReferenceTypeImpl};
+use catalog_schema::Schema;
+use expression::{ColumnValueExpression, Expression, ExpressionRef};
+use std::sync::Arc;
 
 impl Plan for SelectStatement {
     fn plan<'a>(&self, planner: &'a Planner<'a>)-> PlanNodeRef {
@@ -72,7 +71,21 @@ impl Plan for SelectStatement {
         // Plan DISTINCT as group agg
 
         if self.is_distinct {
-            unimplemented!();
+            let distinct_exprs = plan
+                .get_output_schema()
+                .get_columns()
+                .iter()
+                .enumerate()
+                .map(|(index, col)| ColumnValueExpression::new(0, index, col.get_type()).into_ref())
+                .collect::<Vec<_>>();
+
+            plan = AggregationPlanNode::new(
+                plan.get_output_schema(),
+                plan,
+                distinct_exprs,
+                vec![],
+                vec![],
+            ).into_ref();
         }
 
         // Plan ORDER BY

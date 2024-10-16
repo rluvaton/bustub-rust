@@ -2,7 +2,7 @@ use std::fmt::{Display, Formatter};
 use std::rc::Rc;
 use std::sync::Arc;
 use catalog_schema::Schema;
-use crate::plan_nodes::{FilterPlan, PlanNode, ProjectionPlanNode, ValuesPlanNode};
+use crate::plan_nodes::{AggregationPlanNode, FilterPlan, PlanNode, ProjectionPlanNode, ValuesPlanNode};
 use crate::plan_nodes::window_plan_node::WindowFunctionPlanNode;
 use crate::statements::{DeletePlan, InsertPlan};
 
@@ -16,6 +16,7 @@ macro_rules! call_each_variant {
             PlanType::Values($name) => $func,
             PlanType::Window($name) => $func,
             PlanType::Projection($name) => $func,
+            PlanType::Aggregation($name) => $func,
             // Add match arms for other variants as necessary
         }
     };
@@ -30,7 +31,7 @@ pub enum PlanType {
     Insert(InsertPlan),
     // Update,
     Delete(DeletePlan),
-    // Aggregation,
+    Aggregation(AggregationPlanNode),
     // Limit,
     // NestedLoopJoin,
     // NestedIndexJoin,
