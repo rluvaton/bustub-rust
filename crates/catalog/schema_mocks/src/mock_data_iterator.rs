@@ -1,4 +1,5 @@
 use data_types::Value;
+use generics::Shuffle;
 use rid::RID;
 use crate::MockTableName;
 
@@ -6,12 +7,24 @@ pub struct MockDataIterator {
     len: usize,
     cursor: usize,
     shuffled_idx: Vec<usize>,
-    f: Box<dyn Fn(usize)-> Vec<Value>>
+    f: Box<dyn Fn(usize) -> Vec<Value>>,
 }
 
 impl From<MockTableName> for MockDataIterator {
     fn from(value: MockTableName) -> Self {
-        todo!()
+        match value {
+            MockTableName::Table123 => {
+                Self {
+                    len: value.get_size_of(),
+                    cursor: 0,
+                    shuffled_idx: if value.is_shuffled() { (0..value.get_size_of()).shuffle() } else { vec![] },
+                    f: Box::new(|index| {
+                        vec![Value::from(index as i32)]
+                    })
+                }
+            }
+            _ => unimplemented!()
+        }
     }
 }
 impl Iterator for MockDataIterator {

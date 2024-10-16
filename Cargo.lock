@@ -272,6 +272,7 @@ dependencies = [
  "catalog_schema",
  "data_types",
  "error_utils",
+ "generics",
  "rid",
  "strum",
  "strum_macros",

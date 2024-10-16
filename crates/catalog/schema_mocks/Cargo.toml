@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+generics = {path = "../../utils/generics"}
 data_types = {path = "../../data_types"}
 error_utils = {path = "../../utils/error_utils"}
 catalog_schema = {path = "../schema"}
