@@ -220,6 +220,7 @@ dependencies = [
  "binder",
  "buffer_pool_manager",
  "catalog_schema",
+ "catalog_schema_mocks",
  "checkpoint_manager",
  "comfy-table",
  "common",
@@ -262,8 +263,19 @@ version = "0.1.0"
 dependencies = [
  "data_types",
  "error_utils",
+]
+
+[[package]]
+name = "catalog_schema_mocks"
+version = "0.1.0"
+dependencies = [
+ "catalog_schema",
+ "data_types",
+ "error_utils",
+ "rid",
  "strum",
  "strum_macros",
+ "tuple",
 ]
 
 [[package]]
@@ -598,6 +610,7 @@ dependencies = [
  "anyhow",
  "buffer_pool_manager",
  "catalog_schema",
+ "catalog_schema_mocks",
  "db_core",
  "error_utils",
  "execution_common",

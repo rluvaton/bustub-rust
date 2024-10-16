@@ -1,7 +1,8 @@
 use crate::context::ExecutorContext;
-use crate::executors::{CreateExecutor, ExecutorRef};
+use crate::executors::{Executor, ExecutorRef, MockScanExecutor};
 use planner::PlanType;
 use std::fmt::Display;
+use std::rc::Rc;
 use std::sync::Arc;
 
 // Helper to avoid duplicating deref on each variant
@@ -21,10 +22,30 @@ macro_rules! call_each_variant {
     };
 }
 
+pub(crate) trait CreateExecutor {
+    fn create_executor(self: Rc<Self>, ctx: Arc<ExecutorContext>) -> ExecutorRef;
+}
+
 impl CreateExecutor for PlanType {
-    fn create_executor(&self, ctx: Arc<ExecutorContext>) -> ExecutorRef {
-        call_each_variant!(self, p, {
-            p.create_executor(ctx)
-        })
+    fn create_executor(self: Rc<Self>, ctx: Arc<ExecutorContext>) -> ExecutorRef {
+        // call_each_variant!(self, p, {
+        //     p.create_executor(ctx)
+        // })
+        match &*self {
+            // PlanType::SeqScan(_) => {}
+            // PlanType::Insert(_) => {}
+            // PlanType::Delete(_) => {}
+            // PlanType::Aggregation(_) => {}
+            // PlanType::Filter(f) => {
+            //     f.create_executor()
+            // },
+            // PlanType::Values(_) => {}
+            // PlanType::Projection(_) => {}
+            PlanType::MockScan(_) => {
+                MockScanExecutor::new(self, ctx).into_ref()
+            },
+            // PlanType::Window(_) => {}
+            _ => unimplemented!()
+        }
     }
 }

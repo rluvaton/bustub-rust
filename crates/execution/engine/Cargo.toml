@@ -17,6 +17,8 @@ execution_common = {path = "../common"}
 recovery_log_manager = {path = "../../recovery/log_manager"}
 planner = {path = "../../planner"}
 catalog_schema = {path = "../../catalog/schema"}
+catalog_schema_mocks = {path = "../../catalog/schema_mocks"}
+
 expression = {path = "../expression"}
 
 error_utils = {path = "../../utils/error_utils"}

@@ -7,7 +7,7 @@ use tuple::Tuple;
 use crate::context::ExecutorContext;
 
 // TODO - avoid Rc
-pub(crate) type ExecutorRef<'a> = &'a mut Box<dyn Executor>;
+pub(crate) type ExecutorRef = Box<dyn Executor>;
 
 pub(crate) type ExecutorItem = (Tuple, RID);
 
@@ -25,9 +25,9 @@ pub(crate) trait ExecutorMetadata: Debug {
     fn get_context(&self) -> &ExecutorContext;
 }
 
-pub(crate) trait Executor: ExecutorMetadata + Iterator<Item = ExecutorItem> {
-}
+pub(crate) trait Executor: ExecutorMetadata + Iterator<Item = ExecutorItem> where Self: 'static {
 
-pub(crate) trait CreateExecutor {
-    fn create_executor(&self, ctx: Arc<ExecutorContext>) -> ExecutorRef;
+    fn into_ref(self) -> ExecutorRef where Self: Sized {
+        Box::new(self)
+    }
 }

@@ -2,7 +2,6 @@ use crate::instance::ddl::StatementHandler;
 use crate::result_writer::ResultWriter;
 use binder::{Binder, StatementTypeImpl};
 use buffer_pool_manager::BufferPoolManager;
-use catalog_schema::mocks::MockTableName;
 use checkpoint_manager::CheckpointManager;
 use db_core::catalog::Catalog;
 use db_core::concurrency::TransactionManager;
@@ -18,6 +17,7 @@ use std::collections::HashMap;
 use std::ops::Deref;
 use std::path::PathBuf;
 use std::sync::Arc;
+use catalog_schema_mocks::MockTableName;
 use transaction::{Transaction, TransactionManager as TransactionManagerTrait};
 
 const DEFAULT_BPM_SIZE: usize = 128;

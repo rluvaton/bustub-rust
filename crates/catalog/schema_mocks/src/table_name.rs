@@ -1,8 +1,10 @@
-use std::fmt::{Debug, Display, Formatter};
+use std::fmt::{Display, Formatter};
 use strum::IntoEnumIterator;
 use strum_macros::EnumIter;
+use catalog_schema::{Column, Schema};
 use data_types::DBTypeId;
-use crate::{Column, Schema};
+use crate::constants::*;
+use crate::MockDataIterator;
 
 #[derive(EnumIter)]
 pub enum MockTableName {
@@ -130,8 +132,37 @@ impl MockTableName {
         Schema::new(columns)
     }
 
+    pub fn get_size_of(&self) -> usize {
+        match self {
+            MockTableName::Table1 | MockTableName::Table2 | MockTableName::Table3 => 100,
+            MockTableName::TableTas2022 => TA_LIST_2022.len(),
+            MockTableName::TableTas2023 => TA_LIST_2023.len(),
+            MockTableName::TableTas2023Fall => TA_LIST_2023_FALL.len(),
+            MockTableName::AggInputSmall => 1000,
+            MockTableName::AggInputBig => 10000,
+            MockTableName::TableSchedule2022 | MockTableName::TableSchedule2023 => COURSE_ON_DATE.len(),
+            MockTableName::Table123 => 3,
+            MockTableName::Graph => GRAPH_NODE_CNT * GRAPH_NODE_CNT,
+            MockTableName::T1 | MockTableName::T41M | MockTableName::T51M | MockTableName::T61M | MockTableName::T7 => 1000000,
+            MockTableName::T8 => 10,
+            MockTableName::T9 => 10000000,
+            _ => 0
+        }
+    }
+
+    pub fn is_shuffled(&self) -> bool {
+        match self {
+            MockTableName::T1 => true,
+            _ => false,
+        }
+    }
+
     pub fn create_iter() -> MockTableNameIter {
         MockTableName::iter()
+    }
+
+    pub fn get_data_iter(self) -> MockDataIterator {
+        MockDataIterator::from(self)
     }
 }
 
@@ -145,8 +176,16 @@ impl TryFrom<String> for MockTableName {
     type Error = ();
 
     fn try_from(value: String) -> Result<Self, Self::Error> {
+        value.as_str().try_into()
+    }
+}
+
+impl<'a> TryFrom<&'a str> for MockTableName {
+    type Error = ();
+
+    fn try_from(value: &'a str) -> Result<Self, Self::Error> {
         MockTableName::iter()
-            .find(|table_name| table_name.get_table_name() == value.as_str())
+            .find(|table_name| table_name.get_table_name() == value)
             .ok_or(())
     }
 }

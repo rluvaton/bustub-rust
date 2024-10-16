@@ -23,6 +23,7 @@ error_utils = {path = "../utils/error_utils"}
 anyhow = "1.0.89"
 
 catalog_schema = {path = "../catalog/schema" }
+catalog_schema_mocks = {path = "../catalog/schema_mocks" }
 
 binder = {path = "../binder"}
 
