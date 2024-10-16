@@ -465,6 +465,7 @@ dependencies = [
 name = "data_types"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "error_utils",
 ]
 
@@ -594,10 +595,21 @@ dependencies = [
 name = "execution_engine"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "buffer_pool_manager",
+ "catalog_schema",
  "db_core",
+ "error_utils",
+ "execution_common",
+ "expression",
+ "lock_manager",
  "parking_lot",
+ "planner",
+ "recovery_log_manager",
+ "rid",
  "tracy-client",
+ "transaction",
+ "tuple",
 ]
 
 [[package]]

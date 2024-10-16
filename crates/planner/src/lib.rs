@@ -7,4 +7,4 @@ mod expressions;
 mod constants;
 
 pub use planner::Planner;
-use plan_nodes::*;
+pub use plan_nodes::*;

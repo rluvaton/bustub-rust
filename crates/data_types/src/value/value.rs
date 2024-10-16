@@ -181,5 +181,15 @@ impl From<i32> for Value {
     }
 }
 
+impl TryInto<Option<bool>> for Value {
+    type Error = error_utils::anyhow::Error;
+
+    fn try_into(self) -> Result<Option<bool>, Self::Error> {
+        match self.value {
+            DBTypeIdImpl::BOOLEAN(b) => Ok(b.get_as_bool()),
+            _ => Err(error_utils::anyhow!("{} cant be cast to BooleanType", self.value.db_type_id()))
+        }
+    }
+}
 
 
