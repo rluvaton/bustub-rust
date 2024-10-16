@@ -8,10 +8,10 @@ use db_core::concurrency::TransactionManager;
 use disk_storage::{DefaultDiskManager, DiskManager, DiskManagerUnlimitedMemory};
 use error_utils::ToAnyhow;
 use execution_common::CheckOptions;
-use execution_engine::ExecutionEngine;
+use execution_engine::{ExecutionEngine, ExecutorContext};
 use lock_manager::LockManager;
 use parking_lot::Mutex;
-use planner::Planner;
+use planner::{PlanNode, Planner};
 use recovery_log_manager::LogManager;
 use std::collections::HashMap;
 use std::ops::Deref;
@@ -32,6 +32,8 @@ pub struct BustubInstance {
     pub(super) log_manager: Option<Arc<LogManager>>,
     pub(super) checkpoint_manager: Option<Arc<CheckpointManager>>,
     pub(super) execution_engine: Arc<ExecutionEngine>,
+
+    // TODO - remove double arc
     pub(super) catalog: Arc<Mutex<Catalog>>,
 
     pub(super) session_variables: HashMap<String, String>,
@@ -254,12 +256,49 @@ impl BustubInstance {
 
             // Execute the query.
             // TODO - add executor
+            let exec_ctx = self.make_executor_context(txn.clone(), is_delete);
+            // TODO - add check options
+            let result = self.execution_engine.execute(plan.clone(), txn.clone(), exec_ctx)?;
 
-            unimplemented!()
+            // Return the result set as a vector of string.
+            let schema = plan.get_output_schema();
+
+
+            // Generate header for the result set.
+            writer.begin_table(false);
+
+            writer.begin_header();
+            for col in schema.get_columns() {
+                writer.write_header_cell(col.get_name());
+            }
+            writer.end_header();
+
+            // Transforming result set into strings
+            for tuple in result {
+                writer.begin_row();
+                for i in 0..schema.get_column_count() {
+                    writer.write_cell(&tuple.get_value(&schema, i).to_string());
+                }
+                writer.end_row();
+            }
+            writer.end_table();
         }
 
 
         Ok(is_successful)
+    }
+
+    fn make_executor_context(&self, txn: Arc<Transaction>, is_modify: bool) -> Arc<ExecutorContext> {
+        Arc::new(
+            ExecutorContext::new(
+                txn,
+                self.catalog.clone(),
+                self.buffer_pool_manager.clone(),
+                self.txn_manager.clone(),
+                self.lock_manager.clone(),
+                is_modify
+            )
+        )
     }
 
 

@@ -7,6 +7,7 @@ use planner::PlanNodeRef;
 use transaction::Transaction;
 use tuple::Tuple;
 use crate::context::ExecutorContext;
+use crate::executors::CreateExecutor;
 
 /// The ExecutionEngine class executes query plans.
 pub struct ExecutionEngine {
@@ -41,6 +42,14 @@ impl ExecutionEngine {
         // assert_eq!(txn, exec_ctx.get_transaction(), "Broken Invariant")
 
         // Construct the executor for the abstract plan node
-        todo!()
+        let ex = plan.create_executor(exec_ctx);
+
+        let res = ex
+            .map(|item| item.0)
+            .collect::<Vec<Tuple>>();
+
+        // TODO - perform checks
+
+        Ok(res)
     }
 }
