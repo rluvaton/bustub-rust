@@ -11,6 +11,5 @@ execution_common = {path = "../../crates/execution/common"}
 
 
 clap = { version = "4.5.16", features = ["derive"] }
-shellfish = { version = "0.10.0",  features = ["rustyline", "clap"] }
 rustyline = "14.0.0"
 

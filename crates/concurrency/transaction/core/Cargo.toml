@@ -6,14 +6,7 @@ edition = "2021"
 [dependencies]
 
 common = {path = "../../../common"}
-pages = {path = "../../../storage/pages"}
-disk_storage = {path = "../../../storage/disk"}
 tuple = {path = "../../../storage/table/tuple"}
-
-buffer_common = {path = "../../../buffer/common"}
-buffer_pool_manager = {path = "../../../buffer/manager"}
-
-recovery_log_manager = {path = "../../../recovery/log_manager"}
 expression = {path = "../../../execution/expression"}
 rid = {path = "../../../rid"}
 

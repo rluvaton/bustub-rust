@@ -126,29 +126,14 @@ name = "binder"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "buffer_common",
- "buffer_pool_manager",
  "catalog_schema",
- "checkpoint_manager",
  "common",
  "data_types",
  "db_core",
- "disk_storage",
  "error_utils",
- "execution_common",
- "execution_engine",
- "extendible_hash_table",
- "hashing_common",
- "pages",
  "parking_lot",
- "rand 0.8.5",
- "recovery_log_manager",
- "rid",
  "sqlparser",
  "thiserror",
- "tracy-client",
- "transaction",
- "zipf",
 ]
 
 [[package]]
@@ -193,8 +178,6 @@ dependencies = [
  "buffer_common",
  "buffer_pool_manager",
  "clap",
- "common",
- "db_core",
  "disk_storage",
  "pages",
  "parking_lot",
@@ -213,7 +196,6 @@ name = "buffer_pool_manager"
 version = "0.1.0"
 dependencies = [
  "buffer_common",
- "comfy-table",
  "common",
  "derive_builder",
  "disk_storage",
@@ -222,7 +204,6 @@ dependencies = [
  "pages",
  "parking_lot",
  "rand 0.8.5",
- "rand_chacha",
  "recovery_log_manager",
  "stats",
  "tempdir",
@@ -237,11 +218,9 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "binder",
- "buffer_common",
  "buffer_pool_manager",
  "catalog_schema",
  "checkpoint_manager",
- "clap",
  "comfy-table",
  "common",
  "data_types",
@@ -250,19 +229,13 @@ dependencies = [
  "error_utils",
  "execution_common",
  "execution_engine",
- "extendible_hash_table",
- "hashing_common",
  "index",
  "lock_manager",
- "pages",
  "parking_lot",
  "planner",
- "rand 0.8.5",
  "recovery_log_manager",
- "rid",
  "tracy-client",
  "transaction",
- "zipf",
 ]
 
 [[package]]
@@ -287,12 +260,10 @@ checksum = "428d9aa8fbc0670b7b8d6030a7fadd0f86151cae55e4dbbece15f3780a3dfaf3"
 name = "catalog_schema"
 version = "0.1.0"
 dependencies = [
- "anyhow",
  "data_types",
  "error_utils",
  "strum",
  "strum_macros",
- "thiserror",
 ]
 
 [[package]]
@@ -422,7 +393,6 @@ dependencies = [
 name = "common"
 version = "0.1.0"
 dependencies = [
- "error_utils",
  "parking_lot",
 ]
 
@@ -502,14 +472,9 @@ dependencies = [
 name = "db_core"
 version = "0.1.0"
 dependencies = [
- "buffer_common",
  "buffer_pool_manager",
  "catalog_schema",
  "common",
- "data_types",
- "error_utils",
- "extendible_hash_table",
- "hashing_common",
  "index",
  "lock_manager",
  "pages",
@@ -520,7 +485,6 @@ dependencies = [
  "tempdir",
  "thiserror",
  "transaction",
- "tuple",
 ]
 
 [[package]]
@@ -613,12 +577,9 @@ version = "0.1.0"
 dependencies = [
  "bit-vec",
  "buffer_common",
- "common",
  "data_structures",
- "pages",
  "parking_lot",
  "rand 0.8.5",
- "rand_chacha",
  "tracy-client",
 ]
 
@@ -633,18 +594,9 @@ dependencies = [
 name = "execution_engine"
 version = "0.1.0"
 dependencies = [
- "buffer_common",
  "buffer_pool_manager",
- "checkpoint_manager",
- "common",
  "db_core",
- "disk_storage",
- "extendible_hash_table",
- "hashing_common",
- "pages",
  "parking_lot",
- "recovery_log_manager",
- "rid",
  "tracy-client",
 ]
 
@@ -773,8 +725,6 @@ dependencies = [
  "buffer_pool_manager",
  "catalog_schema",
  "clap",
- "common",
- "db_core",
  "disk_storage",
  "extendible_hash_table",
  "hashing_common",
@@ -784,7 +734,6 @@ dependencies = [
  "rand 0.8.5",
  "rid",
  "tracy-client",
- "zipf",
 ]
 
 [[package]]
@@ -831,7 +780,6 @@ checksum = "b9e0384b61958566e926dc50660321d12159025e767c18e043daf26b70104c39"
 name = "index"
 version = "0.1.0"
 dependencies = [
- "buffer_common",
  "buffer_pool_manager",
  "catalog_schema",
  "common",
@@ -839,9 +787,7 @@ dependencies = [
  "error_utils",
  "extendible_hash_table",
  "hashing_common",
- "parking_lot",
  "rid",
- "thiserror",
  "transaction",
  "tuple",
 ]
@@ -1136,26 +1082,13 @@ checksum = "bda66fc9667c18cb2758a2ac84d1167245054bcf85d5d1aaa6923f45801bdd02"
 name = "planner"
 version = "0.1.0"
 dependencies = [
- "anyhow",
  "binder",
- "buffer_common",
- "buffer_pool_manager",
  "catalog_schema",
- "checkpoint_manager",
  "common",
  "data_types",
  "db_core",
- "disk_storage",
- "error_utils",
- "execution_common",
- "execution_engine",
  "expression",
- "index",
- "lock_manager",
- "pages",
  "parking_lot",
- "recovery_log_manager",
- "transaction",
 ]
 
 [[package]]
@@ -1539,20 +1472,7 @@ dependencies = [
  "clap",
  "execution_common",
  "rustyline",
- "shellfish",
  "transaction",
-]
-
-[[package]]
-name = "shellfish"
-version = "0.10.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4b6538aba754b3da0c477bf37f985452fbfbabd0665c29ac0f0e52b82cdb1b09"
-dependencies = [
- "clap",
- "rustyline",
- "thiserror",
- "yansi",
 ]
 
 [[package]]
@@ -1638,12 +1558,10 @@ dependencies = [
  "buffer_common",
  "buffer_pool_manager",
  "common",
- "data_types",
  "lock_manager",
  "pages",
  "parking_lot",
  "rid",
- "thiserror",
  "transaction",
  "tuple",
 ]
@@ -1785,15 +1703,10 @@ name = "transaction"
 version = "0.1.0"
 dependencies = [
  "atomic",
- "buffer_common",
- "buffer_pool_manager",
  "bytemuck",
  "common",
- "disk_storage",
  "expression",
- "pages",
  "parking_lot",
- "recovery_log_manager",
  "rid",
  "tuple",
 ]
@@ -2023,12 +1936,6 @@ name = "windows_x86_64_msvc"
 version = "0.52.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "589f6da84c646204747d1270a2a5661ea66ed1cced2631d546fdfb155959f9ec"
-
-[[package]]
-name = "yansi"
-version = "1.0.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cfe53a6657fd280eaa890a3bc59152892ffa3e30101319d168b781ed6529b049"
 
 [[package]]
 name = "zerocopy"

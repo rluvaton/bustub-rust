@@ -35,3 +35,6 @@ members = [
 
 [profile.bench]
 debug = true
+
+[workspace.metadata.cargo-machete]
+ignored = ["tracy-client"]

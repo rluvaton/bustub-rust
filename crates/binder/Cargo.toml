@@ -5,33 +5,14 @@ edition = "2021"
 
 [dependencies]
 parking_lot = "0.12.3"
-rand = "0.8"
-zipf = "7"
-
-# Profiling
-tracy-client = { version = "0.17.3", default-features = false }
 
 db_core = {path = "../db_core" }
 common = {path = "../common"}
-pages = {path = "../storage/pages"}
-disk_storage = {path = "../storage/disk"}
-buffer_common = {path = "../buffer/common"}
-buffer_pool_manager = {path = "../buffer/manager"}
-recovery_log_manager = {path = "../recovery/log_manager"}
-checkpoint_manager = {path = "../recovery/checkpoint_manager"}
-execution_common = {path = "../execution/common"}
-execution_engine = {path = "../execution/engine"}
 data_types = {path = "../data_types"}
-transaction = {path = "../concurrency/transaction/core"}
 error_utils = {path = "../utils/error_utils"}
 catalog_schema = {path = "../catalog/schema" }
 anyhow = "1.0.89"
 thiserror = "1.0.64"
-
-
-extendible_hash_table = {path = "../hashing/extendible_hash_table"}
-hashing_common = {path = "../hashing/common"}
-rid = {path = "../rid"}
 
 sqlparser = "0.51.0"
 

@@ -10,23 +10,12 @@ parking_lot = "0.12.3"
 tracy-client = { version = "0.17.3", default-features = false }
 
 db_core = {path = "../../db_core" }
-common = {path = "../../common"}
-pages = {path = "../../storage/pages"}
-disk_storage = {path = "../../storage/disk"}
-buffer_common = {path = "../../buffer/common"}
 buffer_pool_manager = {path = "../../buffer/manager"}
-recovery_log_manager = {path = "../../recovery/log_manager"}
-checkpoint_manager = {path = "../../recovery/checkpoint_manager"}
-
-extendible_hash_table = {path = "../../hashing/extendible_hash_table"}
-hashing_common = {path = "../../hashing/common"}
-rid = {path = "../../rid"}
 
 [profile.bench]
 debug = true
 
 [features]
 default = []
-statistics = ["buffer_pool_manager/statistics", "extendible_hash_table/statistics"]
-tracing = ["tracy-client/enable", "extendible_hash_table/tracing", "buffer_pool_manager/tracing"]
+tracing = ["tracy-client/enable"]
 tracing-memory-allocation = ["tracing"]

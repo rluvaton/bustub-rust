@@ -4,19 +4,11 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-clap = { version = "4.5.16", features = ["derive"] }
 parking_lot = "0.12.3"
-rand = "0.8"
-zipf = "7"
-
-# Profiling
-tracy-client = { version = "0.17.3", default-features = false }
 
 db_core = {path = "../db_core" }
 common = {path = "../common"}
-pages = {path = "../storage/pages"}
 disk_storage = {path = "../storage/disk"}
-buffer_common = {path = "../buffer/common"}
 buffer_pool_manager = {path = "../buffer/manager"}
 recovery_log_manager = {path = "../recovery/log_manager"}
 checkpoint_manager = {path = "../recovery/checkpoint_manager"}
@@ -34,13 +26,14 @@ catalog_schema = {path = "../catalog/schema" }
 
 binder = {path = "../binder"}
 
-
-
-extendible_hash_table = {path = "../hashing/extendible_hash_table"}
-hashing_common = {path = "../hashing/common"}
-rid = {path = "../rid"}
-
 comfy-table = "7.1.1"
+
+
+# Profiling
+tracy-client = { version = "0.17.3", default-features = false }
+
+[package.metadata.cargo-machete]
+ignored = ["anyhow"]
 
 [profile.bench]
 debug = true
@@ -50,6 +43,6 @@ default = ["checkpoint_manager"]
 checkpoint_manager = []
 lock_manager = ["db_core/lock_manager"]
 
-statistics = ["buffer_pool_manager/statistics", "extendible_hash_table/statistics"]
-tracing = ["tracy-client/enable", "extendible_hash_table/tracing", "buffer_pool_manager/tracing"]
+statistics = ["buffer_pool_manager/statistics"]
+tracing = ["tracy-client/enable", "buffer_pool_manager/tracing"]
 tracing-memory-allocation = ["tracing"]
