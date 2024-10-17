@@ -12,4 +12,6 @@ execution_common = {path = "../../crates/execution/common"}
 
 clap = { version = "4.5.16", features = ["derive"] }
 rustyline = "14.0.0"
+parking_lot = "0.12.3"
+
 
