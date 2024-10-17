@@ -33,8 +33,8 @@ impl Into<Value> for TimestampType {
     }
 }
 
-impl From<TimestampType> for VarcharType {
-    fn from(value: TimestampType) -> VarcharType {
+impl From<&TimestampType> for VarcharType {
+    fn from(value: &TimestampType) -> VarcharType {
         if value.is_null() {
             return VarcharType::default();
         }

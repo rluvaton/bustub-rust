@@ -182,10 +182,10 @@ impl From<i32> for Value {
 }
 
 
-impl Into<VarcharType> for Value {
-    fn into(self) -> VarcharType {
-        run_on_impl!(self.value, v, {
-                v.into()
+impl From<&Value> for VarcharType {
+    fn from(v: &Value) -> VarcharType {
+        run_on_impl!(&v.value, v, {
+                VarcharType::from(v)
         })
 
     }

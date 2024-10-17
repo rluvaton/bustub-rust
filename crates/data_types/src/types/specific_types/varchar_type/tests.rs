@@ -99,7 +99,9 @@ mod tests {
     #[test]
     fn serialize_deserialize_null() {
         let mut storage = [0u8; 10000];
-        let null = VarcharType::from(None);
+
+        let none_underlying: Option<String> = None;
+        let null = VarcharType::from(none_underlying);
 
         assert_eq!(null.is_null(), true);
 

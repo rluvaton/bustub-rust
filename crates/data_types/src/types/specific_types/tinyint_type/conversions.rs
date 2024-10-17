@@ -33,53 +33,53 @@ impl Into<Value> for TinyIntType {
     }
 }
 
-impl Into<SmallIntType> for TinyIntType {
-    fn into(self) -> SmallIntType {
-        if self.is_null() {
+impl From<&TinyIntType> for SmallIntType {
+    fn from(v: &TinyIntType) -> SmallIntType {
+        if v.is_null() {
             return SmallIntType::default().into();
         }
 
-        SmallIntType::new(self.value as SmallIntUnderlyingType).into()
+        SmallIntType::new(v.value as SmallIntUnderlyingType).into()
     }
 }
 
-impl Into<IntType> for TinyIntType {
-    fn into(self) -> IntType {
-        if self.is_null() {
+impl From<&TinyIntType> for IntType {
+    fn from(v: &TinyIntType) -> IntType {
+        if v.is_null() {
             return IntType::default().into();
         }
 
-        IntType::new(self.value as IntUnderlyingType).into()
+        IntType::new(v.value as IntUnderlyingType).into()
     }
 }
 
-impl Into<BigIntType> for TinyIntType {
-    fn into(self) -> BigIntType {
-        if self.is_null() {
+impl From<&TinyIntType> for BigIntType {
+    fn from(v: &TinyIntType) -> BigIntType {
+        if v.is_null() {
             return BigIntType::default().into();
         }
 
-        BigIntType::new(self.value as BigIntUnderlyingType).into()
+        BigIntType::new(v.value as BigIntUnderlyingType).into()
     }
 }
 
-impl Into<DecimalType> for TinyIntType {
-    fn into(self) -> DecimalType {
-        if self.is_null() {
+impl From<&TinyIntType> for DecimalType {
+    fn from(v: &TinyIntType) -> DecimalType {
+        if v.is_null() {
             return DecimalType::default();
         }
 
-        DecimalType::new(self.value as DecimalUnderlyingType)
+        DecimalType::new(v.value as DecimalUnderlyingType)
     }
 }
 
-impl Into<VarcharType> for TinyIntType {
-    fn into(self) -> VarcharType {
-        if self.is_null() {
+impl From<&TinyIntType> for VarcharType {
+    fn from(v: &TinyIntType) -> VarcharType {
+        if v.is_null() {
             return VarcharType::default();
         }
 
-        VarcharType::from(self.value.to_string())
+        VarcharType::from(v.value.to_string())
     }
 }
 

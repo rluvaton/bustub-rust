@@ -31,10 +31,10 @@ impl Into<DBTypeIdImpl> for BigIntType {
     }
 }
 
-impl TryFrom<BigIntType> for TinyIntType {
+impl TryFrom<&BigIntType> for TinyIntType {
     type Error = NumericConversionError;
 
-    fn try_from(value: BigIntType) -> Result<TinyIntType, Self::Error> {
+    fn try_from(value: &BigIntType) -> Result<TinyIntType, Self::Error> {
         if value.is_null() {
             return Ok(TinyIntType::default().into());
         }
@@ -45,10 +45,10 @@ impl TryFrom<BigIntType> for TinyIntType {
     }
 }
 
-impl TryFrom<BigIntType> for SmallIntType {
+impl TryFrom<&BigIntType> for SmallIntType {
     type Error = NumericConversionError;
 
-    fn try_from(value: BigIntType) -> Result<SmallIntType, Self::Error> {
+    fn try_from(value: &BigIntType) -> Result<SmallIntType, Self::Error> {
         if value.is_null() {
             return Ok(SmallIntType::default().into());
         }
@@ -59,10 +59,10 @@ impl TryFrom<BigIntType> for SmallIntType {
     }
 }
 
-impl TryFrom<BigIntType> for IntType {
+impl TryFrom<&BigIntType> for IntType {
     type Error = NumericConversionError;
 
-    fn try_from(value: BigIntType) -> Result<IntType, Self::Error> {
+    fn try_from(value: &BigIntType) -> Result<IntType, Self::Error> {
         if value.is_null() {
             return Ok(IntType::default().into());
         }
@@ -73,8 +73,8 @@ impl TryFrom<BigIntType> for IntType {
     }
 }
 
-impl From<BigIntType> for DecimalType {
-    fn from(value: BigIntType) -> DecimalType {
+impl From<&BigIntType> for DecimalType {
+    fn from(value: &BigIntType) -> DecimalType {
         if value.is_null() {
             return DecimalType::default();
         }
@@ -83,8 +83,8 @@ impl From<BigIntType> for DecimalType {
     }
 }
 
-impl From<BigIntType> for VarcharType {
-    fn from(value: BigIntType) -> VarcharType {
+impl From<&BigIntType> for VarcharType {
+    fn from(value: &BigIntType) -> VarcharType {
         if value.is_null() {
             return VarcharType::default();
         }

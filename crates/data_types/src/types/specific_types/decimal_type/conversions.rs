@@ -34,69 +34,69 @@ impl Into<Value> for DecimalType {
     }
 }
 
-impl Into<VarcharType> for DecimalType {
-    fn into(self) -> VarcharType {
-        if self.is_null() {
+impl From<&DecimalType> for VarcharType {
+    fn from(v: &DecimalType) -> VarcharType {
+        if v.is_null() {
             return VarcharType::default()
         }
 
-        VarcharType::from(self.value.to_string())
+        VarcharType::from(v.value.to_string())
     }
 }
 
-impl TryInto<TinyIntType> for DecimalType {
+impl TryFrom<&DecimalType> for TinyIntType {
     type Error = NumericConversionError;
 
-    fn try_into(self) -> Result<TinyIntType, Self::Error> {
-        if self.is_null() {
+    fn try_from(v: &DecimalType) -> Result<TinyIntType, Self::Error> {
+        if v.is_null() {
             return Ok(TinyIntType::default().into());
         }
 
-        return_error_on_out_of_range!(TinyIntType, self.value, DecimalUnderlyingType);
+        return_error_on_out_of_range!(TinyIntType, v.value, DecimalUnderlyingType);
 
-        Ok(TinyIntType::new(self.value as TinyIntUnderlyingType).into())
+        Ok(TinyIntType::new(v.value as TinyIntUnderlyingType).into())
     }
 }
 
-impl TryInto<SmallIntType> for DecimalType {
+impl TryFrom<&DecimalType> for SmallIntType {
     type Error = NumericConversionError;
 
-    fn try_into(self) -> Result<SmallIntType, Self::Error> {
-        if self.is_null() {
+    fn try_from(v: &DecimalType) -> Result<SmallIntType, Self::Error> {
+        if v.is_null() {
             return Ok(SmallIntType::default().into());
         }
 
-        return_error_on_out_of_range!(SmallIntType, self.value, DecimalUnderlyingType);
+        return_error_on_out_of_range!(SmallIntType, v.value, DecimalUnderlyingType);
 
-        Ok(SmallIntType::new(self.value as SmallIntUnderlyingType).into())
+        Ok(SmallIntType::new(v.value as SmallIntUnderlyingType).into())
     }
 }
 
-impl TryInto<IntType> for DecimalType {
+impl TryFrom<&DecimalType> for IntType {
     type Error = NumericConversionError;
 
-    fn try_into(self) -> Result<IntType, Self::Error> {
-        if self.is_null() {
+    fn try_from(v: &DecimalType) -> Result<IntType, Self::Error> {
+        if v.is_null() {
             return Ok(IntType::default().into());
         }
 
-        return_error_on_out_of_range!(IntType, self.value, DecimalUnderlyingType);
+        return_error_on_out_of_range!(IntType, v.value, DecimalUnderlyingType);
 
-        Ok(IntType::new(self.value as IntUnderlyingType).into())
+        Ok(IntType::new(v.value as IntUnderlyingType).into())
     }
 }
 
-impl TryInto<BigIntType> for DecimalType {
+impl TryFrom<&DecimalType> for BigIntType {
     type Error = NumericConversionError;
 
-    fn try_into(self) -> Result<BigIntType, Self::Error> {
-        if self.is_null() {
+    fn try_from(v: &DecimalType) -> Result<BigIntType, Self::Error> {
+        if v.is_null() {
             return Ok(BigIntType::default().into());
         }
 
-        return_error_on_out_of_range!(BigIntType, self.value, DecimalUnderlyingType);
+        return_error_on_out_of_range!(BigIntType, v.value, DecimalUnderlyingType);
 
-        Ok(BigIntType::new(self.value as BigIntUnderlyingType).into())
+        Ok(BigIntType::new(v.value as BigIntUnderlyingType).into())
     }
 }
 

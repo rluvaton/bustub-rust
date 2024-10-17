@@ -59,24 +59,20 @@ impl PartialEq<TinyIntType> for VarcharType {
 
 impl PartialEq<BooleanType> for VarcharType {
     fn eq(&self, other: &BooleanType) -> bool {
-        let other: VarcharType = other.into();
-
-        self.eq(&other)
+        self.eq(&VarcharType::from(other))
     }
 }
 
 impl PartialEq<Value> for VarcharType {
     fn eq(&self, other: &Value) -> bool {
-        let other: VarcharType = other.into();
-
-        self.eq(&other)
+        self.eq(&VarcharType::from(other))
     }
 }
 
 impl PartialEq<Option<VarcharUnderlyingType>> for VarcharType {
     fn eq(&self, other: &Option<VarcharUnderlyingType>) -> bool {
         if let Some(other) = other {
-            self.is_null() == false && other == self.value
+            self.is_null() == false && other == &self.value
         } else {
             self.is_null()
         }
@@ -86,7 +82,7 @@ impl PartialEq<Option<VarcharUnderlyingType>> for VarcharType {
 impl PartialEq<Option<&str>> for VarcharType {
     fn eq(&self, other: &Option<&str>) -> bool {
         if let Some(other) = other {
-            self.is_null() == false && other == self.value.as_str()
+            self.is_null() == false && other == &self.value.as_str()
         } else {
             self.is_null()
         }
@@ -96,7 +92,7 @@ impl PartialEq<Option<&str>> for VarcharType {
 impl PartialOrd for VarcharType {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         if self.is_null() || other.is_null() {
-            return self.len.partial_cmp(other.len)
+            return self.len.partial_cmp(&other.len)
         }
         self.value.partial_cmp(&other.value)
     }
@@ -179,7 +175,7 @@ impl Eq for VarcharType {}
 impl Ord for VarcharType {
     fn cmp(&self, other: &Self) -> Ordering {
         if self.is_null() || other.is_null() {
-            return self.len.cmp(other.len)
+            return self.len.cmp(&other.len)
         }
         self.value.cmp(&other.value)
     }

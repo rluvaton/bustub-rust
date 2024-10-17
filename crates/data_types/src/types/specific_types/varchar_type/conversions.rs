@@ -1,5 +1,5 @@
 use crate::types::{ComparisonDBTypeTrait, ConversionDBTypeTrait, DBTypeId, DBTypeIdImpl, DecimalType, DecimalUnderlyingType, IntType, IntUnderlyingType, SmallIntType, SmallIntUnderlyingType, StorageDBTypeTrait, TinyIntType, TinyIntUnderlyingType};
-use crate::{assert_in_range, return_error_on_out_of_range, BigIntType, BigIntUnderlyingType, BooleanType, TimestampType, VarcharType, BUSTUB_VALUE_NULL};
+use crate::{assert_in_range, return_error_on_out_of_range, BigIntType, BigIntUnderlyingType, BooleanType, TimestampType, Value, VarcharType, BUSTUB_VALUE_NULL};
 use error_utils::anyhow::anyhow;
 use error_utils::ToAnyhowResult;
 use crate::types::errors::{InnerFromStringConversionError, NumericConversionError};
@@ -62,48 +62,54 @@ impl Into<DBTypeIdImpl> for VarcharType {
     }
 }
 
-impl TryInto<DecimalType> for VarcharType {
+impl From<&VarcharType> for VarcharType {
+    fn from(value: &VarcharType) -> Self {
+        value.clone()
+    }
+}
+
+impl TryFrom<&VarcharType> for DecimalType {
     type Error = InnerFromStringConversionError;
 
-    fn try_into(self) -> Result<DecimalType, Self::Error> {
-        if self.is_null() {
+    fn try_from(v: &VarcharType) -> Result<DecimalType, Self::Error> {
+        if v.is_null() {
             return Ok(DecimalType::default().into());
         }
 
-        self.value.parse::<DecimalUnderlyingType>()
+        v.value.parse::<DecimalUnderlyingType>()
             .map(|value| DecimalType::from(value))
             .map_err(|err| InnerFromStringConversionError::UnableToConvert {
-                value: self.value.clone(),
+                value: v.value.clone(),
                 dest_type: DBTypeId::DECIMAL,
             })
     }
 }
 
-impl TryInto<BooleanType> for VarcharType {
+impl TryFrom<&VarcharType> for BooleanType {
     type Error = InnerFromStringConversionError;
 
-    fn try_into(self) -> Result<BooleanType, Self::Error> {
-        if self.is_null() {
+    fn try_from(v: &VarcharType) -> Result<BooleanType, Self::Error> {
+        if v.is_null() {
             return Ok(BooleanType::default().into());
         }
 
-        if self.value == "true" || self.value == "TRUE" || self.value == "1" {
+        if v.value == "true" || v.value == "TRUE" || v.value == "1" {
             Ok(BooleanType::from(true))
-        } else if self.value == "false" || self.value == "FALSE" || self.value == "0" {
+        } else if v.value == "false" || v.value == "FALSE" || v.value == "0" {
             Ok(BooleanType::from(false))
         } else {
             Err(InnerFromStringConversionError::UnableToConvert {
-                value: self.value,
+                value: v.value.clone(),
                 dest_type: DBTypeId::BOOLEAN,
             })
         }
     }
 }
-impl TryInto<TimestampType> for VarcharType {
+impl TryFrom<&VarcharType> for TimestampType {
     type Error = InnerFromStringConversionError;
 
-    fn try_into(self) -> Result<TimestampType, Self::Error> {
-        if self.is_null() {
+    fn try_from(v: &VarcharType) -> Result<TimestampType, Self::Error> {
+        if v.is_null() {
             return Ok(TimestampType::default().into());
         }
 
@@ -111,84 +117,108 @@ impl TryInto<TimestampType> for VarcharType {
     }
 }
 
-impl TryInto<TinyIntType> for VarcharType {
+impl TryFrom<&VarcharType> for TinyIntType {
     type Error = InnerFromStringConversionError;
 
-    fn try_into(self) -> Result<TinyIntType, Self::Error> {
-        let val: BigIntType = self.try_into()
-            .map_err(|_| {
+    fn try_from(v: &VarcharType) -> Result<TinyIntType, Self::Error> {
+        let val: Result<BigIntType, Self::Error> = BigIntType::try_from(v);
+
+        let val = match &val {
+            Ok(v) => v,
+            Err(err) => {
+                return Err(match err {
+                    InnerFromStringConversionError::UnableToConvert { value, .. } => {
+                        InnerFromStringConversionError::UnableToConvert {
+                            value: value.clone(),
+                            dest_type: DBTypeId::INT
+                        }
+                    }
+                })
+            }
+        };
+
+        TinyIntType::try_from(val)
+            .map_err(|e| {
                 InnerFromStringConversionError::UnableToConvert {
-                    value: self.value.clone(),
+                    value: val.value.to_string(),
                     dest_type: DBTypeId::TINYINT,
                 }
-            })?;
-
-        TryInto::<TinyIntType>::try_into(val)
-            .map_err(|_| {
-                InnerFromStringConversionError::UnableToConvert {
-                    value: self.value.clone(),
-                    dest_type: DBTypeId::TINYINT,
-                }
             })
     }
 }
 
-impl TryInto<SmallIntType> for VarcharType {
+impl TryFrom<&VarcharType> for SmallIntType {
     type Error = InnerFromStringConversionError;
 
-    fn try_into(self) -> Result<SmallIntType, Self::Error> {
-        let val: BigIntType = self.try_into()
-            .map_err(|_| {
+    fn try_from(v: &VarcharType) -> Result<SmallIntType, Self::Error> {
+        let val: Result<BigIntType, Self::Error> = BigIntType::try_from(v);
+
+        let val = match &val {
+            Ok(v) => v,
+            Err(err) => {
+                return Err(match err {
+                    InnerFromStringConversionError::UnableToConvert { value, .. } => {
+                        InnerFromStringConversionError::UnableToConvert {
+                            value: value.clone(),
+                            dest_type: DBTypeId::INT
+                        }
+                    }
+                })
+            }
+        };
+
+        SmallIntType::try_from(val)
+            .map_err(|err| {
                 InnerFromStringConversionError::UnableToConvert {
-                    value: self.value.clone(),
+                    value: v.value.clone(),
                     dest_type: DBTypeId::SMALLINT,
                 }
-            })?;
+            })
+    }
+}
 
-        TryInto::<SmallIntType>::try_into(val)
+impl TryFrom<&VarcharType> for IntType {
+    type Error = InnerFromStringConversionError;
+
+    fn try_from(v: &VarcharType) -> Result<IntType, Self::Error> {
+        let val: Result<BigIntType, Self::Error> = BigIntType::try_from(v);
+
+        let val = match &val {
+            Ok(v) => v,
+            Err(err) => {
+                return Err(match err {
+                    InnerFromStringConversionError::UnableToConvert { value, .. } => {
+                        InnerFromStringConversionError::UnableToConvert {
+                            value: value.clone(),
+                            dest_type: DBTypeId::INT
+                        }
+                    }
+                })
+            }
+        };
+
+        IntType::try_from(val)
             .map_err(|_| {
                 InnerFromStringConversionError::UnableToConvert {
-                    value: self.value.clone(),
-                    dest_type: DBTypeId::SMALLINT,
+                    value: v.value.clone(),
+                    dest_type: DBTypeId::INT,
                 }
             })
     }
 }
 
-impl TryInto<IntType> for VarcharType {
+impl TryFrom<&VarcharType> for BigIntType {
     type Error = InnerFromStringConversionError;
 
-    fn try_into(self) -> Result<IntType, Self::Error> {
-        let val: BigIntType = self.try_into()
-            .map_err(|_| {
-                InnerFromStringConversionError::UnableToConvert {
-                    value: self.value.clone(),
-                    dest_type: DBTypeId::INT,
-                }
-            })?;
-
-        TryInto::<IntType>::try_into(val)
-            .map_err(|_| {
-                InnerFromStringConversionError::UnableToConvert {
-                    value: self.value.clone(),
-                    dest_type: DBTypeId::INT,
-                }
-            })
-    }
-}
-
-impl TryInto<BigIntType> for VarcharType {
-    type Error = InnerFromStringConversionError;
-
-    fn try_into(self) -> Result<BigIntType, Self::Error> {
-        if self.is_null() {
+    fn try_from(v: &VarcharType) -> Result<BigIntType, Self::Error> {
+        if v.is_null() {
             return Ok(BigIntType::default().into());
         }
 
-        self.value.parse::<BigIntUnderlyingType>()
+        v.value.parse::<BigIntUnderlyingType>()
             .map(|value| BigIntType::from(value))
             .map_err(|err| InnerFromStringConversionError::UnableToConvert {
-                value: self.value.clone(),
+                value: v.value.clone(),
                 dest_type: DBTypeId::BIGINT,
             })
     }

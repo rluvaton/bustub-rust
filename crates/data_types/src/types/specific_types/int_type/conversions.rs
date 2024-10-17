@@ -54,61 +54,61 @@ impl Into<Value> for IntType {
     }
 }
 
-impl TryInto<TinyIntType> for IntType {
+impl TryFrom<&IntType> for TinyIntType {
     type Error = NumericConversionError;
 
-    fn try_into(self) -> Result<TinyIntType, Self::Error> {
-        if self.is_null() {
+    fn try_from(v: &IntType) -> Result<TinyIntType, Self::Error> {
+        if v.is_null() {
             return Ok(TinyIntType::default().into());
         }
 
-        return_error_on_out_of_range!(TinyIntType, self.value, IntUnderlyingType);
+        return_error_on_out_of_range!(TinyIntType, v.value, IntUnderlyingType);
 
-        Ok(TinyIntType::new(self.value as TinyIntUnderlyingType).into())
+        Ok(TinyIntType::new(v.value as TinyIntUnderlyingType).into())
     }
 }
 
-impl TryInto<SmallIntType> for IntType {
+impl TryFrom<&IntType> for SmallIntType {
     type Error = NumericConversionError;
 
-    fn try_into(self) -> Result<SmallIntType, Self::Error> {
-        if self.is_null() {
+    fn try_from(v: &IntType) -> Result<SmallIntType, Self::Error> {
+        if v.is_null() {
             return Ok(SmallIntType::default().into());
         }
 
-        return_error_on_out_of_range!(SmallIntType, self.value, IntUnderlyingType);
+        return_error_on_out_of_range!(SmallIntType, v.value, IntUnderlyingType);
 
-        Ok(SmallIntType::new(self.value as SmallIntUnderlyingType).into())
+        Ok(SmallIntType::new(v.value as SmallIntUnderlyingType).into())
     }
 }
 
-impl Into<BigIntType> for IntType {
-    fn into(self) -> BigIntType {
-        if self.is_null() {
+impl From<&IntType> for BigIntType {
+    fn from(v: &IntType) -> BigIntType {
+        if v.is_null() {
             return BigIntType::default().into();
         }
 
-        BigIntType::new(self.value as BigIntUnderlyingType).into()
+        BigIntType::new(v.value as BigIntUnderlyingType).into()
     }
 }
 
-impl Into<DecimalType> for IntType {
-    fn into(self) -> DecimalType {
-        if self.is_null() {
+impl From<&IntType> for DecimalType {
+    fn from(v: &IntType) -> DecimalType {
+        if v.is_null() {
             return DecimalType::default()
         }
 
-        DecimalType::new(self.value as DecimalUnderlyingType)
+        DecimalType::new(v.value as DecimalUnderlyingType)
     }
 }
 
-impl Into<VarcharType> for IntType {
-    fn into(self) -> VarcharType {
-        if self.is_null() {
+impl From<&IntType> for VarcharType {
+    fn from(v: &IntType) -> VarcharType {
+        if v.is_null() {
             return VarcharType::default()
         }
 
-        VarcharType::from(self.value.to_string())
+        VarcharType::from(v.value.to_string())
     }
 }
 

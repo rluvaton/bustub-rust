@@ -58,13 +58,13 @@ impl Into<DBTypeIdImpl> for BooleanType {
     }
 }
 
-impl Into<VarcharType> for BooleanType {
-    fn into(self) -> VarcharType {
-        if self.is_null() {
+impl From<&BooleanType> for VarcharType {
+    fn from(v: &BooleanType) -> VarcharType {
+        if v.is_null() {
             return VarcharType::default()
         }
 
-        VarcharType::from(self.as_string())
+        VarcharType::from(v.as_string())
     }
 }
 
