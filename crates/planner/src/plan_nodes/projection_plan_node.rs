@@ -1,12 +1,11 @@
+use crate::constants::UNNAMED_COLUMN;
+use crate::plan_nodes::{PlanNode, PlanNodeRef, PlanType};
+use catalog_schema::{Column, Schema};
+use data_types::DBTypeId;
+use expression::{Expression, ExpressionRef};
 use std::fmt::{Display, Formatter};
 use std::rc::Rc;
 use std::sync::Arc;
-use catalog_schema::{Column, Schema};
-use common::config::TableOID;
-use data_types::DBTypeId;
-use expression::{Expression, ExpressionRef};
-use crate::constants::UNNAMED_COLUMN;
-use crate::plan_nodes::{PlanNode, PlanNodeRef, PlanType};
 
 /**
  * The ProjectionPlanNode represents a project operation.
