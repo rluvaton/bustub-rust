@@ -59,7 +59,7 @@ impl DefaultDiskManager {
 
 
         let mut log_name = file_name.clone();
-        log_name.set_extension(".log");
+        log_name.set_extension("log");
 
         let log_io = OpenOptions::new()
             .read(true) // std::ios::in
