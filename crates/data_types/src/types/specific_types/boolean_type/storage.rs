@@ -8,7 +8,6 @@ impl Clone for BooleanType {
 }
 
 impl StorageDBTypeTrait for BooleanType {
-    const SIZE: usize = size_of::<BooleanUnderlyingType>();
 
     fn is_inlined(&self) -> bool {
         true

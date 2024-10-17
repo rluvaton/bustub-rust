@@ -1,10 +1,10 @@
 use std::fmt::{Display, Formatter};
 use crate::types::{SmallIntType, DBTypeId, FormatDBTypeTrait};
-
+use crate::{ConversionDBTypeTrait, VarcharType};
 
 impl Display for SmallIntType {
-    fn fmt(&self, _f: &mut Formatter<'_>) -> std::fmt::Result {
-        todo!()
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.as_string().as_str())
     }
 }
 

@@ -29,3 +29,16 @@ impl<T, E: Into<anyhow::Error>> ToAnyhowResult<T> for Result<T, E> {
         }
     }
 }
+
+
+impl<T, E: Into<anyhow::Error> + std::fmt::Display + std::fmt::Debug + std::marker::Send + std::marker::Sync + 'static> ToAnyhowResult<T> for Result<T, Error<E>> {
+    fn to_anyhow(self) -> Result<T, crate::Error<anyhow::Error>> {
+        match self {
+            Ok(ok) => Ok(ok),
+            Err(err) => Err(Error {
+                error: err.error.into(),
+                phantom_data: PhantomData
+            })
+        }
+    }
+}

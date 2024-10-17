@@ -10,6 +10,8 @@ pub struct IntType {
 }
 
 impl IntType {
+    pub const SIZE: usize = size_of::<IntUnderlyingType>();
+
     pub const NULL: IntUnderlyingType = IntUnderlyingType::MIN;
     pub const MIN: IntUnderlyingType = IntUnderlyingType::MIN + 1;
     pub const MAX: IntUnderlyingType = IntUnderlyingType::MAX;

@@ -9,7 +9,6 @@ impl Clone for BigIntType {
 }
 
 impl StorageDBTypeTrait for BigIntType {
-    const SIZE: usize = size_of::<BigIntUnderlyingType>();
 
     fn is_inlined(&self) -> bool {
         true
