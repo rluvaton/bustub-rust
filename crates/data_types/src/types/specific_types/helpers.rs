@@ -1,7 +1,36 @@
+
 #[macro_export]
 macro_rules! assert_in_range {
     ($db_type:ident, $value:expr, $larger_size:ty) => {
         assert!($db_type::MIN as $larger_size <= $value as $larger_size && $value as $larger_size <= $db_type::MAX as $larger_size, "value {} is out of range of {} and {}", $value, $db_type::MIN, $db_type::MAX)
+    };
+}
+
+#[macro_export]
+macro_rules! return_error_on_out_of_range {
+    ($db_type:ident, $value:expr, $larger_size:ty) => {
+        if ($db_type::MIN as $larger_size > $value as $larger_size || $value as $larger_size > $db_type::MAX as $larger_size) {
+            return Err(crate::types::errors::InnerNumericConversionError::OutOfRange {
+                value: $value.to_string(),
+                min: $db_type::MIN.to_string(),
+                max: $db_type::MAX.to_string(),
+            }.into())
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! partial_eq_null {
+    ($lhs_null:expr, $rhs_null:expr) => {
+        // If both null - true
+        if $lhs_null && $rhs_null {
+            return true;
+        }
+
+        // If only one of them is null - false
+        if $lhs_null || $rhs_null {
+            return false;
+        }
     };
 }
 

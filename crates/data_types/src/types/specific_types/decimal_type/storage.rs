@@ -8,7 +8,6 @@ impl Clone for DecimalType {
 }
 
 impl StorageDBTypeTrait for DecimalType {
-    const SIZE: usize = size_of::<DecimalUnderlyingType>();
 
     fn is_inlined(&self) -> bool {
         true

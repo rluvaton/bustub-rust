@@ -1,4 +1,4 @@
-use crate::{BooleanType, BooleanUnderlyingType, ConversionDBTypeTrait, DBTypeId, DBTypeIdImpl, StorageDBTypeTrait, Value};
+use crate::{BooleanType, BooleanUnderlyingType, ComparisonDBTypeTrait, ConversionDBTypeTrait, DBTypeId, DBTypeIdImpl, Value, VarcharType};
 use error_utils::anyhow::anyhow;
 
 impl From<BooleanUnderlyingType> for BooleanType {
@@ -58,9 +58,23 @@ impl Into<DBTypeIdImpl> for BooleanType {
     }
 }
 
+impl From<&BooleanType> for VarcharType {
+    fn from(v: &BooleanType) -> VarcharType {
+        if v.is_null() {
+            return VarcharType::default()
+        }
+
+        VarcharType::from(v.as_string())
+    }
+}
+
 impl Into<Value> for BooleanType {
     fn into(self) -> Value {
-        Value::new(self.into())
+        Value::new(
+            DBTypeIdImpl::BOOLEAN(
+                self
+            )
+        )
     }
 }
 
@@ -93,7 +107,7 @@ impl ConversionDBTypeTrait for BooleanType {
                 Ok(self.clone().into())
             }
             DBTypeId::VARCHAR => {
-                todo!()
+                Ok(VarcharType::from(self).into())
             }
             _ => Err(anyhow!(format!("boolean is not coercable to {}", db_type_id.get_name())))
         }

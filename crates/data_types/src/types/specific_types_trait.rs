@@ -50,7 +50,8 @@ pub trait ConversionDBTypeTrait:
 
 // TODO - add cast as
 // TryInto<dyn TypeIdTrait> +
-Into<DBTypeIdImpl>
+Into<DBTypeIdImpl> +
+Into<Value>
 {
     /// Serialize this value into the given storage space.
     fn serialize_to(&self, storage: &mut [u8]);
@@ -75,8 +76,6 @@ pub trait FormatDBTypeTrait: Display + Debug {
 }
 
 pub trait StorageDBTypeTrait: Sized + Clone {
-    /// Get the size of this data type in bytes
-    const SIZE: usize;
 
     // Is the data inlined into this classes storage space, or must it be accessed
     // through an indirection/pointer?

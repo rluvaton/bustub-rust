@@ -10,6 +10,8 @@ pub struct BigIntType {
 }
 
 impl BigIntType {
+    pub const SIZE: usize = size_of::<BigIntUnderlyingType>();
+
     pub const NULL: BigIntUnderlyingType = BigIntUnderlyingType::MIN;
     pub const MIN: BigIntUnderlyingType = BigIntUnderlyingType::MIN + 1;
     pub const MAX: BigIntUnderlyingType = BigIntUnderlyingType::MAX;

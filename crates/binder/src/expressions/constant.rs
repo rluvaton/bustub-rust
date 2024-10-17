@@ -1,7 +1,7 @@
 use crate::expressions::{Expression, ExpressionTypeImpl};
 use crate::try_from_ast_error::{ParseASTError, ParseASTResult};
 use crate::Binder;
-use data_types::{DBTypeIdImpl, IntType, IntUnderlyingType, Value};
+use data_types::{BigIntType, DBTypeIdImpl, IntType, Value};
 use sqlparser::ast::Expr;
 
 /// A bound constant, e.g., `1`.
@@ -27,8 +27,9 @@ impl TryFrom<&sqlparser::ast::Value> for Constant {
             sqlparser::ast::Value::Number(num_as_string, _long) => {
                 // TODO - what is the boolean value?
 
-                let num = num_as_string.parse::<IntUnderlyingType>().expect("Was unable to parse to int number");
-                Constant::new(Value::new(DBTypeIdImpl::INT(IntType::from(num))))
+                let bigint = BigIntType::try_from(num_as_string.as_str()).expect("Number is too large");
+                let value = Value::from(bigint);
+                Constant::new(value)
             }
             sqlparser::ast::Value::SingleQuotedString(str) | sqlparser::ast::Value::DoubleQuotedString(str) => {
                 unimplemented!();

@@ -10,6 +10,8 @@ pub struct BooleanType {
 }
 
 impl BooleanType {
+    pub const SIZE: usize = size_of::<BooleanUnderlyingType>();
+
     pub const NULL: BooleanUnderlyingType = i8::MIN;
     pub const FALSE: BooleanUnderlyingType = 0;
     pub const TRUE: BooleanUnderlyingType = 1;

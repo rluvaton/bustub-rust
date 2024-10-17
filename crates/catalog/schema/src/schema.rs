@@ -180,7 +180,7 @@ impl Schema {
             if let Some(white_space_position) = t.find("(") {
                 n = white_space_position;
 
-                column_length = i32::from_ne_bytes(column_type.as_bytes()[n + 1..].try_into().to_anyhow()?);
+                column_length = i32::from_ne_bytes(<&[u8] as TryInto<[u8;4]>>::try_into(&column_type.as_bytes()[n + 1..]).to_anyhow()?);
                 column_type = &column_type[..n];
             }
 

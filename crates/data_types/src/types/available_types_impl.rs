@@ -1,4 +1,5 @@
 use crate::types::{BigIntType, BooleanType, DBTypeId, DecimalType, IntType, SmallIntType, TimestampType, TinyIntType};
+use crate::VarcharType;
 
 /// Macro to run the provided expression on the enum variant
 /// # Example
@@ -23,6 +24,7 @@ macro_rules! run_on_impl {
             DBTypeIdImpl::DECIMAL($name) => $func,
             DBTypeIdImpl::BOOLEAN($name) => $func,
             DBTypeIdImpl::TIMESTAMP($name) => $func,
+            DBTypeIdImpl::VARCHAR($name) => $func,
             // Add match arms for other variants as necessary
         }
     };
@@ -67,7 +69,7 @@ pub enum DBTypeIdImpl {
     INT(IntType),
     BIGINT(BigIntType),
     DECIMAL(DecimalType),
-    // VARCHAR = 7,
+    VARCHAR(VarcharType),
     TIMESTAMP(TimestampType),
 }
 
@@ -81,6 +83,7 @@ impl DBTypeIdImpl {
             DBTypeIdImpl::TINYINT(_) => DBTypeId::TINYINT,
             DBTypeIdImpl::DECIMAL(_) => DBTypeId::DECIMAL,
             DBTypeIdImpl::TIMESTAMP(_) => DBTypeId::TIMESTAMP,
+            DBTypeIdImpl::VARCHAR(_) => DBTypeId::VARCHAR,
         }
     }
 }
