@@ -1,5 +1,6 @@
 use crate::{BooleanType, BooleanUnderlyingType, ComparisonDBTypeTrait, ConversionDBTypeTrait, DBTypeId, DBTypeIdImpl, Value, VarcharType};
 use error_utils::anyhow::anyhow;
+use error_utils::ToAnyhowResult;
 
 impl From<BooleanUnderlyingType> for BooleanType {
     fn from(value: BooleanUnderlyingType) -> Self {
@@ -75,6 +76,22 @@ impl Into<Value> for BooleanType {
                 self
             )
         )
+    }
+}
+
+impl TryFrom<Value> for BooleanType {
+    type Error = error_utils::anyhow::Error;
+
+    fn try_from(value: Value) -> Result<Self, Self::Error> {
+        if value.is_null() {
+            return Ok(BooleanType::default());
+        }
+
+        match value.get_value() {
+            DBTypeIdImpl::BOOLEAN(b) => Ok(b.clone()),
+            DBTypeIdImpl::VARCHAR(v) => BooleanType::try_from(v).to_anyhow(),
+            _ => Err(error_utils::anyhow!("{} cant be converted to boolean", value.get_db_type_id()))
+        }
     }
 }
 
