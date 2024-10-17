@@ -1,7 +1,7 @@
 use crate::result_writer::ResultWriter;
 use binder::{Binder, CreateStatement, StatementTypeImpl};
 use buffer_pool_manager::BufferPoolManager;
-use catalog_schema::mocks::MockTableName;
+use catalog_schema_mocks::MockTableName;
 use catalog_schema::Schema;
 use checkpoint_manager::CheckpointManager;
 use data_types::DBTypeId;

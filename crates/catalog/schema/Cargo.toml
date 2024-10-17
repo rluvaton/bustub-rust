@@ -7,6 +7,3 @@ edition = "2021"
 data_types = {path = "../../data_types"}
 error_utils = {path = "../../utils/error_utils"}
 
-
-strum = "0.26.3"
-strum_macros = "0.26.3"
