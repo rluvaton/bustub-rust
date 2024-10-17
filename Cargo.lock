@@ -1497,6 +1497,7 @@ dependencies = [
  "bustub_instance",
  "clap",
  "execution_common",
+ "parking_lot",
  "rustyline",
  "transaction",
 ]

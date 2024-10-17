@@ -1,17 +1,20 @@
 mod cli;
 
-use std::{panic, process};
-use std::path::PathBuf;
-use std::rc::Rc;
-use std::sync::{Arc, Mutex};
-use clap::Parser;
-use rustyline::{Config, DefaultEditor};
-use rustyline::history::{FileHistory, History};
-use bustub_instance::BustubInstance;
-use bustub_instance::result_writer::ComfyTableWriter;
-use execution_common::CheckOptions;
-use transaction::TransactionState;
 use crate::cli::Args;
+use bustub_instance::result_writer::ComfyTableWriter;
+use bustub_instance::BustubInstance;
+use clap::Parser;
+use execution_common::CheckOptions;
+use parking_lot::Mutex;
+use rustyline::config::BellStyle;
+use rustyline::history::{DefaultHistory, FileHistory, History};
+use rustyline::{Config, DefaultEditor, Editor};
+use std::path::PathBuf;
+use std::sync::Arc;
+use std::panic;
+use transaction::TransactionState;
+
+type Shell = Editor<(), DefaultHistory>;
 
 
 const DEFAULT_PROMPT: &'static str = "bustub> ";
@@ -19,36 +22,12 @@ const DEFAULT_PROMPT: &'static str = "bustub> ";
 // The bathtub emoji
 const EMOJI_PROMPT: &'static str = "🛁> ";
 
+const HISTORY_FILE_PATH: &'static str = "bustub-shell-history.txt";
+
 fn main() -> rustyline::Result<()> {
     let args = Args::parse();
 
-    let file_history = FileHistory::with_config(
-        Config::builder()
-            .max_history_size(1024)?
-            .auto_add_history(!args.disable_tty)
-            .build()
-
-    );
-
-    let mut rl = Arc::new(Mutex::new(DefaultEditor::with_history(
-        Config::builder()
-            .max_history_size(1024)?
-            .auto_add_history(!args.disable_tty)
-            .build(),
-        file_history
-    )?));
-    if rl.lock().unwrap().load_history("history.txt").is_err() {
-        println!("No previous history.");
-    }
-
-    let rl_clone = rl.clone();
-    let orig_hook = panic::take_hook();
-    panic::set_hook(Box::new(move |panic_info| {
-        orig_hook(panic_info);
-        rl_clone.lock().unwrap().append_history("history.txt").expect("should append history");
-        process::exit(1);
-    }));
-
+    let shell = get_shell(&args)?;
 
     let mut bustub = BustubInstance::from_file(PathBuf::from("test.db"), None);
 
@@ -61,9 +40,6 @@ fn main() -> rustyline::Result<()> {
     bustub.enable_managed_txn();
 
     println!("Welcome to the BusTub shell! Type \\help to learn more.\n");
-
-    // linenoiseHistorySetMaxLen(1024);
-    // linenoiseSetMultiLine(1);
 
     let prompt = (if args.emoji_prompt { EMOJI_PROMPT } else { DEFAULT_PROMPT }).to_string();
 
@@ -85,18 +61,9 @@ fn main() -> rustyline::Result<()> {
 
             let line_prompt = if first_line { context_prompt } else { "... ".to_string() };
 
-            // TODO - Do we need this if as the line prompt should support it
+            // TODO - Do we need this `if` as it seems like rustyline support TTY and no TTY
             if !args.disable_tty {
-                let res = rl.lock().unwrap().readline(line_prompt.as_str());
-
-                let res = match res {
-                    Ok(a) => Ok(a),
-                    Err(err) => {
-                        rl.lock().unwrap().append_history("history.txt").expect("should append history");
-                        Err(err)
-                    }
-                }?;
-                query.push_str(res.as_str());
+                query.push_str(read_line(&shell, line_prompt)?.as_str());
 
                 if query.ends_with(";") || query.starts_with("\\") {
                     break;
@@ -125,4 +92,55 @@ fn main() -> rustyline::Result<()> {
             }
         }
     }
+}
+
+fn get_shell(args: &Args) -> rustyline::Result<Arc<Mutex<Shell>>> {
+    let config = Config::builder()
+        .max_history_size(1024)?
+        .auto_add_history(!args.disable_tty)
+        .bell_style(BellStyle::None)
+        .build();
+
+    let file_history = FileHistory::with_config(config);
+
+    let mut shell = DefaultEditor::with_history(
+        config,
+        file_history
+    )?;
+
+    if shell.load_history(HISTORY_FILE_PATH).is_ok() {
+        println!("History loaded");
+    }
+
+    let shell = Arc::new(Mutex::new(shell));
+
+    // Save history on panic
+    {
+        let shell = shell.clone();
+        let orig_hook = panic::take_hook();
+        panic::set_hook(Box::new(move |panic_info| {
+            let append_history_result = shell.lock().append_history(HISTORY_FILE_PATH);
+            let _ = append_history_result.inspect_err(|err| {
+                eprintln!("Failed to save history before exit")
+            });
+
+            // Call original hook
+            orig_hook(panic_info);
+        }));
+    }
+
+    Ok(shell)
+}
+
+
+fn read_line(shell: &Arc<Mutex<Shell>>, prompt: String) -> rustyline::Result<String> {
+    let res = shell.lock().readline(prompt.as_str());
+
+    res.inspect_err(|_| {
+        // Trying to save history
+        let _ = shell
+            .lock()
+            .append_history(HISTORY_FILE_PATH)
+            .inspect_err(|append_history_error| eprintln!("Failed to save history to file {:?}", append_history_error));
+    })
 }
