@@ -1,11 +1,9 @@
-use crate::{run_on_numeric_impl, BigIntType, BigIntUnderlyingType, ComparisonDBTypeTrait, DBTypeIdImpl, DecimalType, DecimalUnderlyingType, FormatDBTypeTrait, IntType, IntUnderlyingType, SmallIntType, SmallIntUnderlyingType, TinyIntType, Value};
+use crate::{partial_eq_null, run_on_numeric_impl, BigIntType, BigIntUnderlyingType, ComparisonDBTypeTrait, DBTypeIdImpl, DecimalType, DecimalUnderlyingType, FormatDBTypeTrait, IntType, IntUnderlyingType, SmallIntType, SmallIntUnderlyingType, TinyIntType, Value};
 use std::cmp::Ordering;
 
 impl PartialEq for SmallIntType {
     fn eq(&self, other: &Self) -> bool {
-        if self.is_null() && other.is_null() {
-            return true;
-        }
+        partial_eq_null!(self.is_null(), other.is_null());
 
         self.value == other.value
     }
@@ -13,9 +11,7 @@ impl PartialEq for SmallIntType {
 
 impl PartialEq<DecimalType> for SmallIntType {
     fn eq(&self, other: &DecimalType) -> bool {
-        if self.is_null() && other.is_null() {
-            return true;
-        }
+        partial_eq_null!(self.is_null(), other.is_null());
 
         self.value as DecimalUnderlyingType == other.value
     }
@@ -33,9 +29,7 @@ impl PartialEq<BigIntType> for SmallIntType {
 
 impl PartialEq<IntType> for SmallIntType {
     fn eq(&self, other: &IntType) -> bool {
-        if self.is_null() && other.is_null() {
-            return true;
-        }
+        partial_eq_null!(self.is_null(), other.is_null());
 
         self.value as IntUnderlyingType == other.value
     }
@@ -43,9 +37,7 @@ impl PartialEq<IntType> for SmallIntType {
 
 impl PartialEq<TinyIntType> for SmallIntType {
     fn eq(&self, other: &TinyIntType) -> bool {
-        if self.is_null() && other.is_null() {
-            return true;
-        }
+        partial_eq_null!(self.is_null(), other.is_null());
 
         self.value == other.value as SmallIntUnderlyingType
     }
@@ -56,15 +48,16 @@ impl PartialEq<Value> for SmallIntType {
         let other_type_id = other.get_db_type_id();
         assert!(Self::TYPE.check_comparable(&other_type_id));
 
-        if self.is_null() && other.is_null() {
-            return true;
-        }
-
         run_on_numeric_impl!(
             other.get_value(),
             rhs, self.eq(rhs),
-            // TODO - support varchar
-            _ => unreachable!()
+            _ => {
+                // Only doing null check here as it will already be checked inside eq
+                partial_eq_null!(self.is_null(), other.is_null());
+
+                // If not nulls
+                unreachable!()
+            }
         )
     }
 }

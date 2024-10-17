@@ -1,11 +1,9 @@
-use crate::{run_on_numeric_impl, BigIntType, BigIntUnderlyingType, ComparisonDBTypeTrait, DBTypeIdImpl, DecimalType, DecimalUnderlyingType, FormatDBTypeTrait, IntType, IntUnderlyingType, SmallIntType, SmallIntUnderlyingType, TinyIntType, TinyIntUnderlyingType, Value};
+use crate::{partial_eq_null, run_on_numeric_impl, BigIntType, BigIntUnderlyingType, ComparisonDBTypeTrait, DBTypeIdImpl, DecimalType, DecimalUnderlyingType, FormatDBTypeTrait, IntType, IntUnderlyingType, SmallIntType, SmallIntUnderlyingType, TinyIntType, TinyIntUnderlyingType, Value};
 use std::cmp::Ordering;
 
 impl PartialEq for TinyIntType {
     fn eq(&self, other: &Self) -> bool {
-        if self.is_null() && other.is_null() {
-            return true;
-        }
+        partial_eq_null!(self.is_null(), other.is_null());
 
         self.value == other.value
     }
@@ -13,9 +11,7 @@ impl PartialEq for TinyIntType {
 
 impl PartialEq<DecimalType> for TinyIntType {
     fn eq(&self, other: &DecimalType) -> bool {
-        if self.is_null() && other.is_null() {
-            return true;
-        }
+        partial_eq_null!(self.is_null(), other.is_null());
 
         self.value as DecimalUnderlyingType == other.value
     }
@@ -23,9 +19,7 @@ impl PartialEq<DecimalType> for TinyIntType {
 
 impl PartialEq<BigIntType> for TinyIntType {
     fn eq(&self, other: &BigIntType) -> bool {
-        if self.is_null() && other.is_null() {
-            return true;
-        }
+        partial_eq_null!(self.is_null(), other.is_null());
 
         self.value as BigIntUnderlyingType == other.value
     }
@@ -33,9 +27,7 @@ impl PartialEq<BigIntType> for TinyIntType {
 
 impl PartialEq<IntType> for TinyIntType {
     fn eq(&self, other: &IntType) -> bool {
-        if self.is_null() && other.is_null() {
-            return true;
-        }
+        partial_eq_null!(self.is_null(), other.is_null());
 
         self.value as IntUnderlyingType == other.value
     }
@@ -43,9 +35,7 @@ impl PartialEq<IntType> for TinyIntType {
 
 impl PartialEq<SmallIntType> for TinyIntType {
     fn eq(&self, other: &SmallIntType) -> bool {
-        if self.is_null() && other.is_null() {
-            return true;
-        }
+        partial_eq_null!(self.is_null(), other.is_null());
 
         self.value as SmallIntUnderlyingType == other.value
     }

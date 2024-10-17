@@ -1,4 +1,4 @@
-use crate::{BooleanType, BooleanUnderlyingType, ComparisonDBTypeTrait, DBTypeIdImpl, FormatDBTypeTrait, Value};
+use crate::{partial_eq_null, BooleanType, BooleanUnderlyingType, ComparisonDBTypeTrait, DBTypeIdImpl, FormatDBTypeTrait, Value};
 use std::cmp::Ordering;
 
 impl PartialEq for BooleanType {
@@ -12,14 +12,15 @@ impl PartialEq<Value> for BooleanType {
         let other_type_id = other.get_db_type_id();
         assert!(Self::TYPE.check_comparable(&other_type_id));
 
-        if self.is_null() && other.is_null() {
-            return true;
-        }
-
         match other.get_value() {
             DBTypeIdImpl::BOOLEAN(rhs) => self.eq(rhs),
             // TODO - add var char
-            _ => unreachable!()
+            _ => {
+                // Only doing null check here as it will already be checked inside eq
+                partial_eq_null!(self.is_null(), other.is_null());
+
+                unreachable!()
+            }
         }
     }
 }

@@ -6,7 +6,7 @@ macro_rules! assert_in_range {
 }
 
 #[macro_export]
-macro_rules! compare_nulls {
+macro_rules! partial_eq_null {
     ($lhs_null:expr, $rhs_null:expr) => {
         // If both null - true
         if $lhs_null && $rhs_null {

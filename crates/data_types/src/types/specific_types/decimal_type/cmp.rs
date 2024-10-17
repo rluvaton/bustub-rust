@@ -1,12 +1,9 @@
-use crate::{run_on_numeric_impl, BigIntType, ComparisonDBTypeTrait, DBTypeIdImpl, DecimalType, DecimalUnderlyingType, FormatDBTypeTrait, IntType, SmallIntType, TinyIntType, Value};
+use crate::{partial_eq_null, run_on_numeric_impl, BigIntType, ComparisonDBTypeTrait, DBTypeIdImpl, DecimalType, DecimalUnderlyingType, FormatDBTypeTrait, IntType, SmallIntType, TinyIntType, Value};
 use std::cmp::Ordering;
 
 impl PartialEq for DecimalType {
     fn eq(&self, other: &Self) -> bool {
-
-        if self.is_null() && other.is_null() {
-            return true;
-        }
+        partial_eq_null!(self.is_null(), other.is_null());
 
         self.value == other.value
     }
@@ -14,10 +11,7 @@ impl PartialEq for DecimalType {
 
 impl PartialEq<BigIntType> for DecimalType {
     fn eq(&self, other: &BigIntType) -> bool {
-
-        if self.is_null() && other.is_null() {
-            return true;
-        }
+        partial_eq_null!(self.is_null(), other.is_null());
 
         self.value == other.value as DecimalUnderlyingType
     }
@@ -25,10 +19,7 @@ impl PartialEq<BigIntType> for DecimalType {
 
 impl PartialEq<IntType> for DecimalType {
     fn eq(&self, other: &IntType) -> bool {
-
-        if self.is_null() && other.is_null() {
-            return true;
-        }
+        partial_eq_null!(self.is_null(), other.is_null());
 
         self.value == other.value as DecimalUnderlyingType
     }
@@ -36,10 +27,7 @@ impl PartialEq<IntType> for DecimalType {
 
 impl PartialEq<SmallIntType> for DecimalType {
     fn eq(&self, other: &SmallIntType) -> bool {
-
-        if self.is_null() && other.is_null() {
-            return true;
-        }
+        partial_eq_null!(self.is_null(), other.is_null());
 
         self.value == other.value as DecimalUnderlyingType
     }
@@ -47,9 +35,7 @@ impl PartialEq<SmallIntType> for DecimalType {
 
 impl PartialEq<TinyIntType> for DecimalType {
     fn eq(&self, other: &TinyIntType) -> bool {
-        if self.is_null() && other.is_null() {
-            return true;
-        }
+        partial_eq_null!(self.is_null(), other.is_null());
 
         self.value == other.value as DecimalUnderlyingType
     }
@@ -60,16 +46,18 @@ impl PartialEq<Value> for DecimalType {
         let other_type_id = other.get_db_type_id();
         assert!(Self::TYPE.check_comparable(&other_type_id));
 
-        if self.is_null() && other.is_null() {
-            return true;
-        }
-
         // TODO - add varchar support
 
         run_on_numeric_impl!(
             other.get_value(),
             rhs, self.eq(rhs),
-            _ => unreachable!()
+            _ => {
+                // Only doing null check here as it will already be checked inside eq
+                partial_eq_null!(self.is_null(), other.is_null());
+
+                // If not nulls
+                unreachable!()
+            }
         )
     }
 }

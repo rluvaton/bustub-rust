@@ -1,8 +1,10 @@
-use crate::{TimestampType, TimestampUnderlyingType, ComparisonDBTypeTrait, DBTypeIdImpl, FormatDBTypeTrait, Value};
+use crate::{TimestampType, TimestampUnderlyingType, ComparisonDBTypeTrait, DBTypeIdImpl, FormatDBTypeTrait, Value, partial_eq_null, run_on_numeric_impl};
 use std::cmp::Ordering;
 
 impl PartialEq for TimestampType {
     fn eq(&self, other: &Self) -> bool {
+        partial_eq_null!(self.is_null(), other.is_null());
+
         self.value == other.value
     }
 }
@@ -12,15 +14,17 @@ impl PartialEq<Value> for TimestampType {
         let other_type_id = other.get_db_type_id();
         assert!(Self::TYPE.check_comparable(&other_type_id));
 
-        if self.is_null() && other.is_null() {
-            return true;
-        }
+        run_on_numeric_impl!(
+            other.get_value(),
+            rhs, self.eq(rhs),
+            _ => {
+                // Only doing null check here as it will already be checked inside eq
+                partial_eq_null!(self.is_null(), other.is_null());
 
-        match other.get_value() {
-            DBTypeIdImpl::TIMESTAMP(rhs) => self.eq(rhs),
-            // TODO - add var char
-            _ => unreachable!()
-        }
+                // If not nulls
+                unreachable!()
+            }
+        )
     }
 }
 
