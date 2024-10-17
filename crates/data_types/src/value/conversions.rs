@@ -1,4 +1,4 @@
-use crate::{BigIntType, BigIntUnderlyingType, DecimalType, DecimalUnderlyingType, IntType, IntUnderlyingType, SmallIntType, SmallIntUnderlyingType, TimestampType, TimestampUnderlyingType, TinyIntType, TinyIntUnderlyingType, Value, VarcharType};
+use crate::{BigIntType, BigIntUnderlyingType, BooleanType, DecimalType, DecimalUnderlyingType, IntType, IntUnderlyingType, SmallIntType, SmallIntUnderlyingType, TimestampType, TimestampUnderlyingType, TinyIntType, TinyIntUnderlyingType, Value, VarcharType};
 
 // Varchar
 
@@ -23,6 +23,27 @@ impl From<String> for Value {
 impl From<Option<String>> for Value {
     fn from(value: Option<String>) -> Self {
         VarcharType::from(value).into()
+    }
+}
+
+// Boolean
+
+
+impl From<bool> for Value {
+    fn from(value: bool) -> Self {
+        BooleanType::from(value).into()
+    }
+}
+
+impl From<Option<bool>> for Value {
+    fn from(value: Option<bool>) -> Self {
+        BooleanType::from(value).into()
+    }
+}
+
+impl From<&Option<bool>> for Value {
+    fn from(value: &Option<bool>) -> Self {
+        BooleanType::from(value).into()
     }
 }
 

@@ -1,5 +1,5 @@
 use super::BigIntUnderlyingType;
-use crate::types::errors::NumericConversionError;
+use crate::types::errors::{InnerFromStringConversionError, NumericConversionError};
 use crate::types::{BigIntType, ComparisonDBTypeTrait, ConversionDBTypeTrait, DBTypeId, DBTypeIdImpl, DecimalType, DecimalUnderlyingType, IntType, IntUnderlyingType, SmallIntType, SmallIntUnderlyingType, TinyIntType, TinyIntUnderlyingType};
 use crate::{return_error_on_out_of_range, Value, VarcharType};
 use error_utils::anyhow::anyhow;
@@ -104,13 +104,27 @@ impl From<&BigIntType> for VarcharType {
     }
 }
 
-impl Into<Value> for BigIntType {
-    fn into(self) -> Value {
+impl From<BigIntType> for Value {
+    fn from(v: BigIntType) -> Value {
         Value::new(
             DBTypeIdImpl::BIGINT(
-                self
+                v
             )
         )
+    }
+}
+
+impl TryFrom<&str> for BigIntType {
+    type Error = InnerFromStringConversionError;
+
+    fn try_from(v: &str) -> Result<BigIntType, Self::Error> {
+
+        v.parse::<BigIntUnderlyingType>()
+            .map(|value| BigIntType::from(value))
+            .map_err(|err| InnerFromStringConversionError::UnableToConvert {
+                value: v.to_string(),
+                dest_type: DBTypeId::BIGINT,
+            })
     }
 }
 
