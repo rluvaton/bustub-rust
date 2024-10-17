@@ -43,3 +43,8 @@ target/
 # MSVC Windows builds of rustc generate these, which store debugging information
 *.pdb
 
+
+# DB related
+bustub-shell-history.txt
+test.log
+test.db
