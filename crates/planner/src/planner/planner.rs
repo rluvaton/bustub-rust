@@ -1,11 +1,10 @@
-use std::rc::Rc;
-use db_core::catalog::Catalog;
-use std::sync::atomic::{AtomicUsize, Ordering};
-use parking_lot::Mutex;
-use binder::StatementTypeImpl;
-use crate::plan_nodes::{PlanNodeRef, PlanType};
+use crate::plan_nodes::PlanNodeRef;
 use crate::planner::{Context, ContextGuard};
 use crate::traits::Plan;
+use binder::StatementTypeImpl;
+use db_core::catalog::Catalog;
+use parking_lot::Mutex;
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 pub struct Planner<'a> {
     /// Catalog will be used during the binding process

@@ -1,10 +1,10 @@
+use crate::plan_nodes::{PlanNode, PlanType};
+use crate::PlanNodeRef;
+use catalog_schema::Schema;
+use expression::ExpressionRef;
 use std::fmt::{Display, Formatter};
 use std::rc::Rc;
 use std::sync::Arc;
-use catalog_schema::Schema;
-use common::config::TableOID;
-use expression::ExpressionRef;
-use crate::plan_nodes::{PlanNode, PlanType};
 
 /**
  * The FilterPlanNode represents a filter operation.
@@ -44,9 +44,9 @@ impl FilterPlan {
     pub fn get_predicate(&self) -> &ExpressionRef { &self.predicate }
 
     /** @return The child plan providing tuples to be deleted */
-    pub fn get_child_plan(&self) -> &PlanType {
+    pub fn get_child_plan(&self) -> PlanNodeRef {
         assert_eq!(self.children.len(), 1, "filter should have exactly one child plan.");
-        &self.children[0]
+        self.children[0].clone()
     }
 }
 

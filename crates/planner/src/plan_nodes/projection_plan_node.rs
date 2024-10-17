@@ -1,12 +1,11 @@
+use crate::constants::UNNAMED_COLUMN;
+use crate::plan_nodes::{PlanNode, PlanNodeRef, PlanType};
+use catalog_schema::{Column, Schema};
+use data_types::DBTypeId;
+use expression::{Expression, ExpressionRef};
 use std::fmt::{Display, Formatter};
 use std::rc::Rc;
 use std::sync::Arc;
-use catalog_schema::{Column, Schema};
-use common::config::TableOID;
-use data_types::DBTypeId;
-use expression::{Expression, ExpressionRef};
-use crate::constants::UNNAMED_COLUMN;
-use crate::plan_nodes::{PlanNode, PlanNodeRef, PlanType};
 
 /**
  * The ProjectionPlanNode represents a project operation.
@@ -47,9 +46,9 @@ impl ProjectionPlanNode {
     pub fn get_expressions(&self) -> &Vec<ExpressionRef> { &self.expressions }
 
     /** @return The child plan providing tuples to be deleted */
-    pub fn get_child_plan(&self) -> &PlanType {
+    pub fn get_child_plan(&self) -> PlanNodeRef {
         assert_eq!(self.children.len(), 1, "Projection should have exactly one child plan.");
-        &self.children[0]
+        self.children[0].clone()
     }
 
     pub fn infer_projection_schema(expressions: &[ExpressionRef]) -> Schema {
