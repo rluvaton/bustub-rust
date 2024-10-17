@@ -613,6 +613,7 @@ dependencies = [
  "buffer_pool_manager",
  "catalog_schema",
  "catalog_schema_mocks",
+ "data_types",
  "db_core",
  "error_utils",
  "execution_common",

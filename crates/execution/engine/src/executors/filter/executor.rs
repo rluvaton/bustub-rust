@@ -7,6 +7,7 @@ use std::fmt;
 use std::fmt::Debug;
 use std::ops::Deref;
 use std::sync::Arc;
+use data_types::BooleanType;
 
 #[must_use = "iterators are lazy and do nothing unless consumed"]
 pub struct FilterExecutor {
@@ -51,7 +52,7 @@ impl Iterator for FilterExecutor
         self.child_executor.find(move |(tuple, _) | {
             let value = filter_expr.evaluate(tuple, output_schema.deref());
 
-            value.try_into().is_ok_and(|val: Option<bool>| val.is_some_and(|b| b))
+            value.try_into().is_ok_and(|val: BooleanType| val.get_as_bool().is_some_and(|b| b))
         })
     }
 

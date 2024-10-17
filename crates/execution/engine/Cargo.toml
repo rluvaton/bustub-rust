@@ -18,6 +18,7 @@ recovery_log_manager = {path = "../../recovery/log_manager"}
 planner = {path = "../../planner"}
 catalog_schema = {path = "../../catalog/schema"}
 catalog_schema_mocks = {path = "../../catalog/schema_mocks"}
+data_types = {path = "../../data_types"}
 
 expression = {path = "../expression"}
 
