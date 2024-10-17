@@ -5,6 +5,21 @@ macro_rules! assert_in_range {
     };
 }
 
+#[macro_export]
+macro_rules! compare_nulls {
+    ($lhs_null:expr, $rhs_null:expr) => {
+        // If both null - true
+        if $lhs_null && $rhs_null {
+            return true;
+        }
+
+        // If only one of them is null - false
+        if $lhs_null || $rhs_null {
+            return false;
+        }
+    };
+}
+
 #[cfg(test)]
 mod tests {
 
