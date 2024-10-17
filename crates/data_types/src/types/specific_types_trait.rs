@@ -50,7 +50,8 @@ pub trait ConversionDBTypeTrait:
 
 // TODO - add cast as
 // TryInto<dyn TypeIdTrait> +
-Into<DBTypeIdImpl>
+Into<DBTypeIdImpl> +
+Into<Value>
 {
     /// Serialize this value into the given storage space.
     fn serialize_to(&self, storage: &mut [u8]);

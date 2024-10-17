@@ -1,8 +1,8 @@
-use crate::types::{ComparisonDBTypeTrait, ConversionDBTypeTrait, DBTypeId, DBTypeIdImpl, DecimalType, DecimalUnderlyingType, IntType, IntUnderlyingType, SmallIntType, SmallIntUnderlyingType, StorageDBTypeTrait, TinyIntType, TinyIntUnderlyingType};
-use crate::{assert_in_range, return_error_on_out_of_range, BigIntType, BigIntUnderlyingType, BooleanType, TimestampType, Value, VarcharType, BUSTUB_VALUE_NULL};
+use crate::types::errors::InnerFromStringConversionError;
+use crate::types::{ComparisonDBTypeTrait, ConversionDBTypeTrait, DBTypeId, DBTypeIdImpl, DecimalType, DecimalUnderlyingType, IntType, SmallIntType, StorageDBTypeTrait, TinyIntType};
+use crate::{BigIntType, BigIntUnderlyingType, BooleanType, TimestampType, Value, VarcharType, BUSTUB_VALUE_NULL};
 use error_utils::anyhow::anyhow;
 use error_utils::ToAnyhowResult;
-use crate::types::errors::{InnerFromStringConversionError, NumericConversionError};
 
 impl From<&str> for VarcharType {
     fn from(value: &str) -> Self {
@@ -59,6 +59,31 @@ impl From<&[u8]> for VarcharType {
 impl Into<DBTypeIdImpl> for VarcharType {
     fn into(self) -> DBTypeIdImpl {
         DBTypeIdImpl::VARCHAR(self)
+    }
+}
+
+impl Into<Value> for VarcharType {
+    fn into(self) -> Value {
+        Value::new(
+            DBTypeIdImpl::VARCHAR(
+                self
+            )
+        )
+    }
+}
+
+impl From<&Value> for VarcharType {
+    fn from(value: &Value) -> VarcharType {
+        match value.get_value() {
+            DBTypeIdImpl::BOOLEAN(v) => v.into(),
+            DBTypeIdImpl::TINYINT(v) => v.into(),
+            DBTypeIdImpl::SMALLINT(v) => v.into(),
+            DBTypeIdImpl::INT(v) => v.into(),
+            DBTypeIdImpl::BIGINT(v) => v.into(),
+            DBTypeIdImpl::DECIMAL(v) => v.into(),
+            DBTypeIdImpl::VARCHAR(v) => v.into(),
+            DBTypeIdImpl::TIMESTAMP(v) => v.into(),
+        }
     }
 }
 

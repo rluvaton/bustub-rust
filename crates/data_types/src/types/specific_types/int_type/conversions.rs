@@ -17,21 +17,13 @@ impl From<&IntUnderlyingType> for IntType {
 
 impl From<Option<IntUnderlyingType>> for IntType {
     fn from(value: Option<IntUnderlyingType>) -> Self {
-        if let Some(value) = value {
-            return value.into()
-        }
-
-        IntType::new(Self::NULL)
+        IntType::from(value.unwrap_or(IntType::NULL))
     }
 }
 
 impl From<&Option<IntUnderlyingType>> for IntType {
     fn from(value: &Option<IntUnderlyingType>) -> Self {
-        if let Some(value) = value {
-            return value.into()
-        }
-
-        IntType::new(Self::NULL)
+        IntType::new(value.unwrap_or(IntType::NULL))
     }
 }
 
@@ -45,12 +37,6 @@ impl From<&[u8]> for IntType {
 impl Into<DBTypeIdImpl> for IntType {
     fn into(self) -> DBTypeIdImpl {
         DBTypeIdImpl::INT(self)
-    }
-}
-
-impl Into<Value> for IntType {
-    fn into(self) -> Value {
-        Value::new(self.into())
     }
 }
 
@@ -109,6 +95,16 @@ impl From<&IntType> for VarcharType {
         }
 
         VarcharType::from(v.value.to_string())
+    }
+}
+
+impl Into<Value> for IntType {
+    fn into(self) -> Value {
+        Value::new(
+            DBTypeIdImpl::INT(
+                self
+            )
+        )
     }
 }
 

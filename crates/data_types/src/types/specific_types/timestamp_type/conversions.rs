@@ -1,4 +1,4 @@
-use crate::{TimestampType, TimestampUnderlyingType, ConversionDBTypeTrait, DBTypeId, DBTypeIdImpl, StorageDBTypeTrait, Value, ComparisonDBTypeTrait, VarcharType, TinyIntType};
+use crate::{ComparisonDBTypeTrait, ConversionDBTypeTrait, DBTypeId, DBTypeIdImpl, TimestampType, TimestampUnderlyingType, Value, VarcharType};
 use error_utils::anyhow::anyhow;
 
 impl From<TimestampUnderlyingType> for TimestampType {
@@ -13,6 +13,17 @@ impl From<&TimestampUnderlyingType> for TimestampType {
     }
 }
 
+impl From<Option<TimestampUnderlyingType>> for TimestampType {
+    fn from(value: Option<TimestampUnderlyingType>) -> Self {
+        TimestampType::from(value.unwrap_or(TimestampType::NULL))
+    }
+}
+
+impl From<&Option<TimestampUnderlyingType>> for TimestampType {
+    fn from(value: &Option<TimestampUnderlyingType>) -> Self {
+        TimestampType::new(value.unwrap_or(TimestampType::NULL))
+    }
+}
 
 impl From<&[u8]> for TimestampType {
     fn from(value: &[u8]) -> Self {

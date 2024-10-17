@@ -1,4 +1,4 @@
-use crate::{assert_in_range, DecimalUnderlyingType, IntType, ConversionDBTypeTrait, DBTypeId, DBTypeIdImpl, StorageDBTypeTrait, Value, DecimalType, ComparisonDBTypeTrait, TinyIntType, TinyIntUnderlyingType, SmallIntType, SmallIntUnderlyingType, BigIntType, BigIntUnderlyingType, IntUnderlyingType, VarcharType, return_error_on_out_of_range};
+use crate::{assert_in_range, DecimalUnderlyingType, IntType, ConversionDBTypeTrait, DBTypeId, DBTypeIdImpl, StorageDBTypeTrait, Value, DecimalType, ComparisonDBTypeTrait, TinyIntType, TinyIntUnderlyingType, SmallIntType, SmallIntUnderlyingType, BigIntType, BigIntUnderlyingType, IntUnderlyingType, VarcharType, return_error_on_out_of_range, BooleanType};
 use error_utils::anyhow::anyhow;
 use error_utils::ToAnyhowResult;
 use crate::types::errors::NumericConversionError;
@@ -12,6 +12,18 @@ impl From<DecimalUnderlyingType> for DecimalType {
 impl From<&DecimalUnderlyingType> for DecimalType {
     fn from(value: &DecimalUnderlyingType) -> Self {
         DecimalType::new(*value)
+    }
+}
+
+impl From<Option<DecimalUnderlyingType>> for DecimalType {
+    fn from(value: Option<DecimalUnderlyingType>) -> Self {
+        DecimalType::from(value.unwrap_or(DecimalType::NULL))
+    }
+}
+
+impl From<&Option<DecimalUnderlyingType>> for DecimalType {
+    fn from(value: &Option<DecimalUnderlyingType>) -> Self {
+        DecimalType::new(value.unwrap_or(DecimalType::NULL))
     }
 }
 

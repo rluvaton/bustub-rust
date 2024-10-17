@@ -1,10 +1,9 @@
-use crate::types::errors::InnerNumericConversionError;
-use crate::types::{BigIntType, ComparisonDBTypeTrait, ConversionDBTypeTrait, DBTypeId, DBTypeIdImpl, DecimalType, DecimalUnderlyingType, IntType, IntUnderlyingType, SmallIntType, SmallIntUnderlyingType, StorageDBTypeTrait, TinyIntType, TinyIntUnderlyingType};
+use super::BigIntUnderlyingType;
+use crate::types::errors::NumericConversionError;
+use crate::types::{BigIntType, ComparisonDBTypeTrait, ConversionDBTypeTrait, DBTypeId, DBTypeIdImpl, DecimalType, DecimalUnderlyingType, IntType, IntUnderlyingType, SmallIntType, SmallIntUnderlyingType, TinyIntType, TinyIntUnderlyingType};
+use crate::{return_error_on_out_of_range, Value, VarcharType};
 use error_utils::anyhow::anyhow;
 use error_utils::ToAnyhowResult;
-use crate::{assert_in_range, return_error_on_out_of_range, VarcharType};
-use crate::types::errors::NumericConversionError;
-use super::BigIntUnderlyingType;
 
 impl From<BigIntUnderlyingType> for BigIntType {
     fn from(value: BigIntUnderlyingType) -> Self {
@@ -15,6 +14,18 @@ impl From<BigIntUnderlyingType> for BigIntType {
 impl From<&BigIntUnderlyingType> for BigIntType {
     fn from(value: &BigIntUnderlyingType) -> Self {
         BigIntType::new(*value)
+    }
+}
+
+impl From<Option<BigIntUnderlyingType>> for BigIntType {
+    fn from(value: Option<BigIntUnderlyingType>) -> Self {
+        BigIntType::from(value.unwrap_or(BigIntType::NULL))
+    }
+}
+
+impl From<&Option<BigIntUnderlyingType>> for BigIntType {
+    fn from(value: &Option<BigIntUnderlyingType>) -> Self {
+        BigIntType::new(value.unwrap_or(BigIntType::NULL))
     }
 }
 
@@ -90,6 +101,16 @@ impl From<&BigIntType> for VarcharType {
         }
 
         VarcharType::from(value.value.to_string())
+    }
+}
+
+impl Into<Value> for BigIntType {
+    fn into(self) -> Value {
+        Value::new(
+            DBTypeIdImpl::BIGINT(
+                self
+            )
+        )
     }
 }
 

@@ -157,7 +157,6 @@ impl Default for Value {
     }
 }
 
-
 impl Clone for Value {
     fn clone(&self) -> Self {
         Value::new(
@@ -165,28 +164,5 @@ impl Clone for Value {
                 v.clone().into()
             })
         )
-    }
-}
-
-impl From<bool> for Value {
-    fn from(value: bool) -> Self {
-        Value::new(DBTypeIdImpl::BOOLEAN(value.into()))
-    }
-}
-
-
-impl From<i32> for Value {
-    fn from(value: i32) -> Self {
-        Value::new(DBTypeIdImpl::INT(value.into()))
-    }
-}
-
-
-impl From<&Value> for VarcharType {
-    fn from(v: &Value) -> VarcharType {
-        run_on_impl!(&v.value, v, {
-                VarcharType::from(v)
-        })
-
     }
 }

@@ -1,4 +1,4 @@
-use crate::{BooleanType, BooleanUnderlyingType, ComparisonDBTypeTrait, ConversionDBTypeTrait, DBTypeId, DBTypeIdImpl, StorageDBTypeTrait, Value, VarcharType};
+use crate::{BooleanType, BooleanUnderlyingType, ComparisonDBTypeTrait, ConversionDBTypeTrait, DBTypeId, DBTypeIdImpl, Value, VarcharType};
 use error_utils::anyhow::anyhow;
 
 impl From<BooleanUnderlyingType> for BooleanType {
@@ -70,7 +70,11 @@ impl From<&BooleanType> for VarcharType {
 
 impl Into<Value> for BooleanType {
     fn into(self) -> Value {
-        Value::new(self.into())
+        Value::new(
+            DBTypeIdImpl::BOOLEAN(
+                self
+            )
+        )
     }
 }
 
