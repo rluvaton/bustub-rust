@@ -11,20 +11,13 @@ impl PartialEq for TimestampType {
 
 impl PartialEq<Value> for TimestampType {
     fn eq(&self, other: &Value) -> bool {
-        let other_type_id = other.get_db_type_id();
-        assert!(Self::TYPE.check_comparable(&other_type_id));
+        partial_eq_null!(self.is_null(), other.is_null());
 
-        run_on_numeric_impl!(
-            other.get_value(),
-            rhs, self.eq(rhs),
-            _ => {
-                // Only doing null check here as it will already be checked inside eq
-                partial_eq_null!(self.is_null(), other.is_null());
-
-                // If not nulls
-                unreachable!()
-            }
-        )
+        match other.get_value() {
+            DBTypeIdImpl::VARCHAR(other) => self.eq(other),
+            DBTypeIdImpl::TIMESTAMP(other) => self.eq(other),
+            _ => unreachable!()
+        }
     }
 }
 

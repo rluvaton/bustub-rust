@@ -479,6 +479,7 @@ name = "data_types"
 version = "0.1.0"
 dependencies = [
  "error_utils",
+ "thiserror",
 ]
 
 [[package]]

@@ -1,7 +1,7 @@
 // TODO - should probably be trait
 
 use std::fmt::{Display, Formatter};
-use crate::run_on_impl;
+use crate::{run_on_impl, VarcharType};
 use crate::types::{BigIntType, BooleanType, ComparisonDBTypeTrait, ConversionDBTypeTrait, DBTypeId, DBTypeIdImpl, DecimalType, IntType, SmallIntType, StorageDBTypeTrait, TimestampType, TinyIntType};
 
 
@@ -120,7 +120,7 @@ impl Value {
 
     #[allow(unused)]
     fn is_inlined(&self) -> bool {
-        run_on_impl!(self.value, v, {
+        run_on_impl!(&self.value, v, {
             v.is_inlined()
         })
     }
@@ -135,7 +135,7 @@ impl Value {
 
     #[allow(unused)]
     pub fn len(&self) -> u32 {
-        run_on_impl!(self.value, v, {
+        run_on_impl!(&self.value, v, {
             v.len()
         })
     }
@@ -161,7 +161,7 @@ impl Default for Value {
 impl Clone for Value {
     fn clone(&self) -> Self {
         Value::new(
-            run_on_impl!(self.value, v, {
+            run_on_impl!(&self.value, v, {
                 v.clone().into()
             })
         )
@@ -182,4 +182,11 @@ impl From<i32> for Value {
 }
 
 
+impl Into<VarcharType> for Value {
+    fn into(self) -> VarcharType {
+        run_on_impl!(self.value, v, {
+                v.into()
+        })
 
+    }
+}

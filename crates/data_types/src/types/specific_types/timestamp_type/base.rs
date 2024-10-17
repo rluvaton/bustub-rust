@@ -11,6 +11,8 @@ pub struct TimestampType {
 }
 
 impl TimestampType {
+    pub const SIZE: usize = size_of::<TimestampUnderlyingType>();
+
     pub const NULL: TimestampUnderlyingType = TimestampUnderlyingType::MAX;
     pub const MIN: TimestampUnderlyingType = 0;
     pub const MAX: TimestampUnderlyingType = 11231999986399999999;

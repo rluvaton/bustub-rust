@@ -1,5 +1,8 @@
-use crate::{SmallIntUnderlyingType, SmallIntType, ConversionDBTypeTrait, DBTypeId, DBTypeIdImpl, StorageDBTypeTrait, assert_in_range, ComparisonDBTypeTrait, TinyIntType, TinyIntUnderlyingType, IntType, IntUnderlyingType, BigIntType, BigIntUnderlyingType, DecimalType, DecimalUnderlyingType, Value};
+use crate::types::errors::InnerNumericConversionError;
+use crate::{SmallIntUnderlyingType, SmallIntType, ConversionDBTypeTrait, DBTypeId, DBTypeIdImpl, StorageDBTypeTrait, assert_in_range, ComparisonDBTypeTrait, TinyIntType, TinyIntUnderlyingType, IntType, IntUnderlyingType, BigIntType, BigIntUnderlyingType, DecimalType, DecimalUnderlyingType, Value, VarcharType, return_error_on_out_of_range};
 use error_utils::anyhow::anyhow;
+use error_utils::ToAnyhowResult;
+use crate::types::errors::NumericConversionError;
 
 impl From<SmallIntUnderlyingType> for SmallIntType {
     fn from(value: SmallIntUnderlyingType) -> Self {
@@ -32,6 +35,60 @@ impl Into<Value> for SmallIntType {
     }
 }
 
+impl TryInto<TinyIntType> for SmallIntType {
+    type Error = NumericConversionError;
+
+    fn try_into(self) -> Result<TinyIntType, Self::Error> {
+        if self.is_null() {
+            return Ok(TinyIntType::default().into());
+        }
+
+        return_error_on_out_of_range!(TinyIntType, self.value, SmallIntUnderlyingType);
+
+        Ok(TinyIntType::new(self.value as TinyIntUnderlyingType).into())
+    }
+}
+
+impl Into<IntType> for SmallIntType {
+    fn into(self) -> IntType {
+        if self.is_null() {
+            return IntType::default().into();
+        }
+
+        IntType::new(self.value as IntUnderlyingType).into()
+    }
+}
+
+impl Into<BigIntType> for SmallIntType {
+    fn into(self) -> BigIntType {
+        if self.is_null() {
+            return BigIntType::default().into();
+        }
+
+        BigIntType::new(self.value as BigIntUnderlyingType).into()
+    }
+}
+
+impl Into<DecimalType> for SmallIntType {
+    fn into(self) -> DecimalType {
+        if self.is_null() {
+            return DecimalType::default()
+        }
+
+        DecimalType::new(self.value as DecimalUnderlyingType)
+    }
+}
+
+impl Into<VarcharType> for SmallIntType {
+    fn into(self) -> VarcharType {
+        if self.is_null() {
+            return VarcharType::default()
+        }
+
+        VarcharType::from(self.value.to_string())
+    }
+}
+
 impl ConversionDBTypeTrait for SmallIntType {
 
     fn as_string(&self) -> String {
@@ -58,39 +115,22 @@ impl ConversionDBTypeTrait for SmallIntType {
                 todo!()
             }
             DBTypeId::TINYINT => {
-                if self.is_null() {
-                    return Ok(TinyIntType::default().into());
-                }
-
-                assert_in_range!(TinyIntType, self.value, SmallIntUnderlyingType);
-                Ok(TinyIntType::new(self.value as TinyIntUnderlyingType).into())
+                TinyIntType::try_from(self).to_anyhow().map(|v| v.into())
             }
             DBTypeId::SMALLINT => {
                 Ok(self.clone().into())
             }
             DBTypeId::INT => {
-                if self.is_null() {
-                    return Ok(IntType::default().into());
-                }
-
-                Ok(IntType::new(self.value as IntUnderlyingType).into())
+                Ok(IntType::from(self).into())
             }
             DBTypeId::BIGINT => {
-                if self.is_null() {
-                    return Ok(BigIntType::default().into());
-                }
-
-                Ok(BigIntType::new(self.value as BigIntUnderlyingType).into())
+                Ok(BigIntType::from(self).into())
             }
             DBTypeId::DECIMAL => {
-                if self.is_null() {
-                    return Ok(DecimalType::default().into());
-                }
-
-                Ok(DecimalType::new(self.value as DecimalUnderlyingType).into())
+                Ok(DecimalType::from(self).into())
             }
             DBTypeId::VARCHAR => {
-                todo!()
+                Ok(VarcharType::from(self).into())
             }
             DBTypeId::TIMESTAMP => {
                 todo!()

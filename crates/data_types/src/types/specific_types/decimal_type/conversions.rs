@@ -1,5 +1,7 @@
-use crate::{assert_in_range, DecimalUnderlyingType, IntType, ConversionDBTypeTrait, DBTypeId, DBTypeIdImpl, StorageDBTypeTrait, Value, DecimalType, ComparisonDBTypeTrait, TinyIntType, TinyIntUnderlyingType, SmallIntType, SmallIntUnderlyingType, BigIntType, BigIntUnderlyingType, IntUnderlyingType};
+use crate::{assert_in_range, DecimalUnderlyingType, IntType, ConversionDBTypeTrait, DBTypeId, DBTypeIdImpl, StorageDBTypeTrait, Value, DecimalType, ComparisonDBTypeTrait, TinyIntType, TinyIntUnderlyingType, SmallIntType, SmallIntUnderlyingType, BigIntType, BigIntUnderlyingType, IntUnderlyingType, VarcharType, return_error_on_out_of_range};
 use error_utils::anyhow::anyhow;
+use error_utils::ToAnyhowResult;
+use crate::types::errors::NumericConversionError;
 
 impl From<DecimalUnderlyingType> for DecimalType {
     fn from(value: DecimalUnderlyingType) -> Self {
@@ -32,6 +34,72 @@ impl Into<Value> for DecimalType {
     }
 }
 
+impl Into<VarcharType> for DecimalType {
+    fn into(self) -> VarcharType {
+        if self.is_null() {
+            return VarcharType::default()
+        }
+
+        VarcharType::from(self.value.to_string())
+    }
+}
+
+impl TryInto<TinyIntType> for DecimalType {
+    type Error = NumericConversionError;
+
+    fn try_into(self) -> Result<TinyIntType, Self::Error> {
+        if self.is_null() {
+            return Ok(TinyIntType::default().into());
+        }
+
+        return_error_on_out_of_range!(TinyIntType, self.value, DecimalUnderlyingType);
+
+        Ok(TinyIntType::new(self.value as TinyIntUnderlyingType).into())
+    }
+}
+
+impl TryInto<SmallIntType> for DecimalType {
+    type Error = NumericConversionError;
+
+    fn try_into(self) -> Result<SmallIntType, Self::Error> {
+        if self.is_null() {
+            return Ok(SmallIntType::default().into());
+        }
+
+        return_error_on_out_of_range!(SmallIntType, self.value, DecimalUnderlyingType);
+
+        Ok(SmallIntType::new(self.value as SmallIntUnderlyingType).into())
+    }
+}
+
+impl TryInto<IntType> for DecimalType {
+    type Error = NumericConversionError;
+
+    fn try_into(self) -> Result<IntType, Self::Error> {
+        if self.is_null() {
+            return Ok(IntType::default().into());
+        }
+
+        return_error_on_out_of_range!(IntType, self.value, DecimalUnderlyingType);
+
+        Ok(IntType::new(self.value as IntUnderlyingType).into())
+    }
+}
+
+impl TryInto<BigIntType> for DecimalType {
+    type Error = NumericConversionError;
+
+    fn try_into(self) -> Result<BigIntType, Self::Error> {
+        if self.is_null() {
+            return Ok(BigIntType::default().into());
+        }
+
+        return_error_on_out_of_range!(BigIntType, self.value, DecimalUnderlyingType);
+
+        Ok(BigIntType::new(self.value as BigIntUnderlyingType).into())
+    }
+}
+
 impl ConversionDBTypeTrait for DecimalType {
 
     fn as_string(&self) -> String {
@@ -58,42 +126,22 @@ impl ConversionDBTypeTrait for DecimalType {
                 todo!()
             }
             DBTypeId::TINYINT => {
-                if self.is_null() {
-                    return Ok(TinyIntType::default().into());
-                }
-
-                assert_in_range!(TinyIntType, self.value, DecimalUnderlyingType);
-                Ok(TinyIntType::new(self.value as TinyIntUnderlyingType).into())
+                TinyIntType::try_from(self).to_anyhow().map(|v| v.into())
             }
             DBTypeId::SMALLINT => {
-                if self.is_null() {
-                    return Ok(SmallIntType::default().into());
-                }
-
-                assert_in_range!(SmallIntType, self.value, DecimalUnderlyingType);
-                Ok(SmallIntType::new(self.value as SmallIntUnderlyingType).into())
+                SmallIntType::try_from(self).to_anyhow().map(|v| v.into())
             }
             DBTypeId::INT => {
-                if self.is_null() {
-                    return Ok(IntType::default().into());
-                }
-
-                assert_in_range!(IntType, self.value, DecimalUnderlyingType);
-                Ok(IntType::new(self.value as IntUnderlyingType).into())
+                IntType::try_from(self).to_anyhow().map(|v| v.into())
             }
             DBTypeId::BIGINT => {
-                if self.is_null() {
-                    return Ok(BigIntType::default().into());
-                }
-
-                assert_in_range!(BigIntType, self.value, DecimalUnderlyingType);
-                Ok(BigIntType::new(self.value as BigIntUnderlyingType).into())
+                BigIntType::try_from(self).to_anyhow().map(|v| v.into())
             }
             DBTypeId::DECIMAL => {
                 Ok(self.clone().into())
             }
             DBTypeId::VARCHAR => {
-                todo!()
+                Ok(VarcharType::from(self).into())
             }
             DBTypeId::TIMESTAMP => {
                 todo!()

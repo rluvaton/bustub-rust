@@ -75,8 +75,6 @@ pub trait FormatDBTypeTrait: Display + Debug {
 }
 
 pub trait StorageDBTypeTrait: Sized + Clone {
-    /// Get the size of this data type in bytes
-    const SIZE: usize;
 
     // Is the data inlined into this classes storage space, or must it be accessed
     // through an indirection/pointer?

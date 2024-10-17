@@ -1,10 +1,10 @@
 use crate::types::{DBTypeId, DecimalType, FormatDBTypeTrait};
+use crate::ConversionDBTypeTrait;
 use std::fmt::{Display, Formatter};
 
-
 impl Display for DecimalType {
-    fn fmt(&self, _f: &mut Formatter<'_>) -> std::fmt::Result {
-        todo!()
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.as_string().as_str())
     }
 }
 

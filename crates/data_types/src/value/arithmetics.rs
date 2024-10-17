@@ -44,6 +44,6 @@ impl Rem for Value {
 
 impl ArithmeticsDBTypeTrait for Value {
     fn operate_null(&self, rhs: &Value) -> error_utils::anyhow::Result<Value> {
-        run_on_impl!(self.value, lhs, lhs.operate_null(rhs))
+        run_on_impl!(&self.value, lhs, lhs.operate_null(rhs))
     }
 }

@@ -1,4 +1,4 @@
-use crate::{TimestampType, TimestampUnderlyingType, ConversionDBTypeTrait, DBTypeId, DBTypeIdImpl, StorageDBTypeTrait, Value, ComparisonDBTypeTrait};
+use crate::{TimestampType, TimestampUnderlyingType, ConversionDBTypeTrait, DBTypeId, DBTypeIdImpl, StorageDBTypeTrait, Value, ComparisonDBTypeTrait, VarcharType, TinyIntType};
 use error_utils::anyhow::anyhow;
 
 impl From<TimestampUnderlyingType> for TimestampType {
@@ -30,6 +30,16 @@ impl Into<DBTypeIdImpl> for TimestampType {
 impl Into<Value> for TimestampType {
     fn into(self) -> Value {
         Value::new(self.into())
+    }
+}
+
+impl From<TimestampType> for VarcharType {
+    fn from(value: TimestampType) -> VarcharType {
+        if value.is_null() {
+            return VarcharType::default();
+        }
+
+        VarcharType::from(value.as_string())
     }
 }
 
@@ -102,7 +112,7 @@ impl ConversionDBTypeTrait for TimestampType {
                 Ok(self.clone().into())
             }
             DBTypeId::VARCHAR => {
-                todo!()
+                Ok(VarcharType::from(self).into())
             }
             _ => Err(anyhow!(format!("timestamp is not coercable to {}", db_type_id.get_name())))
         }

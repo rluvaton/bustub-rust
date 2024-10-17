@@ -10,6 +10,8 @@ pub struct DecimalType {
 }
 
 impl DecimalType {
+    pub const SIZE: usize = size_of::<DecimalUnderlyingType>();
+
     pub const NULL: DecimalUnderlyingType = DBL_LOWEST;
     pub const MIN: DecimalUnderlyingType = FLT_LOWEST;
     pub const MAX: DecimalUnderlyingType = DecimalUnderlyingType::MAX;
