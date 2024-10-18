@@ -181,12 +181,12 @@ impl BustubInstance {
         ).as_str());
     }
 
-    pub fn execute_sql<ResultWriterImpl: ResultWriter>(&mut self, sql: &str, writer: &mut ResultWriterImpl, check_options: CheckOptions) -> error_utils::anyhow::Result<bool> {
+    pub fn execute_user_input<ResultWriterImpl: ResultWriter>(&mut self, sql_or_command: &str, writer: &mut ResultWriterImpl, check_options: CheckOptions) -> error_utils::anyhow::Result<bool> {
         let is_local_txn = self.current_txn.is_some();
 
         let txn = self.current_txn.clone().unwrap_or_else(|| self.txn_manager.begin(None));
 
-        let result = self.execute_sql_txn(sql, writer, txn.clone(), check_options);
+        let result = self.execute_sql_txn(sql_or_command, writer, txn.clone(), check_options);
         if !is_local_txn {
             let res = self.txn_manager.commit(txn);
 

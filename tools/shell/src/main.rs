@@ -79,7 +79,7 @@ fn main() -> rustyline::Result<()> {
         }
 
         let mut writer = ComfyTableWriter::default();
-        let result = bustub.execute_sql(&query, &mut writer, CheckOptions::empty());
+        let result = bustub.execute_user_input(&query, &mut writer, CheckOptions::empty());
 
         match result {
             Ok(_) => {
