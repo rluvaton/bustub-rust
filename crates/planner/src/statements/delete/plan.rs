@@ -5,8 +5,7 @@ use catalog_schema::{Column, Schema};
 use data_types::DBTypeId;
 use crate::expressions::PlanExpression;
 use crate::plan_nodes::{FilterPlan, PlanNode, PlanType};
-use crate::Planner;
-use crate::statements::DeletePlan;
+use crate::{DeletePlan, Planner};
 use crate::traits::Plan;
 
 impl Plan for DeleteStatement {

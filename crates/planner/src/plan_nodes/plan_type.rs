@@ -2,12 +2,11 @@ use std::fmt::{Display, Formatter};
 use std::rc::Rc;
 use std::sync::Arc;
 use catalog_schema::Schema;
-use crate::LimitPlanNode;
+use crate::{DeletePlan, InsertPlan, LimitPlanNode};
 use crate::plan_nodes::{AggregationPlanNode, FilterPlan, PlanNode, ProjectionPlanNode, ValuesPlanNode};
 use crate::plan_nodes::mock_scan_plan_node::MockScanPlanNode;
 use crate::plan_nodes::seq_scan_plan_node::SeqScanPlanNode;
 use crate::plan_nodes::window_plan_node::WindowFunctionPlanNode;
-use crate::statements::{DeletePlan, InsertPlan};
 
 // Helper to avoid duplicating deref on each variant
 macro_rules! call_each_variant {

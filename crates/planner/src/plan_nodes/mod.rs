@@ -8,6 +8,8 @@ mod aggregation_plan_node;
 mod mock_scan_plan_node;
 mod seq_scan_plan_node;
 mod limit_plan_node;
+mod delete_plan;
+mod insert_plan;
 
 pub use plan_type::*;
 pub use window_plan_node::*;
@@ -19,4 +21,5 @@ pub use aggregation_plan_node::*;
 pub use mock_scan_plan_node::*;
 pub use seq_scan_plan_node::*;
 pub use limit_plan_node::*;
-
+pub use delete_plan::*;
+pub use insert_plan::*;

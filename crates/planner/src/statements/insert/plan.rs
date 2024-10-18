@@ -1,12 +1,11 @@
 use crate::plan_nodes::{PlanNode, PlanType};
 use crate::traits::Plan;
-use crate::Planner;
+use crate::{InsertPlan, Planner};
 use binder::InsertStatement;
 use std::rc::Rc;
 use std::sync::Arc;
 use catalog_schema::{Column, Schema};
 use data_types::DBTypeId;
-use crate::statements::InsertPlan;
 
 impl Plan for InsertStatement {
     fn plan<'a>(&self, planner: &'a Planner<'a>)-> Rc<PlanType> {
