@@ -9,7 +9,6 @@ mod window_expr;
 mod binary_op;
 mod expr_impl;
 mod traits;
-mod order_by;
 
 pub use traits::*;
 pub use expr_impl::*;
@@ -18,4 +17,3 @@ pub use alias::*;
 pub use constant::*;
 pub use unary_op_expr::*;
 pub use star_expr::*;
-pub use order_by::*;

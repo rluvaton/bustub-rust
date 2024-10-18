@@ -86,7 +86,7 @@ impl Plan for SelectStatement {
                 .iter()
                 .map(|order_by| (
                     order_by.order_type,
-                    order_by.plan(order_by_plan.as_slice(), planner).1
+                    order_by.expr.plan(order_by_plan.as_slice(), planner).1
                 ))
                 .collect::<Vec<_>>();
 
