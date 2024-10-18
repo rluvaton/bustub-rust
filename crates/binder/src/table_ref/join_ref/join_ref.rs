@@ -12,16 +12,16 @@ use sqlparser::ast::{Join, JoinOperator, TableFactor, TableWithJoins};
 #[derive(Clone, Debug, PartialEq)]
 pub struct JoinRef {
     /// Type of join.
-    pub(crate) join_type: JoinType,
+    pub join_type: JoinType,
 
     /// The left side of the join.
-    pub(crate) left: Box<TableReferenceTypeImpl>,
+    pub left: Box<TableReferenceTypeImpl>,
 
     /** The right side of the join. */
-    pub(crate) right: Box<TableReferenceTypeImpl>,
+    pub right: Box<TableReferenceTypeImpl>,
 
     /** Join condition. */
-    pub(crate) condition: Option<ExpressionTypeImpl>,
+    pub condition: Option<ExpressionTypeImpl>,
 }
 
 impl JoinRef {

@@ -3,6 +3,7 @@ use std::rc::Rc;
 use std::sync::Arc;
 use catalog_schema::Schema;
 use common::config::TableOID;
+use expression::ExpressionRef;
 use crate::plan_nodes::{PlanNode, PlanType};
 use crate::plan_nodes::traits::EMPTY_CHILDREN;
 
@@ -19,7 +20,7 @@ pub struct ValuesPlanNode {
      */
     output_schema: Arc<Schema>,
 
-    values: Vec<Vec<PlanType>>,
+    values: Vec<Vec<ExpressionRef>>,
 }
 
 impl ValuesPlanNode {
@@ -28,15 +29,14 @@ impl ValuesPlanNode {
      * @param output The output schema of this values plan node
      * @param values The values produced by this plan node
      */
-    pub fn new(output: Arc<Schema>, values: Vec<Vec<PlanType>>) -> Self {
+    pub fn new(output: Arc<Schema>, values: Vec<Vec<ExpressionRef>>) -> Self {
         Self {
             output_schema: output,
             values,
         }
     }
 
-    /** @return The predicate to test tuples against; tuples should only be returned if they evaluate to true */
-    pub fn get_values(&self) -> &Vec<Vec<PlanType>> { &self.values }
+    pub fn get_values(&self) -> &Vec<Vec<ExpressionRef>> { &self.values }
 }
 
 impl Display for ValuesPlanNode {

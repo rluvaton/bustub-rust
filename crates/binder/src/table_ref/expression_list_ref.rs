@@ -7,8 +7,8 @@ use sqlparser::ast::{TableFactor, Values};
 /// A bound table ref type for `values` clause.
 #[derive(Clone, Debug, PartialEq)]
 pub struct ExpressionListRef {
-    pub(crate) identifier: String,
-    pub(crate) values: Vec<Vec<ExpressionTypeImpl>>,
+    pub identifier: String,
+    pub values: Vec<Vec<ExpressionTypeImpl>>,
 }
 
 impl ExpressionListRef {

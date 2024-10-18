@@ -66,6 +66,22 @@ impl NestedLoopJoinPlanNode {
 
     /** @return The join type used in the hash join */
     pub fn get_join_type(&self) -> JoinType { self.join_type }
+
+    pub(crate) fn infer_join_schema(left: &PlanType, right: &PlanType) -> Schema {
+        left
+            .get_output_schema()
+            .get_columns()
+            .iter()
+            .chain(
+                right
+                    .get_output_schema()
+                    .get_columns()
+                    .iter()
+            )
+            .cloned()
+            .into()
+
+    }
 }
 
 impl Display for NestedLoopJoinPlanNode {

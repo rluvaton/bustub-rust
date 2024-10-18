@@ -9,10 +9,10 @@ use crate::Binder;
 pub struct CrossProductRef {
 
     /** The left side of the cross product. */
-    pub(crate) left: Box<TableReferenceTypeImpl>,
+    pub left: Box<TableReferenceTypeImpl>,
 
     /** The right side of the cross product. */
-    pub(crate) right: Box<TableReferenceTypeImpl>,
+    pub right: Box<TableReferenceTypeImpl>,
 }
 
 impl CrossProductRef {

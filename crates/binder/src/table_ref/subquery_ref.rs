@@ -8,13 +8,13 @@ use sqlparser::ast::{Cte, Query, TableAlias, TableFactor, With};
 #[derive(Clone, Debug, PartialEq)]
 pub struct SubqueryRef {
     /// Subquery.
-    pub(crate) subquery: SelectStatement,
+    pub subquery: SelectStatement,
 
     /// Name of each item in the select list.
-    pub(crate) select_list_name: Vec<Vec<String>>,
+    pub select_list_name: Vec<Vec<String>>,
 
     // Alias
-    pub(crate) alias: String,
+    pub alias: String,
 }
 
 impl SubqueryRef {

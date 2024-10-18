@@ -7,8 +7,8 @@ use crate::Binder;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct CTERef {
-    pub(crate) cte_name: String,
-    pub(crate) alias: String,
+    pub cte_name: String,
+    pub alias: String,
 }
 
 impl CTERef {
