@@ -182,11 +182,18 @@ impl BustubInstance {
     }
 
     pub fn execute_user_input<ResultWriterImpl: ResultWriter>(&mut self, sql_or_command: &str, writer: &mut ResultWriterImpl, check_options: CheckOptions) -> error_utils::anyhow::Result<bool> {
+        self.wrap_with_txn(|this, txn|
+            this.execute_sql_txn(sql_or_command, writer, txn.clone(), check_options)
+        )
+    }
+
+    fn wrap_with_txn<R, F: FnOnce(&mut Self, Arc<Transaction>) -> R>(&mut self, f: F) -> R {
         let is_local_txn = self.current_txn.is_some();
 
         let txn = self.current_txn.clone().unwrap_or_else(|| self.txn_manager.begin(None));
 
-        let result = self.execute_sql_txn(sql_or_command, writer, txn.clone(), check_options);
+        let result = f(self, txn.clone());
+
         if !is_local_txn {
             let res = self.txn_manager.commit(txn);
 
@@ -194,7 +201,7 @@ impl BustubInstance {
             assert!(res, "Failed to commit txn");
         }
 
-        return result;
+        result
     }
 
     pub fn execute_sql_txn<ResultWriterImpl: ResultWriter>(&mut self, sql: &str, writer: &mut ResultWriterImpl, txn: Arc<Transaction>, check_options: CheckOptions) -> error_utils::anyhow::Result<bool> {
