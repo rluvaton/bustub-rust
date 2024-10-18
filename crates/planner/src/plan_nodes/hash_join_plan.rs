@@ -45,7 +45,7 @@ impl HashJoinPlan {
             children: vec![left, right],
             left_key_expressions,
             right_key_expressions,
-            join_type
+            join_type,
         }
     }
 
@@ -62,15 +62,14 @@ impl HashJoinPlan {
         self.children[0].clone()
     }
 
-/** @return The right plan node of the hash join */
+    /** @return The right plan node of the hash join */
+    pub fn get_right_plan(&self) -> PlanNodeRef {
+        assert_eq!(self.children.len(), 2, "Hash joins should have exactly two children plans.");
+        self.children[1].clone()
+    }
 
-pub fn get_right_plan(&self) -> PlanNodeRef {
-    assert_eq!(self.children.len(), 2, "Hash joins should have exactly two children plans.");
-    self.children[1].clone()
-}
-
-/** @return The join type used in the hash join */
-pub fn get_join_type(&self) -> JoinType { self.join_type }
+    /** @return The join type used in the hash join */
+    pub fn get_join_type(&self) -> JoinType { self.join_type }
 }
 
 impl Display for HashJoinPlan {
@@ -86,7 +85,7 @@ impl Display for HashJoinPlan {
 }
 
 impl Into<PlanType> for HashJoinPlan {
-    fn into(self)-> PlanType {
+    fn into(self) -> PlanType {
         PlanType::HashJoin(self)
     }
 }
