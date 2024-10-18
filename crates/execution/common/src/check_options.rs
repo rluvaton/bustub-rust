@@ -8,3 +8,9 @@ bitflags! {
         const TopN = 0b00000010;
     }
 }
+
+impl Default for CheckOptions {
+    fn default() -> Self {
+        CheckOptions::empty()
+    }
+}

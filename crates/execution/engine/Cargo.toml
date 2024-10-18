@@ -11,11 +11,26 @@ tracy-client = { version = "0.17.3", default-features = false }
 
 db_core = {path = "../../db_core" }
 buffer_pool_manager = {path = "../../buffer/manager"}
+transaction = {path = "../../concurrency/transaction/core"}
+lock_manager = {path = "../../concurrency/lock_manager"}
+execution_common = {path = "../common"}
+recovery_log_manager = {path = "../../recovery/log_manager"}
+planner = {path = "../../planner"}
+catalog_schema = {path = "../../catalog/schema"}
+catalog_schema_mocks = {path = "../../catalog/schema_mocks"}
+data_types = {path = "../../data_types"}
+
+expression = {path = "../expression"}
+
+error_utils = {path = "../../utils/error_utils"}
+anyhow = "1.0.89"
+tuple = {path = "../../storage/table/tuple"}
+rid = {path = "../../rid"}
 
 [profile.bench]
 debug = true
 
 [features]
 default = []
-tracing = ["tracy-client/enable"]
+tracing = ["tracy-client/enable", "buffer_pool_manager/tracing"]
 tracing-memory-allocation = ["tracing"]

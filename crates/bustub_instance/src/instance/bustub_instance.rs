@@ -1,27 +1,28 @@
+use crate::instance::ddl::StatementHandler;
 use crate::result_writer::ResultWriter;
-use binder::{Binder, CreateStatement, StatementTypeImpl};
+use binder::{Binder, StatementTypeImpl};
 use buffer_pool_manager::BufferPoolManager;
 use catalog_schema_mocks::MockTableName;
-use catalog_schema::Schema;
 use checkpoint_manager::CheckpointManager;
-use data_types::DBTypeId;
-use db_core::catalog::{Catalog, IndexInfo, IndexType};
-use db_core::concurrency::{TransactionManager};
+use db_core::catalog::Catalog;
+use db_core::concurrency::TransactionManager;
 use disk_storage::{DefaultDiskManager, DiskManager, DiskManagerUnlimitedMemory};
+use error_utils::ToAnyhow;
 use execution_common::CheckOptions;
-use execution_engine::ExecutionEngine;
+use execution_engine::{ExecutionEngine, ExecutorContext};
+use lock_manager::LockManager;
 use parking_lot::Mutex;
+use planner::{PlanNode, Planner};
 use recovery_log_manager::LogManager;
 use std::collections::HashMap;
 use std::ops::Deref;
 use std::path::PathBuf;
 use std::sync::Arc;
-use error_utils::ToAnyhow;
-use index::TWO_INTEGER_SIZE;
-use lock_manager::LockManager;
-use planner::Planner;
+use catalog_schema::Schema;
+use data_types::Value;
 use transaction::{Transaction, TransactionManager as TransactionManagerTrait};
-use crate::instance::ddl::StatementHandler;
+use tuple::Tuple;
+use crate::rows::Rows;
 
 const DEFAULT_BPM_SIZE: usize = 128;
 const LRU_K_REPLACER_K: usize = 10;
@@ -35,6 +36,8 @@ pub struct BustubInstance {
     pub(super) log_manager: Option<Arc<LogManager>>,
     pub(super) checkpoint_manager: Option<Arc<CheckpointManager>>,
     pub(super) execution_engine: Arc<ExecutionEngine>,
+
+    // TODO - remove double arc
     pub(super) catalog: Arc<Mutex<Catalog>>,
 
     pub(super) session_variables: HashMap<String, String>,
@@ -169,22 +172,29 @@ impl BustubInstance {
         let current_txn = self.current_txn.as_ref().expect("Must have current transaction").clone();
 
         writer.one_cell(format!("{}txn_id={} txn_real_id={} read_ts={} commit_ts={} status={:?} iso_lvl={:?}",
-                    prefix,
-                    current_txn.get_transaction_id_human_readable(),
-                    current_txn.get_transaction_id(),
-                    current_txn.get_read_ts(),
-                    current_txn.get_commit_ts(),
-                    current_txn.get_transaction_state(),
-                    current_txn.get_isolation_level()
-            ).as_str());
+                                prefix,
+                                current_txn.get_transaction_id_human_readable(),
+                                current_txn.get_transaction_id(),
+                                current_txn.get_read_ts(),
+                                current_txn.get_commit_ts(),
+                                current_txn.get_transaction_state(),
+                                current_txn.get_isolation_level()
+        ).as_str());
     }
 
-    pub fn execute_sql<ResultWriterImpl: ResultWriter>(&mut self, sql: &str, writer: &mut ResultWriterImpl, check_options: CheckOptions) -> error_utils::anyhow::Result<bool> {
+    pub fn execute_user_input<ResultWriterImpl: ResultWriter>(&mut self, sql_or_command: &str, writer: &mut ResultWriterImpl, check_options: CheckOptions) -> error_utils::anyhow::Result<bool> {
+        self.wrap_with_txn(|this, txn|
+            this.execute_sql_txn(sql_or_command, writer, txn.clone(), check_options)
+        )
+    }
+
+    fn wrap_with_txn<R, F: FnOnce(&mut Self, Arc<Transaction>) -> R>(&mut self, f: F) -> R {
         let is_local_txn = self.current_txn.is_some();
 
         let txn = self.current_txn.clone().unwrap_or_else(|| self.txn_manager.begin(None));
 
-        let result = self.execute_sql_txn(sql, writer, txn.clone(), check_options);
+        let result = f(self, txn.clone());
+
         if !is_local_txn {
             let res = self.txn_manager.commit(txn);
 
@@ -192,45 +202,19 @@ impl BustubInstance {
             assert!(res, "Failed to commit txn");
         }
 
-        return result;
+        result
     }
 
     pub fn execute_sql_txn<ResultWriterImpl: ResultWriter>(&mut self, sql: &str, writer: &mut ResultWriterImpl, txn: Arc<Transaction>, check_options: CheckOptions) -> error_utils::anyhow::Result<bool> {
         if sql.starts_with("\\") {
-            // Internal meta-commands, like in `psql`.
-
-            match sql {
-                "\\dt" => self.cmd_display_tables(writer),
-                "\\di" => self.cmd_display_indices(writer),
-                "\\help" => Self::cmd_display_help(writer),
-                _ => {
-                    if sql.starts_with("\\dbgmvcc") {
-                        self.cmd_dbg_mvcc(sql.split("").collect(), writer);
-                    } else if sql.starts_with("\\txn") {
-                        self.cmd_txn(sql.split("").collect(), writer);
-                    } else {
-                        return Err(error_utils::anyhow::anyhow!("unsupported internal command: {}", sql))
-                    }
-                }
-            }
-
-            return Ok(true);
+            return self.execute_shell_commands(sql, writer).map(|_| true);
         }
 
         let mut is_successful = true;
 
-
-        let parsed = {
-
-            let catalog = self.catalog.lock();
-
-            let binder = Binder::new(catalog.deref());
-
-            binder.parse(sql).map_err(|err| err.to_anyhow())?
-        };
+        let parsed = self.parse_sql(sql)?;
 
         for stmt in &parsed {
-            let mut is_delete = false;
 
             match &stmt {
                 StatementTypeImpl::Invalid => break,
@@ -239,33 +223,144 @@ impl BustubInstance {
                 StatementTypeImpl::Create(stmt) => {
                     self.create_table(txn.clone(), stmt, writer);
                     continue;
-                },
-                StatementTypeImpl::Delete(_) => {
-                    is_delete = true
                 }
+                StatementTypeImpl::Delete(_) => {}
             }
 
-            let catalog = self.catalog.lock();
+            let rows = self.execute_data_stmt(stmt, txn.clone())?;
 
-            // Plan the query
-            let plan = Planner::new(catalog.deref()).plan(stmt);
-
-            // Optimize the query
-            // TODO - add back
-
-            drop(catalog);
-
-            // Execute the query.
-            // TODO - add executor
-
-            unimplemented!()
+            rows.write_results(writer);
         }
-
 
         Ok(is_successful)
     }
 
+    /// Execute Single SELECT statement and return the results
+    ///
+    /// This is useful for testings
+    pub fn execute_single_select_sql(&mut self, sql: &str, check_options: CheckOptions) -> error_utils::anyhow::Result<Rows> {
+        self.wrap_with_txn(|this, txn| {
+            let parsed = this.parse_sql(sql)?;
 
+            assert_eq!(parsed.len(), 1, "Must have single statement");
+
+            let stmt = &parsed[0];
+            assert!(matches!(stmt, StatementTypeImpl::Select(_)), "Statement must be a select statement, instead got {:#?}", stmt);
+
+            this.execute_data_stmt(stmt, txn)
+        })
+    }
+
+    /// Execute Single INSERT statement and return the results
+    ///
+    /// This is useful for testings
+    pub fn execute_single_insert_sql(&mut self, sql: &str, check_options: CheckOptions) -> error_utils::anyhow::Result<Rows> {
+        self.wrap_with_txn(|this, txn| {
+            let parsed = this.parse_sql(sql)?;
+
+            assert_eq!(parsed.len(), 1, "Must have single statement");
+
+            let stmt = &parsed[0];
+            assert!(matches!(stmt, StatementTypeImpl::Insert(_)), "Statement must be a insert statement, instead got {:#?}", stmt);
+
+            this.execute_data_stmt(stmt, txn)
+        })
+    }
+
+    /// Execute Single DELETE statement and return the results
+    ///
+    /// This is useful for testings
+    pub fn execute_single_delete_sql(&mut self, sql: &str, check_options: CheckOptions) -> error_utils::anyhow::Result<Rows> {
+        self.wrap_with_txn(|this, txn| {
+            let parsed = this.parse_sql(sql)?;
+
+            assert_eq!(parsed.len(), 1, "Must have single statement");
+
+            let stmt = &parsed[0];
+            assert!(matches!(stmt, StatementTypeImpl::Delete(_)), "Statement must be a delete statement, instead got {:#?}", stmt);
+
+            this.execute_data_stmt(stmt, txn)
+        })
+    }
+
+    /// Execute SELECT/INSERT/DELETE/UPDATE statements
+    fn execute_data_stmt(&mut self, stmt: &StatementTypeImpl, txn: Arc<Transaction>) -> error_utils::anyhow::Result<Rows> {
+        let mut is_delete = false;
+
+        // Assert SELECT/INSERT/DELETE/UPDATE statements
+        match stmt {
+            StatementTypeImpl::Select(_) | StatementTypeImpl::Insert(_) => {}
+            StatementTypeImpl::Delete(_) => {
+                is_delete = true;
+            }
+            _ => unreachable!()
+        }
+        let catalog = self.catalog.lock();
+
+        // Plan the query
+        let plan = Planner::new(catalog.deref()).plan(stmt);
+
+        // Optimize the query
+        // TODO - add back
+
+        drop(catalog);
+
+        // Execute the query.
+        // TODO - add executor
+        let exec_ctx = self.make_executor_context(txn.clone(), is_delete);
+        // TODO - add check options
+        let result = self.execution_engine.execute(plan.clone(), txn.clone(), exec_ctx)?;
+
+        // Return the result set as a vector of string.
+        let schema = plan.get_output_schema();
+
+        Ok(Rows::new(result, schema))
+    }
+
+    fn execute_shell_commands<ResultWriterImpl: ResultWriter>(&mut self, cmd: &str, writer: &mut ResultWriterImpl) -> error_utils::anyhow::Result<()> {
+        // Internal meta-commands, like in `psql`.
+        assert!(cmd.starts_with("\\"), "command must start with \\");
+
+        match cmd {
+            "\\dt" => self.cmd_display_tables(writer),
+            "\\di" => self.cmd_display_indices(writer),
+            "\\help" => Self::cmd_display_help(writer),
+            _ => {
+                if cmd.starts_with("\\dbgmvcc") {
+                    self.cmd_dbg_mvcc(cmd.split("").collect(), writer);
+                } else if cmd.starts_with("\\txn") {
+                    self.cmd_txn(cmd.split("").collect(), writer);
+                } else {
+                    return Err(error_utils::anyhow::anyhow!("unsupported internal command: {}", cmd))
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    fn parse_sql(&mut self, sql: &str) -> error_utils::anyhow::Result<Vec<StatementTypeImpl>> {
+        assert_eq!(sql.starts_with("\\"), false, "SQL query must not start with meta command prefix \\");
+
+        let catalog = self.catalog.lock();
+
+        let binder = Binder::new(catalog.deref());
+
+        binder.parse(sql).map_err(|err| err.to_anyhow())
+    }
+
+    fn make_executor_context(&self, txn: Arc<Transaction>, is_modify: bool) -> Arc<ExecutorContext> {
+        Arc::new(
+            ExecutorContext::new(
+                txn,
+                self.catalog.clone(),
+                self.buffer_pool_manager.clone(),
+                self.txn_manager.clone(),
+                self.lock_manager.clone(),
+                is_modify,
+            )
+        )
+    }
 }
 
 impl Drop for BustubInstance {

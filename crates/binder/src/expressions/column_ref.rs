@@ -33,7 +33,7 @@ impl ColumnRef {
             return Ok(None);
         }
 
-        let column_name = column_names[0].clone();
+        let column_name = column_names[0].clone().to_lowercase();
 
         let matching_columns = schema.get_columns()
             .iter()

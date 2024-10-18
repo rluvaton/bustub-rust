@@ -21,6 +21,7 @@ transaction = {path = "../concurrency/transaction/core"}
 index = {path = "../storage/index"}
 error_utils = {path = "../utils/error_utils"}
 anyhow = "1.0.89"
+tuple = { path = "../storage/table/tuple"}
 
 catalog_schema = {path = "../catalog/schema" }
 catalog_schema_mocks = {path = "../catalog/schema_mocks" }
