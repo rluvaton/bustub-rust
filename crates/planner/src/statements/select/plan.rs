@@ -3,8 +3,8 @@ use crate::plan_nodes::{AggregationPlanNode, FilterPlan, PlanNode, PlanNodeRef, 
 use crate::statements::select::plan_aggregation::PlanAggregation;
 use crate::statements::select::plan_window::PlanWindow;
 use crate::traits::Plan;
-use crate::Planner;
-use binder::{Expression as BinderExpression, SelectStatement, TableReferenceTypeImpl};
+use crate::{LimitPlanNode, Planner};
+use binder::{Expression as BinderExpression, ExpressionTypeImpl, SelectStatement, TableReferenceTypeImpl};
 use catalog_schema::Schema;
 use expression::{ColumnValueExpression, Expression, ExpressionRef};
 use std::sync::Arc;
@@ -94,7 +94,21 @@ impl Plan for SelectStatement {
         }
 
         // Plan LIMIT and OFFSET
-        if self.limit_count.is_some() || self.limit_offset.is_some() {
+        if let Some(limit) = &self.limit_count {
+            let e = match limit {
+                ExpressionTypeImpl::Constant(e) => e,
+                _ => unimplemented!("Currently only constant integer as an offset is supported")
+            };
+
+            let limit_count: Option<i64>  = e.value.clone().try_into().expect("Limit constant must be a number");
+            let limit_count = limit_count.expect("Limit constant must not be null");
+
+            assert!(limit_count >= 0, "Limit count cant be negative");
+
+            plan = LimitPlanNode::new(plan.get_output_schema(), plan, limit_count as usize).into_ref();
+        }
+
+        if self.limit_offset.is_some() {
             unimplemented!()
         }
 
