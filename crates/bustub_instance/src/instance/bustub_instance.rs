@@ -2,6 +2,7 @@ use crate::instance::ddl::StatementHandler;
 use crate::result_writer::ResultWriter;
 use binder::{Binder, StatementTypeImpl};
 use buffer_pool_manager::BufferPoolManager;
+use catalog_schema_mocks::MockTableName;
 use checkpoint_manager::CheckpointManager;
 use db_core::catalog::Catalog;
 use db_core::concurrency::TransactionManager;
@@ -17,8 +18,10 @@ use std::collections::HashMap;
 use std::ops::Deref;
 use std::path::PathBuf;
 use std::sync::Arc;
-use catalog_schema_mocks::MockTableName;
+use catalog_schema::Schema;
+use data_types::Value;
 use transaction::{Transaction, TransactionManager as TransactionManagerTrait};
+use tuple::Tuple;
 
 const DEFAULT_BPM_SIZE: usize = 128;
 const LRU_K_REPLACER_K: usize = 10;
@@ -168,14 +171,14 @@ impl BustubInstance {
         let current_txn = self.current_txn.as_ref().expect("Must have current transaction").clone();
 
         writer.one_cell(format!("{}txn_id={} txn_real_id={} read_ts={} commit_ts={} status={:?} iso_lvl={:?}",
-                    prefix,
-                    current_txn.get_transaction_id_human_readable(),
-                    current_txn.get_transaction_id(),
-                    current_txn.get_read_ts(),
-                    current_txn.get_commit_ts(),
-                    current_txn.get_transaction_state(),
-                    current_txn.get_isolation_level()
-            ).as_str());
+                                prefix,
+                                current_txn.get_transaction_id_human_readable(),
+                                current_txn.get_transaction_id(),
+                                current_txn.get_read_ts(),
+                                current_txn.get_commit_ts(),
+                                current_txn.get_transaction_state(),
+                                current_txn.get_isolation_level()
+        ).as_str());
     }
 
     pub fn execute_sql<ResultWriterImpl: ResultWriter>(&mut self, sql: &str, writer: &mut ResultWriterImpl, check_options: CheckOptions) -> error_utils::anyhow::Result<bool> {
@@ -201,14 +204,7 @@ impl BustubInstance {
 
         let mut is_successful = true;
 
-        let parsed = {
-
-            let catalog = self.catalog.lock();
-
-            let binder = Binder::new(catalog.deref());
-
-            binder.parse(sql).map_err(|err| err.to_anyhow())?
-        };
+        let parsed = self.parse_sql(sql)?;
 
         for stmt in &parsed {
             let mut is_delete = false;
@@ -220,31 +216,13 @@ impl BustubInstance {
                 StatementTypeImpl::Create(stmt) => {
                     self.create_table(txn.clone(), stmt, writer);
                     continue;
-                },
+                }
                 StatementTypeImpl::Delete(_) => {
                     is_delete = true
                 }
             }
 
-            let catalog = self.catalog.lock();
-
-            // Plan the query
-            let plan = Planner::new(catalog.deref()).plan(stmt);
-
-            // Optimize the query
-            // TODO - add back
-
-            drop(catalog);
-
-            // Execute the query.
-            // TODO - add executor
-            let exec_ctx = self.make_executor_context(txn.clone(), is_delete);
-            // TODO - add check options
-            let result = self.execution_engine.execute(plan.clone(), txn.clone(), exec_ctx)?;
-
-            // Return the result set as a vector of string.
-            let schema = plan.get_output_schema();
-
+            let (rows, schema) = self.execute_data_stmt(stmt, txn.clone(), is_delete)?;
 
             // Generate header for the result set.
             writer.begin_table(false);
@@ -256,10 +234,10 @@ impl BustubInstance {
             writer.end_header();
 
             // Transforming result set into strings
-            for tuple in result {
+            for row in rows {
                 writer.begin_row();
-                for i in 0..schema.get_column_count() {
-                    writer.write_cell(&tuple.get_value(&schema, i).to_string());
+                for col in row {
+                    writer.write_cell(col.to_string().as_str());
                 }
                 writer.end_row();
             }
@@ -270,7 +248,45 @@ impl BustubInstance {
         Ok(is_successful)
     }
 
-    pub fn execute_shell_commands<ResultWriterImpl: ResultWriter>(&mut self, cmd: &str, writer: &mut ResultWriterImpl) -> error_utils::anyhow::Result<()> {
+    /// Execute SELECT/INSERT/DELETE/UPDATE statements
+    fn execute_data_stmt(&mut self, stmt: &StatementTypeImpl, txn: Arc<Transaction>, is_delete: bool) -> error_utils::anyhow::Result<(Vec<Vec<Value>>, Arc<Schema>)> {
+        // Assert SELECT/INSERT/DELETE/UPDATE statements
+        match stmt {
+            StatementTypeImpl::Select(_) | StatementTypeImpl::Insert(_) | StatementTypeImpl::Delete(_) => {}
+            _ => unreachable!()
+        }
+        let catalog = self.catalog.lock();
+
+        // Plan the query
+        let plan = Planner::new(catalog.deref()).plan(stmt);
+
+        // Optimize the query
+        // TODO - add back
+
+        drop(catalog);
+
+        // Execute the query.
+        // TODO - add executor
+        let exec_ctx = self.make_executor_context(txn.clone(), is_delete);
+        // TODO - add check options
+        let result = self.execution_engine.execute(plan.clone(), txn.clone(), exec_ctx)?;
+
+        // Return the result set as a vector of string.
+        let schema = plan.get_output_schema();
+
+        let parsed_results = result
+            .iter()
+            .map(|(tuple)| {
+                (0..schema.get_column_count())
+                    .map(|index| tuple.get_value(&schema, index))
+                    .collect::<Vec<Value>>()
+            })
+            .collect::<Vec<Vec<Value>>>();
+
+        Ok((parsed_results, schema))
+    }
+
+    fn execute_shell_commands<ResultWriterImpl: ResultWriter>(&mut self, cmd: &str, writer: &mut ResultWriterImpl) -> error_utils::anyhow::Result<()> {
         // Internal meta-commands, like in `psql`.
         assert!(cmd.starts_with("\\"), "command must start with \\");
 
@@ -292,6 +308,14 @@ impl BustubInstance {
         Ok(())
     }
 
+    fn parse_sql(&mut self, sql: &str) -> error_utils::anyhow::Result<Vec<StatementTypeImpl>> {
+        let catalog = self.catalog.lock();
+
+        let binder = Binder::new(catalog.deref());
+
+        binder.parse(sql).map_err(|err| err.to_anyhow())
+    }
+
     fn make_executor_context(&self, txn: Arc<Transaction>, is_modify: bool) -> Arc<ExecutorContext> {
         Arc::new(
             ExecutorContext::new(
@@ -300,12 +324,10 @@ impl BustubInstance {
                 self.buffer_pool_manager.clone(),
                 self.txn_manager.clone(),
                 self.lock_manager.clone(),
-                is_modify
+                is_modify,
             )
         )
     }
-
-
 }
 
 impl Drop for BustubInstance {
