@@ -22,6 +22,7 @@ macro_rules! call_each_variant {
             PlanType::Aggregation($name) => $func,
             PlanType::MockScan($name) => $func,
             PlanType::SeqScan($name) => $func,
+            PlanType::Limit($name) => $func,
             // Add match arms for other variants as necessary
         }
     };
