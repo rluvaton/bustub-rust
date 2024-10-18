@@ -8,7 +8,7 @@ use crate::constants::UNNAMED_COLUMN;
 use crate::expressions::traits::PlanExpression;
 
 impl PlanExpression for BinaryOpExpr {
-    fn plan<'a>(&self, children: &Vec<Rc<PlanType>>, planner: &'a Planner<'a>) -> (String, ExpressionRef) {
+    fn plan<'a>(&self, children: &[&PlanType], planner: &'a Planner<'a>) -> (String, ExpressionRef) {
         let (_, lhs) = self.larg.plan(children, planner);
         let (_, rhs) = self.rarg.plan(children, planner);
 

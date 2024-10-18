@@ -92,7 +92,7 @@ impl Into<ExpressionType> for ArithmeticExpression {
 
 impl Expression for ArithmeticExpression {
     fn evaluate(&self, tuple: &Tuple, schema: &Schema) -> Value {
-        let lhs = self.children[0].evaluate(tuple, schema.clone());
+        let lhs = self.children[0].evaluate(tuple, schema);
         let rhs = self.children[1].evaluate(tuple, schema);
 
         self.compute_type.calc(lhs, rhs)

@@ -1,5 +1,5 @@
 use crate::constants::UNNAMED_COLUMN;
-use crate::plan_nodes::{PlanNode, PlanNodeRef, PlanType};
+use crate::plan_nodes::{PlanNode, PlanType};
 use catalog_schema::{Column, Schema};
 use data_types::DBTypeId;
 use expression::{Expression, ExpressionRef};
@@ -21,7 +21,7 @@ pub struct TopNPlanNode {
     output_schema: Arc<Schema>,
 
     /** The children of this plan node. */
-    children: Vec<PlanNodeRef>,
+    children: Vec<PlanType>,
 
     order_bys: Vec<(OrderByType, ExpressionRef)>,
 
@@ -38,7 +38,7 @@ impl TopNPlanNode {
      * @param order_bys The sort expressions and their order by types.
      * @param n Retain n elements.
      */
-    pub fn new(output: Arc<Schema>, child: PlanNodeRef, order_bys: Vec<(OrderByType, ExpressionRef)>, n: usize) -> Self {
+    pub fn new(output: Arc<Schema>, child: PlanType, order_bys: Vec<(OrderByType, ExpressionRef)>, n: usize) -> Self {
         Self {
             output_schema: output,
             children: vec![child],
@@ -52,9 +52,9 @@ impl TopNPlanNode {
     pub fn get_order_by(&self) -> &[(OrderByType, ExpressionRef)] { self.order_bys.as_slice() }
 
     /** @return The child plan node */
-    pub fn get_child_plan(&self) -> PlanNodeRef {
+    pub fn get_child_plan(&self) -> &PlanType {
         assert_eq!(self.children.len(), 1, "TopN should have exactly one child plan.");
-        self.children[0].clone()
+        &self.children[0]
     }
 
     /** @return The N (limit) */
@@ -81,7 +81,7 @@ impl PlanNode for TopNPlanNode {
         self.output_schema.clone()
     }
 
-    fn get_children(&self) -> &[Rc<PlanType>] {
+    fn get_children(&self) -> &[PlanType] {
         &self.children
     }
 }

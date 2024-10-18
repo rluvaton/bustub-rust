@@ -1,5 +1,5 @@
 use crate::constants::UNNAMED_COLUMN;
-use crate::plan_nodes::{PlanNode, PlanNodeRef, PlanType};
+use crate::plan_nodes::{PlanNode, PlanType};
 use catalog_schema::{Column, Schema};
 use data_types::DBTypeId;
 use expression::{Expression, ExpressionRef};
@@ -19,7 +19,7 @@ pub struct LimitPlanNode {
     output_schema: Arc<Schema>,
 
     /** The children of this plan node. */
-    children: Vec<PlanNodeRef>,
+    children: Vec<PlanType>,
 
     // the limit
     limit: usize,
@@ -32,7 +32,7 @@ impl LimitPlanNode {
      * @param child The child plan from which tuples are obtained
      * @param limit The number of output tuples
      */
-    pub fn new(output: Arc<Schema>, child: PlanNodeRef, limit: usize) -> Self {
+    pub fn new(output: Arc<Schema>, child: PlanType, limit: usize) -> Self {
         Self {
             output_schema: output,
             children: vec![child],
@@ -45,9 +45,9 @@ impl LimitPlanNode {
     pub fn get_limit(&self) -> usize { self.limit }
 
     /** @return The child plan providing tuples to be limited */
-    pub fn get_child_plan(&self) -> PlanNodeRef {
+    pub fn get_child_plan(&self) -> &PlanType {
         assert_eq!(self.children.len(), 1, "Limit should have exactly one child plan.");
-        self.children[0].clone()
+        &self.children[0]
     }
 }
 
@@ -70,7 +70,7 @@ impl PlanNode for LimitPlanNode {
         self.output_schema.clone()
     }
 
-    fn get_children(&self) -> &[Rc<PlanType>] {
+    fn get_children(&self) -> &[PlanType] {
         &self.children
     }
 }

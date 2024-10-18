@@ -1,5 +1,5 @@
 use crate::context::ExecutorContext;
-use crate::executors::{Executor, ExecutorItem, ExecutorMetadata, ExecutorRef};
+use crate::executors::{Executor, ExecutorImpl, ExecutorItem, ExecutorMetadata, ExecutorRef};
 use catalog_schema::Schema;
 use expression::Expression;
 use planner::{FilterPlan, LimitPlanNode, PlanNode, ProjectionPlanNode};
@@ -10,9 +10,9 @@ use std::sync::Arc;
 use tuple::Tuple;
 
 #[must_use = "iterators are lazy and do nothing unless consumed"]
-pub struct LimitExecutor {
+pub struct LimitExecutor<'a> {
     /// The executor context in which the executor runs
-    ctx: Arc<ExecutorContext>,
+    ctx: Arc<ExecutorContext<'a>>,
 
     // ----
 
@@ -20,13 +20,13 @@ pub struct LimitExecutor {
     plan: LimitPlanNode,
 
     /** The child executor from which tuples are obtained */
-    child_executor: ExecutorRef,
+    child_executor: ExecutorRef<'a>,
 
     remaining: usize
 }
 
-impl LimitExecutor {
-    pub(crate) fn new(child_executor: ExecutorRef, plan: LimitPlanNode, ctx: Arc<ExecutorContext>) -> Self {
+impl<'a> LimitExecutor<'a> {
+    pub(crate) fn new(child_executor: ExecutorRef<'a>, plan: LimitPlanNode, ctx: Arc<ExecutorContext<'a>>) -> Self {
         Self {
             remaining: plan.get_limit(),
             plan,
@@ -36,14 +36,14 @@ impl LimitExecutor {
     }
 }
 
-impl Debug for LimitExecutor {
+impl Debug for LimitExecutor<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Limit").field("iter", &self.child_executor).finish()
     }
 }
 
 
-impl Iterator for LimitExecutor
+impl Iterator for LimitExecutor<'_>
 {
     type Item = ExecutorItem;
 
@@ -65,7 +65,7 @@ impl Iterator for LimitExecutor
     }
 }
 
-impl<> ExecutorMetadata for LimitExecutor {
+impl ExecutorMetadata for LimitExecutor<'_> {
     fn get_output_schema(&self) -> Arc<Schema> {
         self.plan.get_output_schema()
     }
@@ -75,5 +75,10 @@ impl<> ExecutorMetadata for LimitExecutor {
     }
 }
 
+impl<'a> Into<ExecutorImpl<'a>> for LimitExecutor<'a> {
+    fn into(self) -> ExecutorImpl<'a> {
+        ExecutorImpl::Limit(self)
+    }
+}
 
-impl Executor for LimitExecutor {}
+impl<'a> Executor<'a> for LimitExecutor<'a> {}

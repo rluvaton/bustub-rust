@@ -71,13 +71,13 @@ impl PlanNode for PlanType {
         })
     }
 
-    fn get_children(&self) -> &[Rc<PlanType>] {
+    fn get_children(&self) -> &[PlanType] {
         call_each_variant!(self, p, {
             p.get_children()
         })
     }
 
-    fn get_child_at(&self, child_idx: usize) -> &Rc<PlanType> {
+    fn get_child_at(&self, child_idx: usize) -> &PlanType {
         call_each_variant!(self, p, {
             p.get_child_at(child_idx)
         })

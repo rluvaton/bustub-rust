@@ -1,5 +1,5 @@
 use crate::context::ExecutorContext;
-use crate::executors::{Executor, ExecutorRef, MockScanExecutor};
+use crate::executors::{Executor, ExecutorRef, FilterExecutor, LimitExecutor, MockScanExecutor, ProjectionExecutor};
 use planner::PlanType;
 use std::fmt::Display;
 use std::rc::Rc;
@@ -23,16 +23,16 @@ macro_rules! call_each_variant {
     };
 }
 
-pub(crate) trait CreateExecutor {
-    fn create_executor(self: Rc<Self>, ctx: Arc<ExecutorContext>) -> ExecutorRef;
+pub(crate) trait CreateExecutor<'a> {
+    fn create_executor(&'a self, ctx: Arc<ExecutorContext<'a>>) -> ExecutorRef<'a>;
 }
 
-impl CreateExecutor for PlanType {
-    fn create_executor(self: Rc<Self>, ctx: Arc<ExecutorContext>) -> ExecutorRef {
+impl<'a> CreateExecutor<'a> for PlanType {
+    fn create_executor(&'a self, ctx: Arc<ExecutorContext<'a>>) -> ExecutorRef<'a> {
         // call_each_variant!(self, p, {
         //     p.create_executor(ctx)
         // })
-        match &*self {
+        match self {
             // PlanType::SeqScan(_) => {}
             // PlanType::Insert(_) => {}
             // PlanType::Delete(_) => {}
@@ -40,21 +40,21 @@ impl CreateExecutor for PlanType {
             PlanType::Filter(f) => {
                 let child = f.get_child_plan().create_executor(ctx.clone());
 
-                child.filter_exec(f.clone(), ctx.clone()).into_ref()
+                child.filter_exec(f.clone(), ctx.clone())
             },
             // PlanType::Values(_) => {}
             PlanType::Projection(d) => {
                 let child = d.get_child_plan().create_executor(ctx.clone());
 
-                child.projection_exec(d.clone(), ctx.clone()).into_ref()
+                child.projection_exec(d.clone(), ctx.clone())
             }
             PlanType::Limit(l) => {
                 let child = l.get_child_plan().create_executor(ctx.clone());
 
-                child.limit_exec(l.clone(), ctx.clone()).into_ref()
+                child.limit_exec(l.clone(), ctx.clone())
             }
             PlanType::MockScan(_) => {
-                MockScanExecutor::new(self, ctx).into_ref()
+                MockScanExecutor::new(&self, ctx).into_ref()
             },
             // PlanType::Window(_) => {}
             _ => unimplemented!("No executor found for the requested plan type {:#?}", self)

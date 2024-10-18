@@ -6,7 +6,6 @@ use catalog_schema::Schema;
 use common::config::TableOID;
 use expression::ExpressionRef;
 use crate::plan_nodes::{PlanNode, PlanType};
-use crate::PlanNodeRef;
 
 /**
  * Hash join performs a JOIN operation with a hash table.
@@ -20,7 +19,7 @@ pub struct HashJoinPlan {
     output_schema: Arc<Schema>,
 
     /** The children of this plan node. */
-    children: Vec<PlanNodeRef>,
+    children: Vec<PlanType>,
 
     /** The expression to compute the left JOIN key */
     left_key_expressions: Vec<ExpressionRef>,
@@ -39,7 +38,7 @@ impl HashJoinPlan {
     * @param left_key_expression The expression for the left JOIN key
     * @param right_key_expression The expression for the right JOIN key
     */
-    pub fn new(output: Arc<Schema>, left: PlanNodeRef, right: PlanNodeRef, left_key_expressions: Vec<ExpressionRef>, right_key_expressions: Vec<ExpressionRef>, join_type: JoinType) -> Self {
+    pub fn new(output: Arc<Schema>, left: PlanType, right: PlanType, left_key_expressions: Vec<ExpressionRef>, right_key_expressions: Vec<ExpressionRef>, join_type: JoinType) -> Self {
         Self {
             output_schema: output,
             children: vec![left, right],
@@ -57,15 +56,15 @@ impl HashJoinPlan {
     pub fn get_right_join_key_expressions(&self) -> &Vec<ExpressionRef> { &self.right_key_expressions }
 
     /** @return The left plan node of the hash join */
-    pub fn get_left_plan(&self) -> PlanNodeRef {
+    pub fn get_left_plan(&self) -> &PlanType {
         assert_eq!(self.children.len(), 2, "Hash joins should have exactly two children plans.");
-        self.children[0].clone()
+        &self.children[0]
     }
 
     /** @return The right plan node of the hash join */
-    pub fn get_right_plan(&self) -> PlanNodeRef {
+    pub fn get_right_plan(&self) -> &PlanType {
         assert_eq!(self.children.len(), 2, "Hash joins should have exactly two children plans.");
-        self.children[1].clone()
+        &self.children[1]
     }
 
     /** @return The join type used in the hash join */
@@ -95,7 +94,7 @@ impl PlanNode for HashJoinPlan {
         self.output_schema.clone()
     }
 
-    fn get_children(&self) -> &[Rc<PlanType>] {
+    fn get_children(&self) -> &[PlanType] {
         &self.children
     }
 }

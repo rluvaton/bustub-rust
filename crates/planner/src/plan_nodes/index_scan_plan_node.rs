@@ -6,9 +6,7 @@ use catalog_schema::{Column, Schema};
 use common::config::{IndexOID, TableOID};
 use expression::{ConstantValueExpression, ExpressionRef};
 use crate::plan_nodes::{PlanNode, PlanType};
-
-const EMPTY_CHILDREN: &'static [Rc<PlanType>] = &[];
-
+use crate::plan_nodes::traits::EMPTY_CHILDREN;
 
 /**
  * The SeqScanPlanNode represents a sequential table scan operation.
@@ -91,7 +89,7 @@ impl PlanNode for IndexScanPlanNode {
         self.output_schema.clone()
     }
 
-    fn get_children(&self) -> &[Rc<PlanType>] {
+    fn get_children(&self) -> &[PlanType] {
         EMPTY_CHILDREN
     }
 }

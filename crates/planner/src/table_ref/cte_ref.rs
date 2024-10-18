@@ -5,7 +5,7 @@ use crate::Planner;
 use binder::CTERef;
 
 impl Plan for CTERef {
-    fn plan<'a>(&self, planner: &'a Planner<'a>)-> Rc<PlanType> {
+    fn plan<'a>(&self, planner: &'a Planner<'a>)-> PlanType {
         todo!()
     }
 }

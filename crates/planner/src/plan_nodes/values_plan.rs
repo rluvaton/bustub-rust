@@ -4,8 +4,7 @@ use std::sync::Arc;
 use catalog_schema::Schema;
 use common::config::TableOID;
 use crate::plan_nodes::{PlanNode, PlanType};
-
-const EMPTY_CHILDREN: &'static [Rc<PlanType>] = &[];
+use crate::plan_nodes::traits::EMPTY_CHILDREN;
 
 /**
  * The ValuesPlanNode represents rows of values. For example,
@@ -20,7 +19,7 @@ pub struct ValuesPlanNode {
      */
     output_schema: Arc<Schema>,
 
-    values: Vec<Vec<Rc<PlanType>>>,
+    values: Vec<Vec<PlanType>>,
 }
 
 impl ValuesPlanNode {
@@ -29,7 +28,7 @@ impl ValuesPlanNode {
      * @param output The output schema of this values plan node
      * @param values The values produced by this plan node
      */
-    pub fn new(output: Arc<Schema>, values: Vec<Vec<Rc<PlanType>>>) -> Self {
+    pub fn new(output: Arc<Schema>, values: Vec<Vec<PlanType>>) -> Self {
         Self {
             output_schema: output,
             values,
@@ -37,7 +36,7 @@ impl ValuesPlanNode {
     }
 
     /** @return The predicate to test tuples against; tuples should only be returned if they evaluate to true */
-    pub fn get_values(&self) -> &Vec<Vec<Rc<PlanType>>> { &self.values }
+    pub fn get_values(&self) -> &Vec<Vec<PlanType>> { &self.values }
 }
 
 impl Display for ValuesPlanNode {
@@ -59,7 +58,7 @@ impl PlanNode for ValuesPlanNode {
         self.output_schema.clone()
     }
 
-    fn get_children(&self) -> &[Rc<PlanType>] {
+    fn get_children(&self) -> &[PlanType] {
         EMPTY_CHILDREN
     }
 }

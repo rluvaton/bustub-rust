@@ -3,9 +3,7 @@ use catalog_schema::Schema;
 use std::fmt::{Display, Formatter};
 use std::rc::Rc;
 use std::sync::Arc;
-
-const EMPTY_CHILDREN: &'static [Rc<PlanType>] = &[];
-
+use crate::plan_nodes::traits::EMPTY_CHILDREN;
 
 /**
  * The MockScanPlanNode represents a "dummy" sequential
@@ -58,7 +56,7 @@ impl PlanNode for MockScanPlanNode {
         self.output_schema.clone()
     }
 
-    fn get_children(&self) -> &[Rc<PlanType>] {
+    fn get_children(&self) -> &[PlanType] {
         EMPTY_CHILDREN
     }
 }

@@ -3,7 +3,7 @@ use parking_lot::Mutex;
 use buffer_pool_manager::BufferPoolManager;
 use db_core::catalog::Catalog;
 use db_core::concurrency::TransactionManager;
-use planner::PlanNodeRef;
+use planner::PlanType;
 use transaction::Transaction;
 use tuple::Tuple;
 use crate::context::ExecutorContext;
@@ -38,7 +38,7 @@ impl ExecutionEngine {
 
     // TODO - return result instead
      */
-    pub fn execute(&self, plan: PlanNodeRef, txn: Arc<Transaction>, exec_ctx: Arc<ExecutorContext>) -> error_utils::anyhow::Result<Vec<Tuple>> {
+    pub fn execute(&self, plan: PlanType, txn: Arc<Transaction>, exec_ctx: Arc<ExecutorContext>) -> error_utils::anyhow::Result<Vec<Tuple>> {
         // assert_eq!(txn, exec_ctx.get_transaction(), "Broken Invariant")
 
         // Construct the executor for the abstract plan node

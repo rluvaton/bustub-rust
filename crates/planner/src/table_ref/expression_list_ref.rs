@@ -5,7 +5,7 @@ use crate::Planner;
 use binder::ExpressionListRef;
 
 impl Plan for ExpressionListRef {
-    fn plan<'a>(&self, planner: &'a Planner<'a>)-> Rc<PlanType> {
+    fn plan<'a>(&self, planner: &'a Planner<'a>)-> PlanType {
         todo!()
     }
 }

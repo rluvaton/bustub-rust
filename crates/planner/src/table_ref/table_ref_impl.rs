@@ -5,7 +5,7 @@ use crate::Planner;
 use binder::TableReferenceTypeImpl;
 
 impl Plan for TableReferenceTypeImpl {
-    fn plan<'a>(&self, planner: &'a Planner<'a>)-> Rc<PlanType> {
+    fn plan<'a>(&self, planner: &'a Planner<'a>)-> PlanType {
         match self {
             TableReferenceTypeImpl::Invalid => panic!("Invalid table ref"),
             TableReferenceTypeImpl::BaseTable(t) => t.plan(planner),

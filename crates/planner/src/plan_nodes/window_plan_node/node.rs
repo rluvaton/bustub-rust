@@ -7,7 +7,7 @@ use catalog_schema::{Column, Schema};
 use data_types::DBTypeId;
 use expression::{Expression, ExpressionRef};
 use crate::constants::UNNAMED_COLUMN;
-use crate::plan_nodes::{PlanNode, PlanNodeRef, PlanType, WindowFunctionType};
+use crate::plan_nodes::{PlanNode, PlanType, WindowFunctionType};
 use crate::plan_nodes::window_plan_node::window_function::WindowFunction;
 
 #[derive(Clone, Debug, PartialEq)]
@@ -19,7 +19,7 @@ pub struct WindowFunctionPlanNode {
     output_schema: Arc<Schema>,
 
     /** The children of this plan node. */
-    children: Vec<Rc<PlanType>>,
+    children: Vec<PlanType>,
 
     /** all columns expressions */
     columns: Vec<ExpressionRef>,
@@ -56,7 +56,7 @@ impl WindowFunctionPlanNode {
     */
     pub fn new(
         output_schema: Arc<Schema>,
-        child: PlanNodeRef,
+        child: PlanType,
         window_func_indexes: Vec<usize>,
         columns: Vec<ExpressionRef>,
         partition_bys: Vec<Vec<ExpressionRef>>,
@@ -127,7 +127,7 @@ impl PlanNode for WindowFunctionPlanNode {
         self.output_schema.clone()
     }
 
-    fn get_children(&self) -> &[Rc<PlanType>] {
+    fn get_children(&self) -> &[PlanType] {
         self.children.as_ref()
     }
 }

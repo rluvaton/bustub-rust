@@ -8,7 +8,7 @@ use catalog_schema::{Column, Schema};
 use data_types::DBTypeId;
 
 impl Plan for InsertStatement {
-    fn plan<'a>(&self, planner: &'a Planner<'a>)-> Rc<PlanType> {
+    fn plan<'a>(&self, planner: &'a Planner<'a>)-> PlanType {
         let select = self.select.plan(planner);
 
         let table_schema = self.get_table().schema.get_columns();
@@ -27,6 +27,6 @@ impl Plan for InsertStatement {
             Arc::new(insert_schema),
             select,
             self.get_table().oid
-        ).into_ref()
+        ).into()
     }
 }

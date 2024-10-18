@@ -1,5 +1,5 @@
 use crate::constants::UNNAMED_COLUMN;
-use crate::plan_nodes::{PlanNode, PlanNodeRef, PlanType};
+use crate::plan_nodes::{PlanNode, PlanType};
 use catalog_schema::{Column, Schema};
 use data_types::DBTypeId;
 use expression::{Expression, ExpressionRef};
@@ -20,7 +20,7 @@ pub struct ProjectionPlanNode {
     output_schema: Arc<Schema>,
 
     /** The children of this plan node. */
-    children: Vec<PlanNodeRef>,
+    children: Vec<PlanType>,
 
     expressions: Vec<ExpressionRef>
 }
@@ -33,7 +33,7 @@ impl ProjectionPlanNode {
      * @param expressions The expression to evaluate
      * @param child The child plan node
      */
-    pub fn new(output: Arc<Schema>, expressions: Vec<ExpressionRef>, child: PlanNodeRef) -> Self {
+    pub fn new(output: Arc<Schema>, expressions: Vec<ExpressionRef>, child: PlanType) -> Self {
         Self {
             output_schema: output,
             children: vec![child],
@@ -46,9 +46,9 @@ impl ProjectionPlanNode {
     pub fn get_expressions(&self) -> &Vec<ExpressionRef> { &self.expressions }
 
     /** @return The child plan providing tuples to be deleted */
-    pub fn get_child_plan(&self) -> PlanNodeRef {
+    pub fn get_child_plan(&self) -> &PlanType {
         assert_eq!(self.children.len(), 1, "Projection should have exactly one child plan.");
-        self.children[0].clone()
+        &self.children[0]
     }
 
     pub fn infer_projection_schema(expressions: &[ExpressionRef]) -> Schema {
@@ -94,7 +94,7 @@ impl PlanNode for ProjectionPlanNode {
         self.output_schema.clone()
     }
 
-    fn get_children(&self) -> &[Rc<PlanType>] {
+    fn get_children(&self) -> &[PlanType] {
         &self.children
     }
 }

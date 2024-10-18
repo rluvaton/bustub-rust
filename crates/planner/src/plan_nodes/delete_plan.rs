@@ -20,7 +20,7 @@ pub struct DeletePlan {
     output_schema: Arc<Schema>,
 
     /** The children of this plan node. */
-    children: Vec<Rc<PlanType>>,
+    children: Vec<PlanType>,
 
     /** The identifier of the table from which tuples are deleted */
     table_oid: TableOID,
@@ -32,7 +32,7 @@ impl DeletePlan {
      * @param child The child plan to obtain tuple from
      * @param table_oid The identifier of the table from which tuples are deleted
      */
-    pub fn new(output: Arc<Schema>, child: Rc<PlanType>, table_oid: TableOID) -> Self {
+    pub fn new(output: Arc<Schema>, child: PlanType, table_oid: TableOID) -> Self {
         Self {
             output_schema: output,
             children: vec![child],
@@ -69,7 +69,7 @@ impl PlanNode for DeletePlan {
         self.output_schema.clone()
     }
 
-    fn get_children(&self) -> &[Rc<PlanType>] {
+    fn get_children(&self) -> &[PlanType] {
         &self.children
     }
 }

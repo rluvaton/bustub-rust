@@ -6,7 +6,7 @@ use expression::ExpressionRef;
 use std::rc::Rc;
 
 impl PlanExpression for WindowExpr {
-    fn plan<'a>(&self, _children: &Vec<Rc<PlanType>>, _planner: &'a Planner<'a>) -> (String, ExpressionRef) {
+    fn plan<'a>(&self, _children: &[&PlanType], _planner: &'a Planner<'a>) -> (String, ExpressionRef) {
         unreachable!("should not parse window expressions here")
     }
 }

@@ -8,7 +8,7 @@ use crate::expression_type::ExpressionType;
 
 pub(crate) const NO_CHILDREN: &[ExpressionRef] = &[];
 
-
+// TODO - remove RC
 pub type ExpressionRef = Rc<ExpressionType>;
 
 /**

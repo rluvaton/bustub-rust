@@ -1,5 +1,5 @@
 use crate::context::ExecutorContext;
-use crate::executors::{Executor, ExecutorItem, ExecutorMetadata, ExecutorRef};
+use crate::executors::{Executor, ExecutorImpl, ExecutorItem, ExecutorMetadata, ExecutorRef};
 use catalog_schema::Schema;
 use expression::Expression;
 use planner::{PlanNode, ProjectionPlanNode};
@@ -9,9 +9,9 @@ use std::sync::Arc;
 use tuple::Tuple;
 
 #[must_use = "iterators are lazy and do nothing unless consumed"]
-pub struct ProjectionExecutor {
+pub struct ProjectionExecutor<'a> {
     /// The executor context in which the executor runs
-    ctx: Arc<ExecutorContext>,
+    ctx: Arc<ExecutorContext<'a>>,
 
     // ----
 
@@ -19,11 +19,11 @@ pub struct ProjectionExecutor {
     plan: ProjectionPlanNode,
 
     /** The child executor from which tuples are obtained */
-    child_executor: ExecutorRef,
+    child_executor: ExecutorRef<'a>,
 }
 
-impl ProjectionExecutor {
-    pub(crate) fn new(child_executor: ExecutorRef, plan: ProjectionPlanNode, ctx: Arc<ExecutorContext>) -> Self {
+impl<'a> ProjectionExecutor<'a> {
+    pub(crate) fn new(child_executor: ExecutorRef<'a>, plan: ProjectionPlanNode, ctx: Arc<ExecutorContext<'a>>) -> Self {
         Self {
             plan,
             child_executor,
@@ -32,14 +32,14 @@ impl ProjectionExecutor {
     }
 }
 
-impl Debug for ProjectionExecutor {
+impl Debug for ProjectionExecutor<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Projection").field("iter", &self.child_executor).finish()
     }
 }
 
 
-impl Iterator for ProjectionExecutor
+impl Iterator for ProjectionExecutor<'_>
 {
     type Item = ExecutorItem;
 
@@ -65,7 +65,7 @@ impl Iterator for ProjectionExecutor
     }
 }
 
-impl<> ExecutorMetadata for ProjectionExecutor {
+impl ExecutorMetadata for ProjectionExecutor<'_> {
     fn get_output_schema(&self) -> Arc<Schema> {
         self.plan.get_output_schema()
     }
@@ -75,5 +75,10 @@ impl<> ExecutorMetadata for ProjectionExecutor {
     }
 }
 
+impl<'a> Into<ExecutorImpl<'a>> for ProjectionExecutor<'a> {
+    fn into(self) -> ExecutorImpl<'a> {
+        ExecutorImpl::Projection(self)
+    }
+}
 
-impl Executor for ProjectionExecutor {}
+impl<'a> Executor<'a> for ProjectionExecutor<'a> {}

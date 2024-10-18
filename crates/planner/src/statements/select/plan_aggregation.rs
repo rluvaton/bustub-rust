@@ -1,20 +1,15 @@
-use std::rc::Rc;
-use std::sync::Arc;
-use binder::{AggCallExpr, Expression as BinderExpression, ExpressionTypeImpl, OrderByType, SelectStatement, WindowBoundary};
-use catalog_schema::Schema;
-use data_types::{DBTypeId, Value};
-use expression::{ColumnValueExpression, ConstantValueExpression, Expression, ExpressionRef};
-use crate::constants::UNNAMED_COLUMN;
 use crate::expressions::PlanExpression;
-use crate::plan_nodes::{PlanNode, PlanNodeRef, PlanType, ProjectionPlanNode, WindowFunctionPlanNode, WindowFunctionType};
-use crate::Planner;
+use crate::{PlanType, Planner};
+use binder::{AggCallExpr, ExpressionTypeImpl, SelectStatement};
+use expression::ExpressionRef;
+use std::rc::Rc;
 
 pub(crate) trait PlanAggregation {
-    fn plan_aggregation(&self, child: PlanNodeRef, planner: &Planner) -> PlanNodeRef;
+    fn plan_aggregation(&self, child: &PlanType, planner: &Planner) -> PlanType;
 }
 
 impl PlanAggregation for SelectStatement {
-    fn plan_aggregation(&self, child: PlanNodeRef, planner: &Planner) -> PlanNodeRef {
+    fn plan_aggregation(&self, child: &PlanType, planner: &Planner) -> PlanType {
         /* Transforming hash agg is complex. Let's see a concrete example here.
     *
     * Now that we have,
@@ -55,7 +50,7 @@ impl PlanAggregation for SelectStatement {
         let mut output_col_names: Vec<String> = vec![];
 
         for expr in &self.group_by {
-            let (col_name, abstract_expr) = expr.plan(&vec![child.clone()], planner);
+            let (col_name, abstract_expr) = expr.plan(&vec![child], planner);
 
             output_col_names.push(col_name);
             group_by_exprs.push(abstract_expr);

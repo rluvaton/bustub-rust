@@ -1,5 +1,4 @@
 use crate::plan_nodes::{PlanNode, PlanType};
-use crate::PlanNodeRef;
 use catalog_schema::Schema;
 use expression::ExpressionRef;
 use std::fmt::{Display, Formatter};
@@ -19,7 +18,7 @@ pub struct FilterPlan {
     output_schema: Arc<Schema>,
 
     /** The children of this plan node. */
-    children: Vec<Rc<PlanType>>,
+    children: Vec<PlanType>,
 
     /** The predicate that all returned tuples must satisfy */
     predicate: ExpressionRef,
@@ -32,7 +31,7 @@ impl FilterPlan {
      * @param predicate The predicate applied during the scan operation
      * @param child The child plan node
      */
-    pub fn new(output: Arc<Schema>, predicate: ExpressionRef, child: Rc<PlanType>) -> Self {
+    pub fn new(output: Arc<Schema>, predicate: ExpressionRef, child: PlanType) -> Self {
         Self {
             output_schema: output,
             children: vec![child],
@@ -44,9 +43,9 @@ impl FilterPlan {
     pub fn get_predicate(&self) -> &ExpressionRef { &self.predicate }
 
     /** @return The child plan providing tuples to be deleted */
-    pub fn get_child_plan(&self) -> PlanNodeRef {
+    pub fn get_child_plan(&self) -> &PlanType {
         assert_eq!(self.children.len(), 1, "filter should have exactly one child plan.");
-        self.children[0].clone()
+        &self.children[0]
     }
 }
 
@@ -69,7 +68,7 @@ impl PlanNode for FilterPlan {
         self.output_schema.clone()
     }
 
-    fn get_children(&self) -> &[Rc<PlanType>] {
+    fn get_children(&self) -> &[PlanType] {
         &self.children
     }
 }

@@ -10,11 +10,11 @@ use crate::plan_nodes::{PlanNode, PlanType, ProjectionPlanNode, WindowFunctionPl
 use crate::Planner;
 
 pub(crate) trait PlanWindow {
-    fn plan_window(&self, child: Rc<PlanType>, planner: &Planner) -> Rc<PlanType>;
+    fn plan_window(&self, child: PlanType, planner: &Planner) -> PlanType;
 }
 
 impl PlanWindow for SelectStatement {
-    fn plan_window(&self, child: Rc<PlanType>, planner: &Planner) -> Rc<PlanType> {
+    fn plan_window(&self, child: PlanType, planner: &Planner) -> PlanType {
         /* For window function we don't do two passes rewrites like planning normal aggregations.
    *  Because standard sql does not allow using window function results in where clause, and
    *  our implementation does not support having on window function. We assume window functions
@@ -29,10 +29,11 @@ impl PlanWindow for SelectStatement {
         let mut order_by_exprs = vec![];
         let mut arg_exprs = vec![];
 
+        let select_list_children = vec![&child];
         for (index, item) in self.select_list.iter().enumerate() {
             if !item.has_window_function() {
                 // Normal select
-                let (mut name, expr) = item.plan(&vec![child.clone()], planner);
+                let (mut name, expr) = item.plan(select_list_children.as_slice(), planner);
                 columns.push(expr);
 
                 if name == UNNAMED_COLUMN {
@@ -72,7 +73,7 @@ impl PlanWindow for SelectStatement {
             partition_by_exprs.push(
                 window_call.partition_by
                     .iter()
-                    .map(|item| item.plan(&vec![child.clone()], planner).1)
+                    .map(|item| item.plan(select_list_children.as_slice(), planner).1)
                     .collect::<Vec<_>>()
             );
 
@@ -81,11 +82,11 @@ impl PlanWindow for SelectStatement {
             order_by_exprs.push(
                 window_call.order_bys
                     .iter()
-                    .map(|item| (item.order_type, item.expr.plan(&vec![child.clone()], planner).1))
+                    .map(|item| (item.order_type, item.expr.plan(select_list_children.as_slice(), planner).1))
                     .collect::<Vec<(OrderByType, ExpressionRef)>>()
             );
 
-            let raw_args = window_call.args.iter().map(|item| item.plan(&vec![child.clone()], planner).1).collect::<Vec<_>>();
+            let raw_args = window_call.args.iter().map(|item| item.plan(select_list_children.as_slice(), planner).1).collect::<Vec<_>>();
 
             let (window_func_type, clean_args) = get_window_agg_call(window_call.func.as_str(), raw_args);
             window_func_types.push(window_func_type);
@@ -115,7 +116,7 @@ impl PlanWindow for SelectStatement {
             order_by_exprs,
             arg_exprs,
             window_func_types
-        ).into_ref()
+        ).into()
     }
 }
 

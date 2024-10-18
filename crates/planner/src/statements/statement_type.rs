@@ -5,7 +5,7 @@ use crate::Planner;
 use crate::traits::Plan;
 
 impl Plan for StatementTypeImpl {
-    fn plan<'a>(&self, planner: &'a Planner<'a>)-> Rc<PlanType> {
+    fn plan<'a>(&self, planner: &'a Planner<'a>)-> PlanType {
         match self {
             StatementTypeImpl::Invalid => panic!("Invalid statement"),
             StatementTypeImpl::Select(node) => node.plan(planner),

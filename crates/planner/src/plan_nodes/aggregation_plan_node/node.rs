@@ -1,5 +1,5 @@
 use crate::constants::UNNAMED_COLUMN;
-use crate::plan_nodes::{AggregationType, PlanNode, PlanNodeRef, PlanType};
+use crate::plan_nodes::{AggregationType, PlanNode, PlanType};
 use catalog_schema::{Column, Schema};
 use data_types::DBTypeId;
 use expression::{Expression, ExpressionRef};
@@ -23,7 +23,7 @@ pub struct AggregationPlanNode {
     output_schema: Arc<Schema>,
 
     /** The children of this plan node. */
-    children: Vec<Rc<PlanType>>,
+    children: Vec<PlanType>,
 
     /** The GROUP BY expressions */
     group_bys: Vec<ExpressionRef>,
@@ -53,7 +53,7 @@ impl AggregationPlanNode {
     */
     pub fn new(
         output_schema: Arc<Schema>,
-        child: PlanNodeRef,
+        child: PlanType,
         group_bys: Vec<ExpressionRef>,
         aggregates: Vec<ExpressionRef>,
         agg_types: Vec<AggregationType>,
@@ -136,7 +136,7 @@ impl PlanNode for AggregationPlanNode {
         self.output_schema.clone()
     }
 
-    fn get_children(&self) -> &[Rc<PlanType>] {
+    fn get_children(&self) -> &[PlanType] {
         self.children.as_ref()
     }
 }

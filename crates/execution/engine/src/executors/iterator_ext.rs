@@ -1,33 +1,32 @@
 use crate::context::ExecutorContext;
-use crate::executors::{Executor, FilterExecutor, LimitExecutor, ProjectionExecutor};
+use crate::executors::{Executor, ExecutorRef, FilterExecutor, LimitExecutor, ProjectionExecutor};
 use planner::{FilterPlan, LimitPlanNode, ProjectionPlanNode};
 use std::sync::Arc;
 
-pub trait IteratorExt {
+pub trait IteratorExt<'a> {
     #[inline]
-    fn filter_exec(self, plan: FilterPlan, ctx: Arc<ExecutorContext>) -> FilterExecutor;
+    fn filter_exec(self, plan: FilterPlan, ctx: Arc<ExecutorContext<'a>>) -> ExecutorRef<'a>;
 
     #[inline]
-    fn projection_exec(self, plan: ProjectionPlanNode, ctx: Arc<ExecutorContext>) -> ProjectionExecutor;
+    fn projection_exec(self, plan: ProjectionPlanNode, ctx: Arc<ExecutorContext<'a>>) -> ExecutorRef<'a>;
 
     #[inline]
-    fn limit_exec(self, plan: LimitPlanNode, ctx: Arc<ExecutorContext>) -> LimitExecutor;
+    fn limit_exec(self, plan: LimitPlanNode, ctx: Arc<ExecutorContext<'a>>) -> ExecutorRef<'a>;
 }
 
-impl  IteratorExt for Box<dyn Executor> {
+impl<'a> IteratorExt<'a> for ExecutorRef<'a> {
     #[inline]
-    fn filter_exec(self, plan: FilterPlan, ctx: Arc<ExecutorContext>) -> FilterExecutor {
-        FilterExecutor::new(self, plan, ctx)
+    fn filter_exec(self, plan: FilterPlan, ctx: Arc<ExecutorContext<'a>>) -> ExecutorRef<'a> {
+        FilterExecutor::new(self, plan, ctx).into_ref()
     }
 
     #[inline]
-    fn projection_exec(self, plan: ProjectionPlanNode, ctx: Arc<ExecutorContext>) -> ProjectionExecutor
-    {
-        ProjectionExecutor::new(self, plan, ctx)
+    fn projection_exec(self, plan: ProjectionPlanNode, ctx: Arc<ExecutorContext<'a>>) -> ExecutorRef<'a> {
+        ProjectionExecutor::new(self, plan, ctx).into_ref()
     }
 
     #[inline]
-    fn limit_exec(self, plan: LimitPlanNode, ctx: Arc<ExecutorContext>) -> LimitExecutor {
-        LimitExecutor::new(self, plan, ctx)
+    fn limit_exec(self, plan: LimitPlanNode, ctx: Arc<ExecutorContext<'a>>) -> ExecutorRef<'a> {
+        LimitExecutor::new(self, plan, ctx).into_ref()
     }
 }

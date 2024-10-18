@@ -8,7 +8,7 @@ use crate::constants::UNNAMED_COLUMN;
 use crate::expressions::traits::PlanExpression;
 
 impl PlanExpression for FuncCallExpr {
-    fn plan<'a>(&self, children: &Vec<Rc<PlanType>>, planner: &'a Planner<'a>) -> (String, ExpressionRef) {
+    fn plan<'a>(&self, children: &[&PlanType], planner: &'a Planner<'a>) -> (String, ExpressionRef) {
         let mut args = self.args
             .iter()
             .map(|arg| arg.plan(children, planner).1)

@@ -5,7 +5,7 @@ use binder::{ExpressionListRef, SubqueryRef};
 use crate::traits::Plan;
 
 impl Plan for SubqueryRef {
-    fn plan<'a>(&self, planner: &'a Planner<'a>)-> Rc<PlanType> {
+    fn plan<'a>(&self, planner: &'a Planner<'a>)-> PlanType {
         todo!()
     }
 }

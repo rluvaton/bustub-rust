@@ -1,4 +1,4 @@
-use crate::executors::{Executor, ExecutorRef};
+use crate::executors::{Executor, ExecutorImpl};
 use buffer_pool_manager::BufferPoolManager;
 use db_core::catalog::Catalog;
 use db_core::concurrency::TransactionManager;
@@ -6,13 +6,14 @@ use execution_common::CheckOptions;
 use lock_manager::LockManager;
 use std::collections::VecDeque;
 use std::fmt::{Debug, Formatter};
+use std::rc::Rc;
 use std::sync::Arc;
 use parking_lot::Mutex;
 use recovery_log_manager::LogManager;
 use transaction::Transaction;
 
 /// ExecutorContext stores all the context necessary to run an executor.
-pub struct ExecutorContext {
+pub struct ExecutorContext<'a> {
 
     /// The transaction context associated with this executor context
     transaction: Arc<Transaction>,
@@ -30,7 +31,7 @@ pub struct ExecutorContext {
     lock_mgr: Option<Arc<LockManager>>,
 
     /// The set of NLJ check executors associated with this executor context
-    nested_loop_join_check_exec_set: VecDeque<(Box<dyn Executor>, Box<dyn Executor>)>,
+    nested_loop_join_check_exec_set: VecDeque<(ExecutorImpl<'a>, ExecutorImpl<'a>)>,
 
     /// The set of check options associated with this executor context
     /// TODO - remove ARC
@@ -39,7 +40,7 @@ pub struct ExecutorContext {
     is_delete: bool,
 }
 
-impl Debug for ExecutorContext {
+impl Debug for ExecutorContext<'_> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Executor Context")
             // TODO - add fields
@@ -48,7 +49,7 @@ impl Debug for ExecutorContext {
 }
 
 
-impl ExecutorContext {
+impl<'a> ExecutorContext<'a> {
 
     /**
      * Creates an ExecutorContext for the transaction that is executing the query.
@@ -95,7 +96,7 @@ impl ExecutorContext {
 
 
     /** @return the set of nlj check executors */
-    pub(crate) fn get_nested_loop_join_check_exec_set(&self) -> &VecDeque<(Box<dyn Executor>, Box<dyn Executor>)> {
+    pub(crate) fn get_nested_loop_join_check_exec_set(&self) -> &VecDeque<(ExecutorImpl, ExecutorImpl)> {
         &self.nested_loop_join_check_exec_set
     }
 
@@ -103,7 +104,7 @@ impl ExecutorContext {
     pub(crate) fn get_check_options(&self) -> &Arc<CheckOptions> { &self.check_options }
 
 
-    pub(crate) fn add_check_executor(&mut self, left_exec: Box<dyn Executor>, right_exec: Box<dyn Executor>) {
+    pub(crate) fn add_check_executor(&'a mut self, left_exec: ExecutorImpl<'a>, right_exec: ExecutorImpl<'a>) {
         self.nested_loop_join_check_exec_set.push_back((left_exec, right_exec));
     }
 

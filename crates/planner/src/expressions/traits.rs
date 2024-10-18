@@ -6,5 +6,5 @@ use expression::{ExpressionRef, ExpressionType};
 
 /// plan table ref
 pub(crate) trait PlanExpression {
-    fn plan<'a>(&self, children: &Vec<Rc<PlanType>>, planner: &'a Planner<'a>) -> (String, ExpressionRef);
+    fn plan<'a>(&self, children: &[&PlanType], planner: &'a Planner<'a>) -> (String, ExpressionRef);
 }

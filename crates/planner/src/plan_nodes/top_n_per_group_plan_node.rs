@@ -1,5 +1,5 @@
 use crate::constants::UNNAMED_COLUMN;
-use crate::plan_nodes::{PlanNode, PlanNodeRef, PlanType};
+use crate::plan_nodes::{PlanNode, PlanType};
 use catalog_schema::{Column, Schema};
 use data_types::DBTypeId;
 use expression::{Expression, ExpressionRef};
@@ -21,7 +21,7 @@ pub struct TopNPerGroupPlanNode {
     output_schema: Arc<Schema>,
 
     /** The children of this plan node. */
-    children: Vec<PlanNodeRef>,
+    children: Vec<PlanType>,
 
     order_bys: Vec<(OrderByType, ExpressionRef)>,
 
@@ -40,7 +40,7 @@ impl TopNPerGroupPlanNode {
      * @param order_bys The sort expressions and their order by types.
      * @param n Retain n elements.
      */
-    pub fn new(output: Arc<Schema>, child: PlanNodeRef, group_bys: Vec<ExpressionRef>, order_bys: Vec<(OrderByType, ExpressionRef)>, n: usize) -> Self {
+    pub fn new(output: Arc<Schema>, child: PlanType, group_bys: Vec<ExpressionRef>, order_bys: Vec<(OrderByType, ExpressionRef)>, n: usize) -> Self {
         Self {
             output_schema: output,
             children: vec![child],
@@ -58,9 +58,9 @@ impl TopNPerGroupPlanNode {
     pub fn get_group_by(&self) -> &[ExpressionRef] { self.group_bys.as_slice() }
 
     /** @return The child plan node */
-    pub fn get_child_plan(&self) -> PlanNodeRef {
+    pub fn get_child_plan(&self) -> &PlanType {
         assert_eq!(self.children.len(), 1, "TopNPerGroup should have exactly one child plan.");
-        self.children[0].clone()
+        &self.children[0]
     }
 
     /** @return The N (limit) */
@@ -88,7 +88,7 @@ impl PlanNode for TopNPerGroupPlanNode {
         self.output_schema.clone()
     }
 
-    fn get_children(&self) -> &[Rc<PlanType>] {
+    fn get_children(&self) -> &[PlanType] {
         &self.children
     }
 }

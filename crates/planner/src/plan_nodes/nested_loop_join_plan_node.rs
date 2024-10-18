@@ -6,7 +6,6 @@ use catalog_schema::{Column, Schema};
 use common::config::{IndexOID, TableOID};
 use expression::{ConstantValueExpression, ExpressionRef};
 use crate::plan_nodes::{PlanNode, PlanType};
-use crate::PlanNodeRef;
 
 const EMPTY_CHILDREN: &'static [Rc<PlanType>] = &[];
 
@@ -22,7 +21,7 @@ pub struct NestedLoopJoinPlanNode {
      */
     output_schema: Arc<Schema>,
 
-    children: Vec<PlanNodeRef>,
+    children: Vec<PlanType>,
 
     /** The join predicate */
     predicate: ExpressionRef,
@@ -39,7 +38,7 @@ impl NestedLoopJoinPlanNode {
     * @param predicate The predicate to join with, the tuples are joined
     * if predicate(tuple) = true.
     */
-    pub fn new(output: Arc<Schema>, left: PlanNodeRef, right: PlanNodeRef, predicate: ExpressionRef, join_type: JoinType) -> Self {
+    pub fn new(output: Arc<Schema>, left: PlanType, right: PlanType, predicate: ExpressionRef, join_type: JoinType) -> Self {
         Self {
             output_schema: output,
             children: vec![left, right],
@@ -54,15 +53,15 @@ impl NestedLoopJoinPlanNode {
     }
 
     /** @return The left plan node of the nested loop join, by convention it should be the smaller table */
-    pub fn get_left_plan(&self) -> PlanNodeRef {
+    pub fn get_left_plan(&self) -> &PlanType {
         assert_eq!(self.children.len(), 2, "Nested loop joins should have exactly two children plans.");
-        self.children[0].clone()
+        &self.children[0]
     }
 
     /** @return The right plan node of the nested loop join */
-    pub fn get_right_plan(&self) -> PlanNodeRef {
+    pub fn get_right_plan(&self) -> &PlanType {
         assert_eq!(self.children.len(), 2, "Nested loop joins should have exactly two children plans.");
-        self.children[1].clone()
+        &self.children[1]
     }
 
     /** @return The join type used in the hash join */
@@ -89,7 +88,7 @@ impl PlanNode for NestedLoopJoinPlanNode {
         self.output_schema.clone()
     }
 
-    fn get_children(&self) -> &[Rc<PlanType>] {
+    fn get_children(&self) -> &[PlanType] {
         self.children.as_slice()
     }
 }

@@ -6,7 +6,7 @@ use crate::{MockScanPlanNode, PlanNode, Planner, SeqScanPlanNode};
 use crate::traits::Plan;
 
 impl Plan for BaseTableRef {
-    fn plan<'a>(&self, planner: &'a Planner<'a>) -> Rc<PlanType> {
+    fn plan<'a>(&self, planner: &'a Planner<'a>) -> PlanType {
         // We always scan ALL columns of the table, and use projection executor to
         // remove some of them, therefore simplifying the planning process.
 
@@ -22,7 +22,7 @@ impl Plan for BaseTableRef {
             return MockScanPlanNode::new(
                 Arc::new(SeqScanPlanNode::infer_scan_schema(self)),
                 table.get_name().clone(),
-            ).into_ref();
+            ).into();
         }
 
         // Otherwise, plan as normal SeqScan.
@@ -31,6 +31,6 @@ impl Plan for BaseTableRef {
             table.get_oid(),
             table.get_name().clone(),
             None
-        ).into_ref()
+        ).into()
     }
 }

@@ -5,7 +5,7 @@ use binder::JoinRef;
 use crate::traits::Plan;
 
 impl Plan for JoinRef {
-    fn plan<'a>(&self, planner: &'a Planner<'a>)-> Rc<PlanType> {
+    fn plan<'a>(&self, planner: &'a Planner<'a>)-> PlanType {
         todo!()
     }
 }

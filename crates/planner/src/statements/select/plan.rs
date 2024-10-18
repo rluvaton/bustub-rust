@@ -1,25 +1,25 @@
 use crate::expressions::PlanExpression;
-use crate::plan_nodes::{AggregationPlanNode, FilterPlan, PlanNode, PlanNodeRef, ProjectionPlanNode, ValuesPlanNode};
+use crate::plan_nodes::{AggregationPlanNode, FilterPlan, PlanNode, ProjectionPlanNode, ValuesPlanNode};
 use crate::statements::select::plan_aggregation::PlanAggregation;
 use crate::statements::select::plan_window::PlanWindow;
 use crate::traits::Plan;
-use crate::{LimitPlanNode, Planner};
+use crate::{LimitPlanNode, PlanType, Planner};
 use binder::{Expression as BinderExpression, ExpressionTypeImpl, SelectStatement, TableReferenceTypeImpl};
 use catalog_schema::Schema;
 use expression::{ColumnValueExpression, Expression, ExpressionRef};
 use std::sync::Arc;
 
 impl Plan for SelectStatement {
-    fn plan<'a>(&self, planner: &'a Planner<'a>)-> PlanNodeRef {
+    fn plan<'a>(&self, planner: &'a Planner<'a>)-> PlanType {
         let ctx_guard = planner.new_context();
 
         if !self.ctes.is_empty() {
             ctx_guard.context.lock().cte_list.replace(self.ctes.clone());
         }
 
-        let mut plan: PlanNodeRef = match &*self.table {
+        let mut plan: PlanType = match &*self.table {
             TableReferenceTypeImpl::Empty => {
-                ValuesPlanNode::new(Arc::new(Schema::new(vec![])), vec![vec![]]).into_ref()
+                ValuesPlanNode::new(Arc::new(Schema::new(vec![])), vec![vec![]]).into()
             }
             _ => {
                 self.table.plan(planner)
@@ -29,8 +29,10 @@ impl Plan for SelectStatement {
         if let Some(where_expr) = &self.where_exp {
             let schema = plan.get_output_schema();
 
-            let (_, expr) = where_expr.plan(&vec![plan.clone()], planner);
-            plan = FilterPlan::new(schema, expr, plan).into_ref();
+            let where_children = vec![&plan];
+
+            let (_, expr) = where_expr.plan(where_children.as_slice(), planner);
+            plan = FilterPlan::new(schema, expr, plan).into();
         }
 
         // Binder already checked that normal aggregations and window aggregations cannot coexist.
@@ -50,12 +52,13 @@ impl Plan for SelectStatement {
             plan = self.plan_window(plan, planner);
         } else if self.having.is_some() || !self.group_by.is_empty() || has_agg {
             // Plan aggregation
-            plan = self.plan_aggregation(plan, planner);
+            plan = self.plan_aggregation(&plan, planner);
         } else {
+            let select_list_children = vec![&plan];
             // Plan normal select
             let (column_names, exprs): (Vec<String>, Vec<ExpressionRef>) = self.select_list
                 .iter()
-                .map(|item| item.plan(&vec![plan.clone()], planner))
+                .map(|item| item.plan(select_list_children.as_slice(), planner))
                 .unzip();
 
             plan = ProjectionPlanNode::new(
@@ -65,7 +68,7 @@ impl Plan for SelectStatement {
                 )),
                 exprs,
                 plan
-            ).into_ref();
+            ).into();
         }
 
         // Plan DISTINCT as group agg
@@ -85,7 +88,7 @@ impl Plan for SelectStatement {
                 distinct_exprs,
                 vec![],
                 vec![],
-            ).into_ref();
+            ).into();
         }
 
         // Plan ORDER BY
@@ -105,7 +108,7 @@ impl Plan for SelectStatement {
 
             assert!(limit_count >= 0, "Limit count cant be negative");
 
-            plan = LimitPlanNode::new(plan.get_output_schema(), plan, limit_count as usize).into_ref();
+            plan = LimitPlanNode::new(plan.get_output_schema(), plan, limit_count as usize).into();
         }
 
         if self.limit_offset.is_some() {

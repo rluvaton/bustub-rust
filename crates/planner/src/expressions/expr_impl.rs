@@ -6,7 +6,7 @@ use crate::plan_nodes::PlanType;
 use crate::Planner;
 
 impl PlanExpression for ExpressionTypeImpl {
-    fn plan<'a>(&self, children: &Vec<Rc<PlanType>>, planner: &'a Planner<'a>) -> (String, ExpressionRef) {
+    fn plan<'a>(&self, children: &[&PlanType], planner: &'a Planner<'a>) -> (String, ExpressionRef) {
         match self {
             ExpressionTypeImpl::ColumnRef(e) => e.plan(children, planner),
             ExpressionTypeImpl::Constant(e) => e.plan(children, planner),

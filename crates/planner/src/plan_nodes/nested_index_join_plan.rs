@@ -6,7 +6,6 @@ use catalog_schema::Schema;
 use common::config::{IndexOID, TableOID};
 use expression::ExpressionRef;
 use crate::plan_nodes::{PlanNode, PlanType};
-use crate::PlanNodeRef;
 
 /**
  * NestedIndexJoinPlan is used to represent performing a nested index join between two tables
@@ -22,7 +21,7 @@ pub struct NestedIndexJoinPlan {
     output_schema: Arc<Schema>,
 
     /** The children of this plan node. */
-    children: Vec<PlanNodeRef>,
+    children: Vec<PlanType>,
 
     key_predicate: ExpressionRef,
 
@@ -37,7 +36,7 @@ pub struct NestedIndexJoinPlan {
 }
 
 impl NestedIndexJoinPlan {
-    pub fn new(output: Arc<Schema>, child: PlanNodeRef, key_predicate: ExpressionRef, inner_table_oid: TableOID, index_oid: IndexOID, index_name: String, index_table_name: String, inner_table_schema: Arc<Schema>, join_type: JoinType) -> Self {
+    pub fn new(output: Arc<Schema>, child: PlanType, key_predicate: ExpressionRef, inner_table_oid: TableOID, index_oid: IndexOID, index_name: String, index_table_name: String, inner_table_schema: Arc<Schema>, join_type: JoinType) -> Self {
         Self {
             output_schema: output,
             children: vec![child],
@@ -56,7 +55,7 @@ impl NestedIndexJoinPlan {
     pub fn get_key_predicate(&self) -> ExpressionRef { self.key_predicate.clone() }
 
     /** @return The plan node for the outer table of the nested index join */
-    pub fn get_child_plan(&self) -> PlanNodeRef { self.children[0].clone() }
+    pub fn get_child_plan(&self) -> &PlanType { &self.children[0] }
 
     /** @return The table oid for the inner table of the nested index join */
     pub fn get_inner_table_oid(&self) -> TableOID { self.inner_table_oid }
@@ -96,7 +95,7 @@ impl PlanNode for NestedIndexJoinPlan {
         self.output_schema.clone()
     }
 
-    fn get_children(&self) -> &[Rc<PlanType>] {
+    fn get_children(&self) -> &[PlanType] {
         &self.children
     }
 }

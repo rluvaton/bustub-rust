@@ -1,5 +1,5 @@
 use crate::context::ExecutorContext;
-use crate::executors::{Executor, ExecutorItem, ExecutorMetadata, FilterExecutor};
+use crate::executors::{Executor, ExecutorItem, ExecutorMetadata, FilterExecutor, LimitExecutor, MockScanExecutor, ProjectionExecutor};
 use catalog_schema::Schema;
 use std::fmt::Display;
 use std::sync::Arc;
@@ -9,37 +9,40 @@ use std::sync::Arc;
 macro_rules! call_each_variant {
     ($enum_val:expr, $name:ident, $func:expr) => {
         match $enum_val {
+            ExecutorImpl::Limit($name) => $func,
             ExecutorImpl::Filter($name) => $func,
+            ExecutorImpl::Projection($name) => $func,
+            ExecutorImpl::MockScan($name) => $func,
             // Add match arms for other variants as necessary
         }
     };
 }
 
 #[derive(Debug)]
-pub(crate) enum ExecutorImpl {
+pub(crate) enum ExecutorImpl<'a> {
     // SeqScan,
     // IndexScan,
     // Insert(InsertPlan),
     // Update,
     // Delete(DeletePlan),
     // Aggregation(AggregationPlanNode),
-    // Limit,
+    Limit(LimitExecutor<'a>),
     // NestedLoopJoin,
     // NestedIndexJoin,
     // HashJoin,
-    Filter(FilterExecutor),
+    Filter(FilterExecutor<'a>),
     // Values(ValuesPlanNode),
-    // Projection(ProjectionPlanNode),
+    Projection(ProjectionExecutor<'a>),
     // Sort,
     // TopN,
     // TopNPerGroup,
-    // MockScan,
+    MockScan(MockScanExecutor<'a>)
     // InitCheck,
     // Window(WindowFunctionPlanNode)
 }
 
 
-impl ExecutorMetadata for ExecutorImpl {
+impl<'a> ExecutorMetadata for ExecutorImpl<'a> {
     fn get_output_schema(&self) -> Arc<Schema> {
         call_each_variant!(self, e, {
             e.get_output_schema()
@@ -53,7 +56,7 @@ impl ExecutorMetadata for ExecutorImpl {
     }
 }
 
-impl Iterator for ExecutorImpl {
+impl Iterator for ExecutorImpl<'_> {
     type Item = ExecutorItem;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -63,4 +66,4 @@ impl Iterator for ExecutorImpl {
     }
 }
 
-impl Executor for ExecutorImpl {}
+impl<'a> Executor<'a> for ExecutorImpl<'a> {}

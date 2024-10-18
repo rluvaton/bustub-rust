@@ -20,7 +20,7 @@ pub struct UpdatePlan {
     output_schema: Arc<Schema>,
 
     /** The children of this plan node. */
-    children: Vec<Rc<PlanType>>,
+    children: Vec<PlanType>,
 
     /** The table to be updated. */
     table_oid: TableOID,
@@ -37,7 +37,7 @@ impl UpdatePlan {
      * @param table_oid The identifier of the table that should be updated
      * @param target_expressions The target expressions for new tuples
      */
-    pub fn new(output: Arc<Schema>, child: Rc<PlanType>, table_oid: TableOID, target_expressions: Vec<ExpressionRef>) -> Self {
+    pub fn new(output: Arc<Schema>, child: PlanType, table_oid: TableOID, target_expressions: Vec<ExpressionRef>) -> Self {
         Self {
             output_schema: output,
             children: vec![child],
@@ -79,7 +79,7 @@ impl PlanNode for UpdatePlan {
         self.output_schema.clone()
     }
 
-    fn get_children(&self) -> &[Rc<PlanType>] {
+    fn get_children(&self) -> &[PlanType] {
         &self.children
     }
 }

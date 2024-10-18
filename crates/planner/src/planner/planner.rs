@@ -1,10 +1,10 @@
-use crate::plan_nodes::PlanNodeRef;
 use crate::planner::{Context, ContextGuard};
 use crate::traits::Plan;
 use binder::StatementTypeImpl;
 use db_core::catalog::Catalog;
 use parking_lot::Mutex;
 use std::sync::atomic::{AtomicUsize, Ordering};
+use crate::PlanType;
 
 pub struct Planner<'a> {
     /// Catalog will be used during the binding process
@@ -35,7 +35,7 @@ impl<'a> Planner<'a> {
         ContextGuard::new(self)
     }
 
-    pub fn plan(self, statement: &StatementTypeImpl)-> PlanNodeRef {
+    pub fn plan(self, statement: &StatementTypeImpl)-> PlanType {
         statement.plan(&self)
     }
 

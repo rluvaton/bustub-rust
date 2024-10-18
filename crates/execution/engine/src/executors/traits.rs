@@ -5,9 +5,10 @@ use catalog_schema::Schema;
 use rid::RID;
 use tuple::Tuple;
 use crate::context::ExecutorContext;
+use crate::executors::ExecutorImpl;
 
 // TODO - avoid Rc
-pub(crate) type ExecutorRef = Box<dyn Executor>;
+pub(crate) type ExecutorRef<'a> = Box<ExecutorImpl<'a>>;
 
 pub(crate) type ExecutorItem = (Tuple, RID);
 
@@ -25,9 +26,9 @@ pub(crate) trait ExecutorMetadata: Debug {
     fn get_context(&self) -> &ExecutorContext;
 }
 
-pub(crate) trait Executor: ExecutorMetadata + Iterator<Item = ExecutorItem> where Self: 'static {
-
-    fn into_ref(self) -> ExecutorRef where Self: Sized {
-        Box::new(self)
+pub(crate) trait Executor<'a>: ExecutorMetadata + Iterator<Item = ExecutorItem> + Into<ExecutorImpl<'a>> where Self: Sized {
+    //
+    fn into_ref(self) -> ExecutorRef<'a> {
+        Box::new(self.into())
     }
 }

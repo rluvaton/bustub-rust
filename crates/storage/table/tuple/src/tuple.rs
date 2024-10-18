@@ -116,7 +116,7 @@ impl Tuple {
         Self::from_value(
             key_attrs
                 .iter()
-                .map(|&idx| self.get_value(schema.clone(), idx as usize))
+                .map(|&idx| self.get_value(schema, idx as usize))
                 .collect(),
             key_schema
         )
@@ -134,10 +134,10 @@ impl Tuple {
         // TODO - change to use formatter
         let cols = (0..column_count)
             .map(|idx| {
-                if self.is_null(schema.clone(), idx) {
+                if self.is_null(schema, idx) {
                     "<NULL>".to_string()
                 } else {
-                    let val = self.get_value(schema.clone(), idx);
+                    let val = self.get_value(schema, idx);
 
                     format!("{}", val)
                 }
