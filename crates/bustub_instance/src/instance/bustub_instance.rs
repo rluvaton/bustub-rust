@@ -214,7 +214,6 @@ impl BustubInstance {
         let parsed = self.parse_sql(sql)?;
 
         for stmt in &parsed {
-            let mut is_delete = false;
 
             match &stmt {
                 StatementTypeImpl::Invalid => break,
@@ -224,12 +223,10 @@ impl BustubInstance {
                     self.create_table(txn.clone(), stmt, writer);
                     continue;
                 }
-                StatementTypeImpl::Delete(_) => {
-                    is_delete = true
-                }
+                StatementTypeImpl::Delete(_) => {}
             }
 
-            let (rows, schema) = self.execute_data_stmt(stmt, txn.clone(), is_delete)?;
+            let (rows, schema) = self.execute_data_stmt(stmt, txn.clone())?;
 
             // Generate header for the result set.
             writer.begin_table(false);
@@ -251,15 +248,73 @@ impl BustubInstance {
             writer.end_table();
         }
 
-
         Ok(is_successful)
     }
 
+    /// Execute Single SELECT statement and return the results
+    ///
+    /// This is useful for testings
+    pub fn execute_single_select_sql(&mut self, sql: &str, check_options: CheckOptions) -> error_utils::anyhow::Result<Vec<Vec<Value>>> {
+        self.wrap_with_txn(|this, txn| {
+            let parsed = this.parse_sql(sql)?;
+
+            assert_eq!(parsed.len(), 1, "Must have single statement");
+
+            let stmt = &parsed[0];
+            assert!(matches!(stmt, StatementTypeImpl::Select(_)), "Statement must be a select statement, instead got {:#?}", stmt);
+
+            let (rows, _) = this.execute_data_stmt(stmt, txn)?;
+
+            Ok(rows)
+        })
+    }
+
+    /// Execute Single INSERT statement and return the results
+    ///
+    /// This is useful for testings
+    pub fn execute_single_insert_sql(&mut self, sql: &str, check_options: CheckOptions) -> error_utils::anyhow::Result<Vec<Vec<Value>>> {
+        self.wrap_with_txn(|this, txn| {
+            let parsed = this.parse_sql(sql)?;
+
+            assert_eq!(parsed.len(), 1, "Must have single statement");
+
+            let stmt = &parsed[0];
+            assert!(matches!(stmt, StatementTypeImpl::Insert(_)), "Statement must be a insert statement, instead got {:#?}", stmt);
+
+            let (rows, _) = this.execute_data_stmt(stmt, txn)?;
+
+            Ok(rows)
+        })
+    }
+
+    /// Execute Single DELETE statement and return the results
+    ///
+    /// This is useful for testings
+    pub fn execute_single_delete_sql(&mut self, sql: &str, check_options: CheckOptions) -> error_utils::anyhow::Result<Vec<Vec<Value>>> {
+        self.wrap_with_txn(|this, txn| {
+            let parsed = this.parse_sql(sql)?;
+
+            assert_eq!(parsed.len(), 1, "Must have single statement");
+
+            let stmt = &parsed[0];
+            assert!(matches!(stmt, StatementTypeImpl::Delete(_)), "Statement must be a delete statement, instead got {:#?}", stmt);
+
+            let (rows, _) = this.execute_data_stmt(stmt, txn)?;
+
+            Ok(rows)
+        })
+    }
+
     /// Execute SELECT/INSERT/DELETE/UPDATE statements
-    fn execute_data_stmt(&mut self, stmt: &StatementTypeImpl, txn: Arc<Transaction>, is_delete: bool) -> error_utils::anyhow::Result<(Vec<Vec<Value>>, Arc<Schema>)> {
+    fn execute_data_stmt(&mut self, stmt: &StatementTypeImpl, txn: Arc<Transaction>) -> error_utils::anyhow::Result<(Vec<Vec<Value>>, Arc<Schema>)> {
+        let mut is_delete = false;
+
         // Assert SELECT/INSERT/DELETE/UPDATE statements
         match stmt {
-            StatementTypeImpl::Select(_) | StatementTypeImpl::Insert(_) | StatementTypeImpl::Delete(_) => {}
+            StatementTypeImpl::Select(_) | StatementTypeImpl::Insert(_) => {}
+            StatementTypeImpl::Delete(_) => {
+                is_delete = true;
+            }
             _ => unreachable!()
         }
         let catalog = self.catalog.lock();
@@ -316,6 +371,8 @@ impl BustubInstance {
     }
 
     fn parse_sql(&mut self, sql: &str) -> error_utils::anyhow::Result<Vec<StatementTypeImpl>> {
+        assert_eq!(sql.starts_with("\\"), false, "SQL query must not start with meta command prefix \\");
+
         let catalog = self.catalog.lock();
 
         let binder = Binder::new(catalog.deref());
