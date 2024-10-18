@@ -1,5 +1,5 @@
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub enum JoinType {
     Invalid,
     Left,

@@ -1,4 +1,4 @@
-use crate::BUSTUB_VALUE_NULL;
+use crate::{ComparisonDBTypeTrait, BUSTUB_VALUE_NULL};
 use std::ops::Deref;
 
 pub type BigIntUnderlyingType = i64;
@@ -20,6 +20,14 @@ impl BigIntType {
         BigIntType {
             value,
             len: if value == Self::NULL { BUSTUB_VALUE_NULL } else { 0 },
+        }
+    }
+
+    pub fn get_as_i64(&self) -> Option<i64> {
+        if self.is_null() {
+            None
+        } else {
+            Some(self.value)
         }
     }
 }
