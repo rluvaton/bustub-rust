@@ -11,10 +11,12 @@ mod tests {
 
         let sql = format!("SELECT number from {}", MockTableName::Table123);
 
-        let results = instance.execute_single_select_sql(sql.as_str(), CheckOptions::default()).expect("Should execute");
+        let actual = instance.execute_single_select_sql(sql.as_str(), CheckOptions::default()).expect("Should execute");
 
-        assert_eq!(results, vec![
+        let expected = actual.create_with_same_schema(vec![
             vec![]
-        ])
+        ]);
+
+        assert_eq!(actual, expected)
     }
 }

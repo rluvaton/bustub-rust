@@ -22,6 +22,7 @@ use catalog_schema::Schema;
 use data_types::Value;
 use transaction::{Transaction, TransactionManager as TransactionManagerTrait};
 use tuple::Tuple;
+use crate::rows::Rows;
 
 const DEFAULT_BPM_SIZE: usize = 128;
 const LRU_K_REPLACER_K: usize = 10;
@@ -226,26 +227,9 @@ impl BustubInstance {
                 StatementTypeImpl::Delete(_) => {}
             }
 
-            let (rows, schema) = self.execute_data_stmt(stmt, txn.clone())?;
+            let rows = self.execute_data_stmt(stmt, txn.clone())?;
 
-            // Generate header for the result set.
-            writer.begin_table(false);
-
-            writer.begin_header();
-            for col in schema.get_columns() {
-                writer.write_header_cell(col.get_name());
-            }
-            writer.end_header();
-
-            // Transforming result set into strings
-            for row in rows {
-                writer.begin_row();
-                for col in row {
-                    writer.write_cell(col.to_string().as_str());
-                }
-                writer.end_row();
-            }
-            writer.end_table();
+            rows.write_results(writer);
         }
 
         Ok(is_successful)
@@ -254,7 +238,7 @@ impl BustubInstance {
     /// Execute Single SELECT statement and return the results
     ///
     /// This is useful for testings
-    pub fn execute_single_select_sql(&mut self, sql: &str, check_options: CheckOptions) -> error_utils::anyhow::Result<Vec<Vec<Value>>> {
+    pub fn execute_single_select_sql(&mut self, sql: &str, check_options: CheckOptions) -> error_utils::anyhow::Result<Rows> {
         self.wrap_with_txn(|this, txn| {
             let parsed = this.parse_sql(sql)?;
 
@@ -263,16 +247,14 @@ impl BustubInstance {
             let stmt = &parsed[0];
             assert!(matches!(stmt, StatementTypeImpl::Select(_)), "Statement must be a select statement, instead got {:#?}", stmt);
 
-            let (rows, _) = this.execute_data_stmt(stmt, txn)?;
-
-            Ok(rows)
+            this.execute_data_stmt(stmt, txn)
         })
     }
 
     /// Execute Single INSERT statement and return the results
     ///
     /// This is useful for testings
-    pub fn execute_single_insert_sql(&mut self, sql: &str, check_options: CheckOptions) -> error_utils::anyhow::Result<Vec<Vec<Value>>> {
+    pub fn execute_single_insert_sql(&mut self, sql: &str, check_options: CheckOptions) -> error_utils::anyhow::Result<Rows> {
         self.wrap_with_txn(|this, txn| {
             let parsed = this.parse_sql(sql)?;
 
@@ -281,16 +263,14 @@ impl BustubInstance {
             let stmt = &parsed[0];
             assert!(matches!(stmt, StatementTypeImpl::Insert(_)), "Statement must be a insert statement, instead got {:#?}", stmt);
 
-            let (rows, _) = this.execute_data_stmt(stmt, txn)?;
-
-            Ok(rows)
+            this.execute_data_stmt(stmt, txn)
         })
     }
 
     /// Execute Single DELETE statement and return the results
     ///
     /// This is useful for testings
-    pub fn execute_single_delete_sql(&mut self, sql: &str, check_options: CheckOptions) -> error_utils::anyhow::Result<Vec<Vec<Value>>> {
+    pub fn execute_single_delete_sql(&mut self, sql: &str, check_options: CheckOptions) -> error_utils::anyhow::Result<Rows> {
         self.wrap_with_txn(|this, txn| {
             let parsed = this.parse_sql(sql)?;
 
@@ -299,14 +279,12 @@ impl BustubInstance {
             let stmt = &parsed[0];
             assert!(matches!(stmt, StatementTypeImpl::Delete(_)), "Statement must be a delete statement, instead got {:#?}", stmt);
 
-            let (rows, _) = this.execute_data_stmt(stmt, txn)?;
-
-            Ok(rows)
+            this.execute_data_stmt(stmt, txn)
         })
     }
 
     /// Execute SELECT/INSERT/DELETE/UPDATE statements
-    fn execute_data_stmt(&mut self, stmt: &StatementTypeImpl, txn: Arc<Transaction>) -> error_utils::anyhow::Result<(Vec<Vec<Value>>, Arc<Schema>)> {
+    fn execute_data_stmt(&mut self, stmt: &StatementTypeImpl, txn: Arc<Transaction>) -> error_utils::anyhow::Result<Rows> {
         let mut is_delete = false;
 
         // Assert SELECT/INSERT/DELETE/UPDATE statements
@@ -336,16 +314,7 @@ impl BustubInstance {
         // Return the result set as a vector of string.
         let schema = plan.get_output_schema();
 
-        let parsed_results = result
-            .iter()
-            .map(|(tuple)| {
-                (0..schema.get_column_count())
-                    .map(|index| tuple.get_value(&schema, index))
-                    .collect::<Vec<Value>>()
-            })
-            .collect::<Vec<Vec<Value>>>();
-
-        Ok((parsed_results, schema))
+        Ok(Rows::new(result, schema))
     }
 
     fn execute_shell_commands<ResultWriterImpl: ResultWriter>(&mut self, cmd: &str, writer: &mut ResultWriterImpl) -> error_utils::anyhow::Result<()> {
