@@ -25,11 +25,13 @@ pub struct FilterExecutor {
     child_executor: ExecutorRef,
 }
 
-pub(crate) fn create_filter(child_executor: ExecutorRef, plan: FilterPlan, ctx: Arc<ExecutorContext>) -> FilterExecutor {
-    FilterExecutor {
-        plan,
-        child_executor,
-        ctx,
+impl FilterExecutor {
+    pub(crate) fn new(child_executor: ExecutorRef, plan: FilterPlan, ctx: Arc<ExecutorContext>) -> FilterExecutor {
+        Self {
+            plan,
+            child_executor,
+            ctx,
+        }
     }
 }
 

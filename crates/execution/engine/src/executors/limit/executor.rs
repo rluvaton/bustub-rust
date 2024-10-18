@@ -2,29 +2,33 @@ use crate::context::ExecutorContext;
 use crate::executors::{Executor, ExecutorItem, ExecutorMetadata, ExecutorRef};
 use catalog_schema::Schema;
 use expression::Expression;
-use planner::{PlanNode, ProjectionPlanNode};
+use planner::{FilterPlan, LimitPlanNode, PlanNode, ProjectionPlanNode};
 use std::fmt;
 use std::fmt::Debug;
+use std::ops::Deref;
 use std::sync::Arc;
 use tuple::Tuple;
 
 #[must_use = "iterators are lazy and do nothing unless consumed"]
-pub struct ProjectionExecutor {
+pub struct LimitExecutor {
     /// The executor context in which the executor runs
     ctx: Arc<ExecutorContext>,
 
     // ----
 
     /** The filter plan node to be executed */
-    plan: ProjectionPlanNode,
+    plan: LimitPlanNode,
 
     /** The child executor from which tuples are obtained */
     child_executor: ExecutorRef,
+
+    remaining: usize
 }
 
-impl ProjectionExecutor {
-    pub(crate) fn new(child_executor: ExecutorRef, plan: ProjectionPlanNode, ctx: Arc<ExecutorContext>) -> Self {
+impl LimitExecutor {
+    pub(crate) fn new(child_executor: ExecutorRef, plan: LimitPlanNode, ctx: Arc<ExecutorContext>) -> Self {
         Self {
+            remaining: plan.get_limit(),
             plan,
             child_executor,
             ctx,
@@ -32,40 +36,36 @@ impl ProjectionExecutor {
     }
 }
 
-impl Debug for ProjectionExecutor {
+impl Debug for LimitExecutor {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("Projection").field("iter", &self.child_executor).finish()
+        f.debug_struct("Limit").field("iter", &self.child_executor).finish()
     }
 }
 
 
-impl Iterator for ProjectionExecutor
+impl Iterator for LimitExecutor
 {
     type Item = ExecutorItem;
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
-        let (tuple, rid) = self.child_executor.next()?;
+        if self.remaining == 0 {
+            return None
+        }
+        let item = self.child_executor.next()?;
 
-        let values = self.plan.get_expressions()
-            .iter()
-            .map(|expr| expr.evaluate(&tuple, &*self.child_executor.get_output_schema().clone()))
-            .collect::<Vec<_>>();
+        self.remaining -= 1;
 
-        Some((
-            Tuple::from_value(values, &*self.plan.get_output_schema()),
-            rid
-        ))
+        Some(item)
     }
 
     #[inline]
     fn size_hint(&self) -> (usize, Option<usize>) {
-        let (_, upper) = self.child_executor.size_hint();
-        (0, upper) // can't know a lower bound, due to the predicate
+        (0, Some(self.remaining))
     }
 }
 
-impl<> ExecutorMetadata for ProjectionExecutor {
+impl<> ExecutorMetadata for LimitExecutor {
     fn get_output_schema(&self) -> Arc<Schema> {
         self.plan.get_output_schema()
     }
@@ -76,4 +76,4 @@ impl<> ExecutorMetadata for ProjectionExecutor {
 }
 
 
-impl Executor for ProjectionExecutor {}
+impl Executor for LimitExecutor {}

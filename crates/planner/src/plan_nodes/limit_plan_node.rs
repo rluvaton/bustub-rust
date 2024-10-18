@@ -42,7 +42,7 @@ impl LimitPlanNode {
 
 
     /** @return limit */
-    pub fn get_limit(&self) -> &usize { &self.limit }
+    pub fn get_limit(&self) -> usize { self.limit }
 
     /** @return The child plan providing tuples to be limited */
     pub fn get_child_plan(&self) -> PlanNodeRef {
