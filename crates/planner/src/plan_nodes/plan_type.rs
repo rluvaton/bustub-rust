@@ -2,6 +2,7 @@ use std::fmt::{Display, Formatter};
 use std::rc::Rc;
 use std::sync::Arc;
 use catalog_schema::Schema;
+use crate::LimitPlanNode;
 use crate::plan_nodes::{AggregationPlanNode, FilterPlan, PlanNode, ProjectionPlanNode, ValuesPlanNode};
 use crate::plan_nodes::mock_scan_plan_node::MockScanPlanNode;
 use crate::plan_nodes::seq_scan_plan_node::SeqScanPlanNode;
@@ -36,7 +37,7 @@ pub enum PlanType {
     // Update,
     Delete(DeletePlan),
     Aggregation(AggregationPlanNode),
-    // Limit,
+    Limit(LimitPlanNode),
     // NestedLoopJoin,
     // NestedIndexJoin,
     // HashJoin,
