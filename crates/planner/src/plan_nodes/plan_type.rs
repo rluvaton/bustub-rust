@@ -2,11 +2,7 @@ use std::fmt::{Display, Formatter};
 use std::rc::Rc;
 use std::sync::Arc;
 use catalog_schema::Schema;
-use crate::plan_nodes::{AggregationPlanNode, FilterPlan, PlanNode, ProjectionPlanNode, ValuesPlanNode};
-use crate::plan_nodes::mock_scan_plan_node::MockScanPlanNode;
-use crate::plan_nodes::seq_scan_plan_node::SeqScanPlanNode;
-use crate::plan_nodes::window_plan_node::WindowFunctionPlanNode;
-use crate::statements::{DeletePlan, InsertPlan};
+use crate::{AggregationPlanNode, DeletePlan, FilterPlan, HashJoinPlan, IndexScanPlanNode, InsertPlan, LimitPlanNode, MockScanPlanNode, NestedIndexJoinPlan, NestedLoopJoinPlanNode, PlanNode, ProjectionPlanNode, SeqScanPlanNode, SortPlanNode, TopNPerGroupPlanNode, TopNPlanNode, UpdatePlan, ValuesPlanNode, WindowFunctionPlanNode};
 
 // Helper to avoid duplicating deref on each variant
 macro_rules! call_each_variant {
@@ -21,6 +17,15 @@ macro_rules! call_each_variant {
             PlanType::Aggregation($name) => $func,
             PlanType::MockScan($name) => $func,
             PlanType::SeqScan($name) => $func,
+            PlanType::Limit($name) => $func,
+            PlanType::HashJoin($name) => $func,
+            PlanType::IndexScan($name) => $func,
+            PlanType::NestedIndexJoin($name) => $func,
+            PlanType::NestedLoopJoin($name) => $func,
+            PlanType::Sort($name) => $func,
+            PlanType::TopNPerGroup($name) => $func,
+            PlanType::TopN($name) => $func,
+            PlanType::Update($name) => $func,
             // Add match arms for other variants as necessary
         }
     };
@@ -31,21 +36,21 @@ macro_rules! call_each_variant {
 #[derive(Clone, Debug, PartialEq)]
 pub enum PlanType {
     SeqScan(SeqScanPlanNode),
-    // IndexScan,
+    IndexScan(IndexScanPlanNode),
     Insert(InsertPlan),
-    // Update,
+    Update(UpdatePlan),
     Delete(DeletePlan),
     Aggregation(AggregationPlanNode),
-    // Limit,
-    // NestedLoopJoin,
-    // NestedIndexJoin,
-    // HashJoin,
+    Limit(LimitPlanNode),
+    NestedLoopJoin(NestedLoopJoinPlanNode),
+    NestedIndexJoin(NestedIndexJoinPlan),
+    HashJoin(HashJoinPlan),
     Filter(FilterPlan),
     Values(ValuesPlanNode),
     Projection(ProjectionPlanNode),
-    // Sort,
-    // TopN,
-    // TopNPerGroup,
+    Sort(SortPlanNode),
+    TopN(TopNPlanNode),
+    TopNPerGroup(TopNPerGroupPlanNode),
     MockScan(MockScanPlanNode),
     // InitCheck,
     Window(WindowFunctionPlanNode)
