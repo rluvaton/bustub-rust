@@ -1,5 +1,5 @@
 use crate::context::ExecutorContext;
-use crate::executors::{Executor, ExecutorRef, FilterExecutor, LimitExecutor, MockScanExecutor, ProjectionExecutor};
+use crate::executors::{Executor, ExecutorRef, FilterExecutor, LimitExecutor, MockScanExecutor, ProjectionExecutor, ValuesExecutor};
 use planner::PlanType;
 use std::fmt::Display;
 use std::rc::Rc;
@@ -55,6 +55,9 @@ impl<'a> CreateExecutor<'a> for PlanType {
             }
             PlanType::MockScan(_) => {
                 MockScanExecutor::new(&self, ctx).into_ref()
+            },
+            PlanType::Values(p) => {
+                ValuesExecutor::new(p, ctx).into_ref()
             },
             // PlanType::Window(_) => {}
             _ => unimplemented!("No executor found for the requested plan type {:#?}", self)

@@ -1,5 +1,5 @@
 use crate::context::ExecutorContext;
-use crate::executors::{Executor, ExecutorItem, ExecutorMetadata, FilterExecutor, LimitExecutor, MockScanExecutor, ProjectionExecutor};
+use crate::executors::{Executor, ExecutorItem, ExecutorMetadata, FilterExecutor, LimitExecutor, MockScanExecutor, ProjectionExecutor, ValuesExecutor};
 use catalog_schema::Schema;
 use std::fmt::Display;
 use std::sync::Arc;
@@ -13,6 +13,7 @@ macro_rules! call_each_variant {
             ExecutorImpl::Filter($name) => $func,
             ExecutorImpl::Projection($name) => $func,
             ExecutorImpl::MockScan($name) => $func,
+            ExecutorImpl::Values($name) => $func,
             // Add match arms for other variants as necessary
         }
     };
@@ -31,7 +32,7 @@ pub(crate) enum ExecutorImpl<'a> {
     // NestedIndexJoin,
     // HashJoin,
     Filter(FilterExecutor<'a>),
-    // Values(ValuesPlanNode),
+    Values(ValuesExecutor<'a>),
     Projection(ProjectionExecutor<'a>),
     // Sort,
     // TopN,
