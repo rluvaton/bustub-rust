@@ -196,28 +196,10 @@ impl BustubInstance {
 
     pub fn execute_sql_txn<ResultWriterImpl: ResultWriter>(&mut self, sql: &str, writer: &mut ResultWriterImpl, txn: Arc<Transaction>, check_options: CheckOptions) -> error_utils::anyhow::Result<bool> {
         if sql.starts_with("\\") {
-            // Internal meta-commands, like in `psql`.
-
-            match sql {
-                "\\dt" => self.cmd_display_tables(writer),
-                "\\di" => self.cmd_display_indices(writer),
-                "\\help" => Self::cmd_display_help(writer),
-                _ => {
-                    if sql.starts_with("\\dbgmvcc") {
-                        self.cmd_dbg_mvcc(sql.split("").collect(), writer);
-                    } else if sql.starts_with("\\txn") {
-                        self.cmd_txn(sql.split("").collect(), writer);
-                    } else {
-                        return Err(error_utils::anyhow::anyhow!("unsupported internal command: {}", sql))
-                    }
-                }
-            }
-
-            return Ok(true);
+            return self.execute_shell_commands(sql, writer).map(|_| true);
         }
 
         let mut is_successful = true;
-
 
         let parsed = {
 
@@ -286,6 +268,28 @@ impl BustubInstance {
 
 
         Ok(is_successful)
+    }
+
+    pub fn execute_shell_commands<ResultWriterImpl: ResultWriter>(&mut self, cmd: &str, writer: &mut ResultWriterImpl) -> error_utils::anyhow::Result<()> {
+        // Internal meta-commands, like in `psql`.
+        assert!(cmd.starts_with("\\"), "command must start with \\");
+
+        match cmd {
+            "\\dt" => self.cmd_display_tables(writer),
+            "\\di" => self.cmd_display_indices(writer),
+            "\\help" => Self::cmd_display_help(writer),
+            _ => {
+                if cmd.starts_with("\\dbgmvcc") {
+                    self.cmd_dbg_mvcc(cmd.split("").collect(), writer);
+                } else if cmd.starts_with("\\txn") {
+                    self.cmd_txn(cmd.split("").collect(), writer);
+                } else {
+                    return Err(error_utils::anyhow::anyhow!("unsupported internal command: {}", cmd))
+                }
+            }
+        }
+
+        Ok(())
     }
 
     fn make_executor_context(&self, txn: Arc<Transaction>, is_modify: bool) -> Arc<ExecutorContext> {
