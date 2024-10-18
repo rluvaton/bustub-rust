@@ -29,6 +29,33 @@ impl From<&Option<BigIntUnderlyingType>> for BigIntType {
     }
 }
 
+impl From<BigIntType> for Option<BigIntUnderlyingType> {
+    fn from(value: BigIntType) -> Option<BigIntUnderlyingType> {
+        if value.is_null() {
+            None
+        } else {
+            Some(value.value)
+        }
+    }
+}
+
+impl TryFrom<Value> for Option<BigIntUnderlyingType> {
+    type Error = error_utils::anyhow::Error;
+
+    fn try_from(value: Value) -> Result<Self, Self::Error> {
+        let bigint: BigIntType = match value.get_value() {
+            DBTypeIdImpl::TINYINT(v) => v.into(),
+            DBTypeIdImpl::SMALLINT(v) => v.into(),
+            DBTypeIdImpl::INT(v) => v.into(),
+            DBTypeIdImpl::BIGINT(v) => *v,
+            DBTypeIdImpl::DECIMAL(d) => d.try_into().map_err(|_| error_utils::anyhow!("Cant convert to bigint"))?,
+            _ => return Err(error_utils::anyhow!("Cant convert to bigint")),
+        };
+
+        Ok(bigint.into())
+    }
+}
+
 impl From<&[u8]> for BigIntType {
     fn from(value: &[u8]) -> Self {
         // TODO - should we have type that indicate whether it's big int or other type?

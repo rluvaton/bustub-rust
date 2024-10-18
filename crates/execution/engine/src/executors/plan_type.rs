@@ -48,11 +48,16 @@ impl CreateExecutor for PlanType {
 
                 child.projection_exec(d.clone(), ctx.clone()).into_ref()
             }
+            PlanType::Limit(l) => {
+                let child = l.get_child_plan().create_executor(ctx.clone());
+
+                child.limit_exec(l.clone(), ctx.clone()).into_ref()
+            }
             PlanType::MockScan(_) => {
                 MockScanExecutor::new(self, ctx).into_ref()
             },
             // PlanType::Window(_) => {}
-            _ => unimplemented!("{:#?}", self)
+            _ => unimplemented!("No executor found for the requested plan type {:#?}", self)
         }
     }
 }
