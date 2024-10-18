@@ -2,7 +2,7 @@ use std::fmt::{Display, Formatter};
 use std::rc::Rc;
 use std::sync::Arc;
 use catalog_schema::Schema;
-use crate::{AggregationPlanNode, DeletePlan, FilterPlan, HashJoinPlan, InsertPlan, LimitPlanNode, MockScanPlanNode, PlanNode, ProjectionPlanNode, SeqScanPlanNode, ValuesPlanNode, WindowFunctionPlanNode};
+use crate::{AggregationPlanNode, DeletePlan, FilterPlan, HashJoinPlan, IndexScanPlanNode, InsertPlan, LimitPlanNode, MockScanPlanNode, PlanNode, ProjectionPlanNode, SeqScanPlanNode, ValuesPlanNode, WindowFunctionPlanNode};
 
 // Helper to avoid duplicating deref on each variant
 macro_rules! call_each_variant {
@@ -19,6 +19,7 @@ macro_rules! call_each_variant {
             PlanType::SeqScan($name) => $func,
             PlanType::Limit($name) => $func,
             PlanType::HashJoin($name) => $func,
+            PlanType::IndexScan($name) => $func,
             // Add match arms for other variants as necessary
         }
     };
@@ -29,7 +30,7 @@ macro_rules! call_each_variant {
 #[derive(Clone, Debug, PartialEq)]
 pub enum PlanType {
     SeqScan(SeqScanPlanNode),
-    // IndexScan,
+    IndexScan(IndexScanPlanNode),
     Insert(InsertPlan),
     // Update,
     Delete(DeletePlan),
