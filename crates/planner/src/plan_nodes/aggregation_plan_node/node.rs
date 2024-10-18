@@ -94,7 +94,7 @@ impl AggregationPlanNode {
     /** @return The aggregate types */
     fn get_aggregate_types(&self) -> &Vec<AggregationType> { &self.agg_types }
 
-    pub fn infer_window_schema(group_bys: &[ExpressionRef], aggregates: &[ExpressionRef], agg_types: Vec<AggregationType>) -> Schema {
+    pub fn infer_agg_schema(group_bys: &[ExpressionRef], aggregates: &[ExpressionRef], agg_types: &[AggregationType]) -> Schema {
         // TODO(avery): correctly infer window call return type
         let group_by_columns = group_bys
             .iter()

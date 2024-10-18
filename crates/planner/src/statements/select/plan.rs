@@ -3,14 +3,15 @@ use crate::plan_nodes::{AggregationPlanNode, FilterPlan, PlanNode, ProjectionPla
 use crate::statements::select::plan_aggregation::PlanAggregation;
 use crate::statements::select::plan_window::PlanWindow;
 use crate::traits::Plan;
-use crate::{LimitPlanNode, PlanType, Planner};
+use crate::{LimitPlanNode, PlanType, Planner, SortPlanNode};
 use binder::{Expression as BinderExpression, ExpressionTypeImpl, SelectStatement, TableReferenceTypeImpl};
 use catalog_schema::Schema;
 use expression::{ColumnValueExpression, Expression, ExpressionRef};
 use std::sync::Arc;
+use crate::statements::select::plan_normal_select::PlanNormalSelect;
 
 impl Plan for SelectStatement {
-    fn plan<'a>(&self, planner: &'a Planner<'a>)-> PlanType {
+    fn plan<'a>(&self, planner: &'a Planner<'a>) -> PlanType {
         let ctx_guard = planner.new_context();
 
         if !self.ctes.is_empty() {
@@ -52,23 +53,10 @@ impl Plan for SelectStatement {
             plan = self.plan_window(plan, planner);
         } else if self.having.is_some() || !self.group_by.is_empty() || has_agg {
             // Plan aggregation
-            plan = self.plan_aggregation(&plan, planner);
+            plan = self.plan_aggregation(plan, planner);
         } else {
-            let select_list_children = vec![&plan];
             // Plan normal select
-            let (column_names, exprs): (Vec<String>, Vec<ExpressionRef>) = self.select_list
-                .iter()
-                .map(|item| item.plan(select_list_children.as_slice(), planner))
-                .unzip();
-
-            plan = ProjectionPlanNode::new(
-                Arc::new(ProjectionPlanNode::rename_schema(
-                    ProjectionPlanNode::infer_projection_schema(exprs.as_slice()),
-                    column_names.as_slice()
-                )),
-                exprs,
-                plan
-            ).into();
+            plan = self.plan_normal_select(plan, planner);
         }
 
         // Plan DISTINCT as group agg
@@ -93,7 +81,16 @@ impl Plan for SelectStatement {
 
         // Plan ORDER BY
         if !self.sort.is_empty() {
-            unimplemented!()
+            let order_by_plan = vec![&plan];
+            let order_bys = self.sort
+                .iter()
+                .map(|order_by| (
+                    order_by.order_type,
+                    order_by.plan(order_by_plan.as_slice(), planner).1
+                ))
+                .collect::<Vec<_>>();
+
+            plan = SortPlanNode::new(plan.get_output_schema(), plan, order_bys).into();
         }
 
         // Plan LIMIT and OFFSET
@@ -103,7 +100,7 @@ impl Plan for SelectStatement {
                 _ => unimplemented!("Currently only constant integer as an offset is supported")
             };
 
-            let limit_count: Option<i64>  = e.value.clone().try_into().expect("Limit constant must be a number");
+            let limit_count: Option<i64> = e.value.clone().try_into().expect("Limit constant must be a number");
             let limit_count = limit_count.expect("Limit constant must not be null");
 
             assert!(limit_count >= 0, "Limit count cant be negative");

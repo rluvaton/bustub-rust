@@ -2,7 +2,6 @@ use crate::plan_nodes::{PlanNode, PlanType};
 use crate::traits::Plan;
 use crate::{InsertPlan, Planner};
 use binder::InsertStatement;
-use std::rc::Rc;
 use std::sync::Arc;
 use catalog_schema::{Column, Schema};
 use data_types::DBTypeId;
