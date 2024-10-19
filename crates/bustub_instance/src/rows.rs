@@ -1,4 +1,4 @@
-use std::fmt::{Debug, Display, Formatter};
+use std::fmt::{Debug, Formatter};
 use std::ops::Deref;
 use std::sync::Arc;
 use catalog_schema::Schema;
@@ -15,7 +15,7 @@ impl Rows {
     pub fn new(tuples: Vec<Tuple>, schema: Arc<Schema>) -> Self {
         let rows = tuples
             .iter()
-            .map(|(tuple)| {
+            .map(|tuple| {
                 (0..schema.get_column_count())
                     .map(|index| tuple.get_value(&schema, index))
                     .collect::<Vec<Value>>()

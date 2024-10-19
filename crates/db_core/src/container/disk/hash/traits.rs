@@ -1,13 +1,7 @@
 use common::{PageKey, PageValue};
-use std::hash::Hash;
 use std::sync::Arc;
 use transaction::Transaction;
 use crate::container::disk::hash::errors::HashTableResult;
-// pub enum HashTableWithSingleKeyError {
-//     KeyAlreadyExists,
-//     BufferPoolError(BufferPoolError),
-//     Unknown(Error)
-// }
 
 pub trait HashTableWithSingleKey<Key: PageKey, Value: PageValue> {
 

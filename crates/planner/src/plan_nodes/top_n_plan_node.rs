@@ -1,12 +1,9 @@
-use crate::constants::UNNAMED_COLUMN;
 use crate::plan_nodes::{PlanNode, PlanType};
-use catalog_schema::{Column, Schema};
-use data_types::DBTypeId;
-use expression::{Expression, ExpressionRef};
-use std::fmt::{Display, Formatter};
-use std::rc::Rc;
-use std::sync::Arc;
 use binder::OrderByType;
+use catalog_schema::Schema;
+use expression::ExpressionRef;
+use std::fmt::{Display, Formatter};
+use std::sync::Arc;
 
 /**
  * The TopNPlanNode represents a top-n operation. It will gather the n extreme rows based on

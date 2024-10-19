@@ -7,7 +7,7 @@ use clap::Parser;
 use execution_common::CheckOptions;
 use parking_lot::Mutex;
 use rustyline::config::BellStyle;
-use rustyline::history::{DefaultHistory, FileHistory, History};
+use rustyline::history::{DefaultHistory, FileHistory};
 use rustyline::{Config, DefaultEditor, Editor};
 use std::path::PathBuf;
 use std::sync::Arc;

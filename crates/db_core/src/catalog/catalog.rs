@@ -144,7 +144,7 @@ impl Catalog {
     /// @return A vector of IndexInfo* for each index on the given table, empty vector
     /// in the event that the table exists but no indexes have been created for it
     pub fn get_table_indexes_by_name(&self, table_name: &String) -> Vec<Arc<IndexInfo>> {
-        /// Ensure the table exists
+        // Ensure the table exists
         if !self.table_names.contains_key(table_name) {
             return vec![];
         }

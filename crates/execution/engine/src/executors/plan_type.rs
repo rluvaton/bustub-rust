@@ -1,27 +1,8 @@
 use crate::context::ExecutorContext;
-use crate::executors::{Executor, ExecutorRef, FilterExecutor, LimitExecutor, MockScanExecutor, ProjectionExecutor, ValuesExecutor};
-use planner::PlanType;
-use std::fmt::Display;
-use std::rc::Rc;
-use std::sync::Arc;
 use crate::executors::iterator_ext::IteratorExt;
-
-// Helper to avoid duplicating deref on each variant
-macro_rules! call_each_variant {
-    ($enum_val:expr, $name:ident, $func:expr) => {
-        match $enum_val {
-            // PlanType::Insert($name) => $func,
-            // PlanType::Delete($name) => $func,
-            PlanType::Filter($name) => $func,
-            // PlanType::Values($name) => $func,
-            // PlanType::Window($name) => $func,
-            // PlanType::Projection($name) => $func,
-            // PlanType::Aggregation($name) => $func,
-            _ => unimplemented!()
-            // Add match arms for other variants as necessary
-        }
-    };
-}
+use crate::executors::{Executor, ExecutorRef, MockScanExecutor, ValuesExecutor};
+use planner::PlanType;
+use std::sync::Arc;
 
 pub(crate) trait CreateExecutor<'a> {
     fn create_executor(&'a self, ctx: Arc<ExecutorContext<'a>>) -> ExecutorRef<'a>;

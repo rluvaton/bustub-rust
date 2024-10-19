@@ -1,4 +1,3 @@
-use std::sync::Arc;
 use common::config::{TxnId, TXN_START_ID};
 use transaction::TransactionManager;
 use crate::BustubInstance;
@@ -12,7 +11,7 @@ impl BustubInstance {
            return;
        }
 
-       let table = params[1].clone();
+       let table = params[1];
        writer.one_cell(format!("please view the result in the BusTub console (or Chrome DevTools console), table={}", table).as_str());
 
        let catalog = self.catalog.lock();

@@ -1,11 +1,10 @@
-use std::fmt::{Display, Formatter};
-use std::rc::Rc;
-use std::sync::Arc;
+use crate::plan_nodes::{PlanNode, PlanType};
 use binder::JoinType;
 use catalog_schema::Schema;
 use common::config::{IndexOID, TableOID};
 use expression::ExpressionRef;
-use crate::plan_nodes::{PlanNode, PlanType};
+use std::fmt::{Display, Formatter};
+use std::sync::Arc;
 
 /**
  * NestedIndexJoinPlan is used to represent performing a nested index join between two tables

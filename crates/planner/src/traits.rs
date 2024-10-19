@@ -1,6 +1,4 @@
-use crate::plan_nodes::{PlanNode, PlanType};
-use std::fmt::Debug;
-use std::rc::Rc;
+use crate::plan_nodes::PlanType;
 use crate::Planner;
 
 /// plan table ref

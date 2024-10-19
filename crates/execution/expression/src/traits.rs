@@ -1,10 +1,9 @@
-use std::fmt::{Debug, Display};
-use std::rc::Rc;
-use std::sync::Arc;
+use crate::expression_type::ExpressionType;
 use catalog_schema::Schema;
 use data_types::{DBTypeId, Value};
+use std::fmt::{Debug, Display};
+use std::rc::Rc;
 use tuple::Tuple;
-use crate::expression_type::ExpressionType;
 
 pub(crate) const NO_CHILDREN: &[ExpressionRef] = &[];
 

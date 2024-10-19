@@ -1,5 +1,6 @@
 use crate::instance::ddl::StatementHandler;
 use crate::result_writer::ResultWriter;
+use crate::rows::Rows;
 use binder::{Binder, StatementTypeImpl};
 use buffer_pool_manager::BufferPoolManager;
 use catalog_schema_mocks::MockTableName;
@@ -18,11 +19,7 @@ use std::collections::HashMap;
 use std::ops::Deref;
 use std::path::PathBuf;
 use std::sync::Arc;
-use catalog_schema::Schema;
-use data_types::Value;
 use transaction::{Transaction, TransactionManager as TransactionManagerTrait};
-use tuple::Tuple;
-use crate::rows::Rows;
 
 const DEFAULT_BPM_SIZE: usize = 128;
 const LRU_K_REPLACER_K: usize = 10;

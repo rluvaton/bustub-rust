@@ -1,5 +1,4 @@
 use std::fmt::Debug;
-use std::rc::Rc;
 use std::sync::Arc;
 use catalog_schema::Schema;
 use rid::RID;

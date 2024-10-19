@@ -1,5 +1,4 @@
 use crate::expressions::{Expression, ExpressionTypeImpl};
-use std::sync::Arc;
 use sqlparser::ast::OrderByExpr;
 use crate::Binder;
 use crate::try_from_ast_error::ParseASTResult;

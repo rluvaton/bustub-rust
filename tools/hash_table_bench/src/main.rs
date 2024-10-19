@@ -1,27 +1,24 @@
 use crate::cli::Args;
 use crate::metrics::metrics::Metrics;
-use buffer_common::AccessType;
-use buffer_pool_manager::{BufferPool, BufferPoolManager};
+use buffer_pool_manager::{BufferPoolManager};
 
 use clap::Parser;
 use disk_storage::DiskManagerUnlimitedMemory;
 use pages::PageId;
-use parking_lot::{Mutex, RwLock};
+use parking_lot::{Mutex};
 use rand::distributions::Distribution;
-use std::collections::HashMap;
-use std::process::abort;
 use std::sync::Arc;
 use std::thread;
 use std::thread::JoinHandle;
 
 use crate::metrics::total_metrics::TotalMetrics;
+use catalog_schema::Schema;
 use extendible_hash_table::{bucket_array_size, DiskHashTable};
 use hashing_common::DefaultKeyHasher;
+use index::{GenericComparator, GenericKey};
 use rid::RID;
 #[cfg(feature = "tracing")]
 use tracy_client::*;
-use catalog_schema::Schema;
-use index::{GenericComparator, GenericKey};
 
 // Tracking Memory usage
 #[cfg(feature = "tracing-memory-allocation")]

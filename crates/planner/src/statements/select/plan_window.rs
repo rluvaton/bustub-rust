@@ -1,13 +1,11 @@
-use std::rc::Rc;
-use std::sync::Arc;
-use binder::{Expression as BinderExpression, ExpressionTypeImpl, OrderByType, SelectStatement, WindowBoundary};
-use catalog_schema::Schema;
-use data_types::{DBTypeId, Value};
-use expression::{ColumnValueExpression, ConstantValueExpression, Expression, ExpressionRef};
 use crate::constants::UNNAMED_COLUMN;
 use crate::expressions::PlanExpression;
-use crate::plan_nodes::{PlanNode, PlanType, ProjectionPlanNode, WindowFunctionPlanNode, WindowFunctionType};
+use crate::plan_nodes::{PlanType, ProjectionPlanNode, WindowFunctionPlanNode, WindowFunctionType};
 use crate::Planner;
+use binder::{Expression as BinderExpression, ExpressionTypeImpl, OrderByType, SelectStatement, WindowBoundary};
+use data_types::{DBTypeId, Value};
+use expression::{ColumnValueExpression, ConstantValueExpression, Expression, ExpressionRef};
+use std::sync::Arc;
 
 pub(crate) trait PlanWindow {
     fn plan_window(&self, child: PlanType, planner: &Planner) -> PlanType;

@@ -2,11 +2,10 @@ use crate::context::ExecutorContext;
 use crate::executors::{Executor, ExecutorImpl, ExecutorItem, ExecutorMetadata};
 use catalog_schema::Schema;
 use catalog_schema_mocks::{MockDataIterator, MockTableName};
-use planner::{MockScanPlanNode, PlanNode, PlanType};
+use planner::{PlanNode, PlanType};
 use std::fmt;
 use std::fmt::Debug;
 use std::ops::Deref;
-use std::rc::Rc;
 use std::sync::Arc;
 use tuple::Tuple;
 

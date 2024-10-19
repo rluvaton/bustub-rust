@@ -317,18 +317,18 @@ impl Store {
     }
 
     // Check if less than or equal to
-    fn compares_le(&self, a: FrameId, b: FrameId) -> bool {
-        unsafe { self.get_node_by_frame_unchecked(a).get_interval() <= self.get_node_by_frame_unchecked(b).get_interval() }
+    unsafe fn compares_le(&self, a: FrameId, b: FrameId) -> bool {
+        self.get_node_by_frame_unchecked(a).get_interval() <= self.get_node_by_frame_unchecked(b).get_interval()
     }
 
     // Check if less than
-    fn compares_lt(&self, a: FrameId, b: FrameId) -> bool {
-        unsafe { self.get_node_by_frame_unchecked(a).get_interval() < self.get_node_by_frame_unchecked(b).get_interval() }
+    unsafe fn compares_lt(&self, a: FrameId, b: FrameId) -> bool {
+        self.get_node_by_frame_unchecked(a).get_interval() < self.get_node_by_frame_unchecked(b).get_interval()
     }
 
     // Check if greater than or equal to
-    fn compares_ge(&self, a: FrameId, b: FrameId) -> bool {
-        unsafe { self.get_node_by_frame_unchecked(a).get_interval() >= self.get_node_by_frame_unchecked(b).get_interval() }
+    unsafe fn compares_ge(&self, a: FrameId, b: FrameId) -> bool {
+        self.get_node_by_frame_unchecked(a).get_interval() >= self.get_node_by_frame_unchecked(b).get_interval()
     }
 
     unsafe fn get_node_by_frame_unchecked(&self, frame_id: FrameId) -> &LRUKNode {
@@ -380,96 +380,3 @@ impl Store {
     }
 }
 
-
-#[cfg(test)]
-mod test {
-    use super::*;
-    use std::collections::HashMap;
-    use std::hash::Hash;
-
-    fn is_normal<T: Send + Unpin>() {}
-
-    #[test]
-    fn check_is_send_unpin() {
-        is_normal::<Store>();
-        assert!(true);
-    }
-
-    fn assert_key_map_valid(bh: &Store) {
-        let mut expected_keys = HashMap::new();
-        for (i, kv) in bh.next_frame_to_evict_heap.iter().enumerate() {
-            expected_keys.insert(kv.clone(), i);
-        }
-
-        for key_index in &expected_keys {
-            let key = key_index.0;
-            let index = *key_index.1;
-            unsafe { assert_eq!(bh.all[*key as usize].get_heap_pos_unchecked(), index); }
-        }
-        let keys_len = bh.all.iter().filter(|item| item.has_heap_pos()).count();
-        assert_eq!(keys_len, expected_keys.len());
-    }
-
-    // #[test]
-    // fn valid_key_map() {
-    //     let counter = AtomicI64Counter::default();
-    //     let mut heap: LRUKReplacerStore = LRUKReplacerStore::with_capacity(10);
-    //
-    //     assert_key_map_valid(&heap);
-    //
-    //     heap.push(0, LRUKNode::new(1, &counter));
-    //
-    //     assert_key_map_valid(&heap);
-    //
-    //     heap.push(1, LRUKNode::new(10, &counter));
-    //     heap.push(2, 15);
-    //     heap.push(3, 5);
-    //     heap.push(4, 8);
-    //
-    //     assert_key_map_valid(&heap);
-    //
-    //     assert_eq!(heap.pop_with_key(), Some((2, 15)));
-    //
-    //     assert_key_map_valid(&heap);
-    //
-    //     assert_eq!(heap.pop_with_key(), Some((1, 10)));
-    //     assert_eq!(heap.pop_with_key(), Some((4, 8)));
-    //
-    //     heap.push(5, 2);
-    //
-    //     assert_key_map_valid(&heap);
-    //
-    //     assert_eq!(heap.pop_with_key(), Some((3, 5)));
-    //     assert_eq!(heap.pop_with_key(), Some((5, 2)));
-    //     assert_eq!(heap.pop_with_key(), Some((0, 0)));
-    //
-    //     assert_key_map_valid(&heap);
-    //
-    //     assert_eq!(heap.pop_with_key(), None);
-    //
-    //     assert_key_map_valid(&heap);
-    // }
-    //
-    // #[test]
-    // fn valid_key_map_after_clear() {
-    //     let mut heap: LRUKReplacerStore = LRUKReplacerStore::with_capacity(10);
-    //
-    //     assert_key_map_valid(&heap);
-    //
-    //     heap.push(0, 0);
-    //
-    //     assert_key_map_valid(&heap);
-    //
-    //     heap.push(1, 10);
-    //     heap.push(2, 15);
-    //     heap.push(3, 5);
-    //     heap.push(4, 8);
-    //
-    //     assert_key_map_valid(&heap);
-    //
-    //     heap.clear();
-    //
-    //     assert_key_map_valid(&heap);
-    //     assert_eq!(heap.len(), 0);
-    // }
-}

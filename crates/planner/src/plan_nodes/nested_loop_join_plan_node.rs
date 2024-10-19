@@ -1,13 +1,9 @@
-use std::fmt::{Display, Formatter};
-use std::rc::Rc;
-use std::sync::Arc;
-use binder::{BaseTableRef, JoinType};
-use catalog_schema::{Column, Schema};
-use common::config::{IndexOID, TableOID};
-use expression::{ConstantValueExpression, ExpressionRef};
 use crate::plan_nodes::{PlanNode, PlanType};
-
-const EMPTY_CHILDREN: &'static [Rc<PlanType>] = &[];
+use binder::JoinType;
+use catalog_schema::Schema;
+use expression::ExpressionRef;
+use std::fmt::{Display, Formatter};
+use std::sync::Arc;
 
 
 /**

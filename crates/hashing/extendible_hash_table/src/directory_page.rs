@@ -6,6 +6,7 @@ use std::collections::HashMap;
 use std::fmt::{Debug, Formatter};
 use std::mem::size_of;
 
+#[allow(dead_code)]
 const PAGE_METADATA_SIZE: usize = size_of::<u32>() * 2;
 
 
@@ -120,7 +121,8 @@ impl DirectoryPage {
     ///
     /// returns: u32 the directory index of the split image
     ///
-    pub(crate)  fn get_split_image_index(&self, _bucket_idx: u32) -> u32 {
+    #[allow(unused)]
+    pub(crate) fn get_split_image_index(&self, _bucket_idx: u32) -> u32 {
         unimplemented!()
     }
 
@@ -137,6 +139,7 @@ impl DirectoryPage {
     ///
     /// returns: u32 mask of global_depth 1's and the rest 0's (with 1's from LSB upwards)
     ///
+    #[allow(unused)]
     pub(crate)  fn get_global_depth_mask(&self) -> u32 {
         u32::MAX.get_n_lsb_bits(self.global_depth as u8)
     }
@@ -170,6 +173,7 @@ impl DirectoryPage {
         self.global_depth
     }
 
+    #[allow(unused)]
     pub(crate)  fn get_max_depth(&self) -> u32 {
         self.max_depth
     }
@@ -272,6 +276,7 @@ impl DirectoryPage {
     /// * `bucket_idx`: the bucket index to update
     /// * `local_depth`: new local depth
     ///
+    #[allow(unused)]
     pub(crate)  fn set_local_depth(&mut self, bucket_idx: u32, local_depth: u8) {
         // assert!((local_depth as u32 )<= self.global_depth, "Local depth cant be larger than global depth");
         self.local_depths[bucket_idx as usize] = local_depth;
@@ -417,8 +422,6 @@ mod tests {
     use buffer_pool_manager::{BufferPool, BufferPoolManager};
     use buffer_common::AccessType;
 
-    use parking_lot::Mutex;
-    use std::sync::Arc;
     use disk_storage::DiskManagerUnlimitedMemory;
     use crate::directory_page::DirectoryPage;
 

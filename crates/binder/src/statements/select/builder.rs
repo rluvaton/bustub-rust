@@ -5,7 +5,6 @@ use crate::table_ref::{CTEList, TableReferenceTypeImpl};
 use anyhow::anyhow;
 use std::fmt::Debug;
 use std::rc::Rc;
-use std::sync::Arc;
 
 #[derive(Debug, PartialEq)]
 pub(super) struct SelectStatementBuilder {

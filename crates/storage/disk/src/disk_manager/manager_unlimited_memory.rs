@@ -1,13 +1,12 @@
-use std::cell::UnsafeCell;
+use crate::DiskManager;
+use common::Future;
 use pages::{PageData, PageId, PAGE_SIZE};
-use std::sync::{Arc};
-use std::sync::atomic::{AtomicBool, Ordering};
 use parking_lot::{Mutex, MutexGuard};
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 use std::thread;
 use std::thread::{sleep, ThreadId};
 use std::time::Duration;
-use common::Future;
-use crate::DiskManager;
 
 type Page = PageData;
 type ProtectedPage = Arc<Mutex<Option<Page>>>;

@@ -4,13 +4,13 @@ use planner::{FilterPlan, LimitPlanNode, ProjectionPlanNode};
 use std::sync::Arc;
 
 pub trait IteratorExt<'a> {
-    #[inline]
+    #[must_use]
     fn filter_exec(self, plan: FilterPlan, ctx: Arc<ExecutorContext<'a>>) -> ExecutorRef<'a>;
 
-    #[inline]
+    #[must_use]
     fn projection_exec(self, plan: ProjectionPlanNode, ctx: Arc<ExecutorContext<'a>>) -> ExecutorRef<'a>;
 
-    #[inline]
+    #[must_use]
     fn limit_exec(self, plan: LimitPlanNode, ctx: Arc<ExecutorContext<'a>>) -> ExecutorRef<'a>;
 }
 

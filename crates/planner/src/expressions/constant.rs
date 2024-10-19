@@ -1,11 +1,9 @@
-use std::rc::Rc;
-use crate::plan_nodes::PlanType;
-use crate::traits::Plan;
-use crate::Planner;
-use binder::{ColumnRef, Constant};
-use expression::{ConstantValueExpression, Expression, ExpressionRef};
 use crate::constants::UNNAMED_COLUMN;
 use crate::expressions::traits::PlanExpression;
+use crate::plan_nodes::PlanType;
+use crate::Planner;
+use binder::Constant;
+use expression::{ConstantValueExpression, Expression, ExpressionRef};
 
 impl PlanExpression for Constant {
     fn plan<'a>(&self, _children: &[&PlanType], _planner: &'a Planner<'a>) -> (String, ExpressionRef) {

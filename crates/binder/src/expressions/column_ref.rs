@@ -1,12 +1,11 @@
-use std::fmt::{Display, Formatter};
-use std::sync::Arc;
-use std::thread::Scope;
 use crate::expressions::{Expression, ExpressionTypeImpl};
+use crate::table_ref::TableRef;
 use crate::try_from_ast_error::{ParseASTError, ParseASTResult};
 use crate::Binder;
-use sqlparser::ast::Expr;
 use catalog_schema::Schema;
-use crate::table_ref::{TableRef, TableReferenceTypeImpl};
+use sqlparser::ast::Expr;
+use std::fmt::{Display, Formatter};
+use std::sync::Arc;
 
 /// A bound column reference, e.g., `y.x` in the SELECT list.
 #[derive(Clone, Debug, PartialEq)]

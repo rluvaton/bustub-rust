@@ -62,7 +62,7 @@ mod tests {
     #[test]
     fn should_shuffle_with_seed_the_range() {
 
-        let mut rng = ChaChaRng::from_seed([0; 32]);
+        let rng = ChaChaRng::from_seed([0; 32]);
 
         let original: Vec<u32> = (0..10000).collect();
 
@@ -78,8 +78,6 @@ mod tests {
     fn should_shuffle_again_will_produce_different_output() {
         let mut rng = ChaChaRng::from_seed([0; 32]);
 
-        let original: Vec<u32> = (0..10000).collect();
-
         let shuffled_with_same_seed1: Vec<u32> = (0..10000).shuffle_with_seed(&mut rng);
         let shuffled_with_same_seed2: Vec<u32> = (0..10000).shuffle_with_seed(&mut rng);
 
@@ -88,8 +86,6 @@ mod tests {
 
     #[test]
     fn should_shuffle_with_different_seed_produce_different_output() {
-        let original: Vec<u32> = (0..10000).collect();
-
         let shuffled_with_same_seed1: Vec<u32> = (0..10000).shuffle_with_seed(&mut ChaChaRng::from_seed([1; 32]));
         let shuffled_with_same_seed2: Vec<u32> = (0..10000).shuffle_with_seed(&mut ChaChaRng::from_seed([2; 32]));
 

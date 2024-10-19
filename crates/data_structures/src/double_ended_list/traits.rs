@@ -554,7 +554,7 @@ pub(super) mod tests_utils {
         }
 
 
-        for i in 0..capacity {
+        for _ in 0..capacity {
             let item = rng.gen();
 
             helper_list.push_back(item);

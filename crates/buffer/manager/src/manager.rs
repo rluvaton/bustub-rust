@@ -3,17 +3,20 @@ use std::collections::{HashMap, LinkedList};
 use std::ops::Deref;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
-use common::{Future, FutureLifetime, Promise, SharedFuture, SharedPromise, UnsafeSingleRefData, UnsafeSingleRefMutData};
-use disk_storage::{DiskManager, DiskScheduler, ReadDiskRequest, WriteDiskRequest};
-use pages::{Page, PageAndGuard, PageAndReadGuard, PageAndWriteGuard, AtomicPageId, PageData, PageId, INVALID_PAGE_ID};
+use common::{SharedFuture, SharedPromise};
+use disk_storage::{DiskScheduler};
+use pages::{Page, PageAndGuard, PageAndReadGuard, PageAndWriteGuard, AtomicPageId, PageId, INVALID_PAGE_ID};
 
 #[cfg(feature = "tracing")]
 use tracy_client::span;
 use buffer_common::{AccessType, FrameId};
-use eviction_policy::{LRUKEvictionPolicy, EvictionPolicy};
+use eviction_policy::{EvictionPolicy};
 use recovery_log_manager::LogManager;
-use crate::{errors, BufferPool, BufferPoolManagerStats, PageReadGuard, PageWriteGuard};
+use crate::{errors, BufferPool, PageReadGuard, PageWriteGuard};
 use crate::builder::BufferPoolManagerBuilder;
+
+#[cfg(feature = "statistics")]
+use crate::BufferPoolManagerStats;
 
 ///
 /// BufferPoolManager reads disk pages to and from its internal buffer pool.

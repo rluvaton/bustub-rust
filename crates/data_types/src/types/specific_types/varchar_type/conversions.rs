@@ -1,5 +1,5 @@
 use crate::types::errors::InnerFromStringConversionError;
-use crate::types::{ComparisonDBTypeTrait, ConversionDBTypeTrait, DBTypeId, DBTypeIdImpl, DecimalType, DecimalUnderlyingType, IntType, SmallIntType, StorageDBTypeTrait, TinyIntType};
+use crate::types::{ComparisonDBTypeTrait, ConversionDBTypeTrait, DBTypeId, DBTypeIdImpl, DecimalType, DecimalUnderlyingType, IntType, SmallIntType, TinyIntType};
 use crate::{BigIntType, BigIntUnderlyingType, BooleanType, TimestampType, Value, VarcharType, BUSTUB_VALUE_NULL};
 use error_utils::anyhow::anyhow;
 use error_utils::ToAnyhowResult;

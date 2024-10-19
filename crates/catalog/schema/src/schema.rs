@@ -148,8 +148,8 @@ impl Schema {
         let mut v: Vec<Column> = vec![];
         let mut column_name: &str;
         let mut column_type: &str;
-        let mut column_length = 0;
-        let mut type_id: DBTypeId = DBTypeId::INVALID;
+        let mut column_length;
+        let mut type_id: DBTypeId;
 
         // create a copy of the sql query
         let sql: &str = sql_base;

@@ -1,8 +1,6 @@
 use crate::plan_nodes::PlanType;
 use crate::Planner;
-use std::fmt::Debug;
-use std::rc::Rc;
-use expression::{ExpressionRef, ExpressionType};
+use expression::ExpressionRef;
 
 /// plan table ref
 pub(crate) trait PlanExpression {

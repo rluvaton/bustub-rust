@@ -1,12 +1,11 @@
-use std::rc::Rc;
-use std::sync::Arc;
+use crate::expressions::PlanExpression;
+use crate::plan_nodes::{FilterPlan, PlanNode, PlanType};
+use crate::traits::Plan;
+use crate::{DeletePlan, Planner};
 use binder::DeleteStatement;
 use catalog_schema::{Column, Schema};
 use data_types::DBTypeId;
-use crate::expressions::PlanExpression;
-use crate::plan_nodes::{FilterPlan, PlanNode, PlanType};
-use crate::{DeletePlan, Planner};
-use crate::traits::Plan;
+use std::sync::Arc;
 
 impl Plan for DeleteStatement {
     fn plan<'a>(&self, planner: &'a Planner<'a>) -> PlanType {

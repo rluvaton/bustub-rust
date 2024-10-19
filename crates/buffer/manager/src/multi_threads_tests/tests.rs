@@ -12,7 +12,7 @@ use std::thread;
 use std::thread::JoinHandle;
 use std::time::Duration;
 use tempdir::TempDir;
-use disk_storage::{DefaultDiskManager, DiskManager, DiskManagerUnlimitedMemory};
+use disk_storage::{DefaultDiskManager, DiskManagerUnlimitedMemory};
 
 // This is the structure of the page
 #[allow(unused)]
@@ -225,7 +225,7 @@ fn run_multi_threads_tests(options: Options) {
 fn init_buffer_pool_manager_for_test(options: &Options, temp_dir: Option<TempDir>) -> (Vec<PageId>, Arc<BufferPoolManager>) {
     let mut page_ids: Vec<PageId> = vec![];
 
-    let mut bpm_raw: Arc<BufferPoolManager>;
+    let bpm_raw: Arc<BufferPoolManager>;
 
     // ############### Setup Buffer pool manager ########################
     // with the different impl of disk manager

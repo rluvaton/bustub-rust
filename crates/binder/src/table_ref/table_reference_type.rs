@@ -1,13 +1,13 @@
-use std::ops::{Deref, DerefMut};
-use sqlparser::ast::{TableFactor, TableWithJoins};
-use crate::{fallback_on_incompatible_2_args, Binder};
 use crate::expressions::ColumnRef;
-use crate::table_ref::{ExpressionListRef, SubqueryRef, TableRef};
 use crate::table_ref::base_table_ref::BaseTableRef;
 use crate::table_ref::cross_product_ref::CrossProductRef;
 use crate::table_ref::cte_ref::CTERef;
 use crate::table_ref::join_ref::JoinRef;
+use crate::table_ref::{ExpressionListRef, SubqueryRef, TableRef};
 use crate::try_from_ast_error::{ParseASTError, ParseASTResult};
+use crate::{fallback_on_incompatible_2_args, Binder};
+use sqlparser::ast::{TableFactor, TableWithJoins};
+use std::ops::Deref;
 
 
 #[derive(Clone, Debug, PartialEq)]
@@ -23,8 +23,8 @@ pub enum TableReferenceTypeImpl {
 }
 
 impl TableReferenceTypeImpl {
-    pub(crate) fn try_to_parse_tables_with_joins<'a>(mut tables: &[TableWithJoins], binder: &'a Binder<'a>) -> ParseASTResult<TableReferenceTypeImpl> {
-        let mut ctx_guard = binder.new_context();
+    pub(crate) fn try_to_parse_tables_with_joins<'a>(tables: &[TableWithJoins], binder: &'a Binder<'a>) -> ParseASTResult<TableReferenceTypeImpl> {
+        let ctx_guard = binder.new_context();
 
         match tables.len() {
             0 => Ok(TableReferenceTypeImpl::Empty),

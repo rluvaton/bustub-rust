@@ -1,5 +1,5 @@
 use crate::expressions::ExpressionTypeImpl;
-use crate::try_from_ast_error::{ParseASTError, ParseASTResult};
+use crate::try_from_ast_error::ParseASTResult;
 use crate::Binder;
 use std::fmt::Debug;
 

@@ -23,7 +23,7 @@ impl CrossProductRef {
         }
     }
 
-    pub(crate) fn try_to_parse_tables_with_joins(mut tables: &[TableWithJoins], binder: &Binder) -> ParseASTResult<TableReferenceTypeImpl> {
+    pub(crate) fn try_to_parse_tables_with_joins(tables: &[TableWithJoins], binder: &Binder) -> ParseASTResult<TableReferenceTypeImpl> {
         // Bind cross join.
 
         // Extract the first node

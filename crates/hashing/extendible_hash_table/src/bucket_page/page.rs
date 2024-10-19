@@ -274,6 +274,7 @@ where
     }
 
     /// Prints the bucket's occupancy information
+    #[allow(unused)]
     pub(crate) fn print_bucket(&self) {
         println!("{:?}", self)
     }

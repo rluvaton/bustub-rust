@@ -5,8 +5,6 @@ mod tests {
 
     use crate::{bucket_array_size, bucket_page};
     use pages::{PageId, INVALID_PAGE_ID};
-    use parking_lot::Mutex;
-    use std::sync::Arc;
     use common::OrdComparator;
     use disk_storage::DiskManagerUnlimitedMemory;
     use crate::bucket_page::{BucketPage};
@@ -26,7 +24,6 @@ mod tests {
         {
             let mut guard = bpm.new_page(AccessType::Unknown).expect("Should be able to create new page");
 
-            const BUCKET_SIZE: usize = bucket_array_size::<Key, Value>();
             let bucket_page = guard.cast_mut::<BucketPage<{
                 bucket_array_size::<Key, Value>()
             }, Key, Value, OrdComparator<Key>>>();
@@ -90,10 +87,10 @@ mod tests {
         const BUCKET_SIZE: usize = bucket_array_size::<Key, Value>();
         type BucketPageType = BucketPage<BUCKET_SIZE, Key, Value, OrdComparator<Key>>;
 
-        let mut bucket_page_id_1: PageId = INVALID_PAGE_ID;
-        let mut bucket_page_id_2: PageId = INVALID_PAGE_ID;
-        let mut bucket_page_id_3: PageId = INVALID_PAGE_ID;
-        let mut bucket_page_id_4: PageId = INVALID_PAGE_ID;
+        let bucket_page_id_1: PageId;
+        let bucket_page_id_2: PageId;
+        let bucket_page_id_3: PageId;
+        let bucket_page_id_4: PageId;
 
         {
             {

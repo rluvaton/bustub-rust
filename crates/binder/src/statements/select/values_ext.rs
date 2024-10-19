@@ -1,10 +1,9 @@
-use std::rc::Rc;
-use std::sync::Arc;
-use crate::Binder;
 use crate::expressions::{ColumnRef, ExpressionTypeImpl};
 use crate::statements::select::builder::SelectStatementBuilder;
 use crate::table_ref::ExpressionListRef;
 use crate::try_from_ast_error::ParseASTResult;
+use crate::Binder;
+use std::rc::Rc;
 
 pub(super) trait ValuesExt {
     fn add_values_to_select_builder(&self, builder: SelectStatementBuilder, binder: &Binder) -> ParseASTResult<SelectStatementBuilder>;

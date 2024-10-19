@@ -1,11 +1,11 @@
 use crate::expressions::PlanExpression;
-use crate::{AggregationPlanNode, AggregationType, FilterPlan, PlanNode, PlanType, Planner, ProjectionPlanNode, WindowFunctionType};
+use crate::statements::select::plan_normal_select::PlanNormalSelect;
+use crate::{AggregationPlanNode, AggregationType, FilterPlan, PlanNode, PlanType, Planner, ProjectionPlanNode};
 use binder::{AggCallExpr, ExpressionTypeImpl, SelectStatement};
+use data_types::{DBTypeId, Value};
 use expression::{ColumnValueExpression, ConstantValueExpression, Expression, ExpressionRef};
 use std::rc::Rc;
 use std::sync::Arc;
-use data_types::{DBTypeId, Value};
-use crate::statements::select::plan_normal_select::PlanNormalSelect;
 
 pub(crate) trait PlanAggregation {
     fn plan_aggregation(&self, child: PlanType, planner: &Planner) -> PlanType;
@@ -178,7 +178,7 @@ fn plan_agg_call(agg_call: &AggCallExpr, children: &[&PlanType], planner: &Plann
 
     let exprs = {
         // Create a new context that doesn't allow aggregation calls.
-        let guard = planner.new_context();
+        let _guard = planner.new_context();
 
         agg_call.args
             .iter()

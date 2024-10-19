@@ -1,14 +1,13 @@
-use std::collections::HashMap;
-use std::fmt::{Display, Formatter};
-use std::rc::Rc;
-use std::sync::Arc;
+use crate::constants::UNNAMED_COLUMN;
+use crate::plan_nodes::window_plan_node::window_function::WindowFunction;
+use crate::plan_nodes::{PlanNode, PlanType, WindowFunctionType};
 use binder::OrderByType;
 use catalog_schema::{Column, Schema};
 use data_types::DBTypeId;
 use expression::{Expression, ExpressionRef};
-use crate::constants::UNNAMED_COLUMN;
-use crate::plan_nodes::{PlanNode, PlanType, WindowFunctionType};
-use crate::plan_nodes::window_plan_node::window_function::WindowFunction;
+use std::collections::HashMap;
+use std::fmt::{Display, Formatter};
+use std::sync::Arc;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct WindowFunctionPlanNode {

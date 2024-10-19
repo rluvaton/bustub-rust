@@ -1,11 +1,9 @@
-use std::rc::Rc;
-use crate::plan_nodes::PlanType;
-use crate::traits::Plan;
-use crate::Planner;
-use binder::{AggCallExpr, BinaryOpExpr};
-use expression::ExpressionRef;
 use crate::constants::UNNAMED_COLUMN;
 use crate::expressions::traits::PlanExpression;
+use crate::plan_nodes::PlanType;
+use crate::Planner;
+use binder::AggCallExpr;
+use expression::ExpressionRef;
 
 impl PlanExpression for AggCallExpr {
     fn plan<'a>(&self, _children: &[&PlanType], planner: &'a Planner<'a>) -> (String, ExpressionRef) {

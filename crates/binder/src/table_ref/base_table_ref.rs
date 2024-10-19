@@ -55,7 +55,7 @@ impl BaseTableRef {
 }
 
 impl TableRef for BaseTableRef {
-    fn resolve_column(&self, col_name: &[String], binder: &Binder) -> ParseASTResult<Option<ColumnRef>> {
+    fn resolve_column(&self, col_name: &[String], _binder: &Binder) -> ParseASTResult<Option<ColumnRef>> {
         let bound_table_name = self.get_table_name();
 
         // Firstly, try directly resolve the column name through schema

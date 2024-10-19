@@ -1,6 +1,5 @@
 use sqlparser::ast::{Ident, TableConstraint};
 use crate::sql_parser_helper::ColumnDefExt;
-use crate::statements::DeleteStatement;
 use crate::try_from_ast_error::{ParseASTResult, ParseASTError};
 
 pub(super) trait SqlParserCreateStatementExt {

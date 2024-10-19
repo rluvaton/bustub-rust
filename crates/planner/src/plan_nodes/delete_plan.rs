@@ -1,9 +1,8 @@
-use std::fmt::{Display, Formatter};
-use std::rc::Rc;
-use std::sync::Arc;
+use crate::plan_nodes::{PlanNode, PlanType};
 use catalog_schema::Schema;
 use common::config::TableOID;
-use crate::plan_nodes::{PlanNode, PlanType};
+use std::fmt::{Display, Formatter};
+use std::sync::Arc;
 
 /**
  * The DeletePlanNode identifies a table from which tuples should be deleted.

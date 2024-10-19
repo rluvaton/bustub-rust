@@ -78,7 +78,6 @@ where
 
 #[cfg(test)]
 mod tests {
-use std::fmt::Display;
 
     fn remove_stack_trace(error_string: String) -> String {
         error_string.split_at(error_string.find("Stack backtrace:").unwrap()).0.to_string()

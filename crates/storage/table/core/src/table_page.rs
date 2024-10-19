@@ -67,7 +67,7 @@ impl TablePage {
     pub fn set_next_page_id(&mut self, next_page_id: PageId) { self.next_page_id = next_page_id; }
 
     /** Get the next offset to insert, return nullopt if this tuple cannot fit in this page */
-    pub fn get_next_tuple_offset(&self, meta: &TupleMeta, tuple: &Tuple) -> Option<usize> {
+    pub fn get_next_tuple_offset(&self, _meta: &TupleMeta, tuple: &Tuple) -> Option<usize> {
         let slot_end_offset: isize;
 
         if self.num_tuples > 0 {

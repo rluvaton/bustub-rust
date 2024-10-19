@@ -107,7 +107,7 @@ mod tests {
 
         // run 2 threads
         for _ in 0..2 {
-            let mut lru_replacer = lru_replacer.clone();
+            let lru_replacer = lru_replacer.clone();
 
             let t = thread::spawn(move || {
 
@@ -138,7 +138,7 @@ mod tests {
         let mut threads: Vec<JoinHandle<()>> = vec![];
 
         for _ in 0..10 {
-            let mut lru_replacer = lru_replacer.clone();
+            let lru_replacer = lru_replacer.clone();
 
             let t = thread::spawn(move || {
 
@@ -153,7 +153,7 @@ mod tests {
         }
 
         for _ in 0..4 {
-            let mut lru_replacer = lru_replacer.clone();
+            let lru_replacer = lru_replacer.clone();
 
             let t = thread::spawn(move || {
                 for _ in 0..FRAMES * 10 {
@@ -171,7 +171,7 @@ mod tests {
 
         for _ in 0..4 {
             let stop = Arc::clone(&stop);
-            let mut lru_replacer = lru_replacer.clone();
+            let lru_replacer = lru_replacer.clone();
             let t = thread::spawn(move || {
 
                 while !stop.load(SeqCst) {
@@ -202,7 +202,7 @@ mod tests {
     fn concurrent_set_evictable() {
         // This does not check any correctness, it just check that we can use the lru with threads
         const FRAMES: usize = 10;
-        let mut lru_replacer = Arc::new(Mutex::new(LRUKEvictionPolicy::new(FRAMES, LRUKOptions::new(10))));
+        let lru_replacer = Arc::new(Mutex::new(LRUKEvictionPolicy::new(FRAMES, LRUKOptions::new(10))));
 
         for i in 0..FRAMES {
             lru_replacer.lock().record_access(i as FrameId, AccessType::default());
@@ -211,7 +211,7 @@ mod tests {
         let mut threads: Vec<JoinHandle<()>> = vec![];
 
         for _ in 0..1000 {
-            let mut lru_replacer = lru_replacer.clone();
+            let lru_replacer = lru_replacer.clone();
             let t = thread::spawn(move || {
 
                 for i in 0..FRAMES {
@@ -234,16 +234,16 @@ mod tests {
 
     #[test]
     fn concurrent_evict_and_access() {
-        let mut lru_replacer = Arc::new(Mutex::new(LRUKEvictionPolicy::new(7, LRUKOptions::new(2))));
+        let lru_replacer = Arc::new(Mutex::new(LRUKEvictionPolicy::new(7, LRUKOptions::new(2))));
         lru_replacer.lock().record_access(1, AccessType::default());
         lru_replacer.lock().set_evictable(1, true);
 
-        let mut evict_replacer = lru_replacer.clone();
+        let evict_replacer = lru_replacer.clone();
         let evict_handle = thread::spawn(move || {
             evict_replacer.lock().evict();
         });
 
-        let mut access_replacer = lru_replacer.clone();
+        let access_replacer = lru_replacer.clone();
         let access_handle = thread::spawn(move || {
             access_replacer.lock().record_access(1, AccessType::default());
         });

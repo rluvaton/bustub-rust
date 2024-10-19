@@ -1,10 +1,9 @@
-use std::fmt::{Debug, Display, Formatter};
-use std::sync::Arc;
+use crate::expression_type::ExpressionType;
+use crate::traits::{Expression, ExpressionRef};
 use catalog_schema::Schema;
 use data_types::{DBTypeId, Value};
+use std::fmt::{Debug, Display, Formatter};
 use tuple::Tuple;
-use crate::expression_type::ExpressionType;
-use crate::traits::{Expression, ExpressionRef, NO_CHILDREN};
 
 
 /** ComparisonType represents the type of comparison that we want to perform. */
@@ -59,6 +58,7 @@ impl Expression for StringExpression {
     fn evaluate(&self, tuple: &Tuple, schema: &Schema) -> Value {
         // TODO(student): implement upper / lower.
 
+        #[allow(unused_variables)]
         let arg = self.children[0].evaluate(tuple, schema);
 
         // match self.expr_type {
@@ -69,6 +69,7 @@ impl Expression for StringExpression {
     }
 
     fn evaluate_join(&self, left_tuple: &Tuple, left_schema: &Schema, right_tuple: &Tuple, right_schema: &Schema) -> Value {
+        #[allow(unused_variables)]
         let val = self.children[0].evaluate_join(left_tuple, left_schema, right_tuple, right_schema);
 
         // TODO(student): implement upper / lower.

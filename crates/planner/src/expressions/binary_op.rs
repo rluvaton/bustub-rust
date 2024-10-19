@@ -1,11 +1,9 @@
-use std::rc::Rc;
+use crate::constants::UNNAMED_COLUMN;
+use crate::expressions::traits::PlanExpression;
 use crate::plan_nodes::PlanType;
-use crate::traits::Plan;
 use crate::Planner;
 use binder::{BinaryOp, BinaryOpExpr};
 use expression::{ArithmeticExpression, ArithmeticExpressionType, ComparisonExpression, ComparisonType, Expression, ExpressionRef, LogicExpression, LogicType};
-use crate::constants::UNNAMED_COLUMN;
-use crate::expressions::traits::PlanExpression;
 
 impl PlanExpression for BinaryOpExpr {
     fn plan<'a>(&self, children: &[&PlanType], planner: &'a Planner<'a>) -> (String, ExpressionRef) {

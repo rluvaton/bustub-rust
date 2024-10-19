@@ -1,12 +1,12 @@
 use crate::context::ExecutorContext;
-use crate::executors::{Executor, ExecutorImpl, ExecutorItem, ExecutorMetadata, ExecutorRef};
+use crate::executors::{Executor, ExecutorImpl, ExecutorItem, ExecutorMetadata};
 use catalog_schema::Schema;
 use expression::Expression;
-use planner::{PlanNode, ProjectionPlanNode, ValuesPlanNode};
+use planner::{PlanNode, ValuesPlanNode};
+use rid::RID;
 use std::fmt;
 use std::fmt::Debug;
 use std::sync::Arc;
-use rid::RID;
 use tuple::Tuple;
 
 #[must_use = "iterators are lazy and do nothing unless consumed"]

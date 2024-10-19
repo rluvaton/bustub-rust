@@ -20,6 +20,6 @@ mod tests {
     fn random() {
         let capacity = 13;
 
-        tests_utils::random(capacity, FixedSizeLinkedList::<isize>::with_capacity(capacity), |list: &FixedSizeLinkedList<isize>| {})
+        tests_utils::random(capacity, FixedSizeLinkedList::<isize>::with_capacity(capacity), |_: &FixedSizeLinkedList<isize>| {})
     }
 }

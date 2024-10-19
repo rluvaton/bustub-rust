@@ -1,11 +1,10 @@
-use std::rc::Rc;
 use crate::expressions::{AliasExpr, Expression, ExpressionTypeImpl, StarExpr};
 use crate::statements::select::builder::SelectStatementBuilder;
 use crate::table_ref::TableReferenceTypeImpl;
 use crate::try_from_ast_error::{ParseASTError, ParseASTResult};
 use crate::Binder;
 use sqlparser::ast::{Distinct, GroupByExpr, RenameSelectItem, SelectItem};
-use std::sync::Arc;
+use std::rc::Rc;
 
 pub(super) trait SelectExt {
     fn add_select_to_select_builder(&self, builder: SelectStatementBuilder, binder: &Binder) -> ParseASTResult<SelectStatementBuilder>;
@@ -80,7 +79,7 @@ impl SelectExt for sqlparser::ast::Select {
         {
             match &self.group_by {
                 GroupByExpr::All(_) => return Err(ParseASTError::Unimplemented("ALL in group by is not supported".to_string())),
-                GroupByExpr::Expressions(expr, with) => {
+                GroupByExpr::Expressions(expr, _) => {
                     builder = builder.with_group_by(ExpressionTypeImpl::parse_expression_list(expr, binder)?);
                 }
             }
