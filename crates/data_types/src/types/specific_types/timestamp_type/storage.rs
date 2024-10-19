@@ -1,5 +1,4 @@
-use crate::types::{TimestampType, StorageDBTypeTrait};
-use super::TimestampUnderlyingType;
+use crate::types::{StorageDBTypeTrait, TimestampType};
 
 
 impl Clone for TimestampType {

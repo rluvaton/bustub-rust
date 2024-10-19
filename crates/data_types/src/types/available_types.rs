@@ -71,9 +71,6 @@ impl DBTypeId {
                     _ => false
                 }
             }
-
-            #[warn(unreachable_patterns)]
-            _ => self == from
         }
     }
 

@@ -1,4 +1,4 @@
-use crate::types::{BigIntType, StorageDBTypeTrait};
+use crate::types::StorageDBTypeTrait;
 use crate::VarcharType;
 
 impl StorageDBTypeTrait for VarcharType {

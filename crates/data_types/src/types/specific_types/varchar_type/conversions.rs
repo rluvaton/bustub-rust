@@ -103,7 +103,7 @@ impl TryFrom<&VarcharType> for DecimalType {
 
         v.value.parse::<DecimalUnderlyingType>()
             .map(|value| DecimalType::from(value))
-            .map_err(|err| InnerFromStringConversionError::UnableToConvert {
+            .map_err(|_| InnerFromStringConversionError::UnableToConvert {
                 value: v.value.clone(),
                 dest_type: DBTypeId::DECIMAL,
             })
@@ -163,7 +163,7 @@ impl TryFrom<&VarcharType> for TinyIntType {
         };
 
         TinyIntType::try_from(val)
-            .map_err(|e| {
+            .map_err(|_| {
                 InnerFromStringConversionError::UnableToConvert {
                     value: val.value.to_string(),
                     dest_type: DBTypeId::TINYINT,
@@ -193,7 +193,7 @@ impl TryFrom<&VarcharType> for SmallIntType {
         };
 
         SmallIntType::try_from(val)
-            .map_err(|err| {
+            .map_err(|_| {
                 InnerFromStringConversionError::UnableToConvert {
                     value: v.value.clone(),
                     dest_type: DBTypeId::SMALLINT,
@@ -242,7 +242,7 @@ impl TryFrom<&VarcharType> for BigIntType {
 
         v.value.parse::<BigIntUnderlyingType>()
             .map(|value| BigIntType::from(value))
-            .map_err(|err| InnerFromStringConversionError::UnableToConvert {
+            .map_err(|_| InnerFromStringConversionError::UnableToConvert {
                 value: v.value.clone(),
                 dest_type: DBTypeId::BIGINT,
             })

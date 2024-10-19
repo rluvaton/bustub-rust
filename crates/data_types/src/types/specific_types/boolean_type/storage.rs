@@ -1,4 +1,4 @@
-use crate::types::{BooleanType, BooleanUnderlyingType, StorageDBTypeTrait};
+use crate::types::{BooleanType, StorageDBTypeTrait};
 
 
 impl Clone for BooleanType {

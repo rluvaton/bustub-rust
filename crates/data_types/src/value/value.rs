@@ -1,15 +1,14 @@
 // TODO - should probably be trait
 
-use std::fmt::{Display, Formatter};
-use crate::{run_on_impl, VarcharType};
 use crate::types::{BigIntType, BooleanType, ComparisonDBTypeTrait, ConversionDBTypeTrait, DBTypeId, DBTypeIdImpl, DecimalType, IntType, SmallIntType, StorageDBTypeTrait, TimestampType, TinyIntType};
+use crate::run_on_impl;
+use std::fmt::{Display, Formatter};
 
 
 // TODO - implement from src/include/type/value.h
 #[derive(Debug)]
 pub struct Value {
     /// The data type
-    // type_id: TypeId,
     pub(super) value: DBTypeIdImpl,
 }
 

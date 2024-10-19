@@ -1,4 +1,4 @@
-use crate::types::{DecimalType, DecimalUnderlyingType, StorageDBTypeTrait};
+use crate::types::{DecimalType, StorageDBTypeTrait};
 
 
 impl Clone for DecimalType {

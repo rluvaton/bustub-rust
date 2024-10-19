@@ -1,12 +1,7 @@
 // Heap implementation greatly influenced by https://github.com/Wasabi375/mut-binary-heap
 use super::{LRUKNode, HistoryRecordProducer};
 use core::mem::swap;
-use std::collections::HashMap;
-use std::hash::Hash;
 use std::marker::PhantomData;
-use std::ops::Deref;
-use std::ops::DerefMut;
-use std::sync::Arc;
 use std::vec;
 use bit_vec::BitVec;
 use buffer_common::FrameId;
@@ -194,7 +189,7 @@ impl Store {
     /// # Safety
     ///
     /// The caller must guarantee that `pos < self.data.len()`.
-    fn sift_up(&mut self, start: usize, pos: usize) -> usize {
+    unsafe fn sift_up(&mut self, start: usize, pos: usize) -> usize {
         // Take out the value at `pos` and create a hole.
         // SAFETY: The caller guarantees that pos < self.data.len()
         let frame_id = self.next_frame_to_evict_heap[pos];
@@ -285,7 +280,7 @@ impl Store {
     /// # Safety
     ///
     /// The caller must guarantee that `pos < self.data.len()`.
-    unsafe fn sift_down_to_bottom(&mut self, mut pos: usize) {
+    unsafe fn sift_down_to_bottom(&mut self, pos: usize) {
         let end = self.next_frame_to_evict_heap.len();
         let start = pos;
 
@@ -346,13 +341,6 @@ impl Store {
     #[must_use]
     fn len(&self) -> usize {
         self.next_frame_to_evict_heap.len()
-    }
-
-    /// Checks if the binary heap is empty.
-    ///
-    #[must_use]
-    fn is_empty(&self) -> bool {
-        self.next_frame_to_evict_heap.is_empty()
     }
 
 

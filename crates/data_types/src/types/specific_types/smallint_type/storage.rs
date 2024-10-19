@@ -1,5 +1,4 @@
 use crate::types::{SmallIntType, StorageDBTypeTrait};
-use super::SmallIntUnderlyingType;
 
 
 impl Clone for SmallIntType {

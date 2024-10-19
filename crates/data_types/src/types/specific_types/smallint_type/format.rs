@@ -1,6 +1,6 @@
+use crate::types::{DBTypeId, FormatDBTypeTrait, SmallIntType};
+use crate::ConversionDBTypeTrait;
 use std::fmt::{Display, Formatter};
-use crate::types::{SmallIntType, DBTypeId, FormatDBTypeTrait};
-use crate::{ConversionDBTypeTrait, VarcharType};
 
 impl Display for SmallIntType {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {

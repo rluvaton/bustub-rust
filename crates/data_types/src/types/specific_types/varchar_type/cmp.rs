@@ -1,4 +1,4 @@
-use crate::{partial_eq_null, run_on_numeric_impl, BigIntType, BigIntUnderlyingType, BooleanType, ComparisonDBTypeTrait, ConversionDBTypeTrait, DBTypeIdImpl, DecimalType, DecimalUnderlyingType, FormatDBTypeTrait, IntType, SmallIntType, TimestampType, TinyIntType, Value, VarcharType, VarcharUnderlyingType, BUSTUB_VALUE_NULL};
+use crate::{partial_eq_null, BigIntType, BooleanType, ComparisonDBTypeTrait, DecimalType, IntType, SmallIntType, TimestampType, TinyIntType, Value, VarcharType, VarcharUnderlyingType, BUSTUB_VALUE_NULL};
 use std::cmp::Ordering;
 
 impl PartialEq for VarcharType {
