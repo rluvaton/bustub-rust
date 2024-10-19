@@ -66,7 +66,6 @@ pub trait DoubleEndedList<T> {
     /// dl.push_back(3);
     /// assert_eq!(dl.len(), 3);
     /// ```
-    #[inline]
     #[must_use]
     fn len(&self) -> usize;
 
