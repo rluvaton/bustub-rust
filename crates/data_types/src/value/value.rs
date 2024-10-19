@@ -1,6 +1,6 @@
 // TODO - should probably be trait
 
-use crate::types::{BigIntType, BooleanType, ComparisonDBTypeTrait, ConversionDBTypeTrait, DBTypeId, DBTypeIdImpl, DecimalType, IntType, SmallIntType, StorageDBTypeTrait, TimestampType, TinyIntType};
+use crate::types::{BigIntType, BooleanType, ComparisonDBTypeTrait, ConversionDBTypeTrait, DBTypeId, DBTypeIdImpl, DecimalType, IntType, SmallIntType, StorageDBTypeTrait, TimestampType, TinyIntType, VariableLengthStorageDBTypeTrait};
 use crate::run_on_impl;
 use std::fmt::{Display, Formatter};
 
@@ -53,13 +53,6 @@ impl Value {
             v.is_null()
         })
     }
-
-    // // TODO - this is deserialize_from
-    // pub fn deserialize_from_ptr(ptr: *const u8, value_type: TypeId) -> Self {
-    //     todo!()
-    // }
-
-    // TODO - this is deserialize_from
     /// Deserialize a value of the given type from the given storage space.
     pub fn deserialize_from_slice(value_type: DBTypeId, slice: &[u8]) -> Self {
         let db_impl: DBTypeIdImpl = match value_type {
@@ -126,17 +119,18 @@ impl Value {
 
     #[allow(unused)]
     fn get_data(&self) -> &[u8] {
-        unimplemented!()
-        // run_on_impl!(self.value, v, {
-        //     v.get_data()
-        // })
+        match &self.value {
+            DBTypeIdImpl::VARCHAR(v) => v.get_data(),
+            _ => unreachable!()
+        }
     }
 
     #[allow(unused)]
     pub fn len(&self) -> u32 {
-        run_on_impl!(&self.value, v, {
-            v.len()
-        })
+        match &self.value {
+            DBTypeIdImpl::VARCHAR(v) => v.len() as u32,
+            _ => unreachable!()
+        }
     }
 }
 
