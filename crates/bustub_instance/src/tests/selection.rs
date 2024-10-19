@@ -24,6 +24,24 @@ mod tests {
     }
 
     #[test]
+    fn should_fail_when_trying_to_select_missing_table() {
+        let mut instance = BustubInstance::in_memory(None);
+        instance.generate_mock_table();
+
+        let sql = "SELECT number from some_table_name";
+
+        let actual = instance.execute_single_select_sql(sql, CheckOptions::default()).expect("Should execute");
+
+        let expected = actual.create_with_same_schema(vec![
+            vec![Value::from(0)],
+            vec![Value::from(1)],
+            vec![Value::from(2)],
+        ]);
+
+        assert_eq!(actual, expected)
+    }
+
+    #[test]
     fn should_select_with_column_constant_filter() {
         let mut instance = BustubInstance::in_memory(None);
         instance.generate_mock_table();
