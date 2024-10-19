@@ -15,6 +15,7 @@ const _: () = {
 };
 
 
+/// ```plain
 /// Slotted page format:
 ///  ---------------------------------------------------------
 ///  | HEADER | ... FREE SPACE ... | ... INSERTED TUPLES ... |
@@ -32,6 +33,7 @@ const _: () = {
 ///
 /// Tuple format:
 /// | meta | data |
+/// ```
 ///
 #[derive(Clone, Debug, PartialEq)]
 #[repr(C)]
