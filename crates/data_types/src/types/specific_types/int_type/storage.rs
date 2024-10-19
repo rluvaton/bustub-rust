@@ -1,4 +1,4 @@
-use crate::types::{IntType, IntUnderlyingType, StorageDBTypeTrait};
+use crate::types::{IntType, StorageDBTypeTrait};
 
 
 impl Clone for IntType {

@@ -1,4 +1,3 @@
-use std::fs::Metadata;
 use crate::{GenericComparator, GenericKey, Index, IndexMetadata};
 use buffer_pool_manager::BufferPoolManager;
 use common::{Comparator, PageKey};
@@ -10,7 +9,7 @@ use std::sync::Arc;
 use transaction::Transaction;
 use tuple::Tuple;
 
-struct ExtendibleHashingIndex<const BUCKET_MAX_SIZE: usize, Key: PageKey, KeyComparator: Comparator<Key>, KeyHasherImpl: KeyHasher> (
+pub struct ExtendibleHashingIndex<const BUCKET_MAX_SIZE: usize, Key: PageKey, KeyComparator: Comparator<Key>, KeyHasherImpl: KeyHasher> (
     DiskExtendibleHashTable<
         BUCKET_MAX_SIZE,
         Key,

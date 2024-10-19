@@ -1,5 +1,4 @@
 use crate::types::{BigIntType, StorageDBTypeTrait};
-use super::BigIntUnderlyingType;
 
 
 impl Clone for BigIntType {

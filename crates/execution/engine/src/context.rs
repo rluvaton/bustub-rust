@@ -1,15 +1,14 @@
-use crate::executors::{Executor, ExecutorImpl};
+use crate::executors::ExecutorImpl;
 use buffer_pool_manager::BufferPoolManager;
 use db_core::catalog::Catalog;
 use db_core::concurrency::TransactionManager;
 use execution_common::CheckOptions;
 use lock_manager::LockManager;
-use std::collections::VecDeque;
-use std::fmt::{Debug, Formatter};
-use std::rc::Rc;
-use std::sync::Arc;
 use parking_lot::Mutex;
 use recovery_log_manager::LogManager;
+use std::collections::VecDeque;
+use std::fmt::{Debug, Formatter};
+use std::sync::Arc;
 use transaction::Transaction;
 
 /// ExecutorContext stores all the context necessary to run an executor.

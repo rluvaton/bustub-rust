@@ -223,6 +223,7 @@ mod tests {
     #[test]
     fn casting_as_before_for_io_error_and_anyhow() {
         // Making sure that the same type works
+        #[allow(dead_code)]
         fn create_error_using_anyhow(io_error: bool) -> anyhow::Result<()> {
             if !io_error {
                 return Err(anyhow::anyhow!("hello"));
@@ -232,7 +233,8 @@ mod tests {
 
             Ok(())
         }
-
+        
+        #[allow(dead_code)]
         fn create_error_using_error_utils(io_error: bool) -> crate::anyhow::Result<()> {
             if !io_error {
                 return Err(crate::anyhow::anyhow!("hello"));
@@ -247,12 +249,14 @@ mod tests {
     #[test]
     fn casting_as_before_for_io_error_only() {
         // Making sure that the same type works
+        #[allow(dead_code)]
         fn create_error_using_anyhow() -> anyhow::Result<()> {
             std::fs::OpenOptions::new().open("foo.txt")?;
 
             Ok(())
         }
 
+        #[allow(dead_code)]
         fn create_error_using_error_utils() -> Result<(), crate::Error<io::Error>> {
             std::fs::OpenOptions::new().open("foo.txt")?;
 
@@ -271,11 +275,13 @@ mod tests {
             Unknown2,
         }
 
+        #[allow(dead_code)]
         fn create_custom_error() -> Result<(), MyCustomError> {
             Err(MyCustomError::Unknown1)
         }
 
         // Making sure that the same type works
+        #[allow(dead_code)]
         fn create_error_using_anyhow(custom_error: bool) -> anyhow::Result<()> {
             if !custom_error {
                 return Err(MyCustomError::Unknown2.into());
@@ -286,6 +292,7 @@ mod tests {
             Ok(())
         }
 
+        #[allow(dead_code)]
         fn create_error_using_error_utils(custom_error: bool) -> Result<(), crate::Error<MyCustomError>> {
             if !custom_error {
                 return Err(MyCustomError::Unknown2.into());

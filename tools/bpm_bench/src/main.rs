@@ -215,9 +215,6 @@ fn main() {
     #[allow(unused)]
     let db_name = tmpdir.path().join("test.db");
 
-    // let disk_manager = DefaultDiskManager::new(db_name).expect("should create disk manager");
-    let disk_manager = DiskManagerUnlimitedMemory::new();
-
 
     let bpm = BufferPoolManager::builder()
         .with_pool_size(bustub_bpm_size)

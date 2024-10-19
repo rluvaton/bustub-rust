@@ -1,7 +1,6 @@
 use crate::context::ExecutorContext;
 use crate::executors::{Executor, ExecutorItem, ExecutorMetadata, FilterExecutor, LimitExecutor, MockScanExecutor, ProjectionExecutor, ValuesExecutor};
 use catalog_schema::Schema;
-use std::fmt::Display;
 use std::sync::Arc;
 
 // Helper to avoid duplicating deref on each variant
@@ -20,6 +19,7 @@ macro_rules! call_each_variant {
 }
 
 #[derive(Debug)]
+#[must_use]
 pub(crate) enum ExecutorImpl<'a> {
     // SeqScan,
     // IndexScan,

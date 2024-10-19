@@ -133,7 +133,7 @@ mod tests {
         let can_resume = Arc::new(AtomicBool::new(false));
 
         let mut threads = vec![];
-        for i in 0..100 {
+        for _ in 0..100 {
             let future = future.clone();
             let number_of_threads_ready = number_of_threads_ready.clone();
             let can_resume = can_resume.clone();

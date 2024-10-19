@@ -148,7 +148,7 @@ impl TryFrom<&str> for BigIntType {
 
         v.parse::<BigIntUnderlyingType>()
             .map(|value| BigIntType::from(value))
-            .map_err(|err| InnerFromStringConversionError::UnableToConvert {
+            .map_err(|_| InnerFromStringConversionError::UnableToConvert {
                 value: v.to_string(),
                 dest_type: DBTypeId::BIGINT,
             })

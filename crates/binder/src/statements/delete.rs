@@ -1,5 +1,4 @@
 use crate::expressions::{Constant, Expression, ExpressionTypeImpl};
-use crate::sql_parser_helper::ColumnDefExt;
 use crate::statements::traits::Statement;
 use crate::statements::StatementTypeImpl;
 use crate::table_ref::{BaseTableRef, TableReferenceTypeImpl};
@@ -7,7 +6,6 @@ use crate::try_from_ast_error::{ParseASTError, ParseASTResult};
 use crate::Binder;
 use sqlparser::ast::{FromTable, TableFactor};
 use std::fmt::Debug;
-use std::ops::DerefMut;
 use std::rc::Rc;
 
 #[derive(Debug, PartialEq, Clone)]
@@ -63,8 +61,7 @@ impl Statement for DeleteStatement {
 
         let table: Rc<TableReferenceTypeImpl> = Rc::new(table?.into());
 
-        // TODO - guard
-        let mut ctx_guard = binder.new_context();
+        let ctx_guard = binder.new_context();
 
         ctx_guard.context.lock().scope.replace(table.clone());
 

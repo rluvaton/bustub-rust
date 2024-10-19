@@ -19,8 +19,6 @@ buffer_pool_manager = {path = "../../crates/buffer/manager"}
 
 tempdir = "0.3.7"
 
-[profile.bench]
-debug = true
 
 [features]
 default = []

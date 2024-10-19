@@ -1,7 +1,7 @@
 use crate::expressions::{Expression, ExpressionTypeImpl};
 use crate::try_from_ast_error::{ParseASTError, ParseASTResult};
 use crate::Binder;
-use data_types::{BigIntType, DBTypeIdImpl, IntType, Value};
+use data_types::{BigIntType, DBTypeIdImpl, Value};
 use sqlparser::ast::Expr;
 
 /// A bound constant, e.g., `1`.
@@ -35,7 +35,7 @@ impl TryFrom<&sqlparser::ast::Value> for Constant {
                 unimplemented!();
                 // Constant::new(Value::new(DBTypeIdImpl::
             }
-            sqlparser::ast::Value::Boolean(val) => Constant::new(Value::new(DBTypeIdImpl::BOOLEAN(val.into()))),
+            sqlparser::ast::Value::Boolean(val) => Constant::new(Value::from(*val)),
 
             // TODO(chi): cast integer null to other types
             sqlparser::ast::Value::Null => Constant::new(Value::new(DBTypeIdImpl::INT(None.into()))),
@@ -56,7 +56,7 @@ impl Expression for Constant {
         false
     }
 
-    fn try_parse_from_expr(expr: &Expr, binder: &Binder) -> ParseASTResult<Self>
+    fn try_parse_from_expr(expr: &Expr, _binder: &Binder) -> ParseASTResult<Self>
     where
         Self: Sized
     {

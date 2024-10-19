@@ -29,7 +29,7 @@ mod tests {
         }
 
         let dm = DiskManagerUnlimitedMemory::new();
-        let mut disk_scheduler = Arc::new(DiskScheduler::new(Arc::new(dm)));
+        let disk_scheduler = Arc::new(DiskScheduler::new(Arc::new(dm)));
 
         // Write first page
         {

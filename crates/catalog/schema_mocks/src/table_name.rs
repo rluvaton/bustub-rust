@@ -146,7 +146,6 @@ impl MockTableName {
             MockTableName::T1 | MockTableName::T41M | MockTableName::T51M | MockTableName::T61M | MockTableName::T7 => 1000000,
             MockTableName::T8 => 10,
             MockTableName::T9 => 10000000,
-            _ => 0
         }
     }
 

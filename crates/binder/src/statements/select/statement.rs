@@ -1,19 +1,18 @@
 use crate::expressions::{Expression, ExpressionTypeImpl};
 use crate::order_by::OrderBy;
-use crate::sql_parser_helper::{ColumnDefExt};
+use crate::sql_parser_helper::ColumnDefExt;
 use crate::statements::select::builder::SelectStatementBuilder;
 use crate::statements::select::select_ext::SelectExt;
 use crate::statements::select::values_ext::ValuesExt;
 use crate::statements::traits::Statement;
+use crate::statements::StatementTypeImpl;
 use crate::table_ref::{CTEList, SubqueryRef, TableReferenceTypeImpl};
 use crate::try_from_ast_error::{ParseASTError, ParseASTResult};
 use crate::Binder;
 use sqlparser::ast::SetExpr;
 use std::fmt::Debug;
-use std::ops::{Deref, DerefMut};
+use std::ops::{Deref};
 use std::rc::Rc;
-use std::sync::Arc;
-use crate::statements::{CreateStatement, StatementTypeImpl};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct SelectStatement {
@@ -68,10 +67,10 @@ impl Statement for SelectStatement {
         Self: Sized,
     {
         let mut builder = Self::builder();
-        let mut ctx_guard = binder.new_context();
+        let ctx_guard = binder.new_context();
 
 
-        // // Bind CTEs
+        // Bind CTEs
         let ctes = if let Some(with) = &ast.with {
             let ctes = Rc::new(SubqueryRef::parse_with(with, ctx_guard.deref())?);
 
@@ -132,14 +131,13 @@ impl Statement for SelectStatement {
 
 #[cfg(test)]
 mod tests {
-    use parking_lot::Mutex;
     use crate::statements::select::statement::SelectStatement;
     use crate::statements::traits::Statement;
     use crate::try_from_ast_error::ParseASTError;
     use crate::Binder;
+    use db_core::catalog::Catalog;
     use sqlparser::dialect::GenericDialect;
     use sqlparser::parser::Parser;
-    use db_core::catalog::Catalog;
 
     fn parse_select_sql(sql: &str) -> Result<Vec<SelectStatement>, ParseASTError> {
         let catalog = Catalog::new(None, None, None);

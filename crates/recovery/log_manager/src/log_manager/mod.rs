@@ -1,10 +1,8 @@
 mod manager_impl;
 
-use std::sync::Arc;
-use common::config::{AtomicLSN};
-use parking_lot::{Condvar, Mutex};
-use disk_storage::DiskManager;
 use crate::types::{FlushBuffer, LogBuffer};
+use common::config::AtomicLSN;
+use parking_lot::{Condvar, Mutex};
 
 pub struct LogManager {
 

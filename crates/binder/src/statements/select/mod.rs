@@ -4,4 +4,3 @@ mod values_ext;
 mod select_ext;
 
 pub use statement::SelectStatement;
-use builder::SelectStatementBuilder;

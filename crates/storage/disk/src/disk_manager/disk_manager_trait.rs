@@ -1,6 +1,5 @@
-use std::any::Any;
-use pages::PageId;
 use common::Future;
+use pages::PageId;
 
 /**
  * DiskManager takes care of the allocation and deallocation of pages within a database. It performs the reading and

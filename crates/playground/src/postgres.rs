@@ -1,7 +1,6 @@
 #[cfg(test)]
 mod tests {
     use pg_query::NodeRef;
-    use pg_query::protobuf::CreateStmt;
 
     use sqlparser::dialect::GenericDialect;
     use sqlparser::parser::Parser;

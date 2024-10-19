@@ -1,10 +1,6 @@
-use crate::constants::UNNAMED_COLUMN;
 use crate::plan_nodes::{PlanNode, PlanType};
-use catalog_schema::{Column, Schema};
-use data_types::DBTypeId;
-use expression::{Expression, ExpressionRef};
+use catalog_schema::Schema;
 use std::fmt::{Display, Formatter};
-use std::rc::Rc;
 use std::sync::Arc;
 
 /**

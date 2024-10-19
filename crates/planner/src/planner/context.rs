@@ -1,6 +1,6 @@
-use std::rc::Rc;
 use binder::{CTEList, ExpressionTypeImpl};
-use expression::{ExpressionRef, ExpressionType};
+use expression::ExpressionRef;
+use std::rc::Rc;
 
 /**
  * The context for the planner. Used for planning aggregation calls.

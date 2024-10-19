@@ -36,7 +36,7 @@ impl TableRef for CTERef {
         unreachable!("CTE not found")
     }
 
-    fn try_from_ast(ast: &TableFactor, binder: &Binder) -> ParseASTResult<Self> {
+    fn try_from_ast(_ast: &TableFactor, _binder: &Binder) -> ParseASTResult<Self> {
         // CTE is manually done
         Err(ParseASTError::IncompatibleType)
     }

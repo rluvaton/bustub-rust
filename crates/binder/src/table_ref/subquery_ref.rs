@@ -3,7 +3,7 @@ use crate::statements::{SelectStatement, Statement};
 use crate::table_ref::{TableRef, TableReferenceTypeImpl};
 use crate::try_from_ast_error::{ParseASTError, ParseASTResult};
 use crate::Binder;
-use sqlparser::ast::{Cte, Query, TableAlias, TableFactor, With};
+use sqlparser::ast::{Cte, Query, TableFactor, With};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct SubqueryRef {
@@ -66,7 +66,7 @@ impl Into<TableReferenceTypeImpl> for SubqueryRef {
 }
 
 impl TableRef for SubqueryRef {
-    fn resolve_column(&self, col_name: &[String], binder: &Binder) -> ParseASTResult<Option<ColumnRef>> {
+    fn resolve_column(&self, col_name: &[String], _binder: &Binder) -> ParseASTResult<Option<ColumnRef>> {
         let alias = &self.alias;
 
         // Firstly, try directly resolve the column name through schema

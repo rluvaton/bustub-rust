@@ -42,6 +42,6 @@ mod tests {
         let error: crate::anyhow::Error = anyhow!("something");
 
         // Making sure not crashing
-        let value = error.deref();
+        let _value = error.deref();
     }
 }

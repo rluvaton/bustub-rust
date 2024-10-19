@@ -22,9 +22,6 @@ rid = {path = "../../crates/rid"}
 catalog_schema = {path = "../../crates/catalog/schema"}
 index = {path = "../../crates/storage/index"}
 
-[profile.bench]
-debug = true
-
 [features]
 default = []
 statistics = ["buffer_pool_manager/statistics", "extendible_hash_table/statistics"]

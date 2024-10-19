@@ -1,8 +1,7 @@
-use crate::types::errors::InnerNumericConversionError;
-use crate::{SmallIntUnderlyingType, SmallIntType, ConversionDBTypeTrait, DBTypeId, DBTypeIdImpl, StorageDBTypeTrait, assert_in_range, ComparisonDBTypeTrait, TinyIntType, TinyIntUnderlyingType, IntType, IntUnderlyingType, BigIntType, BigIntUnderlyingType, DecimalType, DecimalUnderlyingType, Value, VarcharType, return_error_on_out_of_range};
+use crate::types::errors::NumericConversionError;
+use crate::{return_error_on_out_of_range, BigIntType, BigIntUnderlyingType, ComparisonDBTypeTrait, ConversionDBTypeTrait, DBTypeId, DBTypeIdImpl, DecimalType, DecimalUnderlyingType, IntType, IntUnderlyingType, SmallIntType, SmallIntUnderlyingType, TinyIntType, TinyIntUnderlyingType, Value, VarcharType};
 use error_utils::anyhow::anyhow;
 use error_utils::ToAnyhowResult;
-use crate::types::errors::NumericConversionError;
 
 impl From<SmallIntUnderlyingType> for SmallIntType {
     fn from(value: SmallIntUnderlyingType) -> Self {
@@ -102,6 +101,13 @@ impl From<&SmallIntType> for VarcharType {
 }
 
 impl ConversionDBTypeTrait for SmallIntType {
+    fn serialize_to(&self, storage: &mut [u8]) {
+        storage[0..Self::SIZE as usize].copy_from_slice(self.value.to_ne_bytes().as_slice())
+    }
+
+    fn deserialize_from(storage: &[u8]) -> Self {
+        SmallIntType::new(SmallIntUnderlyingType::from_ne_bytes(storage[..Self::SIZE as usize].try_into().unwrap()))
+    }
 
     fn as_string(&self) -> String {
         if self.is_null() {
@@ -109,14 +115,6 @@ impl ConversionDBTypeTrait for SmallIntType {
         }
 
         self.value.to_string()
-    }
-
-    fn serialize_to(&self, storage: &mut [u8]) {
-        storage[0..Self::SIZE as usize].copy_from_slice(self.value.to_ne_bytes().as_slice())
-    }
-
-    fn deserialize_from(storage: &[u8]) -> Self {
-        SmallIntType::new(SmallIntUnderlyingType::from_ne_bytes(storage[..Self::SIZE as usize].try_into().unwrap()))
     }
 
     fn try_cast_as(&self, db_type_id: DBTypeId) -> error_utils::anyhow::Result<DBTypeIdImpl> {

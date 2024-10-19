@@ -1,14 +1,14 @@
 use crate::expressions::PlanExpression;
-use crate::plan_nodes::{AggregationPlanNode, FilterPlan, PlanNode, ProjectionPlanNode, ValuesPlanNode};
+use crate::plan_nodes::{AggregationPlanNode, FilterPlan, PlanNode, ValuesPlanNode};
 use crate::statements::select::plan_aggregation::PlanAggregation;
+use crate::statements::select::plan_normal_select::PlanNormalSelect;
 use crate::statements::select::plan_window::PlanWindow;
 use crate::traits::Plan;
 use crate::{LimitPlanNode, PlanType, Planner, SortPlanNode};
 use binder::{Expression as BinderExpression, ExpressionTypeImpl, SelectStatement, TableReferenceTypeImpl};
 use catalog_schema::Schema;
-use expression::{ColumnValueExpression, Expression, ExpressionRef};
+use expression::{ColumnValueExpression, Expression};
 use std::sync::Arc;
-use crate::statements::select::plan_normal_select::PlanNormalSelect;
 
 impl Plan for SelectStatement {
     fn plan<'a>(&self, planner: &'a Planner<'a>) -> PlanType {

@@ -1,13 +1,10 @@
 use crate::context::ExecutorContext;
 use crate::executors::{Executor, ExecutorImpl, ExecutorItem, ExecutorMetadata, ExecutorRef};
 use catalog_schema::Schema;
-use expression::Expression;
-use planner::{FilterPlan, LimitPlanNode, PlanNode, ProjectionPlanNode};
+use planner::{LimitPlanNode, PlanNode};
 use std::fmt;
 use std::fmt::Debug;
-use std::ops::Deref;
 use std::sync::Arc;
-use tuple::Tuple;
 
 #[must_use = "iterators are lazy and do nothing unless consumed"]
 pub struct LimitExecutor<'a> {

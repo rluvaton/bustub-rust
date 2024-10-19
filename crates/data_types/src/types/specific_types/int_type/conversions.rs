@@ -1,7 +1,7 @@
-use crate::{assert_in_range, return_error_on_out_of_range, BigIntType, BigIntUnderlyingType, ComparisonDBTypeTrait, ConversionDBTypeTrait, DBTypeId, DBTypeIdImpl, DecimalType, DecimalUnderlyingType, IntType, IntUnderlyingType, SmallIntType, SmallIntUnderlyingType, StorageDBTypeTrait, TinyIntType, TinyIntUnderlyingType, Value, VarcharType};
+use crate::types::errors::NumericConversionError;
+use crate::{return_error_on_out_of_range, BigIntType, BigIntUnderlyingType, ComparisonDBTypeTrait, ConversionDBTypeTrait, DBTypeId, DBTypeIdImpl, DecimalType, DecimalUnderlyingType, IntType, IntUnderlyingType, SmallIntType, SmallIntUnderlyingType, TinyIntType, TinyIntUnderlyingType, Value, VarcharType};
 use error_utils::anyhow::anyhow;
 use error_utils::ToAnyhowResult;
-use crate::types::errors::NumericConversionError;
 
 impl From<IntUnderlyingType> for IntType {
     fn from(value: IntUnderlyingType) -> Self {

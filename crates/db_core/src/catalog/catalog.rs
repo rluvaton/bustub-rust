@@ -81,7 +81,7 @@ impl Catalog {
     /// @return A (non-owning) pointer to the metadata for the table
     ///
     /// TODO - change return value to result
-    pub fn create_table(&mut self, txn: Arc<Transaction>, table_name: String, schema: Arc<Schema>, create_table_heap: Option<bool>) -> Option<Arc<TableInfo>> {
+    pub fn create_table(&mut self, _txn: Arc<Transaction>, table_name: String, schema: Arc<Schema>, create_table_heap: Option<bool>) -> Option<Arc<TableInfo>> {
         if self.table_names.contains_key(&table_name) {
             return None;
         }
@@ -144,7 +144,7 @@ impl Catalog {
     /// @return A vector of IndexInfo* for each index on the given table, empty vector
     /// in the event that the table exists but no indexes have been created for it
     pub fn get_table_indexes_by_name(&self, table_name: &String) -> Vec<Arc<IndexInfo>> {
-        /// Ensure the table exists
+        // Ensure the table exists
         if !self.table_names.contains_key(table_name) {
             return vec![];
         }
@@ -216,7 +216,7 @@ impl Catalog {
 
         // TODO(chi): support both hash index and btree index
 
-        let mut index = {
+        let index = {
             let index: Arc<dyn Index> = match index_type {
                 // TODO - return result instead of expect
                 IndexType::HashTableIndex => create_extendible_hashing_index(keysize, meta.clone(), self.bpm.as_ref().expect("Must have bpm").clone()).expect("Should be able to create index"),
@@ -228,7 +228,7 @@ impl Catalog {
 
         // Populate the index with all tuples in table heap
         let table_meta = self.get_table_by_name(table_name).expect("Should have table");
-        for (meta, tuple) in table_meta.get_table_heap().iter() {
+        for (_, tuple) in table_meta.get_table_heap().iter() {
             index.insert_entry(
                 &tuple.key_from_tuple(&schema, &key_schema, key_attrs),
                 tuple.get_rid(),

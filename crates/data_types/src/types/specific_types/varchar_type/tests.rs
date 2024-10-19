@@ -1,7 +1,7 @@
 
 #[cfg(test)]
 mod tests {
-    use crate::types::{BigIntType, ConversionDBTypeTrait, DBTypeIdTrait};
+    use crate::types::ConversionDBTypeTrait;
     use crate::{ComparisonDBTypeTrait, VarcharType};
 
     // #[test]

@@ -1,11 +1,9 @@
-use std::fmt::{Display, Formatter};
-use std::rc::Rc;
-use std::sync::Arc;
-use catalog_schema::Schema;
-use common::config::TableOID;
-use expression::ExpressionRef;
-use crate::plan_nodes::{PlanNode, PlanType};
 use crate::plan_nodes::traits::EMPTY_CHILDREN;
+use crate::plan_nodes::{PlanNode, PlanType};
+use catalog_schema::Schema;
+use expression::ExpressionRef;
+use std::fmt::{Display, Formatter};
+use std::sync::Arc;
 
 /**
  * The ValuesPlanNode represents rows of values. For example,

@@ -1,8 +1,8 @@
 
 #[cfg(test)]
 mod tests {
-    use crate::types::{TinyIntType, ConversionDBTypeTrait, SmallIntUnderlyingType, SmallIntType};
     use super::super::TinyIntUnderlyingType;
+    use crate::types::{ConversionDBTypeTrait, TinyIntType};
 
     #[test]
     fn basic_arithmetics_for_zero() {

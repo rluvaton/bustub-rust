@@ -1,8 +1,7 @@
-use std::fmt::{Display, Formatter};
-use std::rc::Rc;
-use std::sync::Arc;
-use catalog_schema::Schema;
 use crate::{AggregationPlanNode, DeletePlan, FilterPlan, HashJoinPlan, IndexScanPlanNode, InsertPlan, LimitPlanNode, MockScanPlanNode, NestedIndexJoinPlan, NestedLoopJoinPlanNode, PlanNode, ProjectionPlanNode, SeqScanPlanNode, SortPlanNode, TopNPerGroupPlanNode, TopNPlanNode, UpdatePlan, ValuesPlanNode, WindowFunctionPlanNode};
+use catalog_schema::Schema;
+use std::fmt::{Display, Formatter};
+use std::sync::Arc;
 
 // Helper to avoid duplicating deref on each variant
 macro_rules! call_each_variant {

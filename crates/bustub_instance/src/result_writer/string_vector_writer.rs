@@ -13,7 +13,7 @@ impl ResultWriter for StringVectorWriter {
         self.0.last_mut().expect("Must have row").push(cell.to_string());
     }
 
-    fn write_header_cell(&mut self, cell: &str) {
+    fn write_header_cell(&mut self, _cell: &str) {
     }
 
     fn begin_header(&mut self) {

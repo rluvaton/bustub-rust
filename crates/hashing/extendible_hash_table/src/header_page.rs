@@ -4,6 +4,7 @@ use std::mem::size_of;
 use comfy_table::{Table};
 use binary_utils::GetNBits;
 
+#[allow(dead_code)]
 const PAGE_METADATA_SIZE: usize = size_of::<u32>();
 
 //noinspection RsAssertEqual
@@ -122,6 +123,7 @@ impl HeaderPage {
     }
 
     /// Prints the header's occupancy information
+    #[allow(unused)]
     pub fn print_header(&self) {
         println!("{:?}", self)
     }

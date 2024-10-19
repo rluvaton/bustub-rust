@@ -10,7 +10,7 @@ pub(crate) struct ContextGuard<'a> {
 impl<'a> ContextGuard<'a> {
     pub(crate) fn new(planner: &'a Planner) -> Self {
         let mut context = planner.context.lock();
-        let mut old_context = context.clone();
+        let old_context = context.clone();
 
         let mut new_context = Context::default();
         new_context.cte_list = old_context.cte_list.clone();

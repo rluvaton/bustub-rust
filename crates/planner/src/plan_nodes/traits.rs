@@ -1,8 +1,7 @@
-use std::fmt::{Debug, Display};
-use std::rc::Rc;
-use std::sync::Arc;
-use catalog_schema::Schema;
 use crate::plan_nodes::PlanType;
+use catalog_schema::Schema;
+use std::fmt::{Debug, Display};
+use std::sync::Arc;
 
 // pub type PlanNodeRef = Rc<PlanType>;
 

@@ -1,9 +1,8 @@
-use std::rc::Rc;
-use std::sync::Arc;
-use binder::BaseTableRef;
 use crate::plan_nodes::PlanType;
-use crate::{MockScanPlanNode, PlanNode, Planner, SeqScanPlanNode};
 use crate::traits::Plan;
+use crate::{MockScanPlanNode, Planner, SeqScanPlanNode};
+use binder::BaseTableRef;
+use std::sync::Arc;
 
 impl Plan for BaseTableRef {
     fn plan<'a>(&self, planner: &'a Planner<'a>) -> PlanType {

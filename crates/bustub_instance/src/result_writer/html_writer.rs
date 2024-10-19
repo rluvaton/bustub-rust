@@ -1,5 +1,3 @@
-use std::io;
-use std::io::Write;
 use crate::result_writer::ResultWriter;
 
 pub struct HtmlWriter {

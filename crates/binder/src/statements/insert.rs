@@ -1,6 +1,5 @@
-use crate::sql_parser_helper::ColumnDefExt;
 use crate::statements::traits::Statement;
-use crate::statements::{CreateStatement, SelectStatement, StatementTypeImpl};
+use crate::statements::{SelectStatement, StatementTypeImpl};
 use crate::table_ref::{BaseTableRef, TableReferenceTypeImpl};
 use crate::try_from_ast_error::{ParseASTError, ParseASTResult};
 use crate::Binder;
@@ -70,14 +69,13 @@ impl Statement for InsertStatement {
 
 #[cfg(test)]
 mod tests {
-    use parking_lot::Mutex;
     use crate::statements::traits::Statement;
     use crate::statements::InsertStatement;
     use crate::try_from_ast_error::ParseASTError;
     use crate::Binder;
+    use db_core::catalog::Catalog;
     use sqlparser::dialect::GenericDialect;
     use sqlparser::parser::Parser;
-    use db_core::catalog::Catalog;
 
     fn parse_insert_sql(sql: &str) -> Result<Vec<InsertStatement>, ParseASTError> {
         let catalog = Catalog::new(None, None, None);

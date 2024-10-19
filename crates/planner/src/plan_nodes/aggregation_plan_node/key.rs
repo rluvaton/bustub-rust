@@ -1,7 +1,7 @@
 use data_types::Value;
 
 /** AggregateKey represents a key in an aggregation operation */
-struct AggregateKey {
+pub struct AggregateKey {
     /** The group-by values */
     pub group_bys: Vec<Value>,
 }

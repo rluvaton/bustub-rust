@@ -1,11 +1,9 @@
-use std::rc::Rc;
-use crate::plan_nodes::PlanType;
-use crate::traits::Plan;
-use crate::Planner;
-use binder::{BinaryOpExpr, FuncCallExpr};
-use expression::{Expression, ExpressionRef, StringExpression, StringExpressionType};
 use crate::constants::UNNAMED_COLUMN;
 use crate::expressions::traits::PlanExpression;
+use crate::plan_nodes::PlanType;
+use crate::Planner;
+use binder::FuncCallExpr;
+use expression::{Expression, ExpressionRef, StringExpression, StringExpressionType};
 
 impl PlanExpression for FuncCallExpr {
     fn plan<'a>(&self, children: &[&PlanType], planner: &'a Planner<'a>) -> (String, ExpressionRef) {

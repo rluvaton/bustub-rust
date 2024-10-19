@@ -46,7 +46,7 @@ impl TableRef for ExpressionListRef {
         Err(ParseASTError::FailedParsing(format!("cannot resolve column {} in VALUES", col_name.join("."))))
     }
 
-    fn try_from_ast(ast: &TableFactor, binder: &Binder) -> ParseASTResult<Self> {
+    fn try_from_ast(_ast: &TableFactor, _binder: &Binder) -> ParseASTResult<Self> {
         // No table factor matching the expression list
         Err(ParseASTError::IncompatibleType)
     }

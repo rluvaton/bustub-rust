@@ -1,10 +1,9 @@
-use std::fmt::{Debug, Display, Formatter};
-use std::sync::Arc;
-use catalog_schema::Schema;
-use data_types::{DBTypeId, Value};
-use tuple::Tuple;
 use crate::expression_type::ExpressionType;
 use crate::traits::{Expression, ExpressionRef, NO_CHILDREN};
+use catalog_schema::Schema;
+use data_types::{DBTypeId, Value};
+use std::fmt::{Debug, Display, Formatter};
+use tuple::Tuple;
 
 
 /// ColumnValueExpression maintains the tuple index and column index relative to a particular schema or join.

@@ -75,7 +75,7 @@ impl TransactionManager {
         self.txn_map.lock().get(&txn_id).cloned()
     }
 
-    pub fn debug(&self, info: String, table_info: Option<Arc<TableInfo>>, table_heap: Option<Arc<TableHeap>>) {
+    pub fn debug(&self, info: String, _table_info: Option<Arc<TableInfo>>, _table_heap: Option<Arc<TableHeap>>) {
         // always use stderr for printing logs...
        eprintln!("debug_hook: {}", info);
 
@@ -120,7 +120,8 @@ impl TransactionManagerTrait for TransactionManager {
     }
 
     fn commit(&self, txn: Arc<Transaction>) -> bool {
-        let mut commit_lock = self.commit_mutex.lock();
+        #[allow(unused_variables)]
+        let commit_lock = self.commit_mutex.lock();
 
 
         // TODO(fall2023): acquire commit ts!
@@ -138,7 +139,8 @@ impl TransactionManagerTrait for TransactionManager {
 
         // TODO(fall2023): Implement the commit logic!
 
-        let mut txn_map_guard = self.txn_map.lock();
+        #[allow(unused_variables)]
+        let txn_map_guard = self.txn_map.lock();
 
         // TODO(fall2023): set commit timestamp + update last committed timestamp here.
 
@@ -155,7 +157,8 @@ impl TransactionManagerTrait for TransactionManager {
 
         // TODO(fall2023): Implement the abort logic!
 
-        let mut txn_map_guard = self.txn_map.lock();
+        #[allow(unused_variables)]
+        let txn_map_guard = self.txn_map.lock();
 
         txn.set_transaction_state(TransactionState::Aborted);
         self.running_txns.remove_txn(txn.get_read_ts())
@@ -165,26 +168,33 @@ impl TransactionManagerTrait for TransactionManager {
         todo!()
     }
 
+    #[allow(unused_variables)]
     fn update_undo_link(&mut self, rid: RID, prev_link: Option<UndoLink>, check: Option<&dyn CheckUndoLink>) -> bool {
         todo!()
     }
 
+    #[allow(unused_variables)]
     fn update_version_link(&mut self, rid: RID, prev_version: Option<VersionUndoLink>, check: Option<&dyn CheckVersionUndoLink>) -> bool {
         todo!()
     }
 
+    #[allow(unused_variables)]
     fn get_undo_link(&self, rid: RID) -> Option<UndoLink> {
         todo!()
     }
 
+    #[allow(unused_variables)]
     fn get_version_link(&self, rid: RID) -> Option<VersionUndoLink> {
         todo!()
     }
 
+
+    #[allow(unused_variables)]
     fn get_undo_log(&self, link: UndoLink) -> Option<UndoLog> {
         todo!()
     }
 
+    #[allow(unused_variables)]
     unsafe fn get_undo_log_unchecked(&self, link: UndoLink) -> UndoLog {
         todo!()
     }

@@ -4,7 +4,6 @@ use catalog_schema::{Column, Schema};
 use data_types::DBTypeId;
 use expression::{Expression, ExpressionRef};
 use std::fmt::{Display, Formatter};
-use std::rc::Rc;
 use std::sync::Arc;
 
 /**

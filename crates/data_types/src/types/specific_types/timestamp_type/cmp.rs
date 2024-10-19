@@ -1,4 +1,4 @@
-use crate::{TimestampType, TimestampUnderlyingType, ComparisonDBTypeTrait, DBTypeIdImpl, FormatDBTypeTrait, Value, partial_eq_null, run_on_numeric_impl, VarcharType};
+use crate::{partial_eq_null, ComparisonDBTypeTrait, DBTypeIdImpl, FormatDBTypeTrait, TimestampType, TimestampUnderlyingType, Value, VarcharType};
 use std::cmp::Ordering;
 
 impl PartialEq for TimestampType {

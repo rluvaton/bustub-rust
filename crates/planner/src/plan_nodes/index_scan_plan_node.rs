@@ -1,12 +1,10 @@
-use std::fmt::{Display, Formatter};
-use std::rc::Rc;
-use std::sync::Arc;
-use binder::BaseTableRef;
-use catalog_schema::{Column, Schema};
+use crate::plan_nodes::traits::EMPTY_CHILDREN;
+use crate::plan_nodes::{PlanNode, PlanType};
+use catalog_schema::Schema;
 use common::config::{IndexOID, TableOID};
 use expression::{ConstantValueExpression, ExpressionRef};
-use crate::plan_nodes::{PlanNode, PlanType};
-use crate::plan_nodes::traits::EMPTY_CHILDREN;
+use std::fmt::{Display, Formatter};
+use std::sync::Arc;
 
 /**
  * The SeqScanPlanNode represents a sequential table scan operation.

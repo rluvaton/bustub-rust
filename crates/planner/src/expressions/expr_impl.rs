@@ -1,9 +1,8 @@
-use std::rc::Rc;
-use binder::ExpressionTypeImpl;
-use expression::ExpressionRef;
 use crate::expressions::traits::PlanExpression;
 use crate::plan_nodes::PlanType;
 use crate::Planner;
+use binder::ExpressionTypeImpl;
+use expression::ExpressionRef;
 
 impl PlanExpression for ExpressionTypeImpl {
     fn plan<'a>(&self, children: &[&PlanType], planner: &'a Planner<'a>) -> (String, ExpressionRef) {

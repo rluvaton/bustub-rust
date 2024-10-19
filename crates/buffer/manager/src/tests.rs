@@ -144,7 +144,7 @@ mod tests {
 
         // Scenario: After unpinning pages {0, 1, 2, 3, 4} and pinning another 4 new pages,
         // there would still be one buffer page left for reading page 0.
-        for i in 0..5 {
+        for _ in 0..5 {
             // Should drop guard and unpin
             let _ = page_guards.remove(0);
         }
@@ -197,7 +197,7 @@ mod tests {
         // Thread 1
         let thread_1 = thread::spawn(move || {
             // Fetch the created page with write lock
-            let fetch_page_with_write = bpm_thread_1.fetch_page_write(created_page_id, AccessType::Unknown).expect("Should be able to fetch page");
+            let _fetch_page_with_write = bpm_thread_1.fetch_page_write(created_page_id, AccessType::Unknown).expect("Should be able to fetch page");
 
             // Page fetched, Release lock so the next thread can now fetch
             wait_for_next_thread_1.store(1, Ordering::SeqCst);
@@ -296,8 +296,8 @@ mod tests {
         }
 
         {
-            let temp_page_1 = bpm.new_page(AccessType::Unknown).expect("Should be able to create new page");
-            let temp_page_2 = bpm.new_page(AccessType::Unknown).expect("Should be able to create new page");
+            let _temp_page_1 = bpm.new_page(AccessType::Unknown).expect("Should be able to create new page");
+            let _temp_page_2 = bpm.new_page(AccessType::Unknown).expect("Should be able to create new page");
 
             assert_eq!(bpm.get_pin_count(page_id_0), None);
             assert_eq!(bpm.get_pin_count(page_id_1), None);
@@ -409,7 +409,7 @@ mod tests {
 
         // Scenario: After unpinning pages {1, 2, 3, 4, 5}, we should be able to create 4 new pages and bring them into
         // memory. Bringing those 4 pages into memory should evict the first 4 pages {1, 2, 3, 4} because of LRU.
-        for i in 0..((buffer_pool_size / 2) - 1) {
+        for _ in 0..((buffer_pool_size / 2) - 1) {
             pages.push(bpm.new_page(AccessType::Unknown).unwrap());
         }
 
@@ -424,7 +424,7 @@ mod tests {
         // Scenario: Once we unpin page 0 and then make a new page, all the buffer pages should now be pinned. Fetching page 0
         // again should fail.
         let last_pid = bpm.new_page(AccessType::Unknown).unwrap().get_page_id();
-        let last_page = bpm.fetch_page_read(last_pid, AccessType::Unknown);
+        let _last_page = bpm.fetch_page_read(last_pid, AccessType::Unknown);
 
         let fail = bpm.fetch_page_read(pid0, AccessType::Unknown).expect_err("Should fail to fetch page when buffer pool is full");
         assert_eq!(fail, FetchPageError::NoAvailableFrameFound);
@@ -463,7 +463,7 @@ mod tests {
             })
         };
 
-        for i in 0..ROUNDS {
+        for _ in 0..ROUNDS {
             // Wait for a bit before taking the latch, allowing the writer to write some stuff.
             thread::sleep(Duration::from_millis(10));
 
@@ -557,7 +557,7 @@ mod tests {
             start_child_thread.store(true, Ordering::SeqCst);
 
             // Attempt to write to page 0.
-            let guard0 = bpm_child_thread.fetch_page_write(pid0, AccessType::Unknown);
+            let _guard0 = bpm_child_thread.fetch_page_write(pid0, AccessType::Unknown);
         });
 
         // Wait for the other thread to begin before we start the test.
@@ -572,7 +572,7 @@ mod tests {
         // Think about what might happen if you hold a certain "all-encompassing" latch for too long...
 
         // While holding page 0, take the latch on page 1.
-        let guard1 = bpm.fetch_page_write(pid1, AccessType::Unknown);
+        let _guard1 = bpm.fetch_page_write(pid1, AccessType::Unknown);
 
         // Let the child thread have the page 0 since we're done with it.
         drop(guard0);
@@ -613,7 +613,7 @@ mod tests {
 
             let mut readers = vec![];
 
-            for j in 0..num_readers {
+            for _ in 0..num_readers {
                 let bpm = Arc::clone(&bpm);
                 let signal = Arc::clone(&signal);
                 let reader = thread::spawn(move || {
@@ -626,7 +626,7 @@ mod tests {
                     }
 
                     // Read the page in shared mode.
-                    let read_guard = bpm.fetch_page_read(winner_pid, AccessType::Unknown).expect("Should be able to read the winner page id");
+                    let _read_guard = bpm.fetch_page_read(winner_pid, AccessType::Unknown).expect("Should be able to read the winner page id");
 
                     // Since the only frame is pinned, no thread should be able to bring in a new page.
                     let attempt_read_page_error = bpm.fetch_page_read(loser_pid, AccessType::Unknown).expect_err("Should fail to bring another page in");

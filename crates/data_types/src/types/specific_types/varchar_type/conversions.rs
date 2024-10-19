@@ -1,5 +1,5 @@
 use crate::types::errors::InnerFromStringConversionError;
-use crate::types::{ComparisonDBTypeTrait, ConversionDBTypeTrait, DBTypeId, DBTypeIdImpl, DecimalType, DecimalUnderlyingType, IntType, SmallIntType, StorageDBTypeTrait, TinyIntType};
+use crate::types::{ComparisonDBTypeTrait, ConversionDBTypeTrait, DBTypeId, DBTypeIdImpl, DecimalType, DecimalUnderlyingType, IntType, SmallIntType, TinyIntType};
 use crate::{BigIntType, BigIntUnderlyingType, BooleanType, TimestampType, Value, VarcharType, BUSTUB_VALUE_NULL};
 use error_utils::anyhow::anyhow;
 use error_utils::ToAnyhowResult;
@@ -103,7 +103,7 @@ impl TryFrom<&VarcharType> for DecimalType {
 
         v.value.parse::<DecimalUnderlyingType>()
             .map(|value| DecimalType::from(value))
-            .map_err(|err| InnerFromStringConversionError::UnableToConvert {
+            .map_err(|_| InnerFromStringConversionError::UnableToConvert {
                 value: v.value.clone(),
                 dest_type: DBTypeId::DECIMAL,
             })
@@ -163,7 +163,7 @@ impl TryFrom<&VarcharType> for TinyIntType {
         };
 
         TinyIntType::try_from(val)
-            .map_err(|e| {
+            .map_err(|_| {
                 InnerFromStringConversionError::UnableToConvert {
                     value: val.value.to_string(),
                     dest_type: DBTypeId::TINYINT,
@@ -193,7 +193,7 @@ impl TryFrom<&VarcharType> for SmallIntType {
         };
 
         SmallIntType::try_from(val)
-            .map_err(|err| {
+            .map_err(|_| {
                 InnerFromStringConversionError::UnableToConvert {
                     value: v.value.clone(),
                     dest_type: DBTypeId::SMALLINT,
@@ -242,7 +242,7 @@ impl TryFrom<&VarcharType> for BigIntType {
 
         v.value.parse::<BigIntUnderlyingType>()
             .map(|value| BigIntType::from(value))
-            .map_err(|err| InnerFromStringConversionError::UnableToConvert {
+            .map_err(|_| InnerFromStringConversionError::UnableToConvert {
                 value: v.value.clone(),
                 dest_type: DBTypeId::BIGINT,
             })

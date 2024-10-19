@@ -1,13 +1,11 @@
-use std::rc::Rc;
-use crate::plan_nodes::PlanType;
-use crate::traits::Plan;
-use crate::Planner;
-use binder::{BinaryOpExpr, UnaryOpExpr};
-use expression::ExpressionRef;
 use crate::expressions::traits::PlanExpression;
+use crate::plan_nodes::PlanType;
+use crate::Planner;
+use binder::UnaryOpExpr;
+use expression::ExpressionRef;
 
 impl PlanExpression for UnaryOpExpr {
-    fn plan<'a>(&self, children: &[&PlanType], planner: &'a Planner<'a>) -> (String, ExpressionRef) {
+    fn plan<'a>(&self, _children: &[&PlanType], _planner: &'a Planner<'a>) -> (String, ExpressionRef) {
         todo!()
     }
 }

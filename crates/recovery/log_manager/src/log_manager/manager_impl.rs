@@ -8,7 +8,7 @@ use crate::types::LogBuffer;
 
 impl LogManager {
 
-    pub fn new<D: DiskManager>(disk_manager: Arc<D>) -> Self {
+    pub fn new<D: DiskManager>(_disk_manager: Arc<D>) -> Self {
         LogManager {
             next_lsn: AtomicLSN::new(0),
             persistent_lsn: AtomicLSN::new(INVALID_LSN),

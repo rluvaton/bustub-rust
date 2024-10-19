@@ -5,7 +5,6 @@ mod tests {
     use disk_storage::DiskManagerUnlimitedMemory;
     use generics::Shuffle;
     use pages::PAGE_SIZE;
-    use parking_lot::Mutex;
     use rand::seq::SliceRandom;
     use rand::{thread_rng, Rng, SeedableRng};
     use rand_chacha::ChaChaRng;
@@ -57,7 +56,7 @@ mod tests {
 
     fn create_extendible_hash_table(pool_size: usize) -> DiskHashTable<{ bucket_array_size::<TestKey, TestValue>() }, TestKey, TestValue, OrdComparator<TestKey>, DefaultKeyHasher> {
         let bpm = BufferPoolManager::builder()
-            .with_pool_size(4)
+            .with_pool_size(pool_size)
             .with_disk_manager(DiskManagerUnlimitedMemory::new())
             .with_lru_k_eviction_policy(2)
             .build_arc();
@@ -79,7 +78,7 @@ mod tests {
         KeyComparator: Comparator<Key>,
         KeyHasherImpl: KeyHasher,
         GetEntryFn: Fn(i64) -> (Key, Value)
-    >(mut hash_table: DiskHashTable<ARRAY_SIZE, Key, Value, KeyComparator, KeyHasherImpl>, total: i64, get_entry_for_index: GetEntryFn) {
+    >(hash_table: DiskHashTable<ARRAY_SIZE, Key, Value, KeyComparator, KeyHasherImpl>, total: i64, get_entry_for_index: GetEntryFn) {
         let shuffle_seed: u64 = thread_rng().gen();
         println!("Seed used: {}", shuffle_seed);
         let mut rng = ChaChaRng::seed_from_u64(shuffle_seed);
@@ -114,7 +113,7 @@ mod tests {
                 println!("Inserted {}%", i / one_percent);
             }
 
-            /// Abort process on panic, this should be used in thread
+            // Abort process on panic, this should be used in thread
             assert_eq!(hash_table.insert(&key, &value, None), Ok(()), "should insert new key {}", i);
         }
 
@@ -258,7 +257,6 @@ mod tests {
 
                 let (key, _) = get_entry_for_index(i);
 
-                let should_be_removed = !removed_keys.contains(&i);
                 let remove_result = hash_table.remove(&key, None);
 
                 if removed_keys.contains(&i) {
@@ -301,7 +299,7 @@ mod tests {
         let hash_table = create_extendible_hash_table(4);
 
         // Having enough keys so a split would happen
-        let total = (PAGE_SIZE * 100);
+        let total = PAGE_SIZE * 100;
 
 
         for i in 0..total {
@@ -344,7 +342,7 @@ mod tests {
         type Key = u64;
         type Value = u64;
 
-        let mut hash_table = DiskHashTable::<
+        let hash_table = DiskHashTable::<
             { bucket_array_size::<Key, Value>() },
             Key,
             Value,
@@ -637,8 +635,6 @@ mod tests {
                 // Ensure all threads start simultaneously
                 barrier.wait();
                 let one_percent = total / 100;
-
-                let actual_thread_id = thread::current().id();
 
                 let offset = thread_id as i64 * total;
                 for i in 0..total {

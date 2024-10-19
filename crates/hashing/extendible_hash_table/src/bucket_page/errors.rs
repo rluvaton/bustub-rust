@@ -7,7 +7,4 @@ pub(crate) enum InsertionErrors {
 
     #[error("Key already exists")]
     KeyAlreadyExists,
-
-    #[error("unknown extendible hash bucket page error")]
-    Unknown,
 }

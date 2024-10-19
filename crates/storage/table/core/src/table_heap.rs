@@ -64,7 +64,7 @@ impl TableHeap {
         let mut page_guard = bpm.fetch_page_write(*last_page_id_guard, AccessType::Unknown).expect("Should fetch page");
         loop {
             let page = page_guard.cast_mut::<TablePage>();
-            if let Some(tuple_offset) = page.get_next_tuple_offset(meta, tuple) {
+            if let Some(_) = page.get_next_tuple_offset(meta, tuple) {
                 break
             }
 
@@ -178,7 +178,7 @@ impl TableHeap {
     }
 
     /** @return the id of the first page of this table */
-    fn get_first_page_id(&self) -> PageId { self.first_page_id }
+    pub fn get_first_page_id(&self) -> PageId { self.first_page_id }
 
     /**
      * Update a tuple in place. Should NOT be used in project 3. Implement your project 3 update executor as delete and
@@ -188,7 +188,7 @@ impl TableHeap {
      * @param rid the rid of the tuple to be updated
      * @param check the check to run before actually update.
      */
-    unsafe fn update_tuple_in_place<CheckFn: Fn(&TupleMeta, &Tuple, &RID) -> bool>(&self, meta: &TupleMeta, tuple: &Tuple, rid: &RID, check: Option<CheckFn>) -> bool {
+    pub unsafe fn update_tuple_in_place<CheckFn: Fn(&TupleMeta, &Tuple, &RID) -> bool>(&self, meta: &TupleMeta, tuple: &Tuple, rid: &RID, check: Option<CheckFn>) -> bool {
 
         // TODO - return result
         let mut page_guard = self.bpm.as_ref().expect("must have bpm").fetch_page_write(rid.get_page_id(), AccessType::Unknown).expect("should fetch page");
@@ -206,7 +206,7 @@ impl TableHeap {
     }
 
     /** For binder tests */
-    fn create_empty_heap(create_table_heap: bool) -> Arc<TableHeap> {
+    pub fn create_empty_heap(create_table_heap: bool) -> Arc<TableHeap> {
         // The input parameter should be false in order to generate a empty heap
         assert_eq!(create_table_heap, false);
 
@@ -219,27 +219,27 @@ impl TableHeap {
     // And if you decide to use the below functions, DO NOT use the normal ones like `get_tuple`. Having two read locks
     // on the same thing in one thread might cause deadlocks.
 
-    fn acquire_table_page_read_lock(&self, rid: &RID) -> Result<PageReadGuard, errors::FetchPageError> {
+    pub fn acquire_table_page_read_lock(&self, rid: &RID) -> Result<PageReadGuard, errors::FetchPageError> {
         // TODO - avoid expect
         self.bpm.as_ref().expect("must have BPM").fetch_page_read(rid.get_page_id(), AccessType::Unknown)
     }
 
-    fn acquire_table_page_write_lock(&self, rid: &RID) -> Result<PageWriteGuard, errors::FetchPageError> {
+    pub fn acquire_table_page_write_lock(&self, rid: &RID) -> Result<PageWriteGuard, errors::FetchPageError> {
         self.bpm.as_ref().expect("must have BPM").fetch_page_write(rid.get_page_id(), AccessType::Unknown)
     }
 
-    unsafe fn update_tuple_in_place_with_lock_acquired(&self, meta: &TupleMeta, tuple: &Tuple, rid: &RID, page: &mut TablePage) {
+    pub unsafe fn update_tuple_in_place_with_lock_acquired(&self, meta: &TupleMeta, tuple: &Tuple, rid: &RID, page: &mut TablePage) {
         page.update_tuple_in_place(meta, tuple, rid);
     }
 
-    fn get_tuple_with_lock_acquired(&self, rid: &RID, page: &TablePage) -> (TupleMeta, Tuple) {
+    pub fn get_tuple_with_lock_acquired(&self, rid: &RID, page: &TablePage) -> (TupleMeta, Tuple) {
         let (meta, mut tuple) = page.get_tuple(rid);
         tuple.set_rid(*rid);
 
         (meta, tuple)
     }
 
-    fn get_tuple_meta_with_lock_acquired(&self, rid: &RID, page: &TablePage) -> TupleMeta {
+    pub fn get_tuple_meta_with_lock_acquired(&self, rid: &RID, page: &TablePage) -> TupleMeta {
         page.get_tuple_meta(&rid)
     }
 }

@@ -7,7 +7,7 @@ use clap::Parser;
 use execution_common::CheckOptions;
 use parking_lot::Mutex;
 use rustyline::config::BellStyle;
-use rustyline::history::{DefaultHistory, FileHistory, History};
+use rustyline::history::{DefaultHistory, FileHistory};
 use rustyline::{Config, DefaultEditor, Editor};
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -121,7 +121,7 @@ fn get_shell(args: &Args) -> rustyline::Result<Arc<Mutex<Shell>>> {
         panic::set_hook(Box::new(move |panic_info| {
             let append_history_result = shell.lock().append_history(HISTORY_FILE_PATH);
             let _ = append_history_result.inspect_err(|err| {
-                eprintln!("Failed to save history before exit")
+                eprintln!("Failed to save history before exit {}", err)
             });
 
             // Call original hook

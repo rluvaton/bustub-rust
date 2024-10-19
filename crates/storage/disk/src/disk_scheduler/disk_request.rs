@@ -1,4 +1,4 @@
-use common::{Promise, PromiseLifetime};
+use common::Promise;
 use pages::{PageData, PageId};
 
 /**

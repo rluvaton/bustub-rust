@@ -1,13 +1,16 @@
 use crate::manager::InnerBufferPoolManager;
-use crate::{BufferPoolManager, BufferPoolManagerStats};
+use crate::{BufferPoolManager};
 use disk_storage::{DiskManager, DiskScheduler};
 use eviction_policy::{EvictionPoliciesTypes, EvictionPolicy, EvictionPolicyCreator, LRUKEvictionPolicy, LRUKOptions};
 use pages::AtomicPageId;
 use parking_lot::Mutex;
 use recovery_log_manager::LogManager;
 use std::collections::{HashMap, LinkedList};
-use std::ops::Deref;
 use std::sync::Arc;
+
+
+#[cfg(feature = "statistics")]
+use crate::BufferPoolManagerStats;
 
 pub struct BufferPoolManagerBuilder {
     /// This is required
@@ -34,7 +37,7 @@ impl BufferPoolManagerBuilder {
 
     // ################# Disk Scheduler #####################
 
-    pub fn with_disk_manager<D: DiskManager + 'static>(mut self, disk_manager: D) -> Self {
+    pub fn with_disk_manager<D: DiskManager + 'static>(self, disk_manager: D) -> Self {
         self.with_arc_disk_manager(Arc::new(disk_manager))
     }
 

@@ -2,9 +2,8 @@ use catalog_schema::Schema;
 use common::PageKey;
 use data_types::{Value, BUSTUB_VALUE_NULL};
 use rid::RID;
-use std::fmt::{Debug, Display, Formatter};
+use std::fmt::{Debug};
 use std::hash::Hash;
-use std::sync::Arc;
 
 ///
 /// Tuple format:

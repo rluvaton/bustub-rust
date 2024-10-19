@@ -1,6 +1,5 @@
 use crate::DBTypeId;
 
-#[allow(unused)]
 #[derive(thiserror::Error, Debug)]
 pub enum InnerNumericConversionError {
 
@@ -15,7 +14,6 @@ pub enum InnerNumericConversionError {
 
 pub type NumericConversionError = error_utils::Error<InnerNumericConversionError>;
 
-#[allow(unused)]
 #[derive(thiserror::Error, Debug)]
 pub enum InnerFromStringConversionError {
     #[error("value {value} cannot be converted to {dest_type}")]
@@ -25,4 +23,3 @@ pub enum InnerFromStringConversionError {
     },
 }
 
-pub type FromStringConversionError = error_utils::Error<InnerFromStringConversionError>;
