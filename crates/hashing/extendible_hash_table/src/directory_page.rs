@@ -10,7 +10,6 @@ use std::mem::size_of;
 const PAGE_METADATA_SIZE: usize = size_of::<u32>() * 2;
 
 
-
 //noinspection RsAssertEqual
 const _: () = assert!(size_of::<PageId>() == 4);
 //noinspection RsAssertEqual
@@ -38,7 +37,6 @@ pub(crate) struct DirectoryPage {
 
 
 impl DirectoryPage {
-
     pub(crate) const MAX_DEPTH: u32 = 9;
 
     /// `ARRAY_SIZE` is the number of page_ids that can fit in the directory page of an extendible hash index.
@@ -58,7 +56,7 @@ impl DirectoryPage {
     ///
     /// returns: ()
     ///
-    pub(crate)  fn init(&mut self, max_depth: Option<u32>) {
+    pub(crate) fn init(&mut self, max_depth: Option<u32>) {
         self.max_depth = max_depth.unwrap_or(Self::MAX_DEPTH);
         self.local_depths.fill(0);
         self.global_depth = 0;
@@ -74,7 +72,7 @@ impl DirectoryPage {
     ///
     /// returns: u32 bucket index current key is hashed to
     ///
-    pub(crate)  fn hash_to_bucket_index(&self, hash: u32) -> u32 {
+    pub(crate) fn hash_to_bucket_index(&self, hash: u32) -> u32 {
         // When global depth is 0 than all goes to the same bucket
         if self.global_depth == 0 {
             return 0;
@@ -96,7 +94,7 @@ impl DirectoryPage {
     ///
     /// returns: PageId bucket page_id corresponding to bucket_idx
     ///
-    pub(crate)  fn get_bucket_page_id(&self, bucket_idx: u32) -> PageId {
+    pub(crate) fn get_bucket_page_id(&self, bucket_idx: u32) -> PageId {
         self.bucket_page_ids[bucket_idx as usize]
     }
 
@@ -109,7 +107,7 @@ impl DirectoryPage {
     /// * `bucket_page_id`: page_id to insert
     ///
     ///
-    pub(crate)  fn set_bucket_page_id(&mut self, bucket_idx: u32, bucket_page_id: PageId) {
+    pub(crate) fn set_bucket_page_id(&mut self, bucket_idx: u32, bucket_page_id: PageId) {
         self.bucket_page_ids[bucket_idx as usize] = bucket_page_id
     }
 
@@ -140,7 +138,7 @@ impl DirectoryPage {
     /// returns: u32 mask of global_depth 1's and the rest 0's (with 1's from LSB upwards)
     ///
     #[allow(unused)]
-    pub(crate)  fn get_global_depth_mask(&self) -> u32 {
+    pub(crate) fn get_global_depth_mask(&self) -> u32 {
         u32::MAX.get_n_lsb_bits(self.global_depth as u8)
     }
 
@@ -153,7 +151,7 @@ impl DirectoryPage {
     ///
     /// returns: u32 mask of local 1's and the rest 0's (with 1's from LSB upwards)
     ///
-    pub(crate)  fn get_local_depth_mask(&self, bucket_idx: u32) -> u32 {
+    pub(crate) fn get_local_depth_mask(&self, bucket_idx: u32) -> u32 {
         let local_depth = self.get_local_depth(bucket_idx);
 
         if local_depth == 0 {
@@ -169,17 +167,17 @@ impl DirectoryPage {
     ///
     /// returns: u32 the global depth of the directory
     ///
-    pub(crate)  fn get_global_depth(&self) -> u32 {
+    pub(crate) fn get_global_depth(&self) -> u32 {
         self.global_depth
     }
 
     #[allow(unused)]
-    pub(crate)  fn get_max_depth(&self) -> u32 {
+    pub(crate) fn get_max_depth(&self) -> u32 {
         self.max_depth
     }
 
     /// Increment the global depth of the directory
-    pub(crate)  fn incr_global_depth(&mut self) -> bool {
+    pub(crate) fn incr_global_depth(&mut self) -> bool {
         // If reached the max depth
         if self.global_depth + 1 > self.max_depth {
             return false;
@@ -216,7 +214,7 @@ impl DirectoryPage {
     }
 
     /// Decrement the global depth of the directory
-    pub(crate)  fn decr_global_depth(&mut self) -> bool {
+    pub(crate) fn decr_global_depth(&mut self) -> bool {
         if self.global_depth == 0 {
             return false;
         }
@@ -228,7 +226,7 @@ impl DirectoryPage {
 
         // Reset page id
         self.bucket_page_ids[size_after..size_before].fill(INVALID_PAGE_ID);
-        
+
         // Reset depth
         self.local_depths[size_after..size_before].fill(0);
 
@@ -238,21 +236,25 @@ impl DirectoryPage {
     ///
     /// returns: bool true if the directory can be shrunk
     ///
-    pub(crate)  fn can_shrink(&self) -> bool {
+    pub(crate) fn can_shrink(&self) -> bool {
         self.local_depths.iter().all(|&d| (d as u32) < self.global_depth)
     }
 
     ///
     /// returns: u32 the current directory size
     ///
-    pub(crate)  fn size(&self) -> u32 {
+    pub(crate) fn size(&self) -> u32 {
+        // If global depth is 0 there can either be a 1 page or no pages, so we check it
+        if self.global_depth == 0 && self.bucket_page_ids[0] == INVALID_PAGE_ID {
+            return 0;
+        }
         2u32.pow(self.global_depth)
     }
 
     ///
     /// returns: u32 the max directory size
     ///
-    pub(crate)  fn max_size(&self) -> u32 {
+    pub(crate) fn max_size(&self) -> u32 {
         2u32.pow(self.max_depth)
     }
 
@@ -264,7 +266,7 @@ impl DirectoryPage {
     ///
     /// returns: u32 the local depth of the bucket at bucket_idx
     ///
-    pub(crate)  fn get_local_depth(&self, bucket_idx: u32) -> u32 {
+    pub(crate) fn get_local_depth(&self, bucket_idx: u32) -> u32 {
         self.local_depths[bucket_idx as usize] as u32
     }
 
@@ -277,7 +279,7 @@ impl DirectoryPage {
     /// * `local_depth`: new local depth
     ///
     #[allow(unused)]
-    pub(crate)  fn set_local_depth(&mut self, bucket_idx: u32, local_depth: u8) {
+    pub(crate) fn set_local_depth(&mut self, bucket_idx: u32, local_depth: u8) {
         // assert!((local_depth as u32 )<= self.global_depth, "Local depth cant be larger than global depth");
         self.local_depths[bucket_idx as usize] = local_depth;
     }
@@ -288,7 +290,7 @@ impl DirectoryPage {
     ///
     /// * `bucket_idx`: bucket index to increment
     ///
-    pub(crate)  fn incr_local_depth(&mut self, bucket_idx: u32) {
+    pub(crate) fn incr_local_depth(&mut self, bucket_idx: u32) {
         assert!((self.local_depths[bucket_idx as usize] as u32) < self.global_depth, "can't increment more than the global depth {}", self.global_depth);
 
         self.local_depths[bucket_idx as usize] += 1;
@@ -300,22 +302,18 @@ impl DirectoryPage {
     ///
     /// * `bucket_idx`: bucket index to decrement
     ///
-    pub(crate)  fn decr_local_depth(&mut self, bucket_idx: u32) {
+    pub(crate) fn decr_local_depth(&mut self, bucket_idx: u32) {
         assert!(self.local_depths[bucket_idx as usize] + 1 > 0, "local depth is already 0");
 
         self.local_depths[bucket_idx as usize] -= 1;
     }
-    //
-    // pub fn get_addition_status(&self, bucket_idx: u32) -> AdditionRequirement {
-    //
-    // }
 
     /// Verify the following invariants:
     /// (1) All LD <= GD.
     /// (2) Each bucket has precisely 2^(GD - LD) pointers pointing to it.
     /// (3) The LD is the same at each index with the same bucket_page_id
     ///
-    pub(crate)  fn verify_integrity(&self, print_directory_on_failure: bool) {
+    pub(crate) fn verify_integrity(&self, print_directory_on_failure: bool) {
         // build maps of {bucket_page_id : pointer_count} and {bucket_page_id : local_depth}
         let mut page_id_to_count: HashMap<PageId, u32> = HashMap::new();
         let mut page_id_to_ld: HashMap<PageId, u32> = HashMap::new();
@@ -358,11 +356,11 @@ impl DirectoryPage {
     }
 
     /// Prints the current directory
-    pub(crate)  fn print_directory(&self) {
+    pub(crate) fn print_directory(&self) {
         println!("{:?}", self)
     }
 
-    pub(crate)  fn extended_format<GetKeysForBucketFn: Fn(PageId) -> Vec<String>>(&self, f: &mut Formatter<'_>, get_keys_for_bucket: GetKeysForBucketFn) -> std::fmt::Result {
+    pub(crate) fn extended_format<GetKeysForBucketFn: Fn(PageId) -> Vec<String>>(&self, f: &mut Formatter<'_>, get_keys_for_bucket: GetKeysForBucketFn) -> std::fmt::Result {
         f.write_str(format!("======== DIRECTORY (global_depth: {}) ========\n", self.global_depth).as_str())?;
 
         let mut table = Table::new();
@@ -386,7 +384,7 @@ impl DirectoryPage {
 
         f.write_str(table.to_string().as_str())?;
 
-        f.write_str("================ END DIRECTORY ================\n")
+        f.write_str("\n================ END DIRECTORY ================\n")
     }
 }
 
@@ -408,7 +406,7 @@ impl Debug for DirectoryPage {
 
         f.write_str(table.to_string().as_str())?;
 
-        f.write_str("================ END DIRECTORY ================\n")
+        f.write_str("\n================ END DIRECTORY ================\n")
     }
 }
 

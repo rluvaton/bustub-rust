@@ -27,7 +27,7 @@ const _: () = assert!(size_of::<HeaderPage>() <= PAGE_SIZE);
 /// It stores the logical child pointers to the directory pages (as page ids).
 /// You can think about it as a static first-level directory page. The header page has the following fields:
 #[repr(C)]
-pub(crate)  struct HeaderPage {
+pub(crate) struct HeaderPage {
     /// An array of directory page ids
     directory_page_ids: [PageId; HeaderPage::ARRAY_SIZE],
 
@@ -51,7 +51,7 @@ impl HeaderPage {
     ///
     /// returns: ()
     ///
-    pub(crate)  fn init(&mut self, max_depth: Option<u32>) {
+    pub(crate) fn init(&mut self, max_depth: Option<u32>) {
         self.max_depth = max_depth.unwrap_or(Self::MAX_DEPTH);
         self.directory_page_ids.fill(INVALID_PAGE_ID);
     }
@@ -65,7 +65,7 @@ impl HeaderPage {
     ///
     /// returns: u32 directory index the key is hashed to
     ///
-    pub(crate)  fn hash_to_directory_index(&self, hash: u32) -> u32 {
+    pub(crate) fn hash_to_directory_index(&self, hash: u32) -> u32 {
         // When max depth is 0 than all goes to the same directory
         if self.max_depth == 0 {
             return 0;
@@ -94,9 +94,9 @@ impl HeaderPage {
     ///
     /// TODO - should return Option in case of invalid?
     ///        Should add unsafe unchecked function?
-    pub(crate)  fn get_directory_page_id(&self, directory_idx: u32) -> PageId {
+    pub(crate) fn get_directory_page_id(&self, directory_idx: u32) -> PageId {
         if directory_idx >= Self::ARRAY_SIZE as u32 {
-            return INVALID_PAGE_ID
+            return INVALID_PAGE_ID;
         }
         self.directory_page_ids[directory_idx as usize]
     }
@@ -127,6 +127,17 @@ impl HeaderPage {
     pub fn print_header(&self) {
         println!("{:?}", self)
     }
+    
+    /// Verify that the header page does not have any directory
+    /// It will return Ok(()) when all directory page ids are missing or Err(Vec<PageId>) with all the existing directory page ids
+    #[cfg(test)]
+    pub fn verify_empty(&self) {
+        let non_empty_page_id = (0..self.max_size()).into_iter()
+            .map(|index| self.get_directory_page_id(index))
+            .find(|page_id| page_id != &INVALID_PAGE_ID);
+        
+        assert_eq!(non_empty_page_id, None, "There must be no page id in the header page");
+    }
 }
 
 impl Debug for HeaderPage {
@@ -137,13 +148,13 @@ impl Debug for HeaderPage {
 
         table.set_header(vec!["directory_idx", "page_id"]);
 
-        let max_id = (1 << self.max_depth) as u32;
-        for idx in 0..(max_id as usize) {
-            table.add_row(vec![idx, self.directory_page_ids[idx] as usize]);
+        let max_id: PageId = 1 << self.max_depth;
+        for idx in 0..max_id {
+            table.add_row(vec![idx, self.directory_page_ids[idx as usize]]);
         }
 
         f.write_str(table.to_string().as_str())?;
 
-        f.write_str("======== END HEADER ========\n")
+        f.write_str("\n======== END HEADER ========\n")
     }
 }

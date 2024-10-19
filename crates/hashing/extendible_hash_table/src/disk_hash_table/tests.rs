@@ -1,9 +1,11 @@
 #[cfg(test)]
 mod tests {
+    use crate::{bucket_array_size, DiskHashTable};
     use buffer_pool_manager::BufferPoolManager;
     use common::{Comparator, OrdComparator, PageKey, PageValue, U64Comparator};
     use disk_storage::DiskManagerUnlimitedMemory;
     use generics::Shuffle;
+    use hashing_common::{DefaultKeyHasher, KeyHasher, U64IdentityKeyHasher};
     use pages::PAGE_SIZE;
     use rand::seq::SliceRandom;
     use rand::{thread_rng, Rng, SeedableRng};
@@ -13,8 +15,6 @@ mod tests {
     use std::sync::Arc;
     use std::sync::Barrier;
     use std::thread;
-    use hashing_common::{DefaultKeyHasher, KeyHasher, U64IdentityKeyHasher};
-    use crate::{bucket_array_size, DiskHashTable};
 
     type TestKey = u32;
     type TestValue = u64;
@@ -101,6 +101,10 @@ mod tests {
 
             assert_eq!(hash_table.remove(&key, None), Ok(false), "should not delete for key {} when seed is {shuffle_seed}", i);
         }
+
+        hash_table.with_header_page(|header_page| {
+            header_page.verify_empty();
+        });
 
         hash_table.verify_integrity(false);
 
@@ -274,6 +278,9 @@ mod tests {
         }
 
         hash_table.verify_integrity(false);
+        hash_table.with_header_page(|header_page| {
+            header_page.verify_empty();
+        });
 
         println!("Fetch all after everything deleted in random order");
         {
