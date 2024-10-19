@@ -7,7 +7,7 @@ use expression::{ColumnValueExpression, Expression, ExpressionRef};
 use crate::expressions::traits::PlanExpression;
 
 impl PlanExpression for ColumnRef {
-    fn plan<'a>(&self, children: &[&PlanType], planner: &'a Planner<'a>) -> (String, ExpressionRef) {
+    fn plan<'a>(&self, children: &[&PlanType], _planner: &'a Planner<'a>) -> (String, ExpressionRef) {
         let col_name = self.to_string();
 
         match children.len() {

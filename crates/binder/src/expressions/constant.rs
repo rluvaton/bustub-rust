@@ -56,7 +56,7 @@ impl Expression for Constant {
         false
     }
 
-    fn try_parse_from_expr(expr: &Expr, binder: &Binder) -> ParseASTResult<Self>
+    fn try_parse_from_expr(expr: &Expr, _binder: &Binder) -> ParseASTResult<Self>
     where
         Self: Sized
     {

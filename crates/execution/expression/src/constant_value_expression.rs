@@ -35,11 +35,11 @@ impl Into<ExpressionType> for ConstantValueExpression {
 }
 
 impl Expression for ConstantValueExpression {
-    fn evaluate(&self, tuple: &Tuple, schema: &Schema) -> Value {
+    fn evaluate(&self, _tuple: &Tuple, _schema: &Schema) -> Value {
         self.0.clone()
     }
 
-    fn evaluate_join(&self, left_tuple: &Tuple, left_schema: &Schema, right_tuple: &Tuple, right_schema: &Schema) -> Value {
+    fn evaluate_join(&self, _left_tuple: &Tuple, _left_schema: &Schema, _right_tuple: &Tuple, _right_schema: &Schema) -> Value {
         self.0.clone()
     }
 

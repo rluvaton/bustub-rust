@@ -182,7 +182,7 @@ impl BustubInstance {
         ).as_str());
     }
 
-    pub fn execute_user_input<ResultWriterImpl: ResultWriter>(&mut self, sql_or_command: &str, writer: &mut ResultWriterImpl, check_options: CheckOptions) -> error_utils::anyhow::Result<bool> {
+    pub fn execute_user_input<ResultWriterImpl: ResultWriter>(&mut self, sql_or_command: &str, writer: &mut ResultWriterImpl, check_options: CheckOptions) -> error_utils::anyhow::Result<()> {
         self.wrap_with_txn(|this, txn|
             this.execute_sql_txn(sql_or_command, writer, txn.clone(), check_options)
         )
@@ -205,12 +205,10 @@ impl BustubInstance {
         result
     }
 
-    pub fn execute_sql_txn<ResultWriterImpl: ResultWriter>(&mut self, sql: &str, writer: &mut ResultWriterImpl, txn: Arc<Transaction>, check_options: CheckOptions) -> error_utils::anyhow::Result<bool> {
+    pub fn execute_sql_txn<ResultWriterImpl: ResultWriter>(&mut self, sql: &str, writer: &mut ResultWriterImpl, txn: Arc<Transaction>, _check_options: CheckOptions) -> error_utils::anyhow::Result<()> {
         if sql.starts_with("\\") {
-            return self.execute_shell_commands(sql, writer).map(|_| true);
+            return self.execute_shell_commands(sql, writer);
         }
-
-        let mut is_successful = true;
 
         let parsed = self.parse_sql(sql)?;
 
@@ -231,14 +229,14 @@ impl BustubInstance {
 
             rows.write_results(writer);
         }
-
-        Ok(is_successful)
+        
+        Ok(())
     }
 
     /// Execute Single SELECT statement and return the results
     ///
     /// This is useful for testings
-    pub fn execute_single_select_sql(&mut self, sql: &str, check_options: CheckOptions) -> error_utils::anyhow::Result<Rows> {
+    pub fn execute_single_select_sql(&mut self, sql: &str, _check_options: CheckOptions) -> error_utils::anyhow::Result<Rows> {
         self.wrap_with_txn(|this, txn| {
             let parsed = this.parse_sql(sql)?;
 
@@ -254,7 +252,7 @@ impl BustubInstance {
     /// Execute Single INSERT statement and return the results
     ///
     /// This is useful for testings
-    pub fn execute_single_insert_sql(&mut self, sql: &str, check_options: CheckOptions) -> error_utils::anyhow::Result<Rows> {
+    pub fn execute_single_insert_sql(&mut self, sql: &str, _check_options: CheckOptions) -> error_utils::anyhow::Result<Rows> {
         self.wrap_with_txn(|this, txn| {
             let parsed = this.parse_sql(sql)?;
 
@@ -270,7 +268,7 @@ impl BustubInstance {
     /// Execute Single DELETE statement and return the results
     ///
     /// This is useful for testings
-    pub fn execute_single_delete_sql(&mut self, sql: &str, check_options: CheckOptions) -> error_utils::anyhow::Result<Rows> {
+    pub fn execute_single_delete_sql(&mut self, sql: &str, _check_options: CheckOptions) -> error_utils::anyhow::Result<Rows> {
         self.wrap_with_txn(|this, txn| {
             let parsed = this.parse_sql(sql)?;
 

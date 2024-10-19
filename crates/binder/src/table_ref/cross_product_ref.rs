@@ -74,7 +74,7 @@ impl TableRef for CrossProductRef {
         Ok(left_column.or(right_column))
     }
 
-    fn try_from_ast(ast: &TableFactor, binder: &Binder) -> ParseASTResult<Self> {
+    fn try_from_ast(_ast: &TableFactor, _binder: &Binder) -> ParseASTResult<Self> {
         // Always incompatible as we need to have table with joins
         Err(ParseASTError::IncompatibleType)
     }

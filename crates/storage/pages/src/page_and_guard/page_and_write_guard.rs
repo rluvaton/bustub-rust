@@ -1,5 +1,5 @@
 use std::ops::{Deref, DerefMut};
-use crate::{Page, PageAndReadGuard, PageWriteGuard, UnderlyingPage};
+use crate::{Page, PageWriteGuard, UnderlyingPage};
 use crate::page_and_guard::PageAndGuard;
 
 pub struct PageAndWriteGuard<'a>(
@@ -17,6 +17,7 @@ impl<'a> PageAndGuard<'a> for PageAndWriteGuard<'a> {
 impl<'a> PageAndWriteGuard<'a> {
 
     #[inline(always)]
+    #[allow(unused)]
     pub(crate) fn page_mut(&mut self) -> &mut Page {
         &mut self.1
     }
