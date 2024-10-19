@@ -123,7 +123,7 @@ mod tests {
 
         // Make sure we created correctly
         for i in 0..3 {
-            assert_eq!(db_type[i].value, numbers[i]);
+            assert_eq!(db_type[i].0, numbers[i]);
         }
 
         {
@@ -187,7 +187,7 @@ mod tests {
 
         // Make sure we created correctly
         for i in 0..expected.len() {
-            assert_eq!(db_type[i].value, expected[i]);
+            assert_eq!(db_type[i].0, expected[i]);
         }
 
         for i in 0..db_type.len() {
