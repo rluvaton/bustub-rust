@@ -165,7 +165,7 @@ impl TryFrom<&VarcharType> for TinyIntType {
         TinyIntType::try_from(val)
             .map_err(|_| {
                 InnerFromStringConversionError::UnableToConvert {
-                    value: val.value.to_string(),
+                    value: val.0.to_string(),
                     dest_type: DBTypeId::TINYINT,
                 }
             })

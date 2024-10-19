@@ -3,7 +3,7 @@ use crate::types::{BooleanType, StorageDBTypeTrait};
 
 impl Clone for BooleanType {
     fn clone(&self) -> Self {
-        BooleanType::new(self.value)
+        BooleanType::new(self.0)
     }
 }
 

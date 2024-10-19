@@ -4,10 +4,7 @@ use std::ops::Deref;
 pub type TinyIntUnderlyingType = i8;
 
 #[derive(Copy, Debug)]
-pub struct TinyIntType {
-    pub(in super::super) value: TinyIntUnderlyingType,
-    pub(super) len: u32,
-}
+pub struct TinyIntType(pub(crate) TinyIntUnderlyingType);
 
 impl TinyIntType {
     pub const SIZE: usize = size_of::<TinyIntUnderlyingType>();
@@ -17,10 +14,7 @@ impl TinyIntType {
     pub const MAX: TinyIntUnderlyingType = TinyIntUnderlyingType::MAX;
 
     pub fn new(value: TinyIntUnderlyingType) -> Self {
-        TinyIntType {
-            value,
-            len: if value == Self::NULL { BUSTUB_VALUE_NULL } else { 0 },
-        }
+        TinyIntType(value)
     }
 }
 
@@ -28,7 +22,7 @@ impl Deref for TinyIntType {
     type Target = TinyIntUnderlyingType;
 
     fn deref(&self) -> &Self::Target {
-        &self.value
+        &self.0
     }
 }
 

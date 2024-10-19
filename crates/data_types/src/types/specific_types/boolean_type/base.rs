@@ -1,13 +1,10 @@
-use crate::{ComparisonDBTypeTrait, BUSTUB_VALUE_NULL};
+use crate::ComparisonDBTypeTrait;
 use std::ops::Deref;
 
 pub type BooleanUnderlyingType = i8;
 
 #[derive(Copy, Debug)]
-pub struct BooleanType {
-    pub(in super::super) value: BooleanUnderlyingType,
-    pub(super) len: u32,
-}
+pub struct BooleanType(pub(crate) BooleanUnderlyingType);
 
 impl BooleanType {
     pub const SIZE: usize = size_of::<BooleanUnderlyingType>();
@@ -17,18 +14,15 @@ impl BooleanType {
     pub const TRUE: BooleanUnderlyingType = 1;
 
     pub fn new(value: BooleanUnderlyingType) -> Self {
-        BooleanType {
-            value,
-            len: if value == Self::NULL { BUSTUB_VALUE_NULL } else { 0 },
-        }
+        BooleanType(value)
     }
 
     pub fn get_as_bool(&self) -> Option<bool> {
         if self.is_null() {
             None
-        } else if self.value == Self::TRUE {
+        } else if self.0 == Self::TRUE {
             Some(true)
-        } else if self.value == Self::FALSE {
+        } else if self.0 == Self::FALSE {
             Some(false)
         } else {
             unreachable!()
@@ -40,7 +34,7 @@ impl Deref for BooleanType {
     type Target = BooleanUnderlyingType;
 
     fn deref(&self) -> &Self::Target {
-        &self.value
+        &self.0
     }
 }
 

@@ -3,7 +3,7 @@ use crate::types::{DecimalType, StorageDBTypeTrait};
 
 impl Clone for DecimalType {
     fn clone(&self) -> Self {
-        DecimalType::new(self.value)
+        DecimalType::new(self.0)
     }
 }
 

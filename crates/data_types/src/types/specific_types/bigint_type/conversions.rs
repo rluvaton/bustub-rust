@@ -34,7 +34,7 @@ impl From<BigIntType> for Option<BigIntUnderlyingType> {
         if value.is_null() {
             None
         } else {
-            Some(value.value)
+            Some(value.0)
         }
     }
 }
@@ -77,9 +77,9 @@ impl TryFrom<&BigIntType> for TinyIntType {
             return Ok(TinyIntType::default().into());
         }
 
-        return_error_on_out_of_range!(TinyIntType, value.value, BigIntUnderlyingType);
+        return_error_on_out_of_range!(TinyIntType, value.0, BigIntUnderlyingType);
 
-        Ok(TinyIntType::new(value.value as TinyIntUnderlyingType).into())
+        Ok(TinyIntType::new(value.0 as TinyIntUnderlyingType).into())
     }
 }
 
@@ -91,9 +91,9 @@ impl TryFrom<&BigIntType> for SmallIntType {
             return Ok(SmallIntType::default().into());
         }
 
-        return_error_on_out_of_range!(SmallIntType, value.value, BigIntUnderlyingType);
+        return_error_on_out_of_range!(SmallIntType, value.0, BigIntUnderlyingType);
 
-        Ok(SmallIntType::new(value.value as SmallIntUnderlyingType).into())
+        Ok(SmallIntType::new(value.0 as SmallIntUnderlyingType).into())
     }
 }
 
@@ -105,9 +105,9 @@ impl TryFrom<&BigIntType> for IntType {
             return Ok(IntType::default().into());
         }
 
-        return_error_on_out_of_range!(IntType, value.value, BigIntUnderlyingType);
+        return_error_on_out_of_range!(IntType, value.0, BigIntUnderlyingType);
 
-        Ok(IntType::new(value.value as IntUnderlyingType).into())
+        Ok(IntType::new(value.0 as IntUnderlyingType).into())
     }
 }
 
@@ -117,7 +117,7 @@ impl From<&BigIntType> for DecimalType {
             return DecimalType::default();
         }
 
-        DecimalType::new(value.value as DecimalUnderlyingType)
+        DecimalType::new(value.0 as DecimalUnderlyingType)
     }
 }
 
@@ -127,7 +127,7 @@ impl From<&BigIntType> for VarcharType {
             return VarcharType::default();
         }
 
-        VarcharType::from(value.value.to_string())
+        VarcharType::from(value.0.to_string())
     }
 }
 
@@ -161,15 +161,15 @@ impl ConversionDBTypeTrait for BigIntType {
             return "bigint_null".to_string();
         }
 
-        self.value.to_string()
+        self.0.to_string()
     }
 
     fn serialize_to(&self, storage: &mut [u8]) {
-        storage[0..Self::SIZE as usize].copy_from_slice(self.value.to_ne_bytes().as_slice())
+        storage[0..Self::SIZE].copy_from_slice(self.0.to_ne_bytes().as_slice())
     }
 
     fn deserialize_from(storage: &[u8]) -> Self {
-        BigIntType::new(BigIntUnderlyingType::from_ne_bytes(storage[..Self::SIZE as usize].try_into().unwrap()))
+        BigIntType::new(BigIntUnderlyingType::from_ne_bytes(storage[..Self::SIZE].try_into().unwrap()))
     }
 
     fn try_cast_as(&self, db_type_id: DBTypeId) -> error_utils::anyhow::Result<DBTypeIdImpl> {

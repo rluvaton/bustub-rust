@@ -1,9 +1,8 @@
 use crate::types::{BigIntType, StorageDBTypeTrait};
 
-
 impl Clone for BigIntType {
     fn clone(&self) -> Self {
-        BigIntType::new(self.value)
+        BigIntType::new(self.0)
     }
 }
 

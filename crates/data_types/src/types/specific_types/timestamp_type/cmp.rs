@@ -5,7 +5,7 @@ impl PartialEq for TimestampType {
     fn eq(&self, other: &Self) -> bool {
         partial_eq_null!(self.is_null(), other.is_null());
 
-        self.value == other.value
+        self.0 == other.0
     }
 }
 
@@ -23,7 +23,7 @@ impl PartialEq<Value> for TimestampType {
 
 impl PartialEq<TimestampUnderlyingType> for TimestampType {
     fn eq(&self, other: &TimestampUnderlyingType) -> bool {
-        self.value == *other
+        self.0 == *other
     }
 }
 
@@ -34,7 +34,7 @@ impl PartialOrd for TimestampType {
             return Some(Ordering::Equal);
         }
 
-        self.value.partial_cmp(&other.value)
+        self.0.partial_cmp(&other.0)
     }
 }
 
@@ -60,7 +60,7 @@ impl Eq for TimestampType {}
 
 impl Ord for TimestampType {
     fn cmp(&self, other: &Self) -> Ordering {
-        self.value.cmp(&other.value)
+        self.0.cmp(&other.0)
     }
 }
 
@@ -79,6 +79,6 @@ impl ComparisonDBTypeTrait for TimestampType {
 
     // TODO - this is not the same as the value
     fn is_null(&self) -> bool {
-        self.value == Self::NULL
+        self.0 == Self::NULL
     }
 }

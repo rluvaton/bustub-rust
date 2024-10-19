@@ -50,7 +50,7 @@ impl From<&TinyIntType> for SmallIntType {
             return SmallIntType::default().into();
         }
 
-        SmallIntType::new(v.value as SmallIntUnderlyingType).into()
+        SmallIntType::new(v.0 as SmallIntUnderlyingType).into()
     }
 }
 
@@ -60,7 +60,7 @@ impl From<&TinyIntType> for IntType {
             return IntType::default().into();
         }
 
-        IntType::new(v.value as IntUnderlyingType).into()
+        IntType::new(v.0 as IntUnderlyingType).into()
     }
 }
 
@@ -70,7 +70,7 @@ impl From<&TinyIntType> for BigIntType {
             return BigIntType::default().into();
         }
 
-        BigIntType::new(v.value as BigIntUnderlyingType).into()
+        BigIntType::new(v.0 as BigIntUnderlyingType).into()
     }
 }
 
@@ -80,7 +80,7 @@ impl From<&TinyIntType> for DecimalType {
             return DecimalType::default();
         }
 
-        DecimalType::new(v.value as DecimalUnderlyingType)
+        DecimalType::new(v.0 as DecimalUnderlyingType)
     }
 }
 
@@ -90,7 +90,7 @@ impl From<&TinyIntType> for VarcharType {
             return VarcharType::default();
         }
 
-        VarcharType::from(v.value.to_string())
+        VarcharType::from(v.0.to_string())
     }
 }
 
@@ -100,15 +100,15 @@ impl ConversionDBTypeTrait for TinyIntType {
             return "tinyint_null".to_string();
         }
 
-        self.value.to_string()
+        self.0.to_string()
     }
 
     fn serialize_to(&self, storage: &mut [u8]) {
-        storage[0..Self::SIZE as usize].copy_from_slice(self.value.to_ne_bytes().as_slice())
+        storage[0..Self::SIZE].copy_from_slice(self.0.to_ne_bytes().as_slice())
     }
 
     fn deserialize_from(storage: &[u8]) -> Self {
-        TinyIntType::new(TinyIntUnderlyingType::from_ne_bytes(storage[..Self::SIZE as usize].try_into().unwrap()))
+        TinyIntType::new(TinyIntUnderlyingType::from_ne_bytes(storage[..Self::SIZE].try_into().unwrap()))
     }
 
     fn try_cast_as(&self, db_type_id: DBTypeId) -> error_utils::anyhow::Result<DBTypeIdImpl> {

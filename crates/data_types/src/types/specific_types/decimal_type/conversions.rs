@@ -52,7 +52,7 @@ impl From<&DecimalType> for VarcharType {
             return VarcharType::default()
         }
 
-        VarcharType::from(v.value.to_string())
+        VarcharType::from(v.0.to_string())
     }
 }
 
@@ -64,9 +64,9 @@ impl TryFrom<&DecimalType> for TinyIntType {
             return Ok(TinyIntType::default().into());
         }
 
-        return_error_on_out_of_range!(TinyIntType, v.value, DecimalUnderlyingType);
+        return_error_on_out_of_range!(TinyIntType, v.0, DecimalUnderlyingType);
 
-        Ok(TinyIntType::new(v.value as TinyIntUnderlyingType).into())
+        Ok(TinyIntType::new(v.0 as TinyIntUnderlyingType).into())
     }
 }
 
@@ -78,9 +78,9 @@ impl TryFrom<&DecimalType> for SmallIntType {
             return Ok(SmallIntType::default().into());
         }
 
-        return_error_on_out_of_range!(SmallIntType, v.value, DecimalUnderlyingType);
+        return_error_on_out_of_range!(SmallIntType, v.0, DecimalUnderlyingType);
 
-        Ok(SmallIntType::new(v.value as SmallIntUnderlyingType).into())
+        Ok(SmallIntType::new(v.0 as SmallIntUnderlyingType).into())
     }
 }
 
@@ -92,9 +92,9 @@ impl TryFrom<&DecimalType> for IntType {
             return Ok(IntType::default().into());
         }
 
-        return_error_on_out_of_range!(IntType, v.value, DecimalUnderlyingType);
+        return_error_on_out_of_range!(IntType, v.0, DecimalUnderlyingType);
 
-        Ok(IntType::new(v.value as IntUnderlyingType).into())
+        Ok(IntType::new(v.0 as IntUnderlyingType).into())
     }
 }
 
@@ -106,9 +106,9 @@ impl TryFrom<&DecimalType> for BigIntType {
             return Ok(BigIntType::default().into());
         }
 
-        return_error_on_out_of_range!(BigIntType, v.value, DecimalUnderlyingType);
+        return_error_on_out_of_range!(BigIntType, v.0, DecimalUnderlyingType);
 
-        Ok(BigIntType::new(v.value as BigIntUnderlyingType).into())
+        Ok(BigIntType::new(v.0 as BigIntUnderlyingType).into())
     }
 }
 
@@ -119,15 +119,15 @@ impl ConversionDBTypeTrait for DecimalType {
             return "decimal_null".to_string();
         }
 
-        self.value.to_string()
+        self.0.to_string()
     }
 
     fn serialize_to(&self, storage: &mut [u8]) {
-        storage[0..Self::SIZE as usize].copy_from_slice(self.value.to_ne_bytes().as_slice())
+        storage[0..Self::SIZE].copy_from_slice(self.0.to_ne_bytes().as_slice())
     }
 
     fn deserialize_from(storage: &[u8]) -> Self {
-        DecimalType::new(DecimalUnderlyingType::from_ne_bytes(storage[..Self::SIZE as usize].try_into().unwrap()))
+        DecimalType::new(DecimalUnderlyingType::from_ne_bytes(storage[..Self::SIZE].try_into().unwrap()))
     }
 
     fn try_cast_as(&self, db_type_id: DBTypeId) -> error_utils::anyhow::Result<DBTypeIdImpl> {

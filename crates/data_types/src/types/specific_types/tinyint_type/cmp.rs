@@ -5,7 +5,7 @@ impl PartialEq for TinyIntType {
     fn eq(&self, other: &Self) -> bool {
         partial_eq_null!(self.is_null(), other.is_null());
 
-        self.value == other.value
+        self.0 == other.0
     }
 }
 
@@ -13,7 +13,7 @@ impl PartialEq<DecimalType> for TinyIntType {
     fn eq(&self, other: &DecimalType) -> bool {
         partial_eq_null!(self.is_null(), other.is_null());
 
-        self.value as DecimalUnderlyingType == other.value
+        self.0 as DecimalUnderlyingType == other.0
     }
 }
 
@@ -21,7 +21,7 @@ impl PartialEq<BigIntType> for TinyIntType {
     fn eq(&self, other: &BigIntType) -> bool {
         partial_eq_null!(self.is_null(), other.is_null());
 
-        self.value as BigIntUnderlyingType == other.value
+        self.0 as BigIntUnderlyingType == other.0
     }
 }
 
@@ -29,7 +29,7 @@ impl PartialEq<IntType> for TinyIntType {
     fn eq(&self, other: &IntType) -> bool {
         partial_eq_null!(self.is_null(), other.is_null());
 
-        self.value as IntUnderlyingType == other.value
+        self.0 as IntUnderlyingType == other.0
     }
 }
 
@@ -37,7 +37,7 @@ impl PartialEq<SmallIntType> for TinyIntType {
     fn eq(&self, other: &SmallIntType) -> bool {
         partial_eq_null!(self.is_null(), other.is_null());
 
-        self.value as SmallIntUnderlyingType == other.value
+        self.0 as SmallIntUnderlyingType == other.0
     }
 }
 
@@ -62,7 +62,7 @@ impl PartialEq<Value> for TinyIntType {
 
 impl PartialEq<TinyIntUnderlyingType> for TinyIntType {
     fn eq(&self, other: &TinyIntUnderlyingType) -> bool {
-        self.value == *other
+        self.0 == *other
     }
 }
 
@@ -72,7 +72,7 @@ impl PartialOrd for TinyIntType {
             return Some(Ordering::Equal);
         }
 
-        self.value.partial_cmp(&other.value)
+        self.0.partial_cmp(&other.0)
     }
 }
 
@@ -82,7 +82,7 @@ impl PartialOrd<BigIntType> for TinyIntType {
             return Some(Ordering::Equal);
         }
 
-        (self.value as BigIntUnderlyingType).partial_cmp(&other.value)
+        (self.0 as BigIntUnderlyingType).partial_cmp(&other.0)
     }
 }
 
@@ -92,7 +92,7 @@ impl PartialOrd<DecimalType> for TinyIntType {
             return Some(Ordering::Equal);
         }
 
-        (self.value as DecimalUnderlyingType).partial_cmp(&other.value)
+        (self.0 as DecimalUnderlyingType).partial_cmp(&other.0)
     }
 }
 
@@ -102,7 +102,7 @@ impl PartialOrd<IntType> for TinyIntType {
             return Some(Ordering::Equal);
         }
 
-        (self.value as IntUnderlyingType).partial_cmp(&other.value)
+        (self.0 as IntUnderlyingType).partial_cmp(&other.0)
     }
 }
 
@@ -112,7 +112,7 @@ impl PartialOrd<SmallIntType> for TinyIntType {
             return Some(Ordering::Equal);
         }
 
-        (self.value as SmallIntUnderlyingType).partial_cmp(&other.value)
+        (self.0 as SmallIntUnderlyingType).partial_cmp(&other.0)
     }
 }
 
@@ -137,7 +137,7 @@ impl PartialOrd<Value> for TinyIntType {
 
 impl PartialOrd<TinyIntUnderlyingType> for TinyIntType {
     fn partial_cmp(&self, other: &TinyIntUnderlyingType) -> Option<Ordering> {
-        self.value.partial_cmp(other)
+        self.0.partial_cmp(other)
     }
 }
 
@@ -149,13 +149,13 @@ impl Ord for TinyIntType {
             return Ordering::Equal;
         }
 
-        self.value.cmp(&other.value)
+        self.0.cmp(&other.0)
     }
 }
 
 impl ComparisonDBTypeTrait for TinyIntType {
     fn is_zero(&self) -> bool {
-        self.value == 0
+        self.0 == 0
     }
 
     fn get_min_value() -> Self {
@@ -168,6 +168,6 @@ impl ComparisonDBTypeTrait for TinyIntType {
 
     // TODO - this is not the same as the value
     fn is_null(&self) -> bool {
-        self.value == Self::NULL
+        self.0 == Self::NULL
     }
 }

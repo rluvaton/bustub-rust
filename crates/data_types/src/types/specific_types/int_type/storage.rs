@@ -3,7 +3,7 @@ use crate::types::{IntType, StorageDBTypeTrait};
 
 impl Clone for IntType {
     fn clone(&self) -> Self {
-        IntType::new(self.value)
+        IntType::new(self.0)
     }
 }
 
