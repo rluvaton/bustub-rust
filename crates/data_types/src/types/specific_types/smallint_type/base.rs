@@ -1,13 +1,9 @@
-use crate::BUSTUB_VALUE_NULL;
 use std::ops::Deref;
 
 pub type SmallIntUnderlyingType = i16;
 
 #[derive(Copy, Debug)]
-pub struct SmallIntType {
-    pub(in super::super) value: SmallIntUnderlyingType,
-    pub(super) len: u32,
-}
+pub struct SmallIntType(pub(crate) SmallIntUnderlyingType);
 
 impl SmallIntType {
     pub const SIZE: usize = size_of::<SmallIntUnderlyingType>();
@@ -17,10 +13,7 @@ impl SmallIntType {
     pub const MAX: SmallIntUnderlyingType = SmallIntUnderlyingType::MAX;
 
     pub fn new(value: SmallIntUnderlyingType) -> Self {
-        SmallIntType {
-            value,
-            len: if value == Self::NULL { BUSTUB_VALUE_NULL } else { 0 },
-        }
+        SmallIntType(value)
     }
 }
 
@@ -28,7 +21,7 @@ impl Deref for SmallIntType {
     type Target = SmallIntUnderlyingType;
 
     fn deref(&self) -> &Self::Target {
-        &self.value
+        &self.0
     }
 }
 

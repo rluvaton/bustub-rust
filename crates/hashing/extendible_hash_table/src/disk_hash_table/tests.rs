@@ -1,9 +1,11 @@
 #[cfg(test)]
 mod tests {
+    use crate::{bucket_array_size, DiskHashTable};
     use buffer_pool_manager::BufferPoolManager;
     use common::{Comparator, OrdComparator, PageKey, PageValue, U64Comparator};
     use disk_storage::DiskManagerUnlimitedMemory;
     use generics::Shuffle;
+    use hashing_common::{DefaultKeyHasher, KeyHasher, U64IdentityKeyHasher};
     use pages::PAGE_SIZE;
     use rand::seq::SliceRandom;
     use rand::{thread_rng, Rng, SeedableRng};
@@ -13,8 +15,6 @@ mod tests {
     use std::sync::Arc;
     use std::sync::Barrier;
     use std::thread;
-    use hashing_common::{DefaultKeyHasher, KeyHasher, U64IdentityKeyHasher};
-    use crate::{bucket_array_size, DiskHashTable};
 
     type TestKey = u32;
     type TestValue = u64;
@@ -90,7 +90,7 @@ mod tests {
         for &i in &tmp[0..10] {
             let (key, _) = get_entry_for_index(i);
 
-            assert_eq!(hash_table.get_value(&key, None), Ok(vec![]), "should not find values for key {}", i);
+            assert_eq!(hash_table.get_value(&key, None), Ok(vec![]), "should not find values for key {} when seed is {shuffle_seed}", i);
         }
 
         // Should not delete anything before init
@@ -99,8 +99,12 @@ mod tests {
         for &i in &tmp[0..10] {
             let (key, _) = get_entry_for_index(i);
 
-            assert_eq!(hash_table.remove(&key, None), Ok(false), "should not delete for key {}", i);
+            assert_eq!(hash_table.remove(&key, None), Ok(false), "should not delete for key {} when seed is {shuffle_seed}", i);
         }
+
+        hash_table.with_header_page(|header_page| {
+            header_page.verify_empty();
+        });
 
         hash_table.verify_integrity(false);
 
@@ -114,7 +118,7 @@ mod tests {
             }
 
             // Abort process on panic, this should be used in thread
-            assert_eq!(hash_table.insert(&key, &value, None), Ok(()), "should insert new key {}", i);
+            assert_eq!(hash_table.insert(&key, &value, None), Ok(()), "should insert new key {} when seed is {shuffle_seed}", i);
         }
 
         println!("All entries inserted");
@@ -126,7 +130,7 @@ mod tests {
         for &i in &(total..total + 1_000_000).shuffle_with_seed(&mut rng)[0..10] {
             let (key, _) = get_entry_for_index(i);
 
-            assert_eq!(hash_table.get_value(&key, None), Ok(vec![]), "should not find values for key {}", i);
+            assert_eq!(hash_table.get_value(&key, None), Ok(vec![]), "should not find values for key {} when seed is {shuffle_seed}", i);
         }
 
         println!("Asserting not deleting missing values after init");
@@ -135,7 +139,7 @@ mod tests {
         for &i in &(total..total + 1_000_000).shuffle_with_seed(&mut rng)[0..10] {
             let (key, _) = get_entry_for_index(i);
 
-            assert_eq!(hash_table.remove(&key, None), Ok(false), "should not delete values for key {}", i);
+            assert_eq!(hash_table.remove(&key, None), Ok(false), "should not delete values for key {} when seed is {shuffle_seed}", i);
         }
 
         hash_table.verify_integrity(false);
@@ -150,7 +154,7 @@ mod tests {
                     println!("Fetched {}%", counter / one_percent);
                 }
 
-                assert_eq!(hash_table.get_value(&key, None), Ok(vec![value]), "should find values for key {}", i);
+                assert_eq!(hash_table.get_value(&key, None), Ok(vec![value]), "should find values for key {} when seed is {shuffle_seed}", i);
 
                 counter += 1;
             }
@@ -164,7 +168,7 @@ mod tests {
         for &i in random_key_index_to_remove {
             let (key, _) = get_entry_for_index(i);
 
-            assert_eq!(hash_table.remove(&key, None).expect("should remove"), true, "should remove key {}", i);
+            assert_eq!(hash_table.remove(&key, None).expect("should remove"), true, "should remove key {} when seed is {shuffle_seed}", i);
         }
 
         hash_table.verify_integrity(false);
@@ -183,7 +187,7 @@ mod tests {
 
                 let expected_return = if removed_keys.contains(&i) { vec![] } else { vec![value] };
 
-                assert_eq!(hash_table.get_value(&key, None), Ok(expected_return), "get value for key {}", i);
+                assert_eq!(hash_table.get_value(&key, None), Ok(expected_return), "get value for key {} when seed is {shuffle_seed}", i);
 
                 counter += 1;
             }
@@ -206,7 +210,7 @@ mod tests {
                 let (key, _) = get_entry_for_index(i);
                 let (_, value) = get_entry_for_index(i + offset_for_reinserted_values);
 
-                assert_eq!(hash_table.insert(&key, &value, None), Ok(()), "should insert back key {}", i);
+                assert_eq!(hash_table.insert(&key, &value, None), Ok(()), "should insert back key {} when seed is {shuffle_seed}", i);
             }
         }
 
@@ -231,14 +235,14 @@ mod tests {
                 let found_value = hash_table.get_value(&key, None);
 
                 if removed_keys.contains(&i) {
-                    assert_eq!(found_value, Ok(vec![]), "should not find any values for removed key {}", i);
+                    assert_eq!(found_value, Ok(vec![]), "should not find any values for removed key {} when seed is {shuffle_seed}", i);
                     continue;
                 } else if reinserted_keys.contains(&i) {
                     let (_, value) = get_entry_for_index(i + offset_for_reinserted_values);
 
-                    assert_eq!(found_value, Ok(vec![value]), "should find updated value for reinserted key {}", i);
+                    assert_eq!(found_value, Ok(vec![value]), "should find updated value for reinserted key {} when seed is {shuffle_seed}", i);
                 } else {
-                    assert_eq!(found_value, Ok(vec![value]), "should find original value for not changed key {}", i);
+                    assert_eq!(found_value, Ok(vec![value]), "should find original value for not changed key {} when seed is {shuffle_seed}", i);
                 }
 
                 counter += 1;
@@ -260,9 +264,9 @@ mod tests {
                 let remove_result = hash_table.remove(&key, None);
 
                 if removed_keys.contains(&i) {
-                    assert_eq!(remove_result, Ok(false), "should not delete already deleted key, index: {}", i);
+                    assert_eq!(remove_result, Ok(false), "should not delete already deleted key, index: {} when seed is {shuffle_seed}", i);
                 } else {
-                    assert_eq!(remove_result, Ok(true), "should delete key, index: {}", i);
+                    assert_eq!(remove_result, Ok(true), "should delete key, index: {} when seed is {shuffle_seed}", i);
                 }
 
                 if counter % one_percent == 0 {
@@ -274,6 +278,9 @@ mod tests {
         }
 
         hash_table.verify_integrity(false);
+        hash_table.with_header_page(|header_page| {
+            header_page.verify_empty();
+        });
 
         println!("Fetch all after everything deleted in random order");
         {
@@ -285,7 +292,7 @@ mod tests {
 
                 let (key, _) = get_entry_for_index(i);
 
-                assert_eq!(hash_table.get_value(&key, None), Ok(vec![]), "should not find any values for removed key {}", i);
+                assert_eq!(hash_table.get_value(&key, None), Ok(vec![]), "should not find any values for removed key {} when seed is {shuffle_seed}", i);
 
                 counter += 1;
             }

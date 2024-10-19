@@ -127,7 +127,6 @@ where
 
             // 11. If bucket is empty, need to merge
             if bucket_page.is_empty() {
-                // TODO - pass the header as well as we might need to remove the directory as well
                 self.trigger_merge(&mut directory, bucket, bucket_index)?;
             }
         }
@@ -141,10 +140,6 @@ where
             // TODO - Do not remove the directory page and keep it, and when doing some compaction or GC claim that page
             self.remove_directory(&mut header, directory, directory_index)
                 .context("Failed to remove directory")?;
-
-            // 14. Unregister directory page
-            let header_page = header.cast_mut::<<Self as TypeAliases>::HeaderPage>();
-            header_page.set_directory_page_id(directory_index, INVALID_PAGE_ID);
         }
 
         Ok(true)
@@ -158,6 +153,8 @@ where
     ) -> Result<(), MergeError> {
         let directory_page =
             directory_page_guard.cast_mut::<<Self as TypeAliases>::DirectoryPage>();
+        assert_eq!(directory_page.get_bucket_page_id(empty_bucket_index), empty_bucket_page_guard.get_page_id(), "Empty bucket index must point to the same page as the empty bucket guard");
+        
         let bucket_page = empty_bucket_page_guard.cast::<<Self as TypeAliases>::BucketPage>();
 
         // 1. Make sure we need to merge
@@ -236,7 +233,10 @@ where
             return self.trigger_merge(
                 directory_page_guard,
                 non_empty_bucket_guard,
-                non_empty_bucket_index,
+                
+                // Get the starting bucket index, as otherwise we can have index 1,
+                // and we will set its bucket page id to -1 when it's already -1
+                non_empty_bucket_index.get_n_lsb_bits(new_bucket_local_depth),
             );
         }
 
@@ -268,6 +268,7 @@ where
         directory_page_guard: PageWriteGuard,
         directory_index: u32,
     ) -> Result<(), BufferPoolError> {
+        // 14. Unregister directory page
         header_page_guard
             .cast_mut::<<Self as TypeAliases>::HeaderPage>()
             .set_directory_page_id(directory_index, INVALID_PAGE_ID);
@@ -299,9 +300,17 @@ where
         bucket_page_guard: PageWriteGuard,
         bucket_index: u32,
     ) -> Result<(), BufferPoolError> {
-        directory_page_guard
-            .cast_mut::<<Self as TypeAliases>::DirectoryPage>()
-            .set_bucket_page_id(bucket_index, INVALID_PAGE_ID);
+        {
+            let directory_page = directory_page_guard
+                .cast_mut::<<Self as TypeAliases>::DirectoryPage>();
+
+            let bucket_page_id_by_index = directory_page.get_bucket_page_id(bucket_index);
+            assert_eq!(bucket_page_guard.get_page_id(), bucket_page_id_by_index, "Bucket page id must match the directory page matching bucket index");
+            assert_ne!(bucket_page_id_by_index, INVALID_PAGE_ID, "Bucket page is already deleted, this should not happen");
+            
+            directory_page
+                .set_bucket_page_id(bucket_index, INVALID_PAGE_ID);
+        }
 
         let bucket_page_id = bucket_page_guard.get_page_id();
 

@@ -1,5 +1,5 @@
 use crate::types::errors::NumericConversionError;
-use crate::{return_error_on_out_of_range, BigIntType, BigIntUnderlyingType, ComparisonDBTypeTrait, ConversionDBTypeTrait, DBTypeId, DBTypeIdImpl, DecimalType, DecimalUnderlyingType, IntType, IntUnderlyingType, SmallIntType, SmallIntUnderlyingType, TinyIntType, TinyIntUnderlyingType, Value, VarcharType};
+use crate::{return_error_on_out_of_range, BigIntType, BigIntUnderlyingType, BooleanType, ComparisonDBTypeTrait, ConversionDBTypeTrait, DBTypeId, DBTypeIdImpl, DecimalType, DecimalUnderlyingType, IntType, IntUnderlyingType, SmallIntType, SmallIntUnderlyingType, TimestampType, TinyIntType, TinyIntUnderlyingType, Value, VarcharType};
 use error_utils::anyhow::anyhow;
 use error_utils::ToAnyhowResult;
 
@@ -54,9 +54,9 @@ impl TryFrom<&SmallIntType> for TinyIntType {
             return Ok(TinyIntType::default().into());
         }
 
-        return_error_on_out_of_range!(TinyIntType, v.value, SmallIntUnderlyingType);
+        return_error_on_out_of_range!(TinyIntType, v.0, SmallIntUnderlyingType);
 
-        Ok(TinyIntType::new(v.value as TinyIntUnderlyingType).into())
+        Ok(TinyIntType::new(v.0 as TinyIntUnderlyingType).into())
     }
 }
 
@@ -66,7 +66,7 @@ impl From<&SmallIntType> for IntType {
             return IntType::default();
         }
 
-        IntType::new(v.value as IntUnderlyingType)
+        IntType::new(v.0 as IntUnderlyingType)
     }
 }
 
@@ -76,7 +76,7 @@ impl From<&SmallIntType> for BigIntType {
             return BigIntType::default();
         }
 
-        BigIntType::new(v.value as BigIntUnderlyingType)
+        BigIntType::new(v.0 as BigIntUnderlyingType)
     }
 }
 
@@ -86,7 +86,7 @@ impl From<&SmallIntType> for DecimalType {
             return DecimalType::default()
         }
 
-        DecimalType::new(v.value as DecimalUnderlyingType)
+        DecimalType::new(v.0 as DecimalUnderlyingType)
     }
 }
 
@@ -96,17 +96,17 @@ impl From<&SmallIntType> for VarcharType {
             return VarcharType::default()
         }
 
-        VarcharType::from(v.value.to_string())
+        VarcharType::from(v.0.to_string())
     }
 }
 
 impl ConversionDBTypeTrait for SmallIntType {
     fn serialize_to(&self, storage: &mut [u8]) {
-        storage[0..Self::SIZE as usize].copy_from_slice(self.value.to_ne_bytes().as_slice())
+        storage[0..Self::SIZE].copy_from_slice(self.0.to_ne_bytes().as_slice())
     }
 
     fn deserialize_from(storage: &[u8]) -> Self {
-        SmallIntType::new(SmallIntUnderlyingType::from_ne_bytes(storage[..Self::SIZE as usize].try_into().unwrap()))
+        SmallIntType::new(SmallIntUnderlyingType::from_ne_bytes(storage[..Self::SIZE].try_into().unwrap()))
     }
 
     fn as_string(&self) -> String {
@@ -114,7 +114,7 @@ impl ConversionDBTypeTrait for SmallIntType {
             return "smallint_null".to_string();
         }
 
-        self.value.to_string()
+        self.0.to_string()
     }
 
     fn try_cast_as(&self, db_type_id: DBTypeId) -> error_utils::anyhow::Result<DBTypeIdImpl> {
@@ -122,7 +122,11 @@ impl ConversionDBTypeTrait for SmallIntType {
         // TODO - if null
         match db_type_id {
             DBTypeId::BOOLEAN => {
-                todo!()
+                if self.is_null() {
+                    Ok(BooleanType::from(None).into())
+                } else {
+                    Err(error_utils::anyhow!("Unable to cast non null SmallInt to Boolean"))
+                }
             }
             DBTypeId::TINYINT => {
                 TinyIntType::try_from(self).to_anyhow().map(|v| v.into())
@@ -143,7 +147,11 @@ impl ConversionDBTypeTrait for SmallIntType {
                 Ok(VarcharType::from(self).into())
             }
             DBTypeId::TIMESTAMP => {
-                todo!()
+                if self.is_null() {
+                    Ok(TimestampType::from(None).into())
+                } else {
+                    Err(error_utils::anyhow!("Unable to cast non null SmallInt to Timestamp"))
+                }
             }
             _ => Err(anyhow!(format!("smallint is not coercable to {}", db_type_id.get_name())))
         }

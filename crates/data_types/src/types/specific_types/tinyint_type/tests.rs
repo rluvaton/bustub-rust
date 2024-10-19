@@ -11,13 +11,13 @@ mod tests {
 
         // Make sure we created correctly
         for i in 0..81 {
-            assert_eq!(numbers[i].value, numbers_i8[i]);
+            assert_eq!(numbers[i].0, numbers_i8[i]);
         }
 
         let zero = TinyIntType::new(0);
 
         for number in numbers {
-            let value = number.value;
+            let value = number.0;
 
             // 0 + i;
             assert_eq!(zero + number, number);
@@ -55,19 +55,19 @@ mod tests {
                 let b_value = b_index as TinyIntUnderlyingType + 1;
 
                 // a + b;
-                assert_eq!((a + b).value, a_value + b_value);
+                assert_eq!((a + b).0, a_value + b_value);
                 assert_eq!(a + b, TinyIntType::new(a_value + b_value));
 
                 // a * b;
-                assert_eq!((a * b).value, a_value * b_value);
+                assert_eq!((a * b).0, a_value * b_value);
                 assert_eq!(a * b, TinyIntType::new(a_value * b_value));
 
                 // a / b;
-                assert_eq!((a / b).value, a_value / b_value);
+                assert_eq!((a / b).0, a_value / b_value);
                 assert_eq!(a / b, TinyIntType::new(a_value / b_value));
 
                 // a % b
-                assert_eq!((a % b).value, a_value % b_value);
+                assert_eq!((a % b).0, a_value % b_value);
                 assert_eq!(a % b, TinyIntType::new(a_value % b_value));
             }
         }
@@ -91,19 +91,19 @@ mod tests {
                 let b_value = -10 + b_index as TinyIntUnderlyingType;
 
                 // a + b;
-                assert_eq!((a + b).value, a_value + b_value);
+                assert_eq!((a + b).0, a_value + b_value);
                 assert_eq!(a + b, TinyIntType::new(a_value + b_value));
 
                 // a * b;
-                assert_eq!((a * b).value, a_value * b_value);
+                assert_eq!((a * b).0, a_value * b_value);
                 assert_eq!(a * b, TinyIntType::new(a_value * b_value));
 
                 // a / b;
-                assert_eq!((a / b).value, a_value / b_value);
+                assert_eq!((a / b).0, a_value / b_value);
                 assert_eq!(a / b, TinyIntType::new(a_value / b_value));
 
                 // a % b
-                assert_eq!((a % b).value, a_value % b_value);
+                assert_eq!((a % b).0, a_value % b_value);
                 assert_eq!(a % b, TinyIntType::new(a_value % b_value));
             }
         }
@@ -116,7 +116,7 @@ mod tests {
 
         // Make sure we created correctly
         for i in 0..21 {
-            assert_eq!(numbers[i].value, numbers_i8[i]);
+            assert_eq!(numbers[i].0, numbers_i8[i]);
         }
 
         for i in 0..21 {
@@ -131,35 +131,35 @@ mod tests {
 
         for n in numbers {
             // <
-            assert!(n < TinyIntType::new(n.value + 1), "{} < {}", n.value, n.value + 1);
+            assert!(n < TinyIntType::new(n.0 + 1), "{} < {}", n.0, n.0 + 1);
 
-            assert_eq!(n < TinyIntType::new(n.value), false, "{} should not be less than {}", n.value, n.value);
-            assert_eq!(n < TinyIntType::new(n.value - 1), false, "{} should not be less than {}", n.value, n.value - 1);
+            assert_eq!(n < TinyIntType::new(n.0), false, "{} should not be less than {}", n.0, n.0);
+            assert_eq!(n < TinyIntType::new(n.0 - 1), false, "{} should not be less than {}", n.0, n.0 - 1);
         }
 
         for n in numbers {
             // <=
-            assert!(n <= TinyIntType::new(n.value), "{} <= {}", n.value, n.value);
-            assert!(n <= TinyIntType::new(n.value + 1), "{} <= {}", n.value, n.value + 1);
+            assert!(n <= TinyIntType::new(n.0), "{} <= {}", n.0, n.0);
+            assert!(n <= TinyIntType::new(n.0 + 1), "{} <= {}", n.0, n.0 + 1);
 
-            assert_eq!(n <= TinyIntType::new(n.value - 1), false, "{} should not be less than or equal to {}", n.value, n.value - 1);
+            assert_eq!(n <= TinyIntType::new(n.0 - 1), false, "{} should not be less than or equal to {}", n.0, n.0 - 1);
         }
 
         for n in numbers {
             // >
-            assert!(n > TinyIntType::new(n.value - 1), "{} > {}", n.value, n.value - 1);
+            assert!(n > TinyIntType::new(n.0 - 1), "{} > {}", n.0, n.0 - 1);
 
-            assert_eq!(n > TinyIntType::new(n.value), false, "{} should not be greater than {}", n.value, n.value);
-            assert_eq!(n > TinyIntType::new(n.value + 1), false, "{} should not be greater than {}", n.value, n.value + 1);
+            assert_eq!(n > TinyIntType::new(n.0), false, "{} should not be greater than {}", n.0, n.0);
+            assert_eq!(n > TinyIntType::new(n.0 + 1), false, "{} should not be greater than {}", n.0, n.0 + 1);
         }
 
         for n in numbers {
             // >=
-            assert!(n >= TinyIntType::new(n.value), "{} >= {}", n.value, n.value);
+            assert!(n >= TinyIntType::new(n.0), "{} >= {}", n.0, n.0);
 
-            assert!(n >= TinyIntType::new(n.value - 1), "{} >= {}", n.value, n.value - 1);
+            assert!(n >= TinyIntType::new(n.0 - 1), "{} >= {}", n.0, n.0 - 1);
 
-            assert_eq!(n >= TinyIntType::new(n.value + 1), false, "{} should not be greater than or equal to {}", n.value, n.value + 1);
+            assert_eq!(n >= TinyIntType::new(n.0 + 1), false, "{} should not be greater than or equal to {}", n.0, n.0 + 1);
         }
     }
 
@@ -170,7 +170,7 @@ mod tests {
 
         // Make sure we created correctly
         for i in 0..21 {
-            assert_eq!(numbers[i].value, numbers_i8[i]);
+            assert_eq!(numbers[i].0, numbers_i8[i]);
         }
 
         {
@@ -208,7 +208,7 @@ mod tests {
 
         // Make sure we created correctly
         for i in 0..21 {
-            assert_eq!(numbers[i].value, numbers_i8[i]);
+            assert_eq!(numbers[i].0, numbers_i8[i]);
         }
 
         for i in 0..numbers.len() {

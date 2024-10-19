@@ -301,7 +301,7 @@ impl<const ARRAY_SIZE: usize, Key: PageKey, Value: PageValue, KeyComparator: Com
         }
 
         f.write_str(table.to_string().as_str())?;
-        f.write_str("================ END BUCKET ================\n")
+        f.write_str("\n================ END BUCKET ================\n")
     }
 }
 

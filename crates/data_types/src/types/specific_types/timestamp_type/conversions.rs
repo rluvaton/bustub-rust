@@ -61,7 +61,7 @@ impl ConversionDBTypeTrait for TimestampType {
             return "timestamp_null".to_string()
         }
 
-        let mut tm = self.value;
+        let mut tm = self.0;
 
         let micro = (tm % 1_000_000) as u32;
         tm /= 1_000_000;
@@ -108,11 +108,11 @@ impl ConversionDBTypeTrait for TimestampType {
     }
 
     fn serialize_to(&self, storage: &mut [u8]) {
-        storage[0..Self::SIZE as usize].copy_from_slice(self.value.to_ne_bytes().as_slice())
+        storage[0..Self::SIZE].copy_from_slice(self.0.to_ne_bytes().as_slice())
     }
 
     fn deserialize_from(storage: &[u8]) -> Self {
-        TimestampType::new(TimestampUnderlyingType::from_ne_bytes(storage[..Self::SIZE as usize].try_into().unwrap()))
+        TimestampType::new(TimestampUnderlyingType::from_ne_bytes(storage[..Self::SIZE].try_into().unwrap()))
     }
 
     fn try_cast_as(&self, db_type_id: DBTypeId) -> error_utils::anyhow::Result<DBTypeIdImpl> {

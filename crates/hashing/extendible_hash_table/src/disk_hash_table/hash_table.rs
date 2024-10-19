@@ -200,6 +200,18 @@ where
     pub fn get_stats(&self) -> &DiskHashTableStats {
         &self.stats
     }
+
+    /// For tests to assert header page correctness
+    #[cfg(test)]
+    pub(crate) fn with_header_page<R, F: FnOnce(&HeaderPage) -> R>(&self, f: F) -> R {
+        let header = self.bpm.fetch_page_read(self.header_page_id, AccessType::Unknown)
+            .map_err_to_buffer_pool_err()
+            .expect("Should be able to fetch header page");
+
+        let header_page = header.cast::<<Self as TypeAliases>::HeaderPage>();
+
+        f(header_page)
+    }
 }
 
 impl<const BUCKET_MAX_SIZE: usize, Key: PageKey, Value: PageValue, KeyComparator: Comparator<Key>, KeyHasherImpl: KeyHasher> Debug for DiskHashTable<BUCKET_MAX_SIZE, Key, Value, KeyComparator, KeyHasherImpl> {
@@ -225,11 +237,11 @@ impl<const BUCKET_MAX_SIZE: usize, Key: PageKey, Value: PageValue, KeyComparator
             let directory_guard = self.bpm.fetch_page_read(directory_page_id, AccessType::Unknown).expect("Should fetch directory page");
 
             let directory = directory_guard.cast::<<Self as TypeAliases>::DirectoryPage>();
-            write!(f, "Directory {}, page_id: {}\n", idx, directory_page_id)?;
 
             // Extended format
 
             if print_buckets_inside_directory {
+                write!(f, "Directory {}, page_id: {}\n", idx, directory_page_id)?;
                 directory.extended_format(f, |bucket_page_id| {
                     let bucket_guard = self.bpm.fetch_page_read(bucket_page_id, AccessType::Unknown).expect(format!("Should be able to fetch bucket page with id {}", bucket_page_id).as_str());
                     let bucket = bucket_guard.cast::<<Self as TypeAliases>::BucketPage>();

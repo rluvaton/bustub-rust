@@ -32,8 +32,7 @@ impl TryFrom<&sqlparser::ast::Value> for Constant {
                 Constant::new(value)
             }
             sqlparser::ast::Value::SingleQuotedString(str) | sqlparser::ast::Value::DoubleQuotedString(str) => {
-                unimplemented!();
-                // Constant::new(Value::new(DBTypeIdImpl::
+                Constant::new(Value::from(str.as_str()))
             }
             sqlparser::ast::Value::Boolean(val) => Constant::new(Value::from(*val)),
 

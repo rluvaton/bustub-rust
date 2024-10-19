@@ -45,6 +45,7 @@ impl TrieNode {
         }
     }
 
+    #[cfg(test)]
     pub(crate) fn get_child_at_char(&self, key: char) -> Option<Arc<TrieNode>> {
         self.children.as_ref().and_then(|c| c.get(&key).cloned())
     }

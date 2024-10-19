@@ -42,6 +42,7 @@ impl Store {
         }
     }
 
+    #[cfg(test)]
     pub fn get_order_of_eviction(mut self) -> Vec<FrameId> {
         let mut frames = vec![];
 

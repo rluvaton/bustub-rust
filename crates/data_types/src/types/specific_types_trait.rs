@@ -1,6 +1,6 @@
-use std::{cmp, ops};
-use std::fmt::{Debug, Display};
 use crate::{DBTypeId, DBTypeIdImpl, Value};
+use std::fmt::{Debug, Display};
+use std::ops;
 
 pub trait ArithmeticsDBTypeTrait:
 Sized +
@@ -15,12 +15,6 @@ ops::Div<Value, Output=Value> + // '/'
 ops::Rem<Self> + // '%'
 ops::Rem<Value, Output=Value> // '%'
 {
-    // TODO - should take ref?
-    fn sqrt(self) -> Self {
-        // self * self
-        todo!()
-    }
-
     fn operate_null(&self, rhs: &Value) -> error_utils::anyhow::Result<Value>;
 
     unsafe fn operate_null_unchecked(&self, rhs: &Value) -> Value {
@@ -30,10 +24,10 @@ ops::Rem<Value, Output=Value> // '%'
 
 pub trait ComparisonDBTypeTrait:
 // Not using Eq as float number do not implement that
-// cmp::PartialEq<Self> + // == and !=
-cmp::PartialEq<Value> + // == and !=
-// cmp::PartialOrd<Self> + // used to derive min, max, and all compare functions
-cmp::PartialOrd<Value> + // used to derive min, max, and all compare functions
+// PartialEq<Self> + // == and !=
+PartialEq<Value> + // == and !=
+// PartialOrd<Self> + // used to derive min, max, and all compare functions
+PartialOrd<Value> + // used to derive min, max, and all compare functions
 Ord
 {
     fn get_min_value() -> Self;
@@ -47,9 +41,6 @@ Ord
 
 
 pub trait ConversionDBTypeTrait:
-
-// TODO - add cast as
-// TryInto<dyn TypeIdTrait> +
 Into<DBTypeIdImpl> +
 Into<Value>
 {
@@ -76,10 +67,12 @@ pub trait FormatDBTypeTrait: Display + Debug {
 }
 
 pub trait StorageDBTypeTrait: Sized + Clone {
-
     // Is the data inlined into this classes storage space, or must it be accessed
     // through an indirection/pointer?
     fn is_inlined(&self) -> bool;
+}
+
+pub trait VariableLengthStorageDBTypeTrait: Sized + Clone {
 
     /// Access the raw variable length data
     fn get_data(&self) -> &[u8];

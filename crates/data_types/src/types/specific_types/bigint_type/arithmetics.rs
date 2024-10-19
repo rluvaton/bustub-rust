@@ -6,7 +6,7 @@ impl Add for BigIntType {
     type Output = BigIntType;
 
     fn add(self, rhs: Self) -> Self::Output {
-        BigIntType::new(self.value + rhs.value)
+        BigIntType::new(self.0 + rhs.0)
     }
 }
 
@@ -14,7 +14,7 @@ impl Add<DecimalType> for BigIntType {
     type Output = DecimalType;
 
     fn add(self, rhs: DecimalType) -> Self::Output {
-        DecimalType::new(self.value as DecimalUnderlyingType + rhs.value)
+        DecimalType::new(self.0 as DecimalUnderlyingType + rhs.0)
     }
 }
 
@@ -22,7 +22,7 @@ impl Add<IntType> for BigIntType {
     type Output = BigIntType;
 
     fn add(self, rhs: IntType) -> Self::Output {
-        BigIntType::new(self.value + rhs.value as BigIntUnderlyingType)
+        BigIntType::new(self.0 + rhs.0 as BigIntUnderlyingType)
     }
 }
 
@@ -30,7 +30,7 @@ impl Add<SmallIntType> for BigIntType {
     type Output = BigIntType;
 
     fn add(self, rhs: SmallIntType) -> Self::Output {
-        BigIntType::new(self.value + rhs.value as BigIntUnderlyingType)
+        BigIntType::new(self.0 + rhs.0 as BigIntUnderlyingType)
     }
 }
 
@@ -38,7 +38,7 @@ impl Add<TinyIntType> for BigIntType {
     type Output = BigIntType;
 
     fn add(self, rhs: TinyIntType) -> Self::Output {
-        BigIntType::new(self.value + rhs.value as BigIntUnderlyingType)
+        BigIntType::new(self.0 + rhs.0 as BigIntUnderlyingType)
     }
 }
 
@@ -64,7 +64,7 @@ impl Sub for BigIntType {
     type Output = BigIntType;
 
     fn sub(self, rhs: Self) -> Self::Output {
-        BigIntType::new(self.value - rhs.value)
+        BigIntType::new(self.0 - rhs.0)
     }
 }
 
@@ -72,7 +72,7 @@ impl Sub<DecimalType> for BigIntType {
     type Output = DecimalType;
 
     fn sub(self, rhs: DecimalType) -> Self::Output {
-        DecimalType::new(self.value as DecimalUnderlyingType - rhs.value)
+        DecimalType::new(self.0 as DecimalUnderlyingType - rhs.0)
     }
 }
 
@@ -80,7 +80,7 @@ impl Sub<IntType> for BigIntType {
     type Output = BigIntType;
 
     fn sub(self, rhs: IntType) -> Self::Output {
-        BigIntType::new(self.value - rhs.value as BigIntUnderlyingType)
+        BigIntType::new(self.0 - rhs.0 as BigIntUnderlyingType)
     }
 }
 
@@ -88,7 +88,7 @@ impl Sub<SmallIntType> for BigIntType {
     type Output = BigIntType;
 
     fn sub(self, rhs: SmallIntType) -> Self::Output {
-        BigIntType::new(self.value - rhs.value as BigIntUnderlyingType)
+        BigIntType::new(self.0 - rhs.0 as BigIntUnderlyingType)
     }
 }
 
@@ -96,7 +96,7 @@ impl Sub<TinyIntType> for BigIntType {
     type Output = BigIntType;
 
     fn sub(self, rhs: TinyIntType) -> Self::Output {
-        BigIntType::new(self.value - rhs.value as BigIntUnderlyingType)
+        BigIntType::new(self.0 - rhs.0 as BigIntUnderlyingType)
     }
 }
 
@@ -121,7 +121,7 @@ impl Mul for BigIntType {
     type Output = BigIntType;
 
     fn mul(self, rhs: Self) -> Self::Output {
-        BigIntType::new(self.value * rhs.value)
+        BigIntType::new(self.0 * rhs.0)
     }
 }
 
@@ -129,7 +129,7 @@ impl Mul<DecimalType> for BigIntType {
     type Output = DecimalType;
 
     fn mul(self, rhs: DecimalType) -> Self::Output {
-        DecimalType::new(self.value as DecimalUnderlyingType * rhs.value)
+        DecimalType::new(self.0 as DecimalUnderlyingType * rhs.0)
     }
 }
 
@@ -137,7 +137,7 @@ impl Mul<IntType> for BigIntType {
     type Output = BigIntType;
 
     fn mul(self, rhs: IntType) -> Self::Output {
-        BigIntType::new(self.value * rhs.value as BigIntUnderlyingType)
+        BigIntType::new(self.0 * rhs.0 as BigIntUnderlyingType)
     }
 }
 
@@ -145,7 +145,7 @@ impl Mul<SmallIntType> for BigIntType {
     type Output = BigIntType;
 
     fn mul(self, rhs: SmallIntType) -> Self::Output {
-        BigIntType::new(self.value * rhs.value as BigIntUnderlyingType)
+        BigIntType::new(self.0 * rhs.0 as BigIntUnderlyingType)
     }
 }
 
@@ -153,7 +153,7 @@ impl Mul<TinyIntType> for BigIntType {
     type Output = BigIntType;
 
     fn mul(self, rhs: TinyIntType) -> Self::Output {
-        BigIntType::new(self.value * rhs.value as BigIntUnderlyingType)
+        BigIntType::new(self.0 * rhs.0 as BigIntUnderlyingType)
     }
 }
 
@@ -178,7 +178,7 @@ impl Div for BigIntType {
     type Output = BigIntType;
 
     fn div(self, rhs: Self) -> Self::Output {
-        BigIntType::new(self.value / rhs.value)
+        BigIntType::new(self.0 / rhs.0)
     }
 }
 
@@ -186,7 +186,7 @@ impl Div<DecimalType> for BigIntType {
     type Output = DecimalType;
 
     fn div(self, rhs: DecimalType) -> Self::Output {
-        DecimalType::new(self.value as DecimalUnderlyingType / rhs.value)
+        DecimalType::new(self.0 as DecimalUnderlyingType / rhs.0)
     }
 }
 
@@ -194,7 +194,7 @@ impl Div<IntType> for BigIntType {
     type Output = BigIntType;
 
     fn div(self, rhs: IntType) -> Self::Output {
-        BigIntType::new(self.value / rhs.value as BigIntUnderlyingType)
+        BigIntType::new(self.0 / rhs.0 as BigIntUnderlyingType)
     }
 }
 
@@ -202,7 +202,7 @@ impl Div<SmallIntType> for BigIntType {
     type Output = BigIntType;
 
     fn div(self, rhs: SmallIntType) -> Self::Output {
-        BigIntType::new(self.value / rhs.value as BigIntUnderlyingType)
+        BigIntType::new(self.0 / rhs.0 as BigIntUnderlyingType)
     }
 }
 
@@ -210,7 +210,7 @@ impl Div<TinyIntType> for BigIntType {
     type Output = BigIntType;
 
     fn div(self, rhs: TinyIntType) -> Self::Output {
-        BigIntType::new(self.value / rhs.value as BigIntUnderlyingType)
+        BigIntType::new(self.0 / rhs.0 as BigIntUnderlyingType)
     }
 }
 
@@ -239,7 +239,7 @@ impl Rem for BigIntType {
     type Output = BigIntType;
 
     fn rem(self, rhs: Self) -> Self::Output {
-        BigIntType::new(self.value % rhs.value)
+        BigIntType::new(self.0 % rhs.0)
     }
 }
 
@@ -249,7 +249,7 @@ impl Rem<DecimalType> for BigIntType {
     type Output = DecimalType;
 
     fn rem(self, rhs: DecimalType) -> Self::Output {
-        DecimalType::new(self.value as DecimalUnderlyingType % rhs.value)
+        DecimalType::new(self.0 as DecimalUnderlyingType % rhs.0)
     }
 }
 
@@ -257,7 +257,7 @@ impl Rem<IntType> for BigIntType {
     type Output = BigIntType;
 
     fn rem(self, rhs: IntType) -> Self::Output {
-        BigIntType::new(self.value % rhs.value as BigIntUnderlyingType)
+        BigIntType::new(self.0 % rhs.0 as BigIntUnderlyingType)
     }
 }
 
@@ -265,7 +265,7 @@ impl Rem<SmallIntType> for BigIntType {
     type Output = BigIntType;
 
     fn rem(self, rhs: SmallIntType) -> Self::Output {
-        BigIntType::new(self.value % rhs.value as BigIntUnderlyingType)
+        BigIntType::new(self.0 % rhs.0 as BigIntUnderlyingType)
     }
 }
 
@@ -273,7 +273,7 @@ impl Rem<TinyIntType> for BigIntType {
     type Output = BigIntType;
 
     fn rem(self, rhs: TinyIntType) -> Self::Output {
-        BigIntType::new(self.value % rhs.value as BigIntUnderlyingType)
+        BigIntType::new(self.0 % rhs.0 as BigIntUnderlyingType)
     }
 }
 

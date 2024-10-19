@@ -3,7 +3,7 @@ use std::cmp::Ordering;
 
 impl PartialEq for BooleanType {
     fn eq(&self, other: &Self) -> bool {
-        self.value == other.value
+        self.0 == other.0
     }
 }
 
@@ -27,7 +27,7 @@ impl PartialEq<Value> for BooleanType {
 
 impl PartialEq<BooleanUnderlyingType> for BooleanType {
     fn eq(&self, other: &BooleanUnderlyingType) -> bool {
-        self.value == *other
+        self.0 == *other
     }
 }
 
@@ -59,7 +59,7 @@ impl PartialOrd for BooleanType {
             return Some(Ordering::Equal);
         }
 
-        self.value.partial_cmp(&other.value)
+        self.0.partial_cmp(&other.0)
     }
 }
 
@@ -88,7 +88,7 @@ impl Ord for BooleanType {
             return Ordering::Equal;
         }
 
-        self.value.cmp(&other.value)
+        self.0.cmp(&other.0)
     }
 }
 
@@ -107,6 +107,6 @@ impl ComparisonDBTypeTrait for BooleanType {
 
     // TODO - this is not the same as the value
     fn is_null(&self) -> bool {
-        self.value == Self::NULL
+        self.0 == Self::NULL
     }
 }

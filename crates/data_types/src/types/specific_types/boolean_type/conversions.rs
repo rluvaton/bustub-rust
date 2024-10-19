@@ -98,9 +98,9 @@ impl TryFrom<Value> for BooleanType {
 impl ConversionDBTypeTrait for BooleanType {
 
     fn as_string(&self) -> String {
-        if self.value == Self::TRUE {
+        if self.0 == Self::TRUE {
             "true".to_string()
-        } else if self.value == Self::FALSE {
+        } else if self.0 == Self::FALSE {
             "false".to_string()
         } else {
             // Null
@@ -109,11 +109,11 @@ impl ConversionDBTypeTrait for BooleanType {
     }
 
     fn serialize_to(&self, storage: &mut [u8]) {
-        storage[0..Self::SIZE].copy_from_slice(self.value.to_ne_bytes().as_slice())
+        storage[0..Self::SIZE].copy_from_slice(self.0.to_ne_bytes().as_slice())
     }
 
     fn deserialize_from(storage: &[u8]) -> Self {
-        BooleanType::new(BooleanUnderlyingType::from_ne_bytes(storage[..Self::SIZE as usize].try_into().unwrap()))
+        BooleanType::new(BooleanUnderlyingType::from_ne_bytes(storage[..Self::SIZE].try_into().unwrap()))
     }
 
     fn try_cast_as(&self, db_type_id: DBTypeId) -> error_utils::anyhow::Result<DBTypeIdImpl> {
