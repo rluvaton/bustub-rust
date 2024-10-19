@@ -1,4 +1,3 @@
-use crate::BUSTUB_VALUE_NULL;
 use std::ops::Deref;
 
 pub type TinyIntUnderlyingType = i8;

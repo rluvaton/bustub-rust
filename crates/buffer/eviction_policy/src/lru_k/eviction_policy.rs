@@ -44,6 +44,7 @@ impl LRUKEvictionPolicy {
     }
 
     /// Helper for debugging in tests
+    #[cfg(test)]
     pub(crate) fn get_order_of_eviction(&self) -> Vec<FrameId> {
         self.store.clone().get_order_of_eviction()
     }

@@ -1,4 +1,3 @@
-use crate::BUSTUB_VALUE_NULL;
 use std::ops::Deref;
 
 // Not using Timestamp from `common::config::Timestamp` on purpose as it is i64 and not u64

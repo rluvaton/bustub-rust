@@ -1,6 +1,6 @@
-use std::{cmp, ops};
-use std::fmt::{Debug, Display};
 use crate::{DBTypeId, DBTypeIdImpl, Value};
+use std::fmt::{Debug, Display};
+use std::ops;
 
 pub trait ArithmeticsDBTypeTrait:
 Sized +
