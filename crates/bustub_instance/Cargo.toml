@@ -37,9 +37,6 @@ tracy-client = { version = "0.17.3", default-features = false }
 [package.metadata.cargo-machete]
 ignored = ["anyhow"]
 
-[profile.bench]
-debug = true
-
 [features]
 default = ["checkpoint_manager"]
 checkpoint_manager = []
