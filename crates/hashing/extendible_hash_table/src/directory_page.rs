@@ -201,13 +201,13 @@ impl DirectoryPage {
         // Point to the same bucket page id
         {
             let (before, after) = self.bucket_page_ids[..size_after].split_at_mut(size_before);
-            after.clone_from_slice(&before);
+            after.copy_from_slice(&before);
         }
 
         // Have the same local depth as the pointed bucket page
         {
             let (before, after) = self.local_depths[..size_after].split_at_mut(size_before);
-            after.clone_from_slice(&before);
+            after.copy_from_slice(&before);
         }
 
         true
@@ -446,6 +446,8 @@ mod tests {
 
         // grow the directory, local depths should change!
         directory_page.set_local_depth(0, 1);
+        directory_page.set_bucket_page_id(0, 8);
+        
         directory_page.incr_global_depth();
         directory_page.set_local_depth(1, 1);
 
