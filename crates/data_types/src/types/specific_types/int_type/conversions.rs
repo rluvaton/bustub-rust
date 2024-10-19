@@ -1,5 +1,5 @@
 use crate::types::errors::NumericConversionError;
-use crate::{return_error_on_out_of_range, BigIntType, BigIntUnderlyingType, ComparisonDBTypeTrait, ConversionDBTypeTrait, DBTypeId, DBTypeIdImpl, DecimalType, DecimalUnderlyingType, IntType, IntUnderlyingType, SmallIntType, SmallIntUnderlyingType, TinyIntType, TinyIntUnderlyingType, Value, VarcharType};
+use crate::{return_error_on_out_of_range, BigIntType, BigIntUnderlyingType, BooleanType, ComparisonDBTypeTrait, ConversionDBTypeTrait, DBTypeId, DBTypeIdImpl, DecimalType, DecimalUnderlyingType, IntType, IntUnderlyingType, SmallIntType, SmallIntUnderlyingType, TimestampType, TinyIntType, TinyIntUnderlyingType, Value, VarcharType};
 use error_utils::anyhow::anyhow;
 use error_utils::ToAnyhowResult;
 
@@ -131,7 +131,11 @@ impl ConversionDBTypeTrait for IntType {
         // TODO - if null
         match db_type_id {
             DBTypeId::BOOLEAN => {
-                todo!()
+                if self.is_null() {
+                    Ok(BooleanType::from(None).into())
+                } else {
+                    Err(error_utils::anyhow!("Unable to cast non null Int to Boolean"))
+                }
             }
             DBTypeId::TINYINT => {
                 TinyIntType::try_from(self).to_anyhow().map(|v| v.into())
@@ -152,7 +156,11 @@ impl ConversionDBTypeTrait for IntType {
                 Ok(VarcharType::from(self).into())
             }
             DBTypeId::TIMESTAMP => {
-                todo!()
+                if self.is_null() {
+                    Ok(TimestampType::from(None).into())
+                } else {
+                    Err(error_utils::anyhow!("Unable to cast non null Int to Timestamp"))
+                }
             }
             _ => Err(anyhow!(format!("int is not coercable to {}", db_type_id.get_name())))
         }

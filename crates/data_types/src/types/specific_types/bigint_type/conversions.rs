@@ -1,7 +1,7 @@
 use super::BigIntUnderlyingType;
 use crate::types::errors::{InnerFromStringConversionError, NumericConversionError};
 use crate::types::{BigIntType, ComparisonDBTypeTrait, ConversionDBTypeTrait, DBTypeId, DBTypeIdImpl, DecimalType, DecimalUnderlyingType, IntType, IntUnderlyingType, SmallIntType, SmallIntUnderlyingType, TinyIntType, TinyIntUnderlyingType};
-use crate::{return_error_on_out_of_range, BooleanType, Value, VarcharType};
+use crate::{return_error_on_out_of_range, BooleanType, TimestampType, Value, VarcharType};
 use error_utils::anyhow::anyhow;
 use error_utils::ToAnyhowResult;
 
@@ -178,7 +178,7 @@ impl ConversionDBTypeTrait for BigIntType {
         match db_type_id {
             DBTypeId::BOOLEAN => {
                 if self.is_null() {
-                    Ok(DBTypeIdImpl::BOOLEAN(BooleanType::from(None)))
+                    Ok(BooleanType::from(None).into())
                 } else {
                     Err(error_utils::anyhow!("Unable to cast non null BigInt to Boolean"))
                 }
@@ -203,7 +203,7 @@ impl ConversionDBTypeTrait for BigIntType {
             }
             DBTypeId::TIMESTAMP => {
                 if self.is_null() {
-                    Ok(DBTypeIdImpl::BOOLEAN(BooleanType::from(None)))
+                    Ok(TimestampType::from(None).into())
                 } else {
                     Err(error_utils::anyhow!("Unable to cast non null BigInt to Timestamp"))
                 }
