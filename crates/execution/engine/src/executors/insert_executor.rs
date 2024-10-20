@@ -67,6 +67,8 @@ impl Iterator for InsertExecutor<'_>
         ).expect("Tuple is too big to fit in a page (this should be blocked in the planner)");
 
         tuple.set_rid(rid);
+        
+        // TODO - update indexes if relevant
 
         Some((tuple, rid))
     }
