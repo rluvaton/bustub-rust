@@ -231,7 +231,7 @@ impl Catalog {
         for (_, tuple) in table_meta.get_table_heap().iter() {
             index.insert_entry(
                 &tuple.key_from_tuple(&schema, &key_schema, key_attrs),
-                tuple.get_rid(),
+                *tuple.get_rid(),
                 txn.clone()
             ).expect("Should insert entry");
         }
