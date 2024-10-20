@@ -83,8 +83,8 @@ impl Tuple {
 
 
     // return RID of current tuple
-    pub fn get_rid(&self) -> RID {
-        self.rid
+    pub fn get_rid(&self) -> &RID {
+        &self.rid
     }
 
     // set RID of current tuple
@@ -178,19 +178,28 @@ impl Tuple {
         dest[0..data_offset].copy_from_slice(size.to_ne_bytes().as_slice());
         dest[data_offset..data_offset + (size as usize)].copy_from_slice(self.data.as_slice());
     }
+
+    // deserialize tuple data and size
+    pub fn deserialize_to(input: &[u8]) -> Self {
+        let data_offset = size_of::<i32>();
+
+        let size = i32::from_ne_bytes(input[..size_of::<i32>()].try_into().unwrap());
+
+        Self {
+            rid: RID::default(),
+            data: input[data_offset..data_offset + size as usize].to_vec()
+        }
+    }
 }
 
 
 // deserialize tuple data(deep copy)
 impl From<&[u8]> for Tuple {
     fn from(value: &[u8]) -> Self {
-        let data_offset = size_of::<i32>();
-
-        let size = i32::from_ne_bytes(value[..size_of::<i32>()].try_into().unwrap());
 
         Self {
             rid: RID::default(),
-            data: value[data_offset..data_offset + size as usize].to_vec()
+            data: value.to_vec()
         }
     }
 }

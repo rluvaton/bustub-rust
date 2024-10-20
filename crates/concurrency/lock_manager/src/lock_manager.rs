@@ -60,7 +60,7 @@ impl LockManager {
      * @return true if the upgrade is successful, false otherwise
      */
     #[allow(unused_variables)]
-    pub fn lock_row(&self, txn: Arc<Transaction>, lock_mode: LockMode, oid: &TableOID, rid: &RID) -> bool {
+    pub fn lock_row(&self, txn: &Arc<Transaction>, lock_mode: LockMode, oid: &TableOID, rid: &RID) -> bool {
         todo!()
     }
 }

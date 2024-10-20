@@ -1,5 +1,6 @@
 use super::ResultWriter;
 
+#[derive(Default)]
 pub struct NoopWriter;
 
 impl ResultWriter for NoopWriter {

@@ -1,7 +1,7 @@
 use crate::context::ExecutorContext;
 use crate::executors::iterator_ext::IteratorExt;
 use crate::executors::{Executor, ExecutorRef, MockScanExecutor, ValuesExecutor};
-use planner::PlanType;
+use planner::{PlanNode, PlanType};
 use std::sync::Arc;
 
 pub(crate) trait CreateExecutor<'a> {
@@ -15,7 +15,11 @@ impl<'a> CreateExecutor<'a> for PlanType {
         // })
         match self {
             // PlanType::SeqScan(_) => {}
-            // PlanType::Insert(_) => {}
+            PlanType::Insert(plan) => {
+                let child = plan.get_child_plan().create_executor(ctx.clone());
+
+                child.insert_exec(plan, ctx.clone())
+            }
             // PlanType::Delete(_) => {}
             // PlanType::Aggregation(_) => {}
             PlanType::Filter(plan) => {
@@ -35,9 +39,12 @@ impl<'a> CreateExecutor<'a> for PlanType {
                 child.limit_exec(plan, ctx.clone())
             }
             PlanType::MockScan(plan) => {
+                assert_eq!(plan.get_children(), &[], "Mock scan must not have any children");
                 MockScanExecutor::new(plan, ctx).into_ref()
             },
             PlanType::Values(plan) => {
+                assert_eq!(plan.get_children(), &[], "Values must not have any children");
+                
                 ValuesExecutor::new(plan, ctx).into_ref()
             },
             // PlanType::Window(_) => {}

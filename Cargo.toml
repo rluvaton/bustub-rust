@@ -37,7 +37,7 @@ members = [
     "crates/storage/index",
     "crates/storage/table/core",
     "crates/planner",
-    "crates/catalog/schema_mocks",
+    "crates/catalog/schema_mocks"
 ]
 
 [profile.bench]

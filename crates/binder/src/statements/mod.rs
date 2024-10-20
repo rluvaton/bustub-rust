@@ -11,3 +11,4 @@ pub use create::*;
 pub use delete::*;
 pub use insert::*;
 pub use select::*;
+pub(crate) use select::SelectStatementBuilder;

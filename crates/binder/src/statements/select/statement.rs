@@ -1,8 +1,7 @@
 use crate::expressions::{Expression, ExpressionTypeImpl};
 use crate::order_by::OrderBy;
-use crate::sql_parser_helper::ColumnDefExt;
+use crate::sql_parser_helper::SelectExt;
 use crate::statements::select::builder::SelectStatementBuilder;
-use crate::statements::select::select_ext::SelectExt;
 use crate::statements::select::values_ext::ValuesExt;
 use crate::statements::traits::Statement;
 use crate::statements::StatementTypeImpl;

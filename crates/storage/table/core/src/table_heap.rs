@@ -9,6 +9,7 @@ use rid::RID;
 use transaction::Transaction;
 use tuple::{Tuple, TupleMeta};
 use crate::table_iterator::TableIterator;
+use crate::table_page::LARGEST_TUPLE_SIZE_WITHOUT_OVERFLOW;
 use crate::TablePage;
 
 /// TableHeap represents a physical table on disk.
@@ -34,6 +35,7 @@ impl TableHeap {
         // TODO - return result here
         let mut guard = bpm.new_page(AccessType::default()).expect("Couldn't create a page for the table heap. Have you completed the buffer pool manager project?");
         let first_page_id = guard.get_page_id();
+        
         let first_page = guard.cast_mut::<TablePage>();
         first_page.init();
 
@@ -56,7 +58,12 @@ impl TableHeap {
     /// * `oid`:
     ///
     /// returns: Option<RID> the rid of the inserted tuple
-    pub fn insert_tuple(&self, meta: &TupleMeta, tuple: &Tuple, lock_mgr: Option<LockManager>, txn: Arc<Transaction>, oid: Option<TableOID>) -> Option<RID> {
+    pub fn insert_tuple(&self, meta: &TupleMeta, tuple: &Tuple, lock_mgr: &Option<Arc<LockManager>>, txn: &Arc<Transaction>, oid: Option<TableOID>) -> Option<RID> {
+        // Tuple size is too big
+        if tuple.get_length() as usize >= LARGEST_TUPLE_SIZE_WITHOUT_OVERFLOW {
+            return None;
+        }
+        
         let bpm = self.bpm.as_ref().unwrap();
         let oid = oid.unwrap_or(0);
 

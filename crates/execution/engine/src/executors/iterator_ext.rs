@@ -1,6 +1,6 @@
 use crate::context::ExecutorContext;
-use crate::executors::{Executor, ExecutorRef, FilterExecutor, LimitExecutor, ProjectionExecutor};
-use planner::{FilterPlan, LimitPlanNode, ProjectionPlanNode};
+use crate::executors::{Executor, ExecutorRef, FilterExecutor, InsertExecutor, LimitExecutor, ProjectionExecutor};
+use planner::{FilterPlan, InsertPlan, LimitPlanNode, ProjectionPlanNode};
 use std::sync::Arc;
 
 pub trait IteratorExt<'a> {
@@ -12,6 +12,9 @@ pub trait IteratorExt<'a> {
 
     #[must_use]
     fn limit_exec(self, plan: &'a LimitPlanNode, ctx: Arc<ExecutorContext<'a>>) -> ExecutorRef<'a>;
+
+    #[must_use]
+    fn insert_exec(self, plan: &'a InsertPlan, ctx: Arc<ExecutorContext<'a>>) -> ExecutorRef<'a>;
 }
 
 impl<'a> IteratorExt<'a> for ExecutorRef<'a> {
@@ -28,5 +31,10 @@ impl<'a> IteratorExt<'a> for ExecutorRef<'a> {
     #[inline]
     fn limit_exec(self, plan: &'a LimitPlanNode, ctx: Arc<ExecutorContext<'a>>) -> ExecutorRef<'a> {
         LimitExecutor::new(self, plan, ctx).into_ref()
+    }
+
+    #[inline]
+    fn insert_exec(self, plan: &'a InsertPlan, ctx: Arc<ExecutorContext<'a>>) -> ExecutorRef<'a> {
+        InsertExecutor::new(self, plan, ctx).into_ref()
     }
 }

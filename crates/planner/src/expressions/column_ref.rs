@@ -13,7 +13,7 @@ impl PlanExpression for ColumnRef {
             1 => {
                 // Projections, Filters, and other executors evaluating expressions with one single child will
                 // use this branch.
-                let child = children[0].clone();
+                let child = children[0];
                 let schema = child.get_output_schema();
 
                 // Before we can call `schema.GetColIdx`,  we need to ensure there's no duplicated column.

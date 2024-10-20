@@ -34,7 +34,7 @@ impl<'a> ProjectionExecutor<'a> {
 
 impl Debug for ProjectionExecutor<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("Projection").field("iter", &self.child_executor).finish()
+        f.debug_struct("Projection").field("child_executor", &self.child_executor).finish()
     }
 }
 
@@ -60,8 +60,7 @@ impl Iterator for ProjectionExecutor<'_>
 
     #[inline]
     fn size_hint(&self) -> (usize, Option<usize>) {
-        let (_, upper) = self.child_executor.size_hint();
-        (0, upper) // can't know a lower bound, due to the predicate
+        self.child_executor.size_hint()
     }
 }
 

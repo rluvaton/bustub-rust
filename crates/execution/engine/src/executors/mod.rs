@@ -8,6 +8,7 @@ mod projection;
 mod limit;
 mod values_executor;
 mod seq_scan;
+mod insert_executor;
 
 pub(crate) use traits::*;
 pub(crate) use filter::*;
@@ -17,4 +18,5 @@ pub(crate) use mock_seq_scan::*;
 pub(crate) use projection::*;
 pub(crate) use limit::*;
 pub(crate) use values_executor::*;
+pub(crate) use insert_executor::*;
 pub(crate) use seq_scan::*;

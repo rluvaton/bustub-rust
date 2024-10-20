@@ -29,17 +29,16 @@ impl Schema {
     /// # Arguments
     /// columns: columns that describe the schema's individual columns
     ///
-    pub fn new(columns: Vec<Column>) -> Self {
+    pub fn new(mut columns: Vec<Column>) -> Self {
         let mut tuple_is_inlined: bool = true;
         let mut uninlined_columns: Vec<u32> = vec![];
 
         let mut curr_offset: u32 = 0;
 
-        let self_columns = columns
-            .iter()
-            .cloned()
+        columns
+            .iter_mut()
             .enumerate()
-            .map(|(index, mut column)| {
+            .for_each(|(index, column)| {
                 // handle uninlined column
                 if !column.is_inlined() {
                     tuple_is_inlined = false;
@@ -49,18 +48,14 @@ impl Schema {
                 // set column offset
                 column.column_offset = curr_offset;
                 curr_offset += column.get_fixed_length();
-
-                // add column
-                column
-            })
-            .collect::<Vec<Column>>();
+            });
 
         Self {
             // set tuple length
             length: curr_offset,
             tuple_is_inlined,
             uninlined_columns,
-            columns: self_columns,
+            columns,
         }
     }
 
@@ -73,6 +68,16 @@ impl Schema {
         }
 
         Schema::new(columns)
+    }
+    
+    pub fn prefix_column_names(&self, prefix: &str) -> Self {
+        self.columns
+            .iter()
+            .map(|col| Column::create_new_name(
+                format!("{}.{}", prefix, col.get_name()),
+                col
+            ))
+            .into()
     }
 
     /// Return all the columns in the schema
@@ -101,7 +106,7 @@ impl Schema {
     ///
     /// returns: usize The index of a column with the given name, panic if not exists
     pub fn get_col_idx(&self, col_name: &str) -> usize {
-        self.try_get_col_idx(col_name).expect("Column must exist")
+        self.try_get_col_idx(col_name).expect(format!("Column {} must exist", col_name).as_str())
     }
 
 
