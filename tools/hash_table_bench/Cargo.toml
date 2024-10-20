@@ -13,7 +13,6 @@ tracy-client = { version = "0.17.3", default-features = false }
 
 pages = {path = "../../crates/storage/pages"}
 disk_storage = {path = "../../crates/storage/disk"}
-buffer_common = {path = "../../crates/buffer/common"}
 buffer_pool_manager = {path = "../../crates/buffer/manager"}
 
 extendible_hash_table = {path = "../../crates/hashing/extendible_hash_table"}

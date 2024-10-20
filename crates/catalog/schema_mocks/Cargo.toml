@@ -6,9 +6,7 @@ edition = "2021"
 [dependencies]
 generics = {path = "../../utils/generics"}
 data_types = {path = "../../data_types"}
-error_utils = {path = "../../utils/error_utils"}
 catalog_schema = {path = "../schema"}
-tuple = {path = "../../storage/table/tuple"}
 rid = {path = "../../rid"}
 
 strum = "0.26.3"
