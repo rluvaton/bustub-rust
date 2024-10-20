@@ -109,7 +109,7 @@ impl BustubInstance {
         let checkpoint_manager = Some(Arc::new(CheckpointManager::new(None, log_manager.clone().unwrap(), bpm.clone())));
 
         #[cfg(not(feature = "checkpoint_manager"))]
-        let mut checkpoint_mgr: Option<Arc<CheckpointManager>> = None;
+        let mut checkpoint_manager: Option<Arc<CheckpointManager>> = None;
 
 
         let catalog = Arc::new(Mutex::new(Catalog::new(Some(bpm.clone()), lock_manager.clone(), log_manager.clone())));
