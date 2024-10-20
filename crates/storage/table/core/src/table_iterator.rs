@@ -1,3 +1,4 @@
+use std::sync::Arc;
 use buffer_common::AccessType;
 use buffer_pool_manager::BufferPool;
 use pages::INVALID_PAGE_ID;
@@ -5,8 +6,8 @@ use rid::RID;
 use tuple::{Tuple, TupleMeta};
 use crate::{TableHeap, TablePage};
 
-pub struct TableIterator<'a> {
-    table_heap: &'a TableHeap,
+pub struct TableIterator {
+    table_heap: Arc<TableHeap>,
     rid: RID,
 
     // When creating table iterator, we will record the maximum RID that we should scan.
@@ -15,8 +16,8 @@ pub struct TableIterator<'a> {
     stop_at_rid: RID,
 }
 
-impl<'a> TableIterator<'a> {
-    pub(crate) fn new(table_heap: &'a TableHeap, rid: RID, stop_at_rid: RID) -> Self {
+impl TableIterator {
+    pub(crate) fn new(table_heap: Arc<TableHeap>, rid: RID, stop_at_rid: RID) -> Self {
         Self {
             table_heap,
             rid,
@@ -26,7 +27,7 @@ impl<'a> TableIterator<'a> {
 }
 
 
-impl Iterator for TableIterator<'_> {
+impl Iterator for TableIterator {
     type Item = (TupleMeta, Tuple);
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -34,7 +35,14 @@ impl Iterator for TableIterator<'_> {
             return None;
         }
 
+        // If reached the end, the rid is the same
+        if self.rid == self.stop_at_rid {
+            return None;
+        }
+        
         let item = self.table_heap.get_tuple(&self.rid);
+        
+        assert_eq!(item.0.is_deleted, false, "Tuple should not be deleted");
 
         let page_guard = self.table_heap.bpm.as_ref().expect("Must have BPM").fetch_page_read(self.rid.get_page_id(), AccessType::Unknown).expect("Must be able to fetch page");
         let page = page_guard.cast::<TablePage>();

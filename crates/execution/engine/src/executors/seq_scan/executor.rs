@@ -1,13 +1,11 @@
 use crate::context::ExecutorContext;
 use crate::executors::{Executor, ExecutorImpl, ExecutorItem, ExecutorMetadata};
 use catalog_schema::Schema;
-use catalog_schema_mocks::{MockDataIterator, MockTableName};
-use planner::{PlanNode, PlanType};
+use planner::{PlanNode, SeqScanPlanNode};
 use std::fmt;
 use std::fmt::Debug;
-use std::ops::Deref;
 use std::sync::Arc;
-use tuple::Tuple;
+use table::TableIterator;
 
 #[must_use = "iterators are lazy and do nothing unless consumed"]
 pub struct SeqScanExecutor<'a> {
@@ -17,24 +15,25 @@ pub struct SeqScanExecutor<'a> {
     // ----
 
     /** The plan node for the scan */
-    plan: &'a PlanType,
+    plan: &'a SeqScanPlanNode,
 
-    /** The cursor for the current mock scan */
-
-    iter: MockDataIterator,
+    iter: TableIterator,
 }
 
 impl<'a> SeqScanExecutor<'a> {
-    pub(crate) fn new(plan: &'a PlanType, ctx: Arc<ExecutorContext<'a>>) -> Self {
-        let mock_table_name: MockTableName = match &*plan {
-            PlanType::MockScan(s) => s.get_table().as_str().try_into().expect("Must be a valid mock table name"),
-            _ => unreachable!(),
-        };
-
+    pub(crate) fn new(plan: &'a SeqScanPlanNode, ctx: Arc<ExecutorContext<'a>>) -> Self {
+        let iter = ctx
+            .get_catalog()
+            .lock()
+            .get_table_by_oid(plan.get_table_oid())
+            .expect("Table must exists (if table is missing it should be stopped at the planner)")
+            .get_table_heap()
+            .iter();
+        
         Self {
             plan,
+            iter,
             ctx,
-            iter: mock_table_name.get_data_iter(),
         }
     }
 }
@@ -52,12 +51,12 @@ impl Iterator for SeqScanExecutor<'_>
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
-        let (values, rid) = self.iter.next()?;
+        // TODO - support predicate in seq scan
+        let (_, tuple) = self.iter.next()?;
+        
+        let rid = *tuple.get_rid();
 
-        Some((
-            Tuple::from_value(values, self.plan.get_output_schema().deref()),
-            rid
-        ))
+        Some((tuple, rid))
     }
 }
 

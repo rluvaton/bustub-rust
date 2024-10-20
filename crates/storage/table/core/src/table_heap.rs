@@ -166,7 +166,7 @@ impl TableHeap {
       * pipeline breaker, you may use `MakeEagerIterator` to test whether the update executor is implemented correctly.
       * There should be no difference between this function and `MakeEagerIterator` in project 4 if everything is
       * implemented correctly. */
-    pub fn iter(&self) -> TableIterator {
+    pub fn iter(self: Arc<Self>) -> TableIterator {
         // Lock get value and unlock
         let last_page_id = *self.last_page_id.lock();
 
@@ -176,12 +176,12 @@ impl TableHeap {
             page_guard.cast::<TablePage>().get_num_tuples()
         };
 
-        TableIterator::new(self, RID::new(self.first_page_id, 0), RID::new(last_page_id, num_tuples))
+        TableIterator::new(self.clone(), RID::new(self.first_page_id, 0), RID::new(last_page_id, num_tuples))
     }
 
     /** @return the iterator of this table. The iterator will stop at the last tuple at the time of iterating. */
-    pub fn eager_iter(&self) -> TableIterator {
-        TableIterator::new(self, RID::new(self.first_page_id, 0), RID::new(INVALID_PAGE_ID, 0))
+    pub fn eager_iter(self: Arc<Self>) -> TableIterator {
+        TableIterator::new(self.clone(), RID::new(self.first_page_id, 0), RID::new(INVALID_PAGE_ID, 0))
     }
 
     /** @return the id of the first page of this table */

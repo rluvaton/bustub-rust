@@ -1,6 +1,6 @@
 use crate::context::ExecutorContext;
 use crate::executors::iterator_ext::IteratorExt;
-use crate::executors::{Executor, ExecutorRef, MockScanExecutor, ValuesExecutor};
+use crate::executors::{Executor, ExecutorRef, MockScanExecutor, SeqScanExecutor, ValuesExecutor};
 use planner::{PlanNode, PlanType};
 use std::sync::Arc;
 
@@ -14,7 +14,10 @@ impl<'a> CreateExecutor<'a> for PlanType {
         //     p.create_executor(ctx)
         // })
         match self {
-            // PlanType::SeqScan(_) => {}
+            PlanType::SeqScan(plan) => {
+                assert_eq!(plan.get_children(), &[], "SeqScan must not have any children");
+                SeqScanExecutor::new(plan, ctx).into_ref()
+            }
             PlanType::Insert(plan) => {
                 let child = plan.get_child_plan().create_executor(ctx.clone());
 

@@ -133,7 +133,7 @@ impl TablePage {
     pub fn get_tuple(&self, rid: &RID) -> (TupleMeta, Tuple) {
         let tuple_id = rid.get_slot_num();
 
-        assert!(tuple_id < self.num_tuples as u32, "Tuple ID out of range");
+        assert!(tuple_id < self.num_tuples as u32, "Tuple ID ({tuple_id}) out of range 0 to {}", self.num_tuples);
         let (offset, size, meta) = unsafe {
             self.get_tuple_info(tuple_id as usize)
         };

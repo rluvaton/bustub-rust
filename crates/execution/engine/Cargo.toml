@@ -24,6 +24,7 @@ data_types = {path = "../../data_types"}
 expression = {path = "../expression"}
 
 error_utils = {path = "../../utils/error_utils"}
+table = {path = "../../storage/table/core"}
 tuple = {path = "../../storage/table/tuple"}
 rid = {path = "../../rid"}
 

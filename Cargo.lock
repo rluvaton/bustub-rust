@@ -621,6 +621,7 @@ dependencies = [
  "planner",
  "recovery_log_manager",
  "rid",
+ "table",
  "tracy-client",
  "transaction",
  "tuple",

@@ -68,4 +68,33 @@ mod tests {
 
         assert_eq!(select_result, expected_select_result);
     }
+
+    #[test]
+    fn should_select_from_manually_created_table_with_data() {
+        let mut instance = BustubInstance::in_memory(None);
+
+        // Create table
+        {
+            let sql = "CREATE TABLE books (id int);";
+
+            instance.execute_user_input(sql, &mut NoopWriter::default(), CheckOptions::default()).expect("Should execute");
+        }
+        
+        // Insert rows
+        {
+            let sql = "INSERT INTO books (id) VALUES (1), (15)";
+
+            instance.execute_single_insert_sql(sql, CheckOptions::default()).expect("Should insert");
+        }
+
+        let actual = instance.execute_single_select_sql("SELECT id from books;", CheckOptions::default()).expect("Should execute");
+
+        // TODO - the order is not guaranteed so we should assert eq without order
+        let expected = actual.create_with_same_schema(vec![
+            vec![Value::from(1)],
+            vec![Value::from(15)],
+        ]);
+
+        assert_eq!(actual, expected);
+    }
 }
