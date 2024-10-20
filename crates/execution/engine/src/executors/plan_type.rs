@@ -18,27 +18,27 @@ impl<'a> CreateExecutor<'a> for PlanType {
             // PlanType::Insert(_) => {}
             // PlanType::Delete(_) => {}
             // PlanType::Aggregation(_) => {}
-            PlanType::Filter(f) => {
-                let child = f.get_child_plan().create_executor(ctx.clone());
+            PlanType::Filter(plan) => {
+                let child = plan.get_child_plan().create_executor(ctx.clone());
 
-                child.filter_exec(f.clone(), ctx.clone())
+                child.filter_exec(plan, ctx.clone())
             },
             // PlanType::Values(_) => {}
-            PlanType::Projection(d) => {
-                let child = d.get_child_plan().create_executor(ctx.clone());
+            PlanType::Projection(plan) => {
+                let child = plan.get_child_plan().create_executor(ctx.clone());
 
-                child.projection_exec(d.clone(), ctx.clone())
+                child.projection_exec(plan, ctx.clone())
             }
-            PlanType::Limit(l) => {
-                let child = l.get_child_plan().create_executor(ctx.clone());
+            PlanType::Limit(plan) => {
+                let child = plan.get_child_plan().create_executor(ctx.clone());
 
-                child.limit_exec(l.clone(), ctx.clone())
+                child.limit_exec(plan, ctx.clone())
             }
-            PlanType::MockScan(_) => {
-                MockScanExecutor::new(&self, ctx).into_ref()
+            PlanType::MockScan(plan) => {
+                MockScanExecutor::new(plan, ctx).into_ref()
             },
-            PlanType::Values(p) => {
-                ValuesExecutor::new(p, ctx).into_ref()
+            PlanType::Values(plan) => {
+                ValuesExecutor::new(plan, ctx).into_ref()
             },
             // PlanType::Window(_) => {}
             _ => unimplemented!("No executor found for the requested plan type {:#?}", self)

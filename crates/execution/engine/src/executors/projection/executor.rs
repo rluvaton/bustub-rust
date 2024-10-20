@@ -16,14 +16,14 @@ pub struct ProjectionExecutor<'a> {
     // ----
 
     /** The filter plan node to be executed */
-    plan: ProjectionPlanNode,
+    plan: &'a ProjectionPlanNode,
 
     /** The child executor from which tuples are obtained */
     child_executor: ExecutorRef<'a>,
 }
 
 impl<'a> ProjectionExecutor<'a> {
-    pub(crate) fn new(child_executor: ExecutorRef<'a>, plan: ProjectionPlanNode, ctx: Arc<ExecutorContext<'a>>) -> Self {
+    pub(crate) fn new(child_executor: ExecutorRef<'a>, plan: &'a ProjectionPlanNode, ctx: Arc<ExecutorContext<'a>>) -> Self {
         Self {
             plan,
             child_executor,

@@ -14,7 +14,7 @@ pub struct LimitExecutor<'a> {
     // ----
 
     /** The filter plan node to be executed */
-    plan: LimitPlanNode,
+    plan: &'a LimitPlanNode,
 
     /** The child executor from which tuples are obtained */
     child_executor: ExecutorRef<'a>,
@@ -23,7 +23,7 @@ pub struct LimitExecutor<'a> {
 }
 
 impl<'a> LimitExecutor<'a> {
-    pub(crate) fn new(child_executor: ExecutorRef<'a>, plan: LimitPlanNode, ctx: Arc<ExecutorContext<'a>>) -> Self {
+    pub(crate) fn new(child_executor: ExecutorRef<'a>, plan: &'a LimitPlanNode, ctx: Arc<ExecutorContext<'a>>) -> Self {
         Self {
             remaining: plan.get_limit(),
             plan,

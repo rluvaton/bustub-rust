@@ -19,14 +19,14 @@ pub struct FilterExecutor<'a> {
     // ----
 
     /** The filter plan node to be executed */
-    plan: FilterPlan,
+    plan: &'a FilterPlan,
 
     /** The child executor from which tuples are obtained */
     child_executor: ExecutorRef<'a>,
 }
 
 impl<'a> FilterExecutor<'a> {
-    pub(crate) fn new(child_executor: ExecutorRef<'a>, plan: FilterPlan, ctx: Arc<ExecutorContext<'a>>) -> Self {
+    pub(crate) fn new(child_executor: ExecutorRef<'a>, plan: &'a FilterPlan, ctx: Arc<ExecutorContext<'a>>) -> Self {
         Self {
             plan,
             child_executor,

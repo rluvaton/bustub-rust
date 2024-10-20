@@ -2,7 +2,7 @@ use crate::context::ExecutorContext;
 use crate::executors::{Executor, ExecutorImpl, ExecutorItem, ExecutorMetadata};
 use catalog_schema::Schema;
 use catalog_schema_mocks::{MockDataIterator, MockTableName};
-use planner::{PlanNode, PlanType};
+use planner::{MockScanPlanNode, PlanNode};
 use std::fmt;
 use std::fmt::Debug;
 use std::ops::Deref;
@@ -17,7 +17,7 @@ pub struct MockScanExecutor<'a> {
     // ----
 
     /** The plan node for the scan */
-    plan: &'a PlanType,
+    plan: &'a MockScanPlanNode,
 
     /** The cursor for the current mock scan */
 
@@ -25,11 +25,8 @@ pub struct MockScanExecutor<'a> {
 }
 
 impl<'a> MockScanExecutor<'a> {
-    pub(crate) fn new(plan: &'a PlanType, ctx: Arc<ExecutorContext<'a>>) -> Self {
-        let mock_table_name: MockTableName = match &*plan {
-            PlanType::MockScan(s) => s.get_table().as_str().try_into().expect("Must be a valid mock table name"),
-            _ => unreachable!(),
-        };
+    pub(crate) fn new(plan: &'a MockScanPlanNode, ctx: Arc<ExecutorContext<'a>>) -> Self {
+        let mock_table_name: MockTableName = plan.get_table().as_str().try_into().expect("Must be a valid mock table name");
 
         Self {
             plan,
