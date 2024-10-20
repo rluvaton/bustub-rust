@@ -23,7 +23,6 @@ data_types = {path = "../../data_types"}
 expression = {path = "../expression"}
 
 error_utils = {path = "../../utils/error_utils"}
-anyhow = "1.0.89"
 tuple = {path = "../../storage/table/tuple"}
 rid = {path = "../../rid"}
 
