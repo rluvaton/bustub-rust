@@ -5,6 +5,8 @@ use crate::try_from_ast_error::{ParseASTError, ParseASTResult};
 use crate::Binder;
 use std::fmt::Debug;
 use std::sync::Arc;
+use sqlparser::ast::Ident;
+use catalog_schema::Column;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct InsertStatement {
@@ -27,6 +29,14 @@ impl InsertStatement {
             _ => panic!("Invalid table ref in insert")
         }
     }
+    
+    fn is_same_columns(columns: &[Ident], schema_columns: &[Column]) -> bool {
+        schema_columns.iter().all(|col| {
+            let col_name = col.get_name();
+            
+            columns.iter().any(|query_col| query_col.to_string() == col_name.as_str())
+        })
+    }
 }
 
 impl Into<StatementTypeImpl> for InsertStatement {
@@ -39,15 +49,15 @@ impl Statement for InsertStatement {
     type ASTStatement = sqlparser::ast::Insert;
 
     fn try_parse_ast<'a>(ast: &Self::ASTStatement, binder: &'a Binder) -> ParseASTResult<Self> {
-        if !ast.columns.is_empty() {
-            return Err(ParseASTError::Unimplemented("insert only supports all columns, don't specify columns".to_string()))
-        }
-
         let table_name = ast.table_name.to_string();
         let table =  BaseTableRef::try_parse(table_name, ast.table_alias.as_ref().map(|alias| alias.to_string()), binder)?;
 
         if table.table.starts_with("__") {
             return Err(ParseASTError::FailedParsing(format!("Invalid table to insert: {}", table.table)));
+        }
+        
+        if !InsertStatement::is_same_columns(ast.columns.as_slice(), table.schema.get_columns().as_slice()) {
+            return Err(ParseASTError::Unimplemented("insert only supports all columns, don't specify columns".to_string()))
         }
 
         let select = ast.source.as_ref().ok_or(ParseASTError::FailedParsing("Must have source".to_string()))?;
