@@ -14,21 +14,10 @@ mod tests {
 
         instance.execute_user_input(sql, &mut NoopWriter::default(), CheckOptions::default()).expect("Should execute");
 
-    }
+        let select_result = instance.execute_single_select_sql("SELECT id from books;", CheckOptions::default()).expect("Should execute");
 
-    #[test]
-    fn should_select_with_column_constant_filter() {
-        let mut instance = BustubInstance::in_memory(None);
-        instance.generate_mock_table();
+        let expected_select_result = select_result.create_with_same_schema(vec![]);
 
-        let sql = format!("SELECT number from {} where number = 1", MockTableName::Table123);
-
-        let actual = instance.execute_single_select_sql(sql.as_str(), CheckOptions::default()).expect("Should execute");
-
-        let expected = actual.create_with_same_schema(vec![
-            vec![Value::from(1)],
-        ]);
-
-        assert_eq!(actual, expected)
+        assert_eq!(select_result, expected_select_result);
     }
 }
