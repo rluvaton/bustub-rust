@@ -15,7 +15,11 @@ impl<'a> CreateExecutor<'a> for PlanType {
         // })
         match self {
             // PlanType::SeqScan(_) => {}
-            // PlanType::Insert(_) => {}
+            PlanType::Insert(plan) => {
+                let child = plan.get_child_plan().create_executor(ctx.clone());
+
+                child.insert_exec(plan, ctx.clone())
+            }
             // PlanType::Delete(_) => {}
             // PlanType::Aggregation(_) => {}
             PlanType::Filter(plan) => {
