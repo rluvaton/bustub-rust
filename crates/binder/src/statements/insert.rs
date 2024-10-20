@@ -8,7 +8,6 @@ use catalog_schema::Column;
 use sqlparser::ast::Ident;
 use std::fmt::Debug;
 use std::rc::Rc;
-use std::sync::Arc;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct InsertStatement {
