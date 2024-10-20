@@ -14,3 +14,20 @@ pub struct TupleMeta {
     /// marks whether this tuple is marked removed from table heap.
     pub is_deleted: bool,
 }
+
+impl TupleMeta {
+    pub fn new(ts: Timestamp, is_deleted: bool) -> Self {
+        Self {
+            ts,
+            is_deleted
+        }
+    }
+    
+    // Useful for tests
+    pub fn invalid() -> Self {
+        Self {
+            ts: 0,
+            is_deleted: false,
+        }
+    }
+}

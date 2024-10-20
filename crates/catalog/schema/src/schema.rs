@@ -29,17 +29,16 @@ impl Schema {
     /// # Arguments
     /// columns: columns that describe the schema's individual columns
     ///
-    pub fn new(columns: Vec<Column>) -> Self {
+    pub fn new(mut columns: Vec<Column>) -> Self {
         let mut tuple_is_inlined: bool = true;
         let mut uninlined_columns: Vec<u32> = vec![];
 
         let mut curr_offset: u32 = 0;
 
-        let self_columns = columns
-            .iter()
-            .cloned()
+        columns
+            .iter_mut()
             .enumerate()
-            .map(|(index, mut column)| {
+            .for_each(|(index, column)| {
                 // handle uninlined column
                 if !column.is_inlined() {
                     tuple_is_inlined = false;
@@ -49,18 +48,14 @@ impl Schema {
                 // set column offset
                 column.column_offset = curr_offset;
                 curr_offset += column.get_fixed_length();
-
-                // add column
-                column
-            })
-            .collect::<Vec<Column>>();
+            });
 
         Self {
             // set tuple length
             length: curr_offset,
             tuple_is_inlined,
             uninlined_columns,
-            columns: self_columns,
+            columns,
         }
     }
 
