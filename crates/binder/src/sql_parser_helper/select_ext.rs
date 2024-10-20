@@ -1,12 +1,13 @@
-use crate::expressions::{AliasExpr, Expression, ExpressionTypeImpl, StarExpr};
-use crate::statements::select::builder::SelectStatementBuilder;
+use crate::expressions::{Expression, ExpressionTypeImpl};
+use crate::sql_parser_helper::SelectItemExt;
+use crate::statements::SelectStatementBuilder;
 use crate::table_ref::TableReferenceTypeImpl;
 use crate::try_from_ast_error::{ParseASTError, ParseASTResult};
 use crate::Binder;
-use sqlparser::ast::{Distinct, GroupByExpr, RenameSelectItem, SelectItem};
+use sqlparser::ast::{Distinct, GroupByExpr};
 use std::rc::Rc;
 
-pub(super) trait SelectExt {
+pub(crate) trait SelectExt {
     fn add_select_to_select_builder(&self, builder: SelectStatementBuilder, binder: &Binder) -> ParseASTResult<SelectStatementBuilder>;
 }
 
@@ -39,30 +40,7 @@ impl SelectExt for sqlparser::ast::Select {
         {
             let select_list: ParseASTResult<Vec<ExpressionTypeImpl>> = self.projection
                 .iter()
-                .map(|select_item| {
-                    let expr = match select_item {
-                        SelectItem::UnnamedExpr(expr) => ExpressionTypeImpl::try_parse_from_expr(expr, binder)?,
-                        SelectItem::ExprWithAlias { expr, alias } => {
-                            AliasExpr::new(
-                                alias.to_string(),
-                                Box::new(ExpressionTypeImpl::try_parse_from_expr(expr, binder)?)
-                            ).into()
-                        },
-                        SelectItem::Wildcard(opt) => {
-                            if let Some(rename) = &opt.opt_rename {
-                                match rename {
-                                    RenameSelectItem::Single(alias) => AliasExpr::new(alias.alias.to_string(), Box::new(StarExpr::new().into())).into(),
-                                    RenameSelectItem::Multiple(_) => return Err(ParseASTError::Unimplemented("Wildcard with multiple rename is not supported".to_string()))
-                                }
-                            } else {
-                                StarExpr::new().into()
-                            }
-                        }
-                        SelectItem::QualifiedWildcard(_, _) => return Err(ParseASTError::Unimplemented("QualifiedWildcard is not supported".to_string())),
-                    };
-
-                    Ok(expr)
-                })
+                .map(|select_item| select_item.parse(binder))
                 .collect();
 
             builder = builder.with_select_list(select_list?);

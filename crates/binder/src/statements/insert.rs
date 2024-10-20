@@ -1,25 +1,30 @@
+use crate::sql_parser_helper::SelectItemExt;
 use crate::statements::traits::Statement;
 use crate::statements::{SelectStatement, StatementTypeImpl};
 use crate::table_ref::{BaseTableRef, TableReferenceTypeImpl};
 use crate::try_from_ast_error::{ParseASTError, ParseASTResult};
-use crate::Binder;
-use std::fmt::Debug;
-use std::sync::Arc;
-use sqlparser::ast::Ident;
+use crate::{Binder, ExpressionTypeImpl};
 use catalog_schema::Column;
+use sqlparser::ast::Ident;
+use std::fmt::Debug;
+use std::rc::Rc;
+use std::sync::Arc;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct InsertStatement {
-    table: Arc<TableReferenceTypeImpl>,
+    table: Rc<TableReferenceTypeImpl>,
     pub select: SelectStatement,
+    
+    returning: Vec<ExpressionTypeImpl>
 }
 
 impl InsertStatement {
-    pub fn new(table: Arc<TableReferenceTypeImpl>, select: SelectStatement) -> Self {
+    pub fn new(table: Rc<TableReferenceTypeImpl>, select: SelectStatement, returning: Vec<ExpressionTypeImpl>) -> Self {
         assert!(matches!(*table, TableReferenceTypeImpl::BaseTable(_)), "table reference in insert must be base table");
         Self {
             table,
-            select
+            select,
+            returning
         }
     }
 
@@ -28,6 +33,10 @@ impl InsertStatement {
             TableReferenceTypeImpl::BaseTable(t) => t,
             _ => panic!("Invalid table ref in insert")
         }
+    }
+
+    pub fn get_returning(&self) -> &[ExpressionTypeImpl] {
+        self.returning.as_slice()
     }
     
     fn is_same_columns(columns: &[Ident], schema_columns: &[Column]) -> bool {
@@ -57,14 +66,32 @@ impl Statement for InsertStatement {
         }
         
         if !InsertStatement::is_same_columns(ast.columns.as_slice(), table.schema.get_columns().as_slice()) {
+            // When we support this we should change the table context for returning, right?
             return Err(ParseASTError::Unimplemented("insert only supports all columns, don't specify columns".to_string()))
         }
 
         let select = ast.source.as_ref().ok_or(ParseASTError::FailedParsing("Must have source".to_string()))?;
 
         let select_statement = SelectStatement::try_parse_ast(select, binder)?;
+        
+        let table: Rc<TableReferenceTypeImpl> = Rc::new(table.into());
+        
+        let returning = if let Some(returning) = &ast.returning {
 
-        Ok(InsertStatement::new(Arc::new(TableReferenceTypeImpl::BaseTable(table)), select_statement))
+            // This is the current context for the returning
+            
+            let ctx_guard = binder.new_context();
+
+            ctx_guard.context.lock().scope.replace(table.clone());
+            
+            let parse_returning: ParseASTResult<Vec<ExpressionTypeImpl>> = returning.iter().map(|item| item.parse(binder)).collect();
+            
+            parse_returning?
+        } else {
+            vec![]
+        };
+
+        Ok(InsertStatement::new(table, select_statement, returning))
     }
 
 

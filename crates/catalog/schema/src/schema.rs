@@ -69,6 +69,16 @@ impl Schema {
 
         Schema::new(columns)
     }
+    
+    pub fn prefix_column_names(&self, prefix: &str) -> Self {
+        self.columns
+            .iter()
+            .map(|col| Column::create_new_name(
+                format!("{}.{}", prefix, col.get_name()),
+                col
+            ))
+            .into()
+    }
 
     /// Return all the columns in the schema
     pub fn get_columns(&self) -> &Vec<Column> {
@@ -96,7 +106,7 @@ impl Schema {
     ///
     /// returns: usize The index of a column with the given name, panic if not exists
     pub fn get_col_idx(&self, col_name: &str) -> usize {
-        self.try_get_col_idx(col_name).expect("Column must exist")
+        self.try_get_col_idx(col_name).expect(format!("Column {} must exist", col_name).as_str())
     }
 
 

@@ -20,19 +20,18 @@ pub struct InsertExecutor<'a> {
     // ----
 
     plan: &'a InsertPlan,
-    
+
     dest_table_info: Arc<TableInfo>,
 }
 
 impl<'a> InsertExecutor<'a> {
     pub(crate) fn new(child_executor: ExecutorRef<'a>, plan: &'a InsertPlan, ctx: Arc<ExecutorContext<'a>>) -> Self {
-
         let item = {
             let c = ctx.get_catalog().lock();
 
             c.get_table_by_oid(plan.get_table_oid()).expect("Table must exists (otherwise it should be blocked at the planner)")
         };
-        
+
         Self {
             child_executor,
             plan,
@@ -54,9 +53,8 @@ impl Iterator for InsertExecutor<'_>
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
-        let (tuple, _) = self.child_executor.next()?;
-        // TODO - if no returning than don't push anything upward?
-        
+        let (mut tuple, _) = self.child_executor.next()?;
+
         let rid = self.dest_table_info.get_table_heap().insert_tuple(
             &TupleMeta::new(
                 get_timestamp(),
@@ -65,14 +63,12 @@ impl Iterator for InsertExecutor<'_>
             &tuple,
             self.ctx.get_lock_manager(),
             self.ctx.get_transaction(),
-            Some(self.plan.get_table_oid())
-        );
+            Some(self.plan.get_table_oid()),
+        ).expect("Tuple is too big to fit in a page (this should be blocked in the planner)");
 
-        if let Some(rid) = rid {
-            Some((tuple, rid))
-        } else {
-            panic!("Does not have enough space, is it ok?");
-        }
+        tuple.set_rid(rid);
+
+        Some((tuple, rid))
     }
 
     #[inline]

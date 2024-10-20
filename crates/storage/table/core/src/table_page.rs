@@ -16,6 +16,9 @@ const _: () = {
     assert!(size_of::<TablePage>() == PAGE_SIZE);
 };
 
+// This is the maximum length of a tuple that can be inserted in a table page when the table page is empty
+pub const LARGEST_TUPLE_SIZE_WITHOUT_OVERFLOW: usize = TABLE_PAGE_DATA_WITHOUT_HEADER - TUPLE_INFO_SIZE;
+
 
 /// ```plain
 /// Slotted page format:
@@ -239,7 +242,7 @@ impl TablePage {
     /// Assert the following guarantees
     /// 2. The `offset` is after the last tuple location
     fn assert_valid_tuple_data_before_raw_access(&self, offset: usize) {
-        assert!(offset > self.num_tuples as usize * TUPLE_INFO_SIZE, "offset must not be in the tuples info region");
+        assert!(offset >= self.num_tuples as usize * TUPLE_INFO_SIZE, "offset must not be in the tuples info region");
     }
 
     /// Get tuple data slice

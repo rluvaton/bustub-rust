@@ -7,7 +7,7 @@ use std::fmt::Debug;
 use std::rc::Rc;
 
 #[derive(Debug, PartialEq)]
-pub(super) struct SelectStatementBuilder {
+pub(crate) struct SelectStatementBuilder {
     /// Bound FROM clause.
     table: Option<Rc<TableReferenceTypeImpl>>,
 
@@ -42,31 +42,31 @@ pub(super) struct SelectStatementBuilder {
 
 impl SelectStatementBuilder {
 
-    pub(super) fn with_table(mut self, table: Rc<TableReferenceTypeImpl>) -> Self {
+    pub(crate) fn with_table(mut self, table: Rc<TableReferenceTypeImpl>) -> Self {
         self.table.replace(table);
 
         self
     }
 
-    pub(super) fn with_select_list(mut self, select_list: Vec<ExpressionTypeImpl>) -> Self {
+    pub(crate) fn with_select_list(mut self, select_list: Vec<ExpressionTypeImpl>) -> Self {
         self.select_list.replace(select_list);
 
         self
     }
 
-    pub(super) fn with_where_exp(mut self, where_exp: ExpressionTypeImpl) -> Self {
+    pub(crate) fn with_where_exp(mut self, where_exp: ExpressionTypeImpl) -> Self {
         self.where_exp.replace(where_exp);
 
         self
     }
 
-    pub(super) fn with_group_by(mut self, group_by: Vec<ExpressionTypeImpl>) -> Self {
+    pub(crate) fn with_group_by(mut self, group_by: Vec<ExpressionTypeImpl>) -> Self {
         self.group_by = group_by;
 
         self
     }
 
-    pub(super) fn with_having(mut self, having: ExpressionTypeImpl) -> Self {
+    pub(crate) fn with_having(mut self, having: ExpressionTypeImpl) -> Self {
         self.having.replace(having);
 
         self
@@ -96,7 +96,7 @@ impl SelectStatementBuilder {
         self
     }
 
-    pub(super) fn with_is_distinct(mut self, is_distinct: bool) -> Self {
+    pub(crate) fn with_is_distinct(mut self, is_distinct: bool) -> Self {
         self.is_distinct = is_distinct;
 
         self

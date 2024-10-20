@@ -33,12 +33,35 @@ mod tests {
             instance.execute_user_input(sql, &mut NoopWriter::default(), CheckOptions::default()).expect("Should execute");
         }
 
-        let sql = "INSERT INTO books (id) VALUES (1) RETURNING id;";
+        let sql = "INSERT INTO books (id) VALUES (1), (15) RETURNING id;";
 
         let actual = instance.execute_single_insert_sql(sql, CheckOptions::default()).expect("Should insert");
 
         let expected = actual.create_with_same_schema(vec![
             vec![Value::from(1)],
+            vec![Value::from(15)],
+        ]);
+
+        assert_eq!(actual, expected)
+    }
+
+    #[test]
+    fn should_insert_to_newly_created_table_with_returning_star() {
+        let mut instance = BustubInstance::in_memory(None);
+
+        {
+            let sql = "CREATE TABLE books (id int);";
+
+            instance.execute_user_input(sql, &mut NoopWriter::default(), CheckOptions::default()).expect("Should execute");
+        }
+
+        let sql = "INSERT INTO books (id) VALUES (1), (15) RETURNING *;";
+
+        let actual = instance.execute_single_insert_sql(sql, CheckOptions::default()).expect("Should insert");
+
+        let expected = actual.create_with_same_schema(vec![
+            vec![Value::from(1)],
+            vec![Value::from(15)],
         ]);
 
         assert_eq!(actual, expected)

@@ -57,6 +57,8 @@ impl Iterator for ValuesExecutor<'_>
             .iter()
             .map(|col| col.evaluate(&self.dummy_tuple, &self.dummy_schema))
             .collect::<Vec<_>>();
+        
+        self.index += 1;
 
         Some((
             Tuple::from_value(values, &*self.plan.get_output_schema()),

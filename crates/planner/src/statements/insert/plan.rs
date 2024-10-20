@@ -1,10 +1,12 @@
 use crate::plan_nodes::{PlanNode, PlanType};
 use crate::traits::Plan;
-use crate::{InsertPlan, Planner};
+use crate::{InsertPlan, Planner, ProjectionPlanNode};
 use binder::InsertStatement;
 use std::sync::Arc;
 use catalog_schema::{Column, Schema};
 use data_types::DBTypeId;
+use expression::ExpressionRef;
+use crate::expressions::PlanExpression;
 
 impl Plan for InsertStatement {
     fn plan<'a>(&self, planner: &'a Planner<'a>)-> PlanType {
@@ -18,14 +20,42 @@ impl Plan for InsertStatement {
             panic!("table schema mismatch");
         }
 
-        let insert_schema = Schema::new(vec![
-            Column::new_fixed_size("__bustub_internal.insert_rows".to_string(), DBTypeId::INT)
-        ]);
+        let has_returning = !self.get_returning().is_empty();
 
-        InsertPlan::new(
-            Arc::new(insert_schema),
+        let insert_schema = if has_returning {
+            // TODO - fix this, we should not do this!
+            Arc::new(self.get_table().schema.prefix_column_names(self.get_table().table.as_str()))
+        } else {
+            Arc::new(Schema::new(vec![
+                // TODO - use this
+                Column::new_fixed_size("__bustub_internal.insert_rows".to_string(), DBTypeId::INT)
+            ]))
+        };
+
+        let mut plan = InsertPlan::new(
+            insert_schema,
             select,
-            self.get_table().oid
-        ).into()
+            self.get_table().oid,
+        ).into();
+        
+        if has_returning {
+            let select_list_children = vec![&plan];
+            
+            let (column_names, exprs): (Vec<String>, Vec<ExpressionRef>) = self.get_returning()
+                .iter()
+                .map(|item| item.plan(select_list_children.as_slice(), planner))
+                .unzip();
+
+            plan = ProjectionPlanNode::new(
+                Arc::new(ProjectionPlanNode::rename_schema(
+                    ProjectionPlanNode::infer_projection_schema(exprs.as_slice()),
+                    column_names.as_slice(),
+                )),
+                exprs,
+                plan,
+            ).into()
+        }
+
+        plan
     }
 }
