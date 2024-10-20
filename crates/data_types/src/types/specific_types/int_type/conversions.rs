@@ -1,4 +1,4 @@
-use crate::types::errors::NumericConversionError;
+use crate::types::errors::{InnerFromStringConversionError, NumericConversionError};
 use crate::{return_error_on_out_of_range, BigIntType, BigIntUnderlyingType, BooleanType, ComparisonDBTypeTrait, ConversionDBTypeTrait, DBTypeId, DBTypeIdImpl, DecimalType, DecimalUnderlyingType, IntType, IntUnderlyingType, SmallIntType, SmallIntUnderlyingType, TimestampType, TinyIntType, TinyIntUnderlyingType, Value, VarcharType};
 use error_utils::anyhow::anyhow;
 use error_utils::ToAnyhowResult;
@@ -95,6 +95,19 @@ impl From<&IntType> for VarcharType {
         }
 
         VarcharType::from(v.0.to_string())
+    }
+}
+
+impl TryFrom<&str> for IntType {
+    type Error = InnerFromStringConversionError;
+
+    fn try_from(v: &str) -> Result<IntType, Self::Error> {
+        v.parse::<IntUnderlyingType>()
+            .map(|value| IntType::from(value))
+            .map_err(|_| InnerFromStringConversionError::UnableToConvert {
+                value: v.to_string(),
+                dest_type: DBTypeId::INT,
+            })
     }
 }
 
