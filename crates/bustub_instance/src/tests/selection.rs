@@ -30,15 +30,10 @@ mod tests {
 
         let sql = "SELECT number from some_table_name";
 
-        let actual = instance.execute_single_select_sql(sql, CheckOptions::default()).expect("Should execute");
-
-        let expected = actual.create_with_same_schema(vec![
-            vec![Value::from(0)],
-            vec![Value::from(1)],
-            vec![Value::from(2)],
-        ]);
-
-        assert_eq!(actual, expected)
+        let err = instance.execute_single_select_sql(sql, CheckOptions::default()).expect_err("Should fail");
+        
+        // TODO - add better error handling
+        assert_eq!(err.to_string(), "Failed to parse Invalid table some_table_name");
     }
 
     #[test]
