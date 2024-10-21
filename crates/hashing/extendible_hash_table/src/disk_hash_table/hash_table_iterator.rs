@@ -22,11 +22,11 @@ where
     hash_table: &'a mut DiskHashTable<BUCKET_MAX_SIZE, Key, Value, KeyComparator, KeyHasherImpl>,
 
     header_iterator_state: HeaderIterState,
-    
+
     // The first item is the directory page id (last value of the header iterator state)
     // and the second value is the directory iterator state
     directory_iterator_state: Option<(PageId, DirectoryIterState)>,
-    
+
     // The first item is the Bucket page id (last value of the directory iterator state)
     // and the second value is the bucket iterator state
     bucket_iterator_state: Option<(PageId, BucketPageIterState)>,
@@ -122,7 +122,6 @@ where
         }
     }
 
-
     fn resume_from_header_iterator_state(&mut self, header_iterator_state: HeaderIterState) -> Option<(PageId, DirectoryIterState)> {
         let header_page_guard = self.hash_table.bpm.fetch_page_read(
             self.hash_table.header_page_id,
@@ -174,7 +173,7 @@ where
             // If none, then the current bucket iterator finished, and we need to move to the next bucket
         }
 
-        
+
         if let Some((directory_page_id, directory_iterator_state)) = self.directory_iterator_state {
             // Go over all directory buckets until finding the next bucket with value
             while let Some(next_bucket) = self.resume_from_directory_iterator_state(directory_page_id, directory_iterator_state) {
@@ -188,13 +187,6 @@ where
             // If here, then the current directory page iterator finished
         }
 
-        let have_more = self.resume_from_header_iterator_state(self.header_iterator_state);
-
-        if have_more.is_none() {
-            // Finished
-            return None;
-        }
-
         while let Some((directory_page_id, directory_iterator_state)) = self.resume_from_header_iterator_state(self.header_iterator_state) {
             while let Some(next_bucket) = self.resume_from_directory_iterator_state(directory_page_id, directory_iterator_state) {
                 let next_entry = self.resume_from_bucket_iterator_state(next_bucket.0, next_bucket.1);
@@ -206,5 +198,144 @@ where
         }
 
         None
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{bucket_array_size, DiskHashTable};
+    use buffer_pool_manager::BufferPoolManager;
+    use common::{Comparator, OrdComparator, PageKey, PageValue, U64Comparator};
+    use disk_storage::DiskManagerUnlimitedMemory;
+    use generics::Shuffle;
+    use hashing_common::{DefaultKeyHasher, KeyHasher, U64IdentityKeyHasher};
+    use pages::PAGE_SIZE;
+    use rand::seq::SliceRandom;
+    use rand::{thread_rng, Rng, SeedableRng};
+    use rand_chacha::ChaChaRng;
+    use std::collections::HashSet;
+    use std::sync::atomic::{AtomicBool, Ordering};
+    use std::sync::Arc;
+    use std::sync::Barrier;
+    use std::thread;
+    use crate::errors::InsertionError;
+
+    type TestKey = u32;
+    type TestValue = u64;
+
+    fn create_extendible_hash_table(pool_size: usize) -> DiskHashTable<{ bucket_array_size::<TestKey, TestValue>() }, TestKey, TestValue, OrdComparator<TestKey>, DefaultKeyHasher> {
+        let bpm = BufferPoolManager::builder()
+            .with_pool_size(pool_size)
+            .with_disk_manager(DiskManagerUnlimitedMemory::new())
+            .with_lru_k_eviction_policy(2)
+            .build_arc();
+
+        DiskHashTable::new(
+            "temp".to_string(),
+            bpm,
+            OrdComparator::default(),
+            None,
+            None,
+            None,
+        ).expect("Should be able to create hash table")
+    }
+
+    #[test]
+    fn should_get_all_entries_in_iterator() {
+        let mut hash_table = create_extendible_hash_table(1000);
+
+        // Having enough keys so a split would happen
+        let total = 10;
+        
+        hash_table.with_header_page(|header_page| {
+            header_page.verify_empty();
+        });
+
+        hash_table.verify_integrity(false);
+
+        let mut entries = vec![];
+
+        for i in 0..total {
+            let (key, value) = (i as TestKey, (total * 10 + i) as TestValue);
+
+            hash_table.insert(&key, &value, None).expect("Should insert");
+
+            entries.push((key, value));
+        }
+
+        let mut found_entries = hash_table.iter().collect::<Vec<(TestKey, TestValue)>>();
+
+        // Sort both entries so we can compare
+        entries.sort();
+        found_entries.sort();
+
+        assert_eq!(entries, found_entries);
+    }
+
+    #[test]
+    fn should_get_all_entries_in_iterator_large_index() {
+        let mut hash_table = create_extendible_hash_table(1000);
+
+        // Having enough keys so a split would happen
+        let total = (PAGE_SIZE * 100) as i64;
+
+        let mut rng = thread_rng();
+        let one_percent = total / 100;
+
+        hash_table.with_header_page(|header_page| {
+            header_page.verify_empty();
+        });
+
+        hash_table.verify_integrity(false);
+
+        let mut entries = vec![];
+
+        println!("Inserting {} entries", total);
+
+        // Retry to make sure more than 1 bucket is full
+        let mut bucket_is_full_retries = 100;
+
+        for i in 0..total {
+            let (key, value) = rng.gen();
+
+            if i % (10 * one_percent) == 0 {
+                println!("Inserted {}%", i / one_percent);
+            }
+
+            let insert_result = hash_table.insert(&key, &value, None);
+
+            match insert_result {
+                Ok(_) => {
+                    entries.push((key, value));
+                    continue;
+                }
+                Err(err) => {
+                    match err {
+                        // We will generate a different key - TODO - reset `i` by 1 
+                        InsertionError::KeyAlreadyExists => continue,
+
+                        InsertionError::ReachedSplitRetryLimit(_) | InsertionError::BufferPoolError(_) => panic!("Unexpected error {:?}", err),
+                        InsertionError::BucketIsFull => {
+                            // If bucket is full
+                            if bucket_is_full_retries == 0 {
+                                break;
+                            }
+
+                            bucket_is_full_retries -= 1;
+                        }
+                    }
+                }
+            }
+        }
+
+        println!("All entries inserted");
+
+        let mut found_entries = hash_table.iter().collect::<Vec<(TestKey, TestValue)>>();
+
+        // Sort both entries so we can compare
+        entries.sort();
+        found_entries.sort();
+
+        assert_eq!(entries, found_entries);
     }
 }
