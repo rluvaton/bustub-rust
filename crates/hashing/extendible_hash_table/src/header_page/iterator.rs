@@ -21,7 +21,7 @@ impl<'a> HeaderIter<'a> {
             },
         }
     }
-    
+
     pub(crate) fn with_state(page: &'a HeaderPage, state: HeaderIterState) -> HeaderIter<'a> {
         Self {
             page,
