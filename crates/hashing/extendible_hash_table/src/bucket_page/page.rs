@@ -1,7 +1,7 @@
 use super::errors::InsertionErrors;
+use comfy_table::Table;
 use common::{Comparator, OrdComparator, PageKey, PageValue};
 use pages::PAGE_SIZE;
-use comfy_table::{Table};
 use std::cmp::Ordering;
 use std::fmt::{Debug, Formatter};
 use std::marker::PhantomData;
@@ -61,13 +61,13 @@ where
     KeyComparator: Comparator<Key>,
 {
     /// The number of key-value pairs the bucket is holding
-    size: u32,
+    pub(super) size: u32,
 
     /// The maximum number of key-value pairs the bucket can handle
-    max_size: u32,
+    pub(super) max_size: u32,
 
     /// The array that holds the key-value pairs
-    array: [MappingType<Key, Value>; ARRAY_SIZE],
+    pub(super) array: [MappingType<Key, Value>; ARRAY_SIZE],
 
     _key_comparator: PhantomData<KeyComparator>,
 }
@@ -104,7 +104,6 @@ where
 
         self.size = 0;
         self.max_size = max_size;
-        // self.array = [None; ARRAY_SIZE];
     }
 
     /// Lookup a key
@@ -306,3 +305,39 @@ impl<const ARRAY_SIZE: usize, Key: PageKey, Value: PageValue, KeyComparator: Com
 }
 
 
+
+
+
+#[cfg(test)]
+mod tests {
+    use crate::bucket_array_size;
+    use crate::bucket_page::{test_utils, BucketPage};
+    use buffer_common::AccessType;
+    use buffer_pool_manager::{BufferPool, BufferPoolManager};
+    use common::OrdComparator;
+
+    #[test]
+    fn should_find_all_inserted_values() {
+        type Key = u64;
+        type Value = u64;
+        type Entry = (Key, Value);
+        
+        let cmp = OrdComparator::default();
+
+        let bpm = BufferPoolManager::builder().build_arc();
+        let mut new_page = bpm.new_page(AccessType::Unknown).expect("Create new page");
+        let bucket_page = new_page.cast_mut::<BucketPage<{bucket_array_size::<Key, Value>()}, Key, Value, OrdComparator<Key>>>(); 
+        bucket_page.init(None);
+
+        assert!(bucket_page.is_empty(), "bucket should be empty");
+        
+        let entries = test_utils::insert_until_full(bucket_page);
+        
+        // Bucket page should only have the inserted entries
+        for (key, value) in entries {
+            let actual_value = bucket_page.lookup(&key, &cmp);
+            
+            assert_eq!(actual_value, Some(&value), "Page value should be the inserted one");
+        }
+    }
+}

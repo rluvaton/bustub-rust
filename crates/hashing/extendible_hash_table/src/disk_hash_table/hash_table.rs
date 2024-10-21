@@ -17,6 +17,7 @@ use pages::{PageId, INVALID_PAGE_ID};
 use std::fmt::{Debug, Formatter};
 use std::marker::PhantomData;
 use std::sync::Arc;
+use crate::HashTableIterator;
 
 pub const HEADER_PAGE_ID: PageId = 0;                                             // the header page id
 
@@ -176,6 +177,13 @@ where
     pub fn print_hash_table(&self) {
         println!("{:?}", self)
     }
+    
+    /// Get iterator
+    pub fn iter(&mut self) -> HashTableIterator<BUCKET_MAX_SIZE, Key, Value, KeyComparator, KeyHasherImpl> {
+        HashTableIterator::new(self)
+    }
+    
+    
 
     /// Hash - simple helper to downcast MurmurHash's 64-bit hash to 32-bit
     // for extendible hashing.

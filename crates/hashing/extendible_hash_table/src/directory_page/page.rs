@@ -5,6 +5,8 @@ use comfy_table::{Table};
 use std::collections::HashMap;
 use std::fmt::{Debug, Formatter};
 use std::mem::size_of;
+use buffer_pool_manager::PageReadGuard;
+use crate::directory_page::DirectoryIter;
 
 #[allow(dead_code)]
 const PAGE_METADATA_SIZE: usize = size_of::<u32>() * 2;
@@ -23,16 +25,16 @@ const _: () = assert!(size_of::<DirectoryPage>() <= PAGE_SIZE);
 #[repr(C)]
 pub(crate) struct DirectoryPage {
     /// The maximum depth the header page could handle
-    max_depth: u32,
+    pub(super) max_depth: u32,
 
     /// The current directory global depth
-    global_depth: u32,
+    pub(super) global_depth: u32,
 
     /// An array of bucket page local depths
-    local_depths: [u8; DirectoryPage::ARRAY_SIZE],
+    pub(super) local_depths: [u8; DirectoryPage::ARRAY_SIZE],
 
     /// An array of bucket page ids
-    bucket_page_ids: [PageId; DirectoryPage::ARRAY_SIZE],
+    pub(super) bucket_page_ids: [PageId; DirectoryPage::ARRAY_SIZE],
 }
 
 
@@ -307,6 +309,16 @@ impl DirectoryPage {
 
         self.local_depths[bucket_idx as usize] -= 1;
     }
+    
+    /// Return whether the bucket_index is the original bucket index or it is a pointer
+    pub(crate) fn is_the_original_bucket_index(&self, bucket_index: u32) -> bool {
+        bucket_index.get_n_lsb_bits(self.local_depths[bucket_index as usize]) == bucket_index
+    }
+    
+    pub(crate) fn create_iter(page_guard: PageReadGuard) -> DirectoryIter {
+        // The page guard must be a directory
+        DirectoryIter::new(page_guard)
+    }
 
     /// Verify the following invariants:
     /// (1) All LD <= GD.
@@ -455,5 +467,37 @@ mod tests {
         assert_eq!(directory_page.get_global_depth_mask(), 0x00000001u32);
 
         // TODO - add more tests for the mask
+    }
+    
+    #[test]
+    fn test_is_the_original_bucket_index() {
+        let bpm = BufferPoolManager::builder()
+            .with_pool_size(5)
+            .with_disk_manager(DiskManagerUnlimitedMemory::new())
+            .build_arc();
+
+        // Create directory
+        let mut directory_guard = bpm.new_page(AccessType::Unknown).expect("Should be able to create new page");
+
+        let directory_page = directory_guard.cast_mut::<DirectoryPage>();
+        directory_page.init(Some(3));
+
+        assert_eq!(directory_page.global_depth, 0);
+        assert_eq!(directory_page.get_global_depth_mask(), 0);
+
+        for i in 0..directory_page.local_depths.len() {
+            assert_eq!(directory_page.local_depths[i], 0);
+            assert_eq!(directory_page.get_local_depth_mask(i as u32), 0);
+        }
+        
+        // grow the directory, local depths should change!
+        directory_page.set_local_depth(0, 1);
+        directory_page.set_bucket_page_id(0, 8);
+
+        directory_page.incr_global_depth();
+
+        assert_eq!(directory_page.global_depth, 1);
+        assert_eq!(directory_page.is_the_original_bucket_index(0), true);
+        assert_eq!(directory_page.is_the_original_bucket_index(1), false);
     }
 }

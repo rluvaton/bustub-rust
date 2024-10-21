@@ -6,6 +6,8 @@ mod logic;
 
 #[cfg(feature = "statistics")]
 mod hash_table_stats;
+mod hash_table_iterator;
+mod hash_table_page_helpers;
 
 pub use hash_table::DiskHashTable;
 
@@ -13,3 +15,5 @@ pub use hash_table::DiskHashTable;
 pub use hash_table_stats::DiskHashTableStats;
 #[cfg(feature = "statistics")]
 pub(crate) use hash_table_stats::PageLatchStats;
+
+pub use hash_table_iterator::HashTableIterator;

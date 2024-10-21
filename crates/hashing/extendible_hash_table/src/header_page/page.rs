@@ -1,8 +1,9 @@
-use std::fmt::{Debug, Formatter};
-use pages::{PageId, PAGE_SIZE, INVALID_PAGE_ID};
-use std::mem::size_of;
-use comfy_table::{Table};
+use crate::header_page::HeaderIter;
 use binary_utils::GetNBits;
+use comfy_table::Table;
+use pages::{PageId, INVALID_PAGE_ID, PAGE_SIZE};
+use std::fmt::{Debug, Formatter};
+use std::mem::size_of;
 
 #[allow(dead_code)]
 const PAGE_METADATA_SIZE: usize = size_of::<u32>();
@@ -29,7 +30,7 @@ const _: () = assert!(size_of::<HeaderPage>() <= PAGE_SIZE);
 #[repr(C)]
 pub(crate) struct HeaderPage {
     /// An array of directory page ids
-    directory_page_ids: [PageId; HeaderPage::ARRAY_SIZE],
+    pub(super) directory_page_ids: [PageId; HeaderPage::ARRAY_SIZE],
 
     /// The maximum depth the header page could handle
     max_depth: u32,
@@ -137,6 +138,11 @@ impl HeaderPage {
             .find(|page_id| page_id != &INVALID_PAGE_ID);
         
         assert_eq!(non_empty_page_id, None, "There must be no page id in the header page");
+    }
+
+    // Get iterator on valid page ids
+    pub(crate) fn iter(&self) -> HeaderIter {
+        HeaderIter::new(self)
     }
 }
 
