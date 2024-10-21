@@ -679,3 +679,9 @@ impl BufferPool for Arc<BufferPoolManager> {
         }
     }
 }
+
+impl Default for BufferPoolManager {
+    fn default() -> Self {
+        Self::builder().build()
+    }
+}

@@ -1,6 +1,6 @@
 use crate::manager::InnerBufferPoolManager;
 use crate::{BufferPoolManager};
-use disk_storage::{DiskManager, DiskScheduler};
+use disk_storage::{DiskManager, DiskManagerUnlimitedMemory, DiskScheduler};
 use eviction_policy::{EvictionPoliciesTypes, EvictionPolicy, EvictionPolicyCreator, LRUKEvictionPolicy, LRUKOptions};
 use pages::AtomicPageId;
 use parking_lot::Mutex;
@@ -13,24 +13,19 @@ use std::sync::Arc;
 use crate::BufferPoolManagerStats;
 
 pub struct BufferPoolManagerBuilder {
-    /// This is required
-    pool_size: Option<usize>,
+    pool_size: usize,
 
-    /// This is required
-    disk_scheduler: Option<DiskScheduler>,
+    disk_scheduler: DiskScheduler,
 
-    // Eviction policy creator, it get the pool size and return the eviction policy
+    // Eviction policy creator, it gets the pool size and return the eviction policy
     eviction_policy_creator: Box<dyn FnOnce(usize) -> Box<dyn EvictionPolicy>>,
 
-    /// This is not required
     log_manager: Option<Arc<LogManager>>,
 }
 
 impl BufferPoolManagerBuilder {
     pub fn with_pool_size(mut self, pool_size: usize) -> Self {
-        assert!(self.pool_size.is_none(), "Pool size is already set");
-
-        self.pool_size.replace(pool_size);
+        self.pool_size = pool_size;
 
         self
     }
@@ -42,17 +37,13 @@ impl BufferPoolManagerBuilder {
     }
 
     pub fn with_arc_disk_manager<D: DiskManager>(mut self, disk_manager: Arc<D>) -> Self {
-        assert!(self.disk_scheduler.is_none(), "Disk scheduler is already set");
-
-        self.disk_scheduler.replace(DiskScheduler::new(disk_manager));
+        self.disk_scheduler = DiskScheduler::new(disk_manager);
 
         self
     }
 
     pub fn with_disk_scheduler(mut self, disk_scheduler: DiskScheduler) -> Self {
-        assert!(self.disk_scheduler.is_none(), "Disk scheduler is already set");
-
-        self.disk_scheduler.replace(disk_scheduler);
+        self.disk_scheduler = disk_scheduler;
 
         self
     }
@@ -76,31 +67,30 @@ impl BufferPoolManagerBuilder {
     }
 
     pub fn build(self) -> BufferPoolManager {
-        let pool_size = self.pool_size.expect("Must have pool size");
         // Initially, every page is in the free list.
         let mut free_list = LinkedList::new();
 
-        for i in 0..pool_size {
+        for i in 0..self.pool_size {
             free_list.push_back(i as i32)
         }
 
         BufferPoolManager {
             next_page_id: AtomicPageId::new(0),
-            pool_size,
+            pool_size: self.pool_size,
 
             log_manager: self.log_manager,
 
             inner: Mutex::new(InnerBufferPoolManager {
 
                 // we allocate a consecutive memory space for the buffer pool
-                pages: Vec::with_capacity(pool_size),
+                pages: Vec::with_capacity(self.pool_size),
 
-                eviction_policy: (self.eviction_policy_creator)(pool_size),
+                eviction_policy: (self.eviction_policy_creator)(self.pool_size),
 
-                page_table: HashMap::with_capacity(pool_size),
+                page_table: HashMap::with_capacity(self.pool_size),
                 free_list,
 
-                disk_scheduler: Arc::new(self.disk_scheduler.expect("Must have disk scheduler")),
+                disk_scheduler: Arc::new(self.disk_scheduler),
             }),
 
             pending_fetch_requests: Mutex::new(HashMap::new()),
@@ -118,8 +108,8 @@ impl BufferPoolManagerBuilder {
 impl Default for BufferPoolManagerBuilder {
     fn default() -> Self {
         Self {
-            pool_size: None,
-            disk_scheduler: None,
+            pool_size: 16,
+            disk_scheduler: DiskScheduler::new(Arc::new(DiskManagerUnlimitedMemory::default())),
             eviction_policy_creator: Box::new(|number_of_frames: usize| Box::new(LRUKEvictionPolicy::new(number_of_frames, LRUKOptions::default()))),
             log_manager: None,
         }
