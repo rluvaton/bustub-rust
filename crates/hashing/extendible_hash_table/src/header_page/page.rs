@@ -4,6 +4,7 @@ use comfy_table::Table;
 use pages::{PageId, INVALID_PAGE_ID, PAGE_SIZE};
 use std::fmt::{Debug, Formatter};
 use std::mem::size_of;
+use crate::header_page::iterator::HeaderIterState;
 
 #[allow(dead_code)]
 const PAGE_METADATA_SIZE: usize = size_of::<u32>();
@@ -143,6 +144,10 @@ impl HeaderPage {
     // Get iterator on valid page ids
     pub(crate) fn iter(&self) -> HeaderIter {
         HeaderIter::new(self)
+    }
+    
+    pub(crate) fn resume_iter(&self, state: HeaderIterState) -> HeaderIter {
+        HeaderIter::with_state(self, state)
     }
 }
 

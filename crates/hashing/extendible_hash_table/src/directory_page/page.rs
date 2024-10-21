@@ -7,6 +7,7 @@ use std::fmt::{Debug, Formatter};
 use std::mem::size_of;
 use buffer_pool_manager::PageReadGuard;
 use crate::directory_page::DirectoryIter;
+use crate::directory_page::iterator::DirectoryIterState;
 
 #[allow(dead_code)]
 const PAGE_METADATA_SIZE: usize = size_of::<u32>() * 2;
@@ -315,9 +316,13 @@ impl DirectoryPage {
         bucket_index.get_n_lsb_bits(self.local_depths[bucket_index as usize]) == bucket_index
     }
     
-    pub(crate) fn create_iter(page_guard: PageReadGuard) -> DirectoryIter {
+    pub(crate) fn iter(&self) -> DirectoryIter {
         // The page guard must be a directory
-        DirectoryIter::new(page_guard)
+        DirectoryIter::new(self)
+    }
+    
+    pub(crate) fn resume_iter(&self, state: DirectoryIterState) -> DirectoryIter {
+        DirectoryIter::with_state(self, state)
     }
 
     /// Verify the following invariants:

@@ -7,6 +7,7 @@ use std::fmt::{Debug, Formatter};
 use std::marker::PhantomData;
 use std::mem::size_of;
 use std::slice::Iter;
+use crate::bucket_page::{BucketIter, BucketPageIterState};
 
 pub type MappingType<KeyType, ValueType> = (KeyType, ValueType);
 
@@ -288,8 +289,12 @@ where
         self.array[..self.size() as usize].iter().position(|item| comparator.cmp(key, &item.0) == Ordering::Equal)
     }
 
-    pub(crate) fn iter(&self) -> Iter<'_, MappingType<Key, Value>> {
-        self.array[..self.size() as usize].iter()
+    pub(crate) fn iter(&self) -> BucketIter<ARRAY_SIZE, Key, Value, KeyComparator> {
+        BucketIter::new(self)
+    }
+
+    pub(crate) fn resume_iter(&self, state: BucketPageIterState) -> BucketIter<ARRAY_SIZE, Key, Value, KeyComparator> {
+        BucketIter::with_state(self, state)
     }
 }
 
