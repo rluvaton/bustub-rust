@@ -356,6 +356,12 @@ impl BustubInstance {
             )
         )
     }
+    
+    pub fn verify_integrity(&self) {
+        {
+            let catalog = self.catalog.lock();
+        }
+    } 
 }
 
 impl Drop for BustubInstance {
