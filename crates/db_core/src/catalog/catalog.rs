@@ -6,6 +6,7 @@ use common::config::{AtomicIndexOID, AtomicTableOID, IndexOID, TableOID};
 use lock_manager::LockManager;
 use recovery_log_manager::LogManager;
 use std::collections::HashMap;
+use std::ops::Deref;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use index::{create_extendible_hashing_index, Index, IndexMetadata, IndexWithMetadata};
@@ -71,7 +72,6 @@ impl Catalog {
         }
     }
 
-
     /// Create a new table and return its metadata.
     ///
     /// @param txn The transaction in which the table is being created
@@ -126,7 +126,6 @@ impl Catalog {
         None
     }
 
-
     /// Query table metadata by OID
     /// @param table_oid The OID of the table to query
     /// @return A (non-owning) pointer to the metadata for the table
@@ -137,7 +136,6 @@ impl Catalog {
     pub fn get_table_names(&self) -> Vec<String> {
         self.table_names.keys().cloned().collect()
     }
-
 
     /// Get all of the indexes for the table identified by `table_name`.
     /// @param table_name The name of the table for which indexes should be retrieved
@@ -159,7 +157,6 @@ impl Catalog {
 
         indexes
     }
-
 
     /**
      * Create a new index, populate existing data of the table and return its metadata.
@@ -256,6 +253,22 @@ impl Catalog {
         self.index_names.get_mut(table_name).unwrap().insert(index_name.to_string(), index_oid);
 
         Some(index_info)
+    }
+    
+    pub fn verify_integrity(&self) {
+        self.indexes.iter().for_each(|(_, index)| {
+            let index_name = index.get_name().as_str();
+            let index_oid = index.get_index_oid();
+            let table_name = index.get_table_name().as_str();
+            
+            let table_oid = self.table_names.get(table_name)
+                .expect(format!("Must have table_oid for the table name {table_name} (got by index with name {index_name} and oid {index_oid})").as_str());
+            
+            let table_info  = self.tables.get(table_oid)
+                .expect(format!("Must have table info for table oid {table_oid} (with name {table_name}) (got by index with name {index_name} and oid {index_oid})").as_str());
+            
+            index.verify_integrity(table_info.get_table_heap().deref());
+        })
     }
 }
 

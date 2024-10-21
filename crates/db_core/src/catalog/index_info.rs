@@ -1,8 +1,10 @@
+use std::ops::Deref;
 use crate::catalog::IndexType;
 use catalog_schema::Schema;
 use common::config::IndexOID;
 use std::sync::Arc;
-use index::IndexWithMetadata;
+use index::{Index, IndexWithMetadata};
+use table::TableHeap;
 
 /// The IndexInfo class maintains metadata about a index.
 pub struct IndexInfo {
@@ -67,7 +69,15 @@ impl IndexInfo {
         &self.name
     }
 
+    pub fn get_table_name(&self) -> &String {
+        &self.table_name
+    }
+
     pub fn get_key_schema(&self) -> Arc<Schema> {
         self.key_schema.clone()
+    }
+    
+    pub fn verify_integrity(&self, table_heap: &TableHeap) {
+        self.index.verify_integrity(self.index.get_metadata().deref(), table_heap)
     }
 }
