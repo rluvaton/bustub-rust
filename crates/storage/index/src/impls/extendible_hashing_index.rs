@@ -6,6 +6,7 @@ use extendible_hash_table::{DiskExtendibleHashTable, bucket_array_size};
 use hashing_common::{DefaultKeyHasher, KeyHasher};
 use rid::RID;
 use std::sync::Arc;
+use table::TableHeap;
 use transaction::Transaction;
 use tuple::Tuple;
 
@@ -52,6 +53,16 @@ impl Index for ExtendibleHashingIndex<{ bucket_array_size::<GenericKey<$key_size
     fn scan_key(&self, key: &Tuple, transaction: Option<Arc<Transaction>>) -> error_utils::anyhow::Result<Vec<RID>> {
         self.0.get_value(&GenericKey::from(key), transaction)
             .map_err(|err| err.to_anyhow())
+    }
+    
+    fn verify_integrity(&self, index_metadata: &IndexMetadata, table_heap: &TableHeap) {
+        self.0.verify_integrity(false);
+        
+        // Assert every index entry exists in the table heap
+        self.0.
+        
+        // Assert every table heap entry exists in the index
+        todo!()
     }
 }
 

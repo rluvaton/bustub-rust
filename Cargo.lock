@@ -814,6 +814,7 @@ dependencies = [
  "extendible_hash_table",
  "hashing_common",
  "rid",
+ "table",
  "transaction",
  "tuple",
 ]

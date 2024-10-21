@@ -1,8 +1,9 @@
 use rid::RID;
 use std::sync::Arc;
+use table::TableHeap;
 use transaction::Transaction;
 use tuple::Tuple;
-
+use crate::IndexMetadata;
 
 /// class Index - Base class for derived indices of different types
 ///
@@ -45,6 +46,10 @@ pub trait Index where Self: 'static {
     ///
     /// returns `Vec<RID>`: The collection of RIDs with the search results
     fn scan_key(&self, key: &Tuple, transaction: Option<Arc<Transaction>>) -> error_utils::anyhow::Result<Vec<RID>>;
+    
+    
+    /// Verify correctness of the index
+    fn verify_integrity(&self, index_metadata: &IndexMetadata, table_heap: &TableHeap);
 
 
     fn to_dyn_arc(self) -> Arc<dyn Index> where Self: Sized {

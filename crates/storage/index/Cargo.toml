@@ -15,3 +15,4 @@ hashing_common = {path = "../../hashing/common"}
 rid = {path = "../../rid"}
 transaction = {path = "../../concurrency/transaction/core"}
 tuple = {path = "../table/tuple"}
+table = {path = "../table/core"}

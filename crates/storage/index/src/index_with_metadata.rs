@@ -2,7 +2,9 @@ use crate::{Index, IndexMetadata};
 use catalog_schema::Schema;
 use rid::RID;
 use std::fmt::{Debug, Formatter};
+use std::fs::Metadata;
 use std::sync::Arc;
+use table::TableHeap;
 use transaction::Transaction;
 use tuple::Tuple;
 
@@ -71,6 +73,10 @@ impl Index for IndexWithMetadata {
 
     fn scan_key(&self, key: &Tuple, transaction: Option<Arc<Transaction>>) -> error_utils::anyhow::Result<Vec<RID>> {
         self.index.scan_key(key, transaction)
+    }
+
+    fn verify_integrity(&self, _index_metadata: &IndexMetadata, table_heap: &TableHeap) {
+        self.index.verify_integrity(&self.metadata, table_heap)
     }
 }
 
