@@ -108,7 +108,7 @@ impl BufferPoolManagerBuilder {
 impl Default for BufferPoolManagerBuilder {
     fn default() -> Self {
         Self {
-            pool_size: 16,
+            pool_size: 4096,
             disk_scheduler: DiskScheduler::new(Arc::new(DiskManagerUnlimitedMemory::default())),
             eviction_policy_creator: Box::new(|number_of_frames: usize| Box::new(LRUKEvictionPolicy::new(number_of_frames, LRUKOptions::default()))),
             log_manager: None,
