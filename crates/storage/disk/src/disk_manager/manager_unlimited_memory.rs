@@ -239,3 +239,9 @@ impl DiskManager for DiskManagerUnlimitedMemory {
         unimplemented!();
     }
 }
+
+impl Default for DiskManagerUnlimitedMemory {
+    fn default() -> Self {
+        Self::new()
+    }
+}
