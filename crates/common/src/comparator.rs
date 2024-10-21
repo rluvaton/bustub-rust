@@ -6,17 +6,9 @@ pub trait Comparator<Item>: Clone {
 }
 
 /// Wrapper for implementing `Comparator` for all types that implement `Clone` and `Ord`
-#[derive(Clone)]
+#[derive(Default, Clone)]
 pub struct OrdComparator<T: Clone + Ord> {
     phantom_data: PhantomData<T>
-}
-
-impl<T: Clone + Ord> Default for OrdComparator<T> {
-    fn default() -> Self {
-        OrdComparator {
-            phantom_data: PhantomData
-        }
-    }
 }
 
 impl<T: Clone + Ord> Comparator<T> for OrdComparator<T> {
