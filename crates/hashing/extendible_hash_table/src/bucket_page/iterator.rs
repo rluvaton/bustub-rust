@@ -1,29 +1,26 @@
-use crate::bucket_page::BucketPage;
-use buffer_pool_manager::PageReadGuard;
+use crate::bucket_page::{BucketPage, MappingType};
 use common::{Comparator, PageKey, PageValue};
-use pages::{PageId, INVALID_PAGE_ID};
-use std::marker::PhantomData;
 
 pub(crate) struct BucketIter<'a, const ARRAY_SIZE: usize, Key, Value, KeyComparator>
 where
-Key: PageKey,
-Value: PageValue,
-KeyComparator: Comparator<Key> {
-    guard: PageReadGuard<'a>,
-    index: usize,
-    
-    phantom_data: PhantomData<(KeyComparator, Value, KeyComparator)>
-}
-
-impl<'a, const ARRAY_SIZE: usize, Key, Value, KeyComparator> BucketIter<'a, ARRAY_SIZE, Key, Value, KeyComparator> where
     Key: PageKey,
     Value: PageValue,
-    KeyComparator: Comparator<Key> {
-    pub(crate) fn new(guard: PageReadGuard<'a>) ->Self {
+    KeyComparator: Comparator<Key>,
+{
+    page: &'a BucketPage<ARRAY_SIZE, Key, Value, KeyComparator>,
+    index: usize,
+}
+
+impl<'a, const ARRAY_SIZE: usize, Key, Value, KeyComparator> BucketIter<'a, ARRAY_SIZE, Key, Value, KeyComparator>
+where
+    Key: PageKey,
+    Value: PageValue,
+    KeyComparator: Comparator<Key>,
+{
+    pub(crate) fn new(page: &'a BucketPage<ARRAY_SIZE, Key, Value, KeyComparator>) -> Self {
         Self {
-            guard,
+            page,
             index: 0,
-            phantom_data: PhantomData::default()
         }
     }
 }
@@ -32,27 +29,16 @@ impl<'a, const ARRAY_SIZE: usize, Key, Value, KeyComparator> Iterator for Bucket
 where
     Key: PageKey,
     Value: PageValue,
-    KeyComparator: Comparator<Key>{
-    type Item = PageId;
+    KeyComparator: Comparator<Key>,
+{
+    type Item = &'a MappingType<Key, Value>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let bucket = self.guard.cast::<BucketPage<ARRAY_SIZE, Key, Value, KeyComparator>>();
-
-        // Continue while there is more items and we did not reach a valid page id
-        while self.index < bucket.size() as usize &&
-            // Continue while the bucket page id is invalid or the current index is a pointer to already seen bucket page id
-            (bucket.bucket_page_ids[self.index] == INVALID_PAGE_ID || !bucket.is_the_original_bucket_index(self.index as u32)) {
-            
-            
-            self.index += 1;
-        }
-
-        // If reached the end
-        if self.index >= bucket.size() as usize {
+        if self.index >= self.page.size() as usize {
             return None;
         }
 
-        let res = Some(bucket[self.index]);
+        let res = Some(&self.page.array[self.index]);
         self.index += 1;
 
         res
@@ -61,26 +47,30 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::bucket_array_size;
-    use crate::bucket_page::{test_utils, BucketPage};
+    use crate::bucket_page::test_utils::insert_until_full;
+use std::sync::Arc;
     use buffer_common::AccessType;
     use buffer_pool_manager::{BufferPool, BufferPoolManager};
     use common::OrdComparator;
+    use crate::{bucket_array_size, bucket_page_type};
+    use crate::bucket_page::BucketPage;
 
-    // #[test]
-    // fn should_go_over_all_items() {
-    //     type Key = u64;
-    //     type Value = u64;
-    //     type Entry = (Key, Value);
-    //     
-    //     let bpm = BufferPoolManager::builder().build_arc();
-    //     let mut new_page = bpm.new_page(AccessType::Unknown).expect("Create new page");
-    //     let bucket_page = new_page.cast_mut::<BucketPage<{bucket_array_size::<Key, Value>()}, Key, Value, OrdComparator<Key>>>();
-    //     
-    //     let entries = test_utils::insert_until_full(bucket_page);
-    //     
-    //     bucket_page.insert()
-    //     
-    //     
-    // }
+    #[test]
+    fn should_go_over_all_entries() {
+        type Key = u64;
+        type Value = u64;
+        
+        let bpm = Arc::new(BufferPoolManager::default());
+        let mut new_page = bpm.new_page(AccessType::Unknown).expect("Create new page");
+        let bucket_page = new_page.cast_mut::<bucket_page_type!(Key, Value, OrdComparator<Key>)>();
+        
+        let mut entries = insert_until_full(bucket_page);
+        let mut found_entries = bucket_page.iter().cloned().collect::<Vec<(Key, Value)>>();
+        
+        // Sort both entries so we can compare
+        entries.sort();
+        found_entries.sort();
+        
+        assert_eq!(entries, found_entries);
+    }
 }

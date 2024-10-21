@@ -10,7 +10,6 @@ use std::slice::Iter;
 
 pub type MappingType<KeyType, ValueType> = (KeyType, ValueType);
 
-
 //noinspection RsAssertEqual
 const _: () = {
     type Key = u64;
@@ -34,6 +33,13 @@ const PAGE_METADATA_SIZE: usize = size_of::<u32>() * 2;
 
 pub const fn bucket_array_size<Key, Value>() -> usize {
     (PAGE_SIZE - PAGE_METADATA_SIZE) / size_of::<MappingType<Key, Value>>()
+}
+
+#[macro_export]
+macro_rules! bucket_page_type {
+    ($key:ty, $value:ty, $cmp:ty) => {
+        BucketPage<{bucket_array_size::<$key, $value>()}, $key, $value, $cmp>
+    };
 }
 
 
@@ -305,9 +311,6 @@ impl<const ARRAY_SIZE: usize, Key: PageKey, Value: PageValue, KeyComparator: Com
 }
 
 
-
-
-
 #[cfg(test)]
 mod tests {
     use crate::bucket_array_size;
@@ -321,22 +324,22 @@ mod tests {
         type Key = u64;
         type Value = u64;
         type Entry = (Key, Value);
-        
+
         let cmp = OrdComparator::default();
 
         let bpm = BufferPoolManager::builder().build_arc();
         let mut new_page = bpm.new_page(AccessType::Unknown).expect("Create new page");
-        let bucket_page = new_page.cast_mut::<BucketPage<{bucket_array_size::<Key, Value>()}, Key, Value, OrdComparator<Key>>>(); 
+        let bucket_page = new_page.cast_mut::<bucket_page_type!(Key, Value, OrdComparator<Key>)>();
         bucket_page.init(None);
 
         assert!(bucket_page.is_empty(), "bucket should be empty");
-        
+
         let entries = test_utils::insert_until_full(bucket_page);
-        
+
         // Bucket page should only have the inserted entries
         for (key, value) in entries {
             let actual_value = bucket_page.lookup(&key, &cmp);
-            
+
             assert_eq!(actual_value, Some(&value), "Page value should be the inserted one");
         }
     }
