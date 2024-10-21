@@ -59,10 +59,10 @@ impl Index for ExtendibleHashingIndex<{ bucket_array_size::<GenericKey<$key_size
         self.0.verify_integrity(false);
         
         // Assert every index entry exists in the table heap
-        self.0.
+        // self.0.
         
         // Assert every table heap entry exists in the index
-        todo!()
+        todo!();
     }
 }
 
