@@ -19,8 +19,6 @@ use std::marker::PhantomData;
 use std::sync::Arc;
 use crate::HashTableIterator;
 
-pub const HEADER_PAGE_ID: PageId = 0;                                             // the header page id
-
 
 /// Thread safe implementation of extendible hash table that is backed by a buffer pool
 /// manager. Non-unique keys are supported. Supports insert and delete. The
@@ -130,14 +128,14 @@ where
         assert_eq!(BUCKET_MAX_SIZE as u32 as usize, BUCKET_MAX_SIZE, "Bucket max size must be u32 in size");
 
         let header_max_depth = header_max_depth.unwrap_or(HeaderPage::MAX_DEPTH);
-        Self::init_new_header(bpm.clone(), header_max_depth)?;
+        let header_page_id = Self::init_new_header(bpm.clone(), header_max_depth)?;
 
         Ok(Self {
             index_name: name,
             bpm,
             cmp,
 
-            header_page_id: HEADER_PAGE_ID,
+            header_page_id,
 
             directory_max_depth: directory_max_depth.unwrap_or(DirectoryPage::MAX_DEPTH),
             bucket_max_size: bucket_max_size.unwrap_or(BUCKET_MAX_SIZE as u32),
@@ -179,29 +177,25 @@ where
     }
     
     /// Get iterator
-    pub fn iter(&mut self) -> HashTableIterator<BUCKET_MAX_SIZE, Key, Value, KeyComparator, KeyHasherImpl> {
+    pub fn iter(&self) -> HashTableIterator<BUCKET_MAX_SIZE, Key, Value, KeyComparator, KeyHasherImpl> {
         HashTableIterator::new(self)
     }
     
-    
-
     /// Hash - simple helper to downcast MurmurHash's 64-bit hash to 32-bit
     // for extendible hashing.
     pub(super) fn hash(&self, key: &Key) -> u32 {
         KeyHasherImpl::hash_key(key) as u32
     }
 
-    fn init_new_header(bpm: Arc<BufferPoolManager>, header_max_depth: u32) -> Result<(), errors::InitError> {
+    fn init_new_header(bpm: Arc<BufferPoolManager>, header_max_depth: u32) -> Result<PageId, errors::InitError> {
         // TODO - this should be removed, we should not create on each instance and instead it should depend if the hash table exists or not
         let mut page_guard = bpm.new_page(AccessType::Unknown).map_err_to_buffer_pool_err()?;
-
-        assert_eq!(page_guard.get_page_id(), HEADER_PAGE_ID, "must be uninitialized");
 
         let page = page_guard.cast_mut::<<Self as TypeAliases>::HeaderPage>();
 
         page.init(Some(header_max_depth));
 
-        Ok(())
+        Ok(page_guard.get_page_id())
     }
 
     #[cfg(feature = "statistics")]

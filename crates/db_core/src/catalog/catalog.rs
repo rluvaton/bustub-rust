@@ -267,7 +267,7 @@ impl Catalog {
             let table_info  = self.tables.get(table_oid)
                 .expect(format!("Must have table info for table oid {table_oid} (with name {table_name}) (got by index with name {index_name} and oid {index_oid})").as_str());
             
-            index.verify_integrity(table_info.get_table_heap().deref());
+            index.verify_integrity(table_info.get_table_heap().clone());
         })
     }
 }

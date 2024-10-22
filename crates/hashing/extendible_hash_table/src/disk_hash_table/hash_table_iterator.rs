@@ -19,7 +19,7 @@ where
     KeyHasherImpl: KeyHasher,
 {
     // Holding mutable reference so the compiler will force the hash table to not change
-    hash_table: &'a mut DiskHashTable<BUCKET_MAX_SIZE, Key, Value, KeyComparator, KeyHasherImpl>,
+    hash_table: &'a DiskHashTable<BUCKET_MAX_SIZE, Key, Value, KeyComparator, KeyHasherImpl>,
 
     header_iterator_state: HeaderIterState,
 
@@ -39,7 +39,7 @@ where
     KeyComparator: Comparator<Key>,
     KeyHasherImpl: KeyHasher,
 {
-    pub(crate) fn new(hash_table: &'a mut DiskHashTable<BUCKET_MAX_SIZE, Key, Value, KeyComparator, KeyHasherImpl>) -> Self {
+    pub(crate) fn new(hash_table: &'a DiskHashTable<BUCKET_MAX_SIZE, Key, Value, KeyComparator, KeyHasherImpl>) -> Self {
         let initial_header_state = {
             // TODO - use with header page
             let header_page_guard = hash_table.bpm.fetch_page_read(

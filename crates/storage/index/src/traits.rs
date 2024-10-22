@@ -49,7 +49,7 @@ pub trait Index where Self: 'static {
     
     
     /// Verify correctness of the index
-    fn verify_integrity(&self, index_metadata: &IndexMetadata, table_heap: &TableHeap);
+    fn verify_integrity(&self, index_metadata: &IndexMetadata, table_heap: Arc<TableHeap>);
 
 
     fn to_dyn_arc(self) -> Arc<dyn Index> where Self: Sized {

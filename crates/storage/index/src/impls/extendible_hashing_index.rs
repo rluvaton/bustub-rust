@@ -55,19 +55,30 @@ impl Index for ExtendibleHashingIndex<{ bucket_array_size::<GenericKey<$key_size
             .map_err(|err| err.to_anyhow())
     }
     
-    fn verify_integrity(&self, index_metadata: &IndexMetadata, table_heap: &TableHeap) {
+    fn verify_integrity(&self, index_metadata: &IndexMetadata, table_heap: Arc<TableHeap>) {
         self.0.verify_integrity(false);
         
-        // Assert every index entry exists in the table heap
-        // self.0.
-        
-        // Assert every table heap entry exists in the index
-        todo!();
+        if index_metadata.is_primary_key() {
+            let table_heap_count = table_heap.clone().iter().count();
+
+            let all_table_heap_values_are_in_the_index = table_heap
+                .iter()
+                .all(|(_, tuple)| {
+                    self.0.get_value(&GenericKey::from(&tuple), None) == Ok(vec![*tuple.get_rid()])
+                });
+
+            assert!(all_table_heap_values_are_in_the_index, "There should be for every table heap an entry in the index for primary key index");
+
+            let index_count = self.0.iter().count();
+            
+            assert_eq!(table_heap_count, index_count, "Table heap count should have the same amount of items as the primary key index items");
+        }
     }
 }
 
     )+)
 }
+
 
 impl_extendible_hashing_index_for_generic_key! {
     ExtendibleHashingIndex8, 1

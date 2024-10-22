@@ -77,7 +77,7 @@ impl IndexInfo {
         self.key_schema.clone()
     }
     
-    pub fn verify_integrity(&self, table_heap: &TableHeap) {
+    pub fn verify_integrity(&self, table_heap: Arc<TableHeap>) {
         self.index.verify_integrity(self.index.get_metadata().deref(), table_heap)
     }
 }

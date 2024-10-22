@@ -75,7 +75,7 @@ impl Index for IndexWithMetadata {
         self.index.scan_key(key, transaction)
     }
 
-    fn verify_integrity(&self, _index_metadata: &IndexMetadata, table_heap: &TableHeap) {
+    fn verify_integrity(&self, _index_metadata: &IndexMetadata, table_heap: Arc<TableHeap>) {
         self.index.verify_integrity(&self.metadata, table_heap)
     }
 }
