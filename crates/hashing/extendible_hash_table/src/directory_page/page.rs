@@ -497,12 +497,28 @@ mod tests {
         
         // grow the directory, local depths should change!
         directory_page.set_local_depth(0, 1);
+
         directory_page.set_bucket_page_id(0, 8);
+        directory_page.set_bucket_page_id(1, 9);
 
         directory_page.incr_global_depth();
 
+
         assert_eq!(directory_page.global_depth, 1);
         assert_eq!(directory_page.is_the_original_bucket_index(0), true);
-        assert_eq!(directory_page.is_the_original_bucket_index(1), false);
+        assert_eq!(directory_page.is_the_original_bucket_index(1), true);
+
+        directory_page.set_bucket_page_id(0, 8);
+        directory_page.set_bucket_page_id(1, 9);
+
+        directory_page.incr_global_depth();
+
+        assert_eq!(directory_page.global_depth, 2);
+        assert_eq!(directory_page.is_the_original_bucket_index(0), true);
+        assert_eq!(directory_page.is_the_original_bucket_index(1), true);
+        
+        // Still have local depth of 1
+        assert_eq!(directory_page.is_the_original_bucket_index(2), false);
+        assert_eq!(directory_page.is_the_original_bucket_index(3), false);
     }
 }
