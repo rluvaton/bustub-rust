@@ -160,12 +160,7 @@ fn add_agg_call_to_context(expr: &binder::ExpressionTypeImpl, planner: &Planner)
             return;
         }
         ExpressionTypeImpl::AggCall(agg) => {
-            let agg_name = format!("__pseudo_agg#{}", planner.context.lock().aggregations.len());
-            let agg_call = AggCallExpr::new(agg_name, vec![], agg.is_distinct);
-
-            // Replace the agg call in the original bound expression with a pseudo one, add agg call to the context.
-            // TODO - in the original code there was std::exchange(agg_call_expr, std::move(agg_call))));
-            planner.context.lock().add_aggregations(Rc::new(agg_call.into()))
+            planner.context.lock().add_aggregations(Rc::new(agg.clone().into()))
         },
         _ => panic!("expression type {:?} not supported in planner yet", expr)
     }
