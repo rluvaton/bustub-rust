@@ -5,8 +5,6 @@ mod tests {
     use crate::BustubInstance;
     use execution_common::CheckOptions;
 
-    // TODO - unignore
-    #[ignore]
     #[test]
     fn should_insert_to_newly_created_table() {
         let mut instance = BustubInstance::in_memory(None);
@@ -17,12 +15,13 @@ mod tests {
             instance.execute_user_input(sql, &mut NoopWriter::default(), CheckOptions::default()).expect("Should execute");
         }
 
-        let sql = "INSERT INTO books (id) VALUES (1);";
+        let sql = "INSERT INTO books (id) VALUES (1), (24);";
 
-        let actual = instance.execute_single_insert_sql(sql, CheckOptions::default()).expect("Should insert");
+        let inserted_rows_count_result = instance.execute_single_insert_sql(sql, CheckOptions::default()).expect("Should insert");
         
-        // Without returning
-        assert_eq!(actual, actual.create_with_same_schema(vec![]));
+        assert_eq!(inserted_rows_count_result, inserted_rows_count_result.create_with_same_schema(vec![
+            vec![Value::from(2)]
+        ]));
 
         instance.verify_integrity();
     }

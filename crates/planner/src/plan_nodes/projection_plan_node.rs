@@ -5,6 +5,9 @@ use data_types::DBTypeId;
 use expression::{Expression, ExpressionRef};
 use std::fmt::{Display, Formatter};
 use std::sync::Arc;
+use binder::ExpressionTypeImpl;
+use crate::expressions::PlanExpression;
+use crate::Planner;
 
 /**
  * The ProjectionPlanNode represents a project operation.
@@ -40,7 +43,6 @@ impl ProjectionPlanNode {
         }
     }
 
-
     /** @return Projection expressions */
     pub fn get_expressions(&self) -> &Vec<ExpressionRef> { &self.expressions }
 
@@ -71,6 +73,24 @@ impl ProjectionPlanNode {
             .zip(schema.get_columns())
             .map(|(name, column)| Column::create_new_name(name.to_string(), column))
             .into()
+    }
+    
+    pub fn create_from_returning(returning: &[ExpressionTypeImpl], plan: PlanType, planner: &Planner) -> Self {
+        let select_list_children = vec![&plan];
+
+        let (column_names, exprs): (Vec<String>, Vec<ExpressionRef>) = returning
+            .iter()
+            .map(|item| item.plan(select_list_children.as_slice(), planner))
+            .unzip();
+
+        ProjectionPlanNode::new(
+            Arc::new(ProjectionPlanNode::rename_schema(
+                ProjectionPlanNode::infer_projection_schema(exprs.as_slice()),
+                column_names.as_slice(),
+            )),
+            exprs,
+            plan,
+        )
     }
 }
 

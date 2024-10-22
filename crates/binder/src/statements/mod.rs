@@ -4,6 +4,7 @@ mod create;
 mod delete;
 mod insert;
 mod select;
+mod parse_returning;
 
 pub use traits::Statement;
 pub use statement_type::{StatementType, StatementTypeImpl};

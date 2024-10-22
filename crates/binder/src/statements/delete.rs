@@ -7,19 +7,23 @@ use crate::Binder;
 use sqlparser::ast::{FromTable, TableFactor};
 use std::fmt::Debug;
 use std::rc::Rc;
+use crate::statements::parse_returning::parse_returning;
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct DeleteStatement {
     pub(crate) table: Rc<TableReferenceTypeImpl>,
-    pub expr: ExpressionTypeImpl,
+    pub filter_expr: ExpressionTypeImpl,
+    
+    returning: Vec<ExpressionTypeImpl>,
 }
 
 impl DeleteStatement {
-    pub fn new(table: Rc<TableReferenceTypeImpl>, expr: ExpressionTypeImpl) -> Self {
+    pub fn new(table: Rc<TableReferenceTypeImpl>, filter_expr: ExpressionTypeImpl, returning: Vec<ExpressionTypeImpl>) -> Self {
         assert!(matches!(*table, TableReferenceTypeImpl::BaseTable(_)), "table reference in delete must be base table");
         Self {
             table,
-            expr,
+            filter_expr,
+            returning
         }
     }
 
@@ -28,6 +32,10 @@ impl DeleteStatement {
             TableReferenceTypeImpl::BaseTable(t) => t,
             _ => panic!("Invalid table ref in delete")
         }
+    }
+    
+    pub fn get_returning(&self) -> &Vec<ExpressionTypeImpl> {
+        &self.returning
     }
 }
 
@@ -71,7 +79,9 @@ impl Statement for DeleteStatement {
             Constant::new(true.into()).into()
         };
 
-        Ok(DeleteStatement::new(table, expr))
+        let returning = parse_returning(&ast.returning, table.clone(), binder)?;
+
+        Ok(DeleteStatement::new(table, expr, returning))
     }
 
 

@@ -1,8 +1,8 @@
 use crate::constants::UNNAMED_COLUMN;
 use crate::plan_nodes::{AggregationType, PlanNode, PlanType};
 use catalog_schema::{Column, Schema};
-use data_types::DBTypeId;
-use expression::{Expression, ExpressionRef};
+use data_types::{DBTypeId, Value};
+use expression::{ConstantValueExpression, Expression, ExpressionRef, ExpressionType};
 use std::fmt::{Display, Formatter};
 use std::sync::Arc;
 
@@ -72,12 +72,10 @@ impl AggregationPlanNode {
         &self.children[0]
     }
 
-
     /** @return The idx'th group by expression */
     fn get_group_at(&self, index: usize) -> &ExpressionRef {
         &self.group_bys[index]
     }
-
 
     /** @return The group by expressions */
     pub fn get_group_bys(&self) -> &Vec<ExpressionRef> { &self.group_bys }
@@ -115,6 +113,18 @@ impl AggregationPlanNode {
         group_by_columns
             .chain(aggregate_columns)
             .into()
+    }
+    
+    pub fn create_internal_result_count(plan: PlanType, count_name: &str) -> Self {
+        AggregationPlanNode::new(
+            Arc::new(Schema::new(vec![
+                Column::new_fixed_size(format!("__bustub_internal.{}", count_name), DBTypeId::INT)
+            ])),
+            plan,
+            vec![],
+            vec![ExpressionType::Constant(ConstantValueExpression::new(Value::from(1))).into_ref()],
+            vec![AggregationType::CountStarAggregate]
+        )
     }
 }
 

@@ -1,10 +1,8 @@
 use crate::expressions::PlanExpression;
 use crate::plan_nodes::{FilterPlan, PlanNode, PlanType};
 use crate::traits::Plan;
-use crate::{DeletePlan, Planner};
+use crate::{AggregationPlanNode, DeletePlan, Planner, ProjectionPlanNode};
 use binder::DeleteStatement;
-use catalog_schema::{Column, Schema};
-use data_types::DBTypeId;
 use std::sync::Arc;
 
 impl Plan for DeleteStatement {
@@ -13,13 +11,21 @@ impl Plan for DeleteStatement {
 
         let expr_children = vec![&table];
 
-        let (_, condition) = self.expr.plan(expr_children.as_slice(), planner);
+        let (_, condition) = self.filter_expr.plan(expr_children.as_slice(), planner);
 
         let filter = FilterPlan::new(table.get_output_schema(), condition, table);
-        let delete_schema = Arc::new(Schema::new(vec![
-            Column::new_fixed_size("__bustub_internal.delete_rows".to_string(), DBTypeId::INT)
-        ]));
 
-        DeletePlan::new(delete_schema, filter.into(), self.get_table().oid).into()
+        // TODO - fix this!, we should not prefix column names like this!
+        let delete_schema = Arc::new(self.get_table().schema.prefix_column_names(self.get_table().table.as_str()));
+
+        let mut plan = DeletePlan::new(delete_schema, filter.into(), self.get_table().oid).into();
+
+        if !self.get_returning().is_empty() {
+            plan = ProjectionPlanNode::create_from_returning(self.get_returning(), plan, planner).into();
+        } else {
+            plan = AggregationPlanNode::create_internal_result_count(plan, "delete_rows").into()
+        }
+        
+        plan
     }
 }

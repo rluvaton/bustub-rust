@@ -7,7 +7,9 @@ use crate::{Binder, ExpressionTypeImpl};
 use catalog_schema::Column;
 use sqlparser::ast::Ident;
 use std::fmt::Debug;
+use std::ops::Deref;
 use std::rc::Rc;
+use crate::statements::parse_returning::parse_returning;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct InsertStatement {
@@ -75,20 +77,7 @@ impl Statement for InsertStatement {
         
         let table: Rc<TableReferenceTypeImpl> = Rc::new(table.into());
         
-        let returning = if let Some(returning) = &ast.returning {
-
-            // This is the current context for the returning
-            
-            let ctx_guard = binder.new_context();
-
-            ctx_guard.context.lock().scope.replace(table.clone());
-            
-            let parse_returning: ParseASTResult<Vec<ExpressionTypeImpl>> = returning.iter().map(|item| item.parse(binder)).collect();
-            
-            parse_returning?
-        } else {
-            vec![]
-        };
+        let returning = parse_returning(&ast.returning, table.clone(), binder)?;
 
         Ok(InsertStatement::new(table, select_statement, returning))
     }
@@ -119,23 +108,4 @@ mod tests {
         let statements = Parser::parse_sql(&GenericDialect {}, sql).unwrap();
         statements.iter().map(|stmt| InsertStatement::try_parse_from_statement(stmt, &mut binder)).collect()
     }
-
-    // #[test]
-    // fn convert_delete_to_statement() {
-    //     let sql = "DELETE FROM tasks WHERE status = 'DONE' RETURNING *";
-    //
-    //     let expected_create_statement = DeleteStatement::new(
-    //         BaseTableRef::new()
-    //         "distributors".to_string(),
-    //         vec![
-    //             Column::new_fixed_size("did".to_string(), DBTypeId::INT),
-    //             Column::new_variable_size("name".to_string(), DBTypeId::VARCHAR, 40),
-    //         ],
-    //         vec!["did".to_string()],
-    //     );
-    //
-    //     let create_statements = parse_create_sql(sql).expect("should parse");
-    //
-    //     assert_eq!(create_statements, vec![expected_create_statement]);
-    // }
 }

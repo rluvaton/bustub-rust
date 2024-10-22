@@ -51,7 +51,11 @@ mod tests {
         {
             let sql = "DELETE FROM books WHERE id = 15;";
 
-            instance.execute_single_delete_sql(sql, CheckOptions::default()).expect("Should delete");
+            let deleted_rows_count_result = instance.execute_single_delete_sql(sql, CheckOptions::default()).expect("Should delete");
+
+            assert_eq!(deleted_rows_count_result, deleted_rows_count_result.create_with_same_schema(vec![
+                vec![Value::from(1)]
+            ]));
         }
 
         instance.verify_integrity();
