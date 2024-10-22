@@ -21,7 +21,7 @@ impl TableIterator {
         Self {
             table_heap,
             rid,
-            stop_at_rid
+            stop_at_rid,
         }
     }
 }
@@ -31,18 +31,29 @@ impl Iterator for TableIterator {
     type Item = (TupleMeta, Tuple);
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.rid.is_invalid() {
-            return None;
-        }
+        let mut item;
 
-        // If reached the end, the rid is the same
-        if self.rid == self.stop_at_rid {
-            return None;
+        loop {
+            if self.rid.is_invalid() {
+                return None;
+            }
+
+            // If reached the end, the rid is the same
+            if self.rid == self.stop_at_rid {
+                return None;
+            }
+
+            item = self.table_heap.get_tuple(&self.rid);
+
+            if !item.0.is_deleted {
+                break;
+            }
+            
+            // Go to next
+            let next_tuple_id = self.rid.get_slot_num() + 1;
+
+            self.rid.set_slot_num(next_tuple_id);
         }
-        
-        let item = self.table_heap.get_tuple(&self.rid);
-        
-        assert_eq!(item.0.is_deleted, false, "Tuple should not be deleted");
 
         let page_guard = self.table_heap.bpm.as_ref().expect("Must have BPM").fetch_page_read(self.rid.get_page_id(), AccessType::Unknown).expect("Must be able to fetch page");
         let page = page_guard.cast::<TablePage>();
@@ -71,4 +82,6 @@ impl Iterator for TableIterator {
 
         Some(item)
     }
+
+    // TODO - add next_chunk for fetching a whole page for better performance
 }

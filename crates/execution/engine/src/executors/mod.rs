@@ -9,6 +9,7 @@ mod limit;
 mod values_executor;
 mod seq_scan;
 mod insert_executor;
+mod delete_executor;
 
 pub(crate) use traits::*;
 pub(crate) use filter::*;
@@ -20,3 +21,4 @@ pub(crate) use limit::*;
 pub(crate) use values_executor::*;
 pub(crate) use insert_executor::*;
 pub(crate) use seq_scan::*;
+pub(crate) use delete_executor::*;

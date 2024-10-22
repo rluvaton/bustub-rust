@@ -128,6 +128,32 @@ impl TablePage {
     }
 
     /**
+     * Mark tuple as deleted.
+     */
+    pub fn mark_tuple_as_deleted(&mut self, meta: &TupleMeta, rid: &RID) -> bool {
+        assert!(meta.is_deleted, "Tuple meta must be marked as deleted");
+        
+        let tuple_id = rid.get_slot_num();
+
+        assert!(tuple_id < self.num_tuples as u32, "Tuple ID out of range");
+        let (offset, size, old_meta) = unsafe {
+            self.get_tuple_info(self.num_tuples as usize - 1)
+        };
+
+        let deleted = !old_meta.is_deleted && meta.is_deleted;
+
+        if deleted {
+            self.num_deleted_tuples += 1;
+        }
+
+        unsafe {
+            *self.get_tuple_info_mut(tuple_id as usize) = (offset, size, *meta)
+        }
+
+        deleted
+    }
+
+    /**
      * Read a tuple from a table.
      */
     pub fn get_tuple(&self, rid: &RID) -> (TupleMeta, Tuple) {

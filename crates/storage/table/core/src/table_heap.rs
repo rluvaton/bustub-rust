@@ -46,7 +46,6 @@ impl TableHeap {
         }
     }
 
-
     /// Insert a tuple into the table. If the tuple is too large (>= page_size), return std::nullopt.
     ///
     /// # Arguments
@@ -117,13 +116,29 @@ impl TableHeap {
     ///
     /// # Arguments
     ///
-    /// * `meta`:  meta new tuple meta
-    /// * `rid`: rid the rid of the inserted tuple
+    /// * `meta`: the new tuple meta
+    /// * `rid`: the rid to update the meta to
+    ///
     ///
     pub fn update_tuple_meta(&self, meta: &TupleMeta, rid: &RID) {
         // TODO - return result
         let mut page_guard = self.bpm.as_ref().expect("must have bpm").fetch_page_write(rid.get_page_id(), AccessType::Unknown).expect("should fetch page");
-        page_guard.cast_mut::<TablePage>().update_tuple_meta(meta, rid);
+        page_guard.cast_mut::<TablePage>().update_tuple_meta(meta, rid)
+    }
+
+    /// Mark tuple as deleted
+    ///
+    /// # Arguments
+    ///
+    /// * `meta`: the new tuple meta
+    /// * `rid`: the rid to for the tuple
+    ///
+    /// returns: `bool` return whether the tuple was deleted (false if it was already deleted or not found)
+    ///
+    ///
+    pub fn mark_tuple_as_deleted(&self, meta: &TupleMeta, rid: &RID) -> bool {
+        let mut page_guard = self.bpm.as_ref().expect("must have bpm").fetch_page_write(rid.get_page_id(), AccessType::Unknown).expect("should fetch page");
+        page_guard.cast_mut::<TablePage>().mark_tuple_as_deleted(meta, rid)
     }
 
     /**

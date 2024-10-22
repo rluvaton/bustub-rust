@@ -1,6 +1,6 @@
 use crate::context::ExecutorContext;
-use crate::executors::{Executor, ExecutorRef, FilterExecutor, InsertExecutor, LimitExecutor, ProjectionExecutor};
-use planner::{FilterPlan, InsertPlan, LimitPlanNode, ProjectionPlanNode};
+use crate::executors::{DeleteExecutor, Executor, ExecutorRef, FilterExecutor, InsertExecutor, LimitExecutor, ProjectionExecutor};
+use planner::{DeletePlan, FilterPlan, InsertPlan, LimitPlanNode, ProjectionPlanNode};
 use std::sync::Arc;
 
 pub trait IteratorExt<'a> {
@@ -15,6 +15,9 @@ pub trait IteratorExt<'a> {
 
     #[must_use]
     fn insert_exec(self, plan: &'a InsertPlan, ctx: Arc<ExecutorContext<'a>>) -> ExecutorRef<'a>;
+
+    #[must_use]
+    fn delete_exec(self, plan: &'a DeletePlan, ctx: Arc<ExecutorContext<'a>>) -> ExecutorRef<'a>;
 }
 
 impl<'a> IteratorExt<'a> for ExecutorRef<'a> {
@@ -36,5 +39,10 @@ impl<'a> IteratorExt<'a> for ExecutorRef<'a> {
     #[inline]
     fn insert_exec(self, plan: &'a InsertPlan, ctx: Arc<ExecutorContext<'a>>) -> ExecutorRef<'a> {
         InsertExecutor::new(self, plan, ctx).into_ref()
+    }
+
+    #[inline]
+    fn delete_exec(self, plan: &'a DeletePlan, ctx: Arc<ExecutorContext<'a>>) -> ExecutorRef<'a> {
+        DeleteExecutor::new(self, plan, ctx).into_ref()
     }
 }
