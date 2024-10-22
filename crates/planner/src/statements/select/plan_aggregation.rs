@@ -160,6 +160,7 @@ fn add_agg_call_to_context(expr: &binder::ExpressionTypeImpl, planner: &Planner)
             return;
         }
         ExpressionTypeImpl::AggCall(agg) => {
+            // TODO - remove clone?
             planner.context.lock().add_aggregations(Rc::new(agg.clone().into()))
         },
         _ => panic!("expression type {:?} not supported in planner yet", expr)

@@ -356,7 +356,7 @@ mod tests {
         let page_id = page_guard.get_page_id();
 
         fn insert_random_tuple(rng: &mut ThreadRng, schema: &Schema, table_page: &mut TablePage, page_id: PageId) -> Tuple {
-            let mut tuple = Tuple::from_value(generate_row_values(rng), &schema);
+            let mut tuple = Tuple::from_value(generate_row_values(rng).as_slice(), &schema);
             let rid = table_page.insert_tuple(&TupleMeta::invalid(), &tuple).expect("Must add");
             tuple.set_rid(RID::new(page_id, rid as u32));
 
@@ -433,7 +433,7 @@ mod tests {
         let page_id = page_guard.get_page_id();
 
         fn try_insert_random_tuple(rng: &mut ThreadRng, schema: &Schema, table_page: &mut TablePage, page_id: PageId) -> Option<Tuple> {
-            let mut tuple = Tuple::from_value(generate_row_values(rng), &schema);
+            let mut tuple = Tuple::from_value(generate_row_values(rng).as_slice(), &schema);
             let rid = table_page.insert_tuple(&TupleMeta::invalid(), &tuple)?;
             tuple.set_rid(RID::new(page_id, rid as u32));
 

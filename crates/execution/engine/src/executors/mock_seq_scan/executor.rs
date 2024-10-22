@@ -52,7 +52,7 @@ impl Iterator for MockScanExecutor<'_>
         let (values, rid) = self.iter.next()?;
 
         Some((
-            Tuple::from_value(values, self.plan.get_output_schema().deref()),
+            Tuple::from_value(values.as_slice(), self.plan.get_output_schema().deref()),
             rid
         ))
     }

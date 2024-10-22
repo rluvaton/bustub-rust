@@ -2,6 +2,7 @@ use crate::context::ExecutorContext;
 use crate::executors::{Executor, ExecutorItem, ExecutorMetadata, FilterExecutor, InsertExecutor, LimitExecutor, MockScanExecutor, ProjectionExecutor, SeqScanExecutor, ValuesExecutor};
 use catalog_schema::Schema;
 use std::sync::Arc;
+use crate::executors::aggregations::AggregationExecutor;
 use crate::executors::delete_executor::DeleteExecutor;
 
 // Helper to avoid duplicating deref on each variant
@@ -17,6 +18,7 @@ macro_rules! call_each_variant {
             ExecutorImpl::Insert($name) => $func,
             ExecutorImpl::SeqScan($name) => $func,
             ExecutorImpl::Delete($name) => $func,
+            ExecutorImpl::Aggregation($name) => $func,
             // Add match arms for other variants as necessary
         }
     };
@@ -30,7 +32,7 @@ pub(crate) enum ExecutorImpl<'a> {
     Insert(InsertExecutor<'a>),
     // Update,
     Delete(DeleteExecutor<'a>),
-    // Aggregation(AggregationPlanNode),
+    Aggregation(AggregationExecutor<'a>),
     Limit(LimitExecutor<'a>),
     // NestedLoopJoin,
     // NestedIndexJoin,

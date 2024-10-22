@@ -10,6 +10,7 @@ mod values_executor;
 mod seq_scan;
 mod insert_executor;
 mod delete_executor;
+mod aggregations;
 
 pub(crate) use traits::*;
 pub(crate) use filter::*;

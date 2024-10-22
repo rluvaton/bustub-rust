@@ -80,18 +80,18 @@ impl AggregationPlanNode {
 
 
     /** @return The group by expressions */
-    fn get_group_bys(&self) -> &Vec<ExpressionRef> { &self.group_bys }
+    pub fn get_group_bys(&self) -> &Vec<ExpressionRef> { &self.group_bys }
 
     /** @return The idx'th aggregate expression */
-    fn get_aggregate_at(&self, index: usize) -> &ExpressionRef {
+    pub fn get_aggregate_at(&self, index: usize) -> &ExpressionRef {
         &self.aggregates[index]
     }
 
     /** @return The aggregate expressions */
-    fn get_aggregates(&self) -> &Vec<ExpressionRef> { &self.aggregates }
+    pub fn get_aggregates(&self) -> &Vec<ExpressionRef> { &self.aggregates }
 
     /** @return The aggregate types */
-    fn get_aggregate_types(&self) -> &Vec<AggregationType> { &self.agg_types }
+    pub fn get_aggregate_types(&self) -> &Vec<AggregationType> { &self.agg_types }
 
     pub fn infer_agg_schema(group_bys: &[ExpressionRef], aggregates: &[ExpressionRef], _agg_types: &[AggregationType]) -> Schema {
         // TODO(avery): correctly infer window call return type

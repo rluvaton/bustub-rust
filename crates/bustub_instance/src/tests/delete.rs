@@ -30,7 +30,7 @@ mod tests {
     }
 
     #[test]
-    fn should_delete_from_manually_created_table_with_data() {
+    fn should_delete() {
         let mut instance = BustubInstance::in_memory(None);
 
         // Create table
@@ -39,7 +39,7 @@ mod tests {
 
             instance.execute_user_input(sql, &mut NoopWriter::default(), CheckOptions::default()).expect("Should execute");
         }
-        
+
         // Insert rows
         {
             let sql = "INSERT INTO books (id) VALUES (1), (15), (42);";
@@ -50,10 +50,10 @@ mod tests {
         // Delete rows
         {
             let sql = "DELETE FROM books WHERE id = 15;";
-            
+
             instance.execute_single_delete_sql(sql, CheckOptions::default()).expect("Should delete");
         }
-        
+
         instance.verify_integrity();
 
         let actual = instance.execute_single_select_sql("SELECT id from books;", CheckOptions::default()).expect("Should execute");
@@ -65,5 +65,70 @@ mod tests {
         ]);
 
         assert_eq!(actual, expected);
+    }
+
+    #[test]
+    fn should_delete_with_returning() {
+        let mut instance = BustubInstance::in_memory(None);
+
+        // Create table
+        {
+            let sql = "CREATE TABLE books (id int);";
+
+            instance.execute_user_input(sql, &mut NoopWriter::default(), CheckOptions::default()).expect("Should execute");
+        }
+
+        // Insert rows
+        {
+            let sql = "INSERT INTO books (id) VALUES (1), (15), (42);";
+
+            instance.execute_single_insert_sql(sql, CheckOptions::default()).expect("Should insert");
+        }
+
+        // Delete rows
+        let sql = "DELETE FROM books WHERE id = 15 returning id;";
+
+        let actual = instance.execute_single_delete_sql(sql, CheckOptions::default()).expect("Should delete");
+
+        let expected = actual.create_with_same_schema(vec![
+            vec![Value::from(15)],
+        ]);
+
+        assert_eq!(actual, expected);
+
+        instance.verify_integrity();
+    }
+
+    #[test]
+    fn delete_should_return_number_of_delete() {
+        let mut instance = BustubInstance::in_memory(None);
+
+        // Create table
+        {
+            let sql = "CREATE TABLE books (id int);";
+
+            instance.execute_user_input(sql, &mut NoopWriter::default(), CheckOptions::default()).expect("Should execute");
+        }
+
+        // Insert rows
+        {
+            let sql = "INSERT INTO books (id) VALUES (1), (15), (42);";
+
+            instance.execute_single_insert_sql(sql, CheckOptions::default()).expect("Should insert");
+        }
+
+        // Delete rows
+        let sql = "DELETE FROM books WHERE id = 15 or id = 1";
+
+        let actual = instance.execute_single_delete_sql(sql, CheckOptions::default()).expect("Should delete");
+
+        let expected = actual.create_with_same_schema(vec![
+            // Number of deleted items
+            vec![Value::from(2)],
+        ]);
+
+        assert_eq!(actual, expected);
+
+        instance.verify_integrity();
     }
 }

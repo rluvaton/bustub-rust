@@ -28,7 +28,7 @@ impl Tuple {
 
 
     // constructor for creating a new tuple based on input value
-    pub fn from_value(values: Vec<Value>, schema: &Schema) -> Self {
+    pub fn from_value(values: &[Value], schema: &Schema) -> Self {
         assert_eq!(values.len(), schema.get_column_count());
 
         // 1. Calculate the size of the tuple.
@@ -71,7 +71,7 @@ impl Tuple {
 
                 offset += len + size_of::<u32>() as u32;
             } else {
-                values[i].serialize_to(&mut data[col.get_offset()..]);
+                values[i].try_cast_as(col.get_type()).expect("Should be able to cast to the schema type").serialize_to(&mut data[col.get_offset()..]);
             }
         }
 
@@ -116,7 +116,8 @@ impl Tuple {
             key_attrs
                 .iter()
                 .map(|&idx| self.get_value(schema, idx as usize))
-                .collect(),
+                .collect::<Vec<_>>()
+                .as_slice(),
             key_schema
         )
     }

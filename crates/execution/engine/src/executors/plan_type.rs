@@ -28,7 +28,11 @@ impl<'a> CreateExecutor<'a> for PlanType {
 
                 child.delete_exec(plan, ctx.clone())
             }
-            // PlanType::Aggregation(_) => {}
+            PlanType::Aggregation(plan) => {
+                let child = plan.get_child_plan().create_executor(ctx.clone());
+                
+                child.aggregation_exec(plan, ctx.clone())
+            }
             PlanType::Filter(plan) => {
                 let child = plan.get_child_plan().create_executor(ctx.clone());
 

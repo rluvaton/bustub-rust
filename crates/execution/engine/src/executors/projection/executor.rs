@@ -53,7 +53,7 @@ impl Iterator for ProjectionExecutor<'_>
             .collect::<Vec<_>>();
 
         Some((
-            Tuple::from_value(values, &*self.plan.get_output_schema()),
+            Tuple::from_value(values.as_slice(), &*self.plan.get_output_schema()),
             rid
         ))
     }

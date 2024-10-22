@@ -1,7 +1,8 @@
 use crate::context::ExecutorContext;
 use crate::executors::{DeleteExecutor, Executor, ExecutorRef, FilterExecutor, InsertExecutor, LimitExecutor, ProjectionExecutor};
-use planner::{DeletePlan, FilterPlan, InsertPlan, LimitPlanNode, ProjectionPlanNode};
+use planner::{AggregationPlanNode, DeletePlan, FilterPlan, InsertPlan, LimitPlanNode, ProjectionPlanNode};
 use std::sync::Arc;
+use crate::executors::aggregations::AggregationExecutor;
 
 pub trait IteratorExt<'a> {
     #[must_use]
@@ -18,6 +19,9 @@ pub trait IteratorExt<'a> {
 
     #[must_use]
     fn delete_exec(self, plan: &'a DeletePlan, ctx: Arc<ExecutorContext<'a>>) -> ExecutorRef<'a>;
+
+    #[must_use]
+    fn aggregation_exec(self, plan: &'a AggregationPlanNode, ctx: Arc<ExecutorContext<'a>>) -> ExecutorRef<'a>;
 }
 
 impl<'a> IteratorExt<'a> for ExecutorRef<'a> {
@@ -44,5 +48,10 @@ impl<'a> IteratorExt<'a> for ExecutorRef<'a> {
     #[inline]
     fn delete_exec(self, plan: &'a DeletePlan, ctx: Arc<ExecutorContext<'a>>) -> ExecutorRef<'a> {
         DeleteExecutor::new(self, plan, ctx).into_ref()
+    }
+
+    #[inline]
+    fn aggregation_exec(self, plan: &'a AggregationPlanNode, ctx: Arc<ExecutorContext<'a>>) -> ExecutorRef<'a> {
+        AggregationExecutor::new(self, plan, ctx).into_ref()
     }
 }

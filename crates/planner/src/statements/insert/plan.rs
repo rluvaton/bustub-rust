@@ -1,11 +1,11 @@
 use crate::plan_nodes::{PlanNode, PlanType};
 use crate::traits::Plan;
-use crate::{InsertPlan, Planner, ProjectionPlanNode};
+use crate::{AggregationPlanNode, AggregationType, InsertPlan, Planner, ProjectionPlanNode};
 use binder::InsertStatement;
 use std::sync::Arc;
 use catalog_schema::{Column, Schema};
-use data_types::DBTypeId;
-use expression::ExpressionRef;
+use data_types::{DBTypeId, Value};
+use expression::{ConstantValueExpression, Expression, ExpressionRef, ExpressionType};
 use crate::expressions::PlanExpression;
 
 impl Plan for InsertStatement {
@@ -22,15 +22,8 @@ impl Plan for InsertStatement {
 
         let has_returning = !self.get_returning().is_empty();
 
-        let insert_schema = if has_returning {
-            // TODO - fix this, we should not do this!
-            Arc::new(self.get_table().schema.prefix_column_names(self.get_table().table.as_str()))
-        } else {
-            Arc::new(Schema::new(vec![
-                // TODO - use this
-                Column::new_fixed_size("__bustub_internal.insert_rows".to_string(), DBTypeId::INT)
-            ]))
-        };
+        // TODO - fix this!, we should not prefix column names like this!
+        let insert_schema = Arc::new(self.get_table().schema.prefix_column_names(self.get_table().table.as_str()));
 
         let mut plan = InsertPlan::new(
             insert_schema,
@@ -53,6 +46,16 @@ impl Plan for InsertStatement {
                 )),
                 exprs,
                 plan,
+            ).into()
+        } else {
+            plan = AggregationPlanNode::new(
+                Arc::new(Schema::new(vec![
+                    Column::new_fixed_size("__bustub_internal.insert_rows".to_string(), DBTypeId::INT)
+                ])),
+                plan,
+                vec![],
+                vec![ExpressionType::Constant(ConstantValueExpression::new(Value::from(1))).into_ref()],
+                vec![AggregationType::CountStarAggregate]
             ).into()
         }
 
