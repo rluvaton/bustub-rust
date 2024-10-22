@@ -135,4 +135,36 @@ mod tests {
 
         instance.verify_integrity();
     }
+
+    #[test]
+    fn should_delete_from_table_with_pk_index() {
+        let mut instance = BustubInstance::in_memory(None);
+
+        {
+            let sql = "CREATE TABLE books (id int PRIMARY KEY);";
+
+            instance.execute_user_input(sql, &mut NoopWriter::default(), CheckOptions::default()).expect("Should execute");
+        }
+
+        {
+            let sql = "INSERT INTO books (id) VALUES (1), (15), (42), (13)";
+            instance.execute_single_insert_sql(sql, CheckOptions::default()).expect("Should insert");
+        }
+
+        // Delete rows
+        let sql = "DELETE FROM books WHERE id >= 15";
+
+        let actual = instance.execute_single_delete_sql(sql, CheckOptions::default()).expect("Should delete");
+
+        let expected = actual.create_with_same_schema(vec![
+            // Number of deleted items - 15 and 42
+            vec![Value::from(2)],
+        ]);
+
+        assert_eq!(actual, expected);
+
+        // Verify integrity of table with indexes
+        instance.verify_integrity();
+    }
+
 }
