@@ -19,6 +19,7 @@ use index::{GenericComparator, GenericKey};
 use rid::RID;
 #[cfg(feature = "tracing")]
 use tracy_client::*;
+use transaction::Transaction;
 
 // Tracking Memory usage
 #[cfg(feature = "tracing-memory-allocation")]
@@ -141,7 +142,7 @@ fn main() {
                         #[cfg(feature = "tracing")]
                         let _fetch_page = span!("read thread - get_value");
 
-                        index.get_value(&index_key, None).expect("must be able to get value")
+                        index.get_value(&index_key, &Transaction::default()).expect("must be able to get value")
                     };
 
                     assert!(key_will_vanish(key) || !rids.is_empty(), "Key {} not found", key);
@@ -207,12 +208,12 @@ fn main() {
                             // This can fail when we're trying to insert key that is already exists
                             // it happens when we generate base random number in delete
                             // and then generate base random number in insert that is smaller than the delete one
-                            let _ = index.insert(&index_key, &rid, None);
+                            let _ = index.insert(&index_key, &rid, &Transaction::default());
                         } else {
                             #[cfg(feature = "tracing")]
                             let _remove = span!("write thread - remove");
 
-                            index.remove(&index_key, None).expect("Should remove when key will vanish");
+                            index.remove(&index_key, &Transaction::default()).expect("Should remove when key will vanish");
                         }
 
                         metrics.tick();
@@ -225,7 +226,7 @@ fn main() {
                             #[cfg(feature = "tracing")]
                             let _insert = span!("write thread - replace");
 
-                            index.update(&index_key, &rid, None).expect("Should update value");
+                            index.update(&index_key, &rid, &Transaction::default()).expect("Should update value");
                         }
 
                         metrics.tick();
@@ -265,6 +266,6 @@ fn init_hash_map(total_keys: usize, index: &CustomHashTable) {
         let index_key = GenericKey::<8>::new_from_integer(key as i64);
         let rid = RID::new(value as PageId, value);
 
-        index.insert(&index_key, &rid, None).expect(format!("Should insert key {}", key).as_str())
+        index.insert(&index_key, &rid, &Transaction::default()).expect(format!("Should insert key {}", key).as_str())
     }
 }

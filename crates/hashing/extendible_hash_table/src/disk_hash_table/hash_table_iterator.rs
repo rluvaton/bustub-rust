@@ -218,6 +218,7 @@ mod tests {
     use std::sync::Arc;
     use std::sync::Barrier;
     use std::thread;
+    use transaction::Transaction;
     use crate::errors::InsertionError;
 
     type TestKey = u32;
@@ -258,7 +259,7 @@ mod tests {
         for i in 0..total {
             let (key, value) = (i as TestKey, (total * 10 + i) as TestValue);
 
-            hash_table.insert(&key, &value, None).expect("Should insert");
+            hash_table.insert(&key, &value, &Transaction::default()).expect("Should insert");
 
             entries.push((key, value));
         }
@@ -302,7 +303,7 @@ mod tests {
                 println!("Inserted {}%", i / one_percent);
             }
 
-            let insert_result = hash_table.insert(&key, &value, None);
+            let insert_result = hash_table.insert(&key, &value, &Transaction::default());
 
             match insert_result {
                 Ok(_) => {

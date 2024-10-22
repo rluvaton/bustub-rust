@@ -15,6 +15,7 @@ mod tests {
     use std::sync::Arc;
     use std::sync::Barrier;
     use std::thread;
+    use transaction::Transaction;
 
     type TestKey = u32;
     type TestValue = u64;
@@ -90,7 +91,7 @@ mod tests {
         for &i in &tmp[0..10] {
             let (key, _) = get_entry_for_index(i);
 
-            assert_eq!(hash_table.get_value(&key, None), Ok(vec![]), "should not find values for key {} when seed is {shuffle_seed}", i);
+            assert_eq!(hash_table.get_value(&key, &Transaction::default()), Ok(vec![]), "should not find values for key {} when seed is {shuffle_seed}", i);
         }
 
         // Should not delete anything before init
@@ -99,7 +100,7 @@ mod tests {
         for &i in &tmp[0..10] {
             let (key, _) = get_entry_for_index(i);
 
-            assert_eq!(hash_table.remove(&key, None), Ok(false), "should not delete for key {} when seed is {shuffle_seed}", i);
+            assert_eq!(hash_table.remove(&key, &Transaction::default()), Ok(false), "should not delete for key {} when seed is {shuffle_seed}", i);
         }
 
         hash_table.with_header_page(|header_page| {
@@ -118,7 +119,7 @@ mod tests {
             }
 
             // Abort process on panic, this should be used in thread
-            assert_eq!(hash_table.insert(&key, &value, None), Ok(()), "should insert new key {} when seed is {shuffle_seed}", i);
+            assert_eq!(hash_table.insert(&key, &value, &Transaction::default()), Ok(()), "should insert new key {} when seed is {shuffle_seed}", i);
         }
 
         println!("All entries inserted");
@@ -130,7 +131,7 @@ mod tests {
         for &i in &(total..total + 1_000_000).shuffle_with_seed(&mut rng)[0..10] {
             let (key, _) = get_entry_for_index(i);
 
-            assert_eq!(hash_table.get_value(&key, None), Ok(vec![]), "should not find values for key {} when seed is {shuffle_seed}", i);
+            assert_eq!(hash_table.get_value(&key, &Transaction::default()), Ok(vec![]), "should not find values for key {} when seed is {shuffle_seed}", i);
         }
 
         println!("Asserting not deleting missing values after init");
@@ -139,7 +140,7 @@ mod tests {
         for &i in &(total..total + 1_000_000).shuffle_with_seed(&mut rng)[0..10] {
             let (key, _) = get_entry_for_index(i);
 
-            assert_eq!(hash_table.remove(&key, None), Ok(false), "should not delete values for key {} when seed is {shuffle_seed}", i);
+            assert_eq!(hash_table.remove(&key, &Transaction::default()), Ok(false), "should not delete values for key {} when seed is {shuffle_seed}", i);
         }
 
         hash_table.verify_integrity(false);
@@ -154,7 +155,7 @@ mod tests {
                     println!("Fetched {}%", counter / one_percent);
                 }
 
-                assert_eq!(hash_table.get_value(&key, None), Ok(vec![value]), "should find values for key {} when seed is {shuffle_seed}", i);
+                assert_eq!(hash_table.get_value(&key, &Transaction::default()), Ok(vec![value]), "should find values for key {} when seed is {shuffle_seed}", i);
 
                 counter += 1;
             }
@@ -168,7 +169,7 @@ mod tests {
         for &i in random_key_index_to_remove {
             let (key, _) = get_entry_for_index(i);
 
-            assert_eq!(hash_table.remove(&key, None).expect("should remove"), true, "should remove key {} when seed is {shuffle_seed}", i);
+            assert_eq!(hash_table.remove(&key, &Transaction::default()).expect("should remove"), true, "should remove key {} when seed is {shuffle_seed}", i);
         }
 
         hash_table.verify_integrity(false);
@@ -187,7 +188,7 @@ mod tests {
 
                 let expected_return = if removed_keys.contains(&i) { vec![] } else { vec![value] };
 
-                assert_eq!(hash_table.get_value(&key, None), Ok(expected_return), "get value for key {} when seed is {shuffle_seed}", i);
+                assert_eq!(hash_table.get_value(&key, &Transaction::default()), Ok(expected_return), "get value for key {} when seed is {shuffle_seed}", i);
 
                 counter += 1;
             }
@@ -210,7 +211,7 @@ mod tests {
                 let (key, _) = get_entry_for_index(i);
                 let (_, value) = get_entry_for_index(i + offset_for_reinserted_values);
 
-                assert_eq!(hash_table.insert(&key, &value, None), Ok(()), "should insert back key {} when seed is {shuffle_seed}", i);
+                assert_eq!(hash_table.insert(&key, &value, &Transaction::default()), Ok(()), "should insert back key {} when seed is {shuffle_seed}", i);
             }
         }
 
@@ -232,7 +233,7 @@ mod tests {
 
                 let (key, value) = get_entry_for_index(i);
 
-                let found_value = hash_table.get_value(&key, None);
+                let found_value = hash_table.get_value(&key, &Transaction::default());
 
                 if removed_keys.contains(&i) {
                     assert_eq!(found_value, Ok(vec![]), "should not find any values for removed key {} when seed is {shuffle_seed}", i);
@@ -261,7 +262,7 @@ mod tests {
 
                 let (key, _) = get_entry_for_index(i);
 
-                let remove_result = hash_table.remove(&key, None);
+                let remove_result = hash_table.remove(&key, &Transaction::default());
 
                 if removed_keys.contains(&i) {
                     assert_eq!(remove_result, Ok(false), "should not delete already deleted key, index: {} when seed is {shuffle_seed}", i);
@@ -292,7 +293,7 @@ mod tests {
 
                 let (key, _) = get_entry_for_index(i);
 
-                assert_eq!(hash_table.get_value(&key, None), Ok(vec![]), "should not find any values for removed key {} when seed is {shuffle_seed}", i);
+                assert_eq!(hash_table.get_value(&key, &Transaction::default()), Ok(vec![]), "should not find any values for removed key {} when seed is {shuffle_seed}", i);
 
                 counter += 1;
             }
@@ -310,7 +311,7 @@ mod tests {
 
 
         for i in 0..total {
-            assert_eq!(hash_table.get_value(&(i as TestKey), None), Ok(vec![]), "should not find values for key {}", i);
+            assert_eq!(hash_table.get_value(&(i as TestKey), &Transaction::default()), Ok(vec![]), "should not find values for key {}", i);
         }
     }
 
@@ -400,7 +401,7 @@ mod tests {
         // [AsciiFlow](https://asciiflow.com/#/share/eJyrVspLzE1VslLKzMssyUzMUSguSSxJVdJRykmsTC0CilfHKJWlFhVn5ufFKFkZ6cQoVQBpSzNTIKsSyDI2NgOySlIrSoCcGCUFgsCpNDk7taTYCsaPickjrAkdEKXJJz8Z6J%2BU1IKSDCsFI%2BI0PZrS82hKAwytwcGegOQGl8yi1OSS%2FKJKK1ymIKFpux5NaVIwASpoMgKThmYgEqjFEI%2FrICqgzClIBm7BwZ6B5D73nPwklGBANRBHKOH0AT40wRDNraSEpYEBirPgZsxB9xfCWEhowuxEJo1gvphDui%2BWGKEEO2khbmBI2BdoaAa%2BWCDH%2FcZkp2dDIuIAB4LEBTg1GxmBSLhZxpT4xQTFHaTEhCFxMTGBUD6YQrqrZ6DmMdLLFKwAu1Mg4W4Oss4Y5mMIaUJceUd8mCrVKtUCAADbshE%3D))
 
         for key in vec![4, 24, 16, 6, 22, 10, 7, 31] {
-            hash_table.insert(&key, &key, None).unwrap();
+            hash_table.insert(&key, &key, &Transaction::default()).unwrap();
             hash_table.verify_integrity(true);
         }
 
@@ -426,7 +427,7 @@ mod tests {
         //                          └──────►│ 7 │31 │   │   4
         //                                  └───┴───┴───┘
         // ```
-        hash_table.insert(&9, &9, None).unwrap();
+        hash_table.insert(&9, &9, &Transaction::default()).unwrap();
         hash_table.verify_integrity(true);
 
         // Try to insert 20 and cause an overflow which will trigger directory expansion
@@ -487,7 +488,7 @@ mod tests {
         // 111 │                ├─────────┘
         //     └────────────────┘
         // ```
-        hash_table.insert(&20, &20, None).unwrap();
+        hash_table.insert(&20, &20, &Transaction::default()).unwrap();
         hash_table.verify_integrity(true);
 
         // Try to insert 26 and cause an overflow which will trigger **local** bucket 3 to split
@@ -552,13 +553,13 @@ mod tests {
         //                         └────────►│ 6 │22 │   │     6
         //                                   └───┴───┴───┘
         // ```
-        hash_table.insert(&26, &26, None).unwrap();
+        hash_table.insert(&26, &26, &Transaction::default()).unwrap();
         hash_table.verify_integrity(true);
 
         let all_keys = [24, 16, 9, 10, 26, 7, 31, 4, 20, 6, 22];
 
         for key in all_keys {
-            assert_eq!(hash_table.get_value(&key, None), Ok(vec![key]));
+            assert_eq!(hash_table.get_value(&key, &Transaction::default()), Ok(vec![key]));
         }
     }
 
@@ -653,7 +654,7 @@ mod tests {
                     }
                     // Alternating between insert and delete for stress
                     if i % 2 == 0 {
-                        let result = hash_table.insert(&key, &rid, None);
+                        let result = hash_table.insert(&key, &rid, &Transaction::default());
 
                         assert_eq!(
                             result,
@@ -663,13 +664,13 @@ mod tests {
                             i + offset
                         );
                     } else {
-                        let result = hash_table.get_value(&key, None);
+                        let result = hash_table.get_value(&key, &Transaction::default());
 
                         assert!(result.is_ok(), "Thread {} failed to get key {}", thread_id, i + offset);
                     }
 
                     if i % 3 == 0 {
-                        let result = hash_table.remove(&key, None);
+                        let result = hash_table.remove(&key, &Transaction::default());
 
                         match result {
                             Ok(_) => {}

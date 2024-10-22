@@ -20,6 +20,7 @@ hashing_common = {path = "../../crates/hashing/common"}
 rid = {path = "../../crates/rid"}
 catalog_schema = {path = "../../crates/catalog/schema"}
 index = {path = "../../crates/storage/index"}
+transaction = {path = "../../crates/concurrency/transaction/core"}
 
 [features]
 default = []

@@ -183,3 +183,10 @@ impl Transaction {
         panic!("transaction not in running state: {:?}", state)
     }
 }
+
+// This will create an invalid transaction - transaction outside the transaction manager - only useful for tests
+impl Default for Transaction {
+    fn default() -> Self {
+        Transaction::new(0, None)
+    }
+}
