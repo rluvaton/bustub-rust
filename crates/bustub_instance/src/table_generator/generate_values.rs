@@ -1,24 +1,24 @@
+use rand::rngs::ThreadRng;
 use crate::table_generator::column_insert_meta::{GenerateMeta, GenerateType};
 use crate::table_generator::dist::Dist;
+use rand::distributions::{Uniform, Distribution};
 use data_types::{BigIntUnderlyingType, DecimalUnderlyingType, IntUnderlyingType, SmallIntUnderlyingType, TinyIntUnderlyingType, Value};
-use rand::distributions::{IndependentSample, Range};
-use rand::ThreadRng;
 
 pub(crate) trait GenerateValues {
-    fn gen_numeric_values(&self, dist: Dist, serial_counter: &mut i64, count: usize, rng: &mut rand::ThreadRng) -> Vec<Value>;
+    fn gen_numeric_values(&self, dist: Dist, serial_counter: &mut i64, count: usize, rng: &mut ThreadRng) -> Vec<Value>;
 }
 
 macro_rules! generate_values_impl {
     ($($t:ty)+) => ($(
 impl GenerateValues for GenerateMeta<$t> {
-    fn gen_numeric_values(&self, dist: Dist, serial_counter: &mut i64, count: usize, rng: &mut rand::ThreadRng) -> Vec<Value> {
+    fn gen_numeric_values(&self, dist: Dist, serial_counter: &mut i64, count: usize, rng: &mut ThreadRng) -> Vec<Value> {
         let count = count as i64;
         match dist {
             Dist::Uniform => {
-                let between = Range::new(self.min, self.max);
+                let uniform = Uniform::from(self.min..self.max);
 
                 (0..count)
-                    .map(|_| between.ind_sample(rng))
+                    .map(|_| uniform.sample(rng))
                     .map(|value| Value::from(value))
                     .collect::<Vec<Value>>()
             }
