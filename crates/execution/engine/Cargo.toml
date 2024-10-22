@@ -27,6 +27,7 @@ error_utils = {path = "../../utils/error_utils"}
 table = {path = "../../storage/table/core"}
 tuple = {path = "../../storage/table/tuple"}
 rid = {path = "../../rid"}
+index = {path = "../../storage/index"}
 
 
 [features]

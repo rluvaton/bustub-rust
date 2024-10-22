@@ -63,20 +63,20 @@ impl IndexWithMetadata {
 }
 
 impl Index for IndexWithMetadata {
-    fn insert_entry(&self, key: &Tuple, rid: RID, transaction: Option<Arc<Transaction>>) -> error_utils::anyhow::Result<()> {
+    fn insert_entry(&self, key: &Tuple, rid: RID, transaction: &Transaction) -> error_utils::anyhow::Result<()> {
         self.index.insert_entry(key, rid, transaction)
     }
 
-    fn delete_entry(&self, key: &Tuple, rid: RID, transaction: Option<Arc<Transaction>>) -> error_utils::anyhow::Result<()> {
+    fn delete_entry(&self, key: &Tuple, rid: RID, transaction: &Transaction) -> error_utils::anyhow::Result<()> {
         self.index.delete_entry(key, rid, transaction)
     }
 
-    fn scan_key(&self, key: &Tuple, transaction: Option<Arc<Transaction>>) -> error_utils::anyhow::Result<Vec<RID>> {
+    fn scan_key(&self, key: &Tuple, transaction: &Transaction) -> error_utils::anyhow::Result<Vec<RID>> {
         self.index.scan_key(key, transaction)
     }
 
-    fn verify_integrity(&self, _index_metadata: &IndexMetadata, table_heap: Arc<TableHeap>) {
-        self.index.verify_integrity(&self.metadata, table_heap)
+    fn verify_integrity(&self, _index_metadata: &IndexMetadata, table_heap: Arc<TableHeap>, transaction: &Transaction) {
+        self.index.verify_integrity(&self.metadata, table_heap, transaction)
     }
 }
 

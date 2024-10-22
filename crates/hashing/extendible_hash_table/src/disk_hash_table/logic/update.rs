@@ -39,10 +39,7 @@ where
     ///
     /// Returns: `()` the value(s) associated with the given key
     ///
-    pub fn update(&self, key: &Key, value: &Value, transaction: Option<Arc<Transaction>>) -> Result<(), UpdateError> {
-        // TODO - use transaction
-        assert!(transaction.is_none(), "transaction is not none, transactions are not supported at the moment");
-
+    pub fn update(&self, key: &Key, value: &Value, _transaction: &Transaction) -> Result<(), UpdateError> {
         let directory_page_id: PageId;
         let bucket_page_id: PageId;
         let key_hash = self.hash(key);

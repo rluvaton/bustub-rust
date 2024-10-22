@@ -47,7 +47,7 @@ impl StatementHandler for BustubInstance {
             }
 
             index_info = catalog_guard.create_index(
-                Some(txn),
+                txn,
                 (stmt.table.clone() + "_pk").as_str(),
                 stmt.table.as_str(),
                 info.get_schema(),

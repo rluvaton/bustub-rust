@@ -51,14 +51,8 @@ where
     pub fn remove(
         &self,
         key: &Key,
-        transaction: Option<Arc<Transaction>>,
+        _transaction: &Transaction,
     ) -> Result<bool, RemoveError> {
-        // TODO - use transaction
-        assert!(
-            transaction.is_none(),
-            "transaction is not none, transactions are not supported at the moment"
-        );
-
         // TODO - performance improvement release write latch as soon as can
 
         let directory_index: u32;

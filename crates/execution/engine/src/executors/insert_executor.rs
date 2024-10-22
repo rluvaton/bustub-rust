@@ -1,8 +1,9 @@
+use index::Index;
 use crate::context::ExecutorContext;
 use crate::executors::{Executor, ExecutorImpl, ExecutorItem, ExecutorMetadata, ExecutorRef};
 use catalog_schema::Schema;
 use common::get_timestamp;
-use db_core::catalog::TableInfo;
+use db_core::catalog::{IndexInfo, TableInfo};
 use planner::{InsertPlan, PlanNode};
 use std::fmt;
 use std::fmt::Debug;
@@ -21,22 +22,31 @@ pub struct InsertExecutor<'a> {
 
     plan: &'a InsertPlan,
 
+    // The table info for the table the values should be inserted into
     dest_table_info: Arc<TableInfo>,
+    
+    // The indexes of the matching dest table
+    dest_indexes: Vec<Arc<IndexInfo>>
 }
 
 impl<'a> InsertExecutor<'a> {
     pub(crate) fn new(child_executor: ExecutorRef<'a>, plan: &'a InsertPlan, ctx: Arc<ExecutorContext<'a>>) -> Self {
-        let item = {
+        let (dest_table_info, dest_indexes) = {
             let c = ctx.get_catalog().lock();
 
-            c.get_table_by_oid(plan.get_table_oid()).expect("Table must exists (otherwise it should be blocked at the planner)")
+            let table_info = c.get_table_by_oid(plan.get_table_oid()).expect("Table must exists (otherwise it should be blocked at the planner)");
+            
+            let indexes = c.get_table_indexes_by_name(table_info.get_name());
+
+            (table_info, indexes)
         };
 
         Self {
             child_executor,
             plan,
             ctx,
-            dest_table_info: item,
+            dest_table_info,
+            dest_indexes
         }
     }
 }
@@ -68,7 +78,16 @@ impl Iterator for InsertExecutor<'_>
 
         tuple.set_rid(rid);
         
-        // TODO - update indexes if relevant
+        // Update indexes
+        self.dest_indexes
+            .iter()
+            .for_each(|index_info| {
+                let index = index_info.get_index();
+                
+                index
+                    .insert_entry(&tuple, rid,  self.ctx.get_transaction())
+                    .expect("Should insert to index");
+            });
 
         Some((tuple, rid))
     }

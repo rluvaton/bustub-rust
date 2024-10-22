@@ -39,10 +39,7 @@ where
     ///
     /// Returns: `Vec<Value` the value(s) associated with the given key
     ///
-    pub fn get_value(&self, key: &Key, transaction: Option<Arc<Transaction>>) -> Result<Vec<Value>, LookupError> {
-        // TODO - use transaction
-        assert!(transaction.is_none(), "transaction is not none, transactions are not supported at the moment");
-
+    pub fn get_value(&self, key: &Key, _transaction: &Transaction) -> Result<Vec<Value>, LookupError> {
         let directory_page_id: PageId;
         let bucket_page_id: PageId;
 

@@ -358,8 +358,11 @@ impl BustubInstance {
     }
     
     pub fn verify_integrity(&self) {
+        let txn = self.current_txn.clone().unwrap_or_else(|| self.txn_manager.begin(None));
         {
             let catalog = self.catalog.lock();
+            
+            catalog.verify_integrity(txn.deref());
         }
     } 
 }

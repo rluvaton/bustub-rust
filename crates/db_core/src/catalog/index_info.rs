@@ -5,6 +5,7 @@ use common::config::IndexOID;
 use std::sync::Arc;
 use index::{Index, IndexWithMetadata};
 use table::TableHeap;
+use transaction::Transaction;
 
 /// The IndexInfo class maintains metadata about a index.
 pub struct IndexInfo {
@@ -77,7 +78,11 @@ impl IndexInfo {
         self.key_schema.clone()
     }
     
-    pub fn verify_integrity(&self, table_heap: Arc<TableHeap>) {
-        self.index.verify_integrity(self.index.get_metadata().deref(), table_heap)
+    pub fn verify_integrity(&self, table_heap: Arc<TableHeap>, txn: &Transaction) {
+        self.index.verify_integrity(self.index.get_metadata().deref(), table_heap, txn)
+    }
+    
+    pub fn get_index(&self) -> &IndexWithMetadata {
+        self.index.deref()
     }
 }

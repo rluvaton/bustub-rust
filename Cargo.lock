@@ -616,6 +616,7 @@ dependencies = [
  "error_utils",
  "execution_common",
  "expression",
+ "index",
  "lock_manager",
  "parking_lot",
  "planner",

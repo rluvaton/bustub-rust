@@ -171,7 +171,7 @@ impl Catalog {
      * @return A (non-owning) pointer to the metadata of the new table
      */
     pub fn create_index(&mut self,
-                    txn: Option<Arc<Transaction>>,
+                    txn: Arc<Transaction>,
                     index_name: &str,
                     table_name: &str,
                     schema: Arc<Schema>,
@@ -229,7 +229,7 @@ impl Catalog {
             index.insert_entry(
                 &tuple.key_from_tuple(&schema, &key_schema, key_attrs),
                 *tuple.get_rid(),
-                txn.clone()
+                txn.deref()
             ).expect("Should insert entry");
         }
 
@@ -255,7 +255,7 @@ impl Catalog {
         Some(index_info)
     }
     
-    pub fn verify_integrity(&self) {
+    pub fn verify_integrity(&self, txn: &Transaction) {
         self.indexes.iter().for_each(|(_, index)| {
             let index_name = index.get_name().as_str();
             let index_oid = index.get_index_oid();
@@ -267,7 +267,7 @@ impl Catalog {
             let table_info  = self.tables.get(table_oid)
                 .expect(format!("Must have table info for table oid {table_oid} (with name {table_name}) (got by index with name {index_name} and oid {index_oid})").as_str());
             
-            index.verify_integrity(table_info.get_table_heap().clone());
+            index.verify_integrity(table_info.get_table_heap().clone(), txn);
         })
     }
 }

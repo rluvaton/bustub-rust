@@ -55,12 +55,9 @@ where
     ///
     /// TODO - return custom result if inserted or not - NotInsertedError
     ///
-    pub fn insert(&self, key: &Key, value: &Value, transaction: Option<Arc<Transaction>>) -> Result<(), InsertionError> {
+    pub fn insert(&self, key: &Key, value: &Value, _transaction: &Transaction) -> Result<(), InsertionError> {
         #[cfg(feature = "tracing")]
         let _insert = span!("[extendible hash table] insert");
-
-        // TODO - use transaction
-        assert!(transaction.is_none(), "transaction is not none, transactions are not supported at the moment");
 
         let mut directory_page_id: PageId;
         let mut bucket_page_id: PageId;

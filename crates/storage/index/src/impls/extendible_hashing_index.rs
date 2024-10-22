@@ -40,22 +40,22 @@ impl ExtendibleHashingIndex<{ bucket_array_size::<GenericKey<$key_size>, RID>() 
 }
 
 impl Index for ExtendibleHashingIndex<{ bucket_array_size::<GenericKey<$key_size>, RID>() }, GenericKey<$key_size>, GenericComparator<$key_size>, DefaultKeyHasher> {
-    fn insert_entry(&self, key: &Tuple, rid: RID, transaction: Option<Arc<Transaction>>) -> error_utils::anyhow::Result<()> {
+    fn insert_entry(&self, key: &Tuple, rid: RID, transaction: &Transaction) -> error_utils::anyhow::Result<()> {
         self.0.insert(&GenericKey::from(key), &rid, transaction).map_err(|err| err.to_anyhow())
     }
 
-    fn delete_entry(&self, key: &Tuple, _rid: RID, transaction: Option<Arc<Transaction>>) -> error_utils::anyhow::Result<()> {
+    fn delete_entry(&self, key: &Tuple, _rid: RID, transaction: &Transaction) -> error_utils::anyhow::Result<()> {
         self.0.remove(&GenericKey::from(key), transaction)
             .map(|_| ())
             .map_err(|err| err.to_anyhow())
     }
 
-    fn scan_key(&self, key: &Tuple, transaction: Option<Arc<Transaction>>) -> error_utils::anyhow::Result<Vec<RID>> {
+    fn scan_key(&self, key: &Tuple, transaction: &Transaction) -> error_utils::anyhow::Result<Vec<RID>> {
         self.0.get_value(&GenericKey::from(key), transaction)
             .map_err(|err| err.to_anyhow())
     }
     
-    fn verify_integrity(&self, index_metadata: &IndexMetadata, table_heap: Arc<TableHeap>) {
+    fn verify_integrity(&self, index_metadata: &IndexMetadata, table_heap: Arc<TableHeap>, transaction: &Transaction) {
         self.0.verify_integrity(false);
         
         if index_metadata.is_primary_key() {
@@ -64,7 +64,7 @@ impl Index for ExtendibleHashingIndex<{ bucket_array_size::<GenericKey<$key_size
             let all_table_heap_values_are_in_the_index = table_heap
                 .iter()
                 .all(|(_, tuple)| {
-                    self.0.get_value(&GenericKey::from(&tuple), None) == Ok(vec![*tuple.get_rid()])
+                    self.0.get_value(&GenericKey::from(&tuple), transaction) == Ok(vec![*tuple.get_rid()])
                 });
 
             assert!(all_table_heap_values_are_in_the_index, "There should be for every table heap an entry in the index for primary key index");
