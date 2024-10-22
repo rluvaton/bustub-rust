@@ -9,3 +9,8 @@ Bustub instance in the browser.
 ```bash
 wasm-pack build --target web
 ```
+
+## Serve
+```bash
+npx serve .
+```
