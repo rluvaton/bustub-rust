@@ -11,7 +11,7 @@ pub trait CheckVersionUndoLink {
     fn check_version_undo_link(&self, version_undo_link: Option<VersionUndoLink>) -> bool;
 }
 
-pub trait TransactionManager {
+pub trait TransactionManager: Sync + Send {
 
     /// Get the lowest read timestamp in the system
     fn get_watermark(&self) -> Timestamp;

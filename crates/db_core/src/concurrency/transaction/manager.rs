@@ -44,6 +44,9 @@ pub struct TransactionManager {
     next_txn_id: AtomicTxnId,
 }
 
+unsafe impl Sync for TransactionManager {
+    
+}
 
 struct PageVersionInfo {
     /// protects the map

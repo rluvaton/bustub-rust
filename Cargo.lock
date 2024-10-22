@@ -240,7 +240,7 @@ dependencies = [
  "lock_manager",
  "parking_lot",
  "planner",
- "rand 0.4.6",
+ "rand 0.8.5",
  "recovery_log_manager",
  "tracy-client",
  "transaction",

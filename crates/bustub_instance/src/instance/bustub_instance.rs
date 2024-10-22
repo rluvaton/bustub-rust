@@ -20,6 +20,7 @@ use std::ops::Deref;
 use std::path::PathBuf;
 use std::sync::Arc;
 use transaction::{Transaction, TransactionManager as TransactionManagerTrait};
+use crate::table_generator::TableGenerator;
 
 const DEFAULT_BPM_SIZE: usize = 128;
 const LRU_K_REPLACER_K: usize = 10;
@@ -70,7 +71,7 @@ impl BustubInstance {
         #[cfg(feature = "checkpoint_manager")]
         let log_manager = Some(Arc::new(LogManager::new(disk_manager.clone())));
 
-        // We need more frames for GenerateTestTable to work. Therefore, we use 128 instead of the default
+        // We need more frames for generate_test_table to work. Therefore, we use 128 instead of the default
         // buffer pool size specified in `config.h`.
 
         let bpm = BufferPoolManager::builder()
@@ -153,6 +154,17 @@ impl BustubInstance {
         drop(catalog_guard);
 
         self.txn_manager.commit(txn);
+    }
+
+    pub fn generate_test_table(&self) {
+        let txn = self.txn_manager.begin(None);
+        let exec_ctx = self.make_executor_context(txn.clone(), false);
+        let gen = TableGenerator::from(exec_ctx.deref());
+        let guard = self.catalog.lock();
+        gen.generate_test_tables();
+        drop(guard);
+
+        self.txn_manager.commit(txn.clone());
     }
 
     /// Enable managed txn mode on this BusTub instance, allowing statements like `BEGIN`

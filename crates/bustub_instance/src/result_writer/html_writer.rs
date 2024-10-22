@@ -33,6 +33,10 @@ impl HtmlWriter {
 
         buffer
     }
+    
+    pub fn get_output(&self) -> &str {
+        self.string.as_str()
+    }
 }
 
 impl ResultWriter for HtmlWriter {
