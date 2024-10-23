@@ -1858,6 +1858,7 @@ dependencies = [
  "bustub_instance",
  "console_error_panic_hook",
  "execution_common",
+ "parking_lot",
  "transaction",
  "wasm-bindgen",
 ]

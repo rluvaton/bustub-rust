@@ -1,7 +1,9 @@
 extern crate console_error_panic_hook;
-use bustub_instance::BustubInstance;
-use wasm_bindgen::prelude::*;
 
+use bustub_instance::BustubInstance;
+use std::panic;
+use wasm_bindgen::prelude::*;
+use execution_common::CheckOptions;
 
 // https://rustwasm.github.io/wasm-bindgen/examples/console-log.html
 #[wasm_bindgen]
@@ -32,21 +34,12 @@ macro_rules! console_log {
     ($($t:tt)*) => (log(&format_args!($($t)*).to_string()))
 }
 
-
-use execution_common::CheckOptions;
-use std::panic;
-use std::sync::Mutex;
-
-
-#[wasm_bindgen]
-pub struct BustubInstanceShell {
-    bustub: Mutex<BustubInstance>,
-}
-
 #[wasm_bindgen]
 #[no_mangle]
-pub fn bus_tub_init() -> BustubInstanceShell {
+pub fn bus_tub_init() -> usize {
     console_log!("Initialize BusTub...");
+
+    // Print to browser console on panic
     panic::set_hook(Box::new(console_error_panic_hook::hook));
 
     console_log!("Acquiring bustub instance");
@@ -59,7 +52,7 @@ pub fn bus_tub_init() -> BustubInstanceShell {
 
     // if bustub.buffer_pool_manager.is_some() {
     console_log!("Generating test table");
-        bustub.generate_test_table();
+    bustub.generate_test_table();
     console_log!("Test table generated");
     // }
 
@@ -69,44 +62,47 @@ pub fn bus_tub_init() -> BustubInstanceShell {
 
     console_log!("Bustub initialized successfully");
 
-    // Success
-    BustubInstanceShell {
-        bustub: Mutex::new(bustub)
-    }
+    let bustub = Box::new(bustub);
+    
+    // Leak the pointer so can have multiple mutable references without dealing with rust
+    let add = Box::leak(bustub);
+
+    add as *mut BustubInstance as usize
 }
 
-
-
-
 #[wasm_bindgen]
-#[no_mangle]
-pub fn bus_tub_execute_query(bustub: &BustubInstanceShell, input: &str, buffer_size: usize) -> Vec<String> {
-    // pub fn bus_tub_execute_query(input: &str, prompt: &str, output: &str) -> (String, String) {
-    println!("{}", input);
-
+pub fn bus_tub_execute_query(pointer: usize, input: &str, buffer_size: usize) -> Vec<String> {
+    let mut bustub = unsafe { Box::from_raw(pointer as *mut BustubInstance) };
+    
     let mut writer = bustub_instance::result_writer::HtmlWriter::default();
-    let result = bustub.bustub.lock().unwrap().execute_user_input(input, &mut writer, CheckOptions::default());
-
+    let result = bustub.execute_user_input(input, &mut writer, CheckOptions::default());
+    
+    let has_error = result.is_err();
+    
     let mut output_string = match result {
         Ok(_) => writer.get_output().to_string(),
         Err(err) => format!("{:#?}", err),
     };
-
-    let txn = bustub.bustub.lock().unwrap().current_managed_txn();
-
+    
+    let txn = bustub.current_managed_txn();
+    
     let output_prompt = match txn {
         Some(txn) => {
             format!("txn{}", txn.get_transaction_id_human_readable())
         }
         None => "".to_string()
     };
-
-    output_string.truncate(buffer_size + 1);
-
-    // (output_string, output_prompt);
     
-    vec![output_string, output_prompt]
+    if !has_error {
+        // + 1 to indicate to JS that it was truncate
+        output_string.truncate(buffer_size + 1);
+    }
 
+
+    // Leak again the instance to avoid the instance from being freed
+    let new_leak = Box::leak(bustub);
+
+    vec![(new_leak as *mut BustubInstance as usize).to_string(), output_string, output_prompt]
 }
 
 #[cfg(test)]

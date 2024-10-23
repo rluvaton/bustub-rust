@@ -7,8 +7,13 @@ edition = "2021"
 crate-type = ["cdylib"]
 
 [dependencies]
+
+# WASM related
 wasm-bindgen = "0.2"
+console_error_panic_hook = "0.1.7"
+
+parking_lot = "0.12.3"
+
 bustub_instance = { path = "../../crates/bustub_instance", features = ["wasm"] }
 transaction = {path = "../../crates/concurrency/transaction/core"}
 execution_common = {path = "../../crates/execution/common"}
-console_error_panic_hook = "0.1.7"

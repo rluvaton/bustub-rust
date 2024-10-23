@@ -80,7 +80,7 @@
     const BUSTUB_BUILD_TIME_VAR = "${BUSTUB_BUILD_TIME}"
     let is_ready = false;
 
-    let bustub_shell;
+    let bustub_shell_pointer;
 
     init().then(() => {
         // const executeQuery = Module.cwrap('BusTubExecuteQuery', 'number', ['string', 'number', 'number', 'number'])
@@ -88,11 +88,18 @@
         window.executeQuery = (input) => {
             const bufferSize = 64 * 1024
 
-            const [output, prompt] = bus_tub_execute_query(bustub_shell, input, bufferSize);
+            const [new_bustub_shell_pointer_str, output, prompt] = bus_tub_execute_query(bustub_shell_pointer, input, bufferSize);
 
-            return [output.length > bufferSize, prompt, output]
+            // Set the new pointer
+            bustub_shell_pointer = parseInt(new_bustub_shell_pointer_str);
+
+            return [
+                // If truncated
+                output.length === bufferSize + 1,
+                prompt,
+                output]
         }
-        bustub_shell = bus_tub_init();
+        bustub_shell_pointer = bus_tub_init();
         is_ready = true
     });
 
