@@ -1,51 +1,98 @@
+extern crate console_error_panic_hook;
 use wasm_bindgen::prelude::*;
 use bustub_instance::BustubInstance;
 
+
+// https://rustwasm.github.io/wasm-bindgen/examples/console-log.html
 #[wasm_bindgen]
-extern {
-    pub fn alert(s: &str);
+extern "C" {
+    // Use `js_namespace` here to bind `console.log(..)` instead of just
+    // `log(..)`
+    #[wasm_bindgen(js_namespace = console)]
+    fn log(s: &str);
+
+    // The `console.log` is quite polymorphic, so we can bind it with multiple
+    // signatures. Note that we need to use `js_name` to ensure we always call
+    // `log` in JS.
+    #[wasm_bindgen(js_namespace = console, js_name = log)]
+    fn log_u32(a: u32);
+
+    // Multiple arguments too!
+    #[wasm_bindgen(js_namespace = console, js_name = log)]
+    fn log_many(a: &str, b: &str);
 }
 
-use std::sync::{Arc, LazyLock, Mutex};
+// Next let's define a macro that's like `println!`, only it works for
+// `console.log`. Note that `println!` doesn't actually work on the Wasm target
+// because the standard library currently just eats all output. To get
+// `println!`-like behavior in your app you'll likely want a macro like this.
+macro_rules! console_log {
+    // Note that this is using the `log` function imported above during
+    // `bare_bones`
+    ($($t:tt)*) => (log(&format_args!($($t)*).to_string()))
+}
+
+
+use std::panic;
 use execution_common::CheckOptions;
-use transaction::Transaction;
 
-static INSTANCE: LazyLock<Mutex<BustubInstance>> = LazyLock::new(|| Mutex::new(BustubInstance::in_memory(None)));
 
-// TODO - https://stackoverflow.com/questions/47529643/how-to-return-a-string-or-similar-from-rust-in-webassembly
+#[no_mangle]
+#[wasm_bindgen]
+pub struct BustubInstanceShell {
+    bustub: BustubInstance,
+}
 
 #[wasm_bindgen]
-pub fn bus_tub_init() -> i32 {
-    println!("Initialize BusTub...");
+#[no_mangle]
+pub fn bus_tub_init() -> BustubInstanceShell {
+    console_log!("Initialize BusTub...");
+    panic::set_hook(Box::new(console_error_panic_hook::hook));
 
-    let mut bustub = INSTANCE.lock().unwrap();
+    console_log!("Acquiring bustub instance");
+    let mut bustub = BustubInstance::in_memory(None);
+    console_log!("Bustub instance acquired");
+    
+    console_log!("Generating mock table");
     bustub.generate_mock_table();
+    console_log!("Mock table generated");
     
     // if bustub.buffer_pool_manager.is_some() {
+    console_log!("Generating test table");
         bustub.generate_test_table();
+    console_log!("Test table generated");
     // }
     
+    console_log!("Enabling managed txn");
     bustub.enable_managed_txn();
+    console_log!("Managed txn enabled");
+    
+    console_log!("Bustub initialized successfully");
     
     // Success
-    0
+    BustubInstanceShell {
+        bustub
+    }
 }
 
+
+
+
 #[wasm_bindgen]
-pub fn bus_tub_execute_query(input: &str, prompt: &str, output: &str) -> i32 {
+#[no_mangle]
+pub fn bus_tub_execute_query(mut bustub: BustubInstanceShell, input: &str, prompt: &str, output: &str) -> Vec<String> {
 // pub fn bus_tub_execute_query(input: &str, prompt: &str, output: &str) -> (String, String) {
-    let mut bustub = INSTANCE.lock().unwrap();
     println!("{}", input);
     
     let mut writer = bustub_instance::result_writer::HtmlWriter::default();
-    let result = bustub.execute_user_input(input, &mut writer, CheckOptions::default());
+    let result = bustub.bustub.execute_user_input(input, &mut writer, CheckOptions::default());
     
     let output_string = match result {
         Ok(_) => writer.get_output().to_string(),
         Err(err) => format!("{:#?}", err),
     };
     
-    let txn = bustub.current_managed_txn();
+    let txn = bustub.bustub.current_managed_txn();
     
     let output_prompt = match txn {
         Some(txn) => {
@@ -55,8 +102,18 @@ pub fn bus_tub_execute_query(input: &str, prompt: &str, output: &str) -> i32 {
     };
 
 
-    (output_string, output_prompt);
+    // (output_string, output_prompt);
     
-    0
+    vec![output_string, output_prompt]
 
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::bus_tub_init;
+
+    #[test]
+    fn init() {
+        bus_tub_init();
+    }
 }

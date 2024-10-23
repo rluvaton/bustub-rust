@@ -50,7 +50,7 @@
 
     .terminal::after {
         content: "";
-        background-image: url("bustub.svg");
+        background-image: url("https://15445.courses.cs.cmu.edu/fall2023/bustub/bustub.svg");
         opacity: 0.02;
         top: -50%;
         left: -50%;
@@ -72,13 +72,8 @@
     }
 </style>
 
-<script src="./pkg/wasm_shell.js"></script>
-
 <script type="module">
-    import init, { BusTubExecuteQuery, BusTubInit, allocateUTF8, UTF8ToString, _free } from "./pkg/wasm_shell.js";
-    init().then(() => {
-        greet("WebAssembly");
-    });
+    import init, { bus_tub_execute_query, bus_tub_init } from "./pkg/wasm_shell.js";
 
     const BUSTUB_PUBLIC_VERSION_VAR = "${BUSTUB_PUBLIC_VERSION}"
     const BUSTUB_PRIVATE_VERSION_VAR = "${BUSTUB_PRIVATE_VERSION}"
@@ -86,22 +81,25 @@
     let is_ready = false
 
     init().then(() => {
-        const executeQuery = Module.cwrap('BusTubExecuteQuery', 'number', ['string', 'number', 'number', 'number'])
-        const initialize = Module.cwrap('BusTubInit', 'number', [])
+        // const executeQuery = Module.cwrap('BusTubExecuteQuery', 'number', ['string', 'number', 'number', 'number'])
+        // const initialize = Module.cwrap('BusTubInit', 'number', [])
         window.executeQuery = (x) => {
             const bufferSize = 64 * 1024
             let output = "\0".repeat(bufferSize)
-            let ptrOutput = allocateUTF8(output)
+            let ptrOutput = output
+            // let ptrOutput = allocateUTF8(output)
             let output2 = "\0".repeat(bufferSize)
-            let ptrOutput2 = allocateUTF8(output2)
-            const retCode = executeQuery(x, ptrOutput2, ptrOutput, bufferSize)
+            let ptrOutput2 = output2;
+            debugger;
+            // let ptrOutput2 = allocateUTF8(output2)
+            const retCode = bus_tub_execute_query(x, ptrOutput2, ptrOutput, bufferSize)
             output = UTF8ToString(ptrOutput)
             output2 = UTF8ToString(ptrOutput2)
             _free(ptrOutput)
             _free(ptrOutput2)
             return [retCode, output2, output]
         }
-        initialize()
+        bus_tub_init();
         is_ready = true
     });
 
