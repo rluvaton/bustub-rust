@@ -52,23 +52,23 @@ pub fn bus_tub_init() -> BustubInstanceShell {
     console_log!("Acquiring bustub instance");
     let mut bustub = BustubInstance::in_memory(None);
     console_log!("Bustub instance acquired");
-    
+
     console_log!("Generating mock table");
     bustub.generate_mock_table();
     console_log!("Mock table generated");
-    
+
     // if bustub.buffer_pool_manager.is_some() {
     console_log!("Generating test table");
         bustub.generate_test_table();
     console_log!("Test table generated");
     // }
-    
+
     console_log!("Enabling managed txn");
     bustub.enable_managed_txn();
     console_log!("Managed txn enabled");
-    
+
     console_log!("Bustub initialized successfully");
-    
+
     // Success
     BustubInstanceShell {
         bustub: Mutex::new(bustub)
@@ -80,20 +80,20 @@ pub fn bus_tub_init() -> BustubInstanceShell {
 
 #[wasm_bindgen]
 #[no_mangle]
-pub fn bus_tub_execute_query(bustub: &BustubInstanceShell, input: &str) -> Vec<String> {
-// pub fn bus_tub_execute_query(input: &str, prompt: &str, output: &str) -> (String, String) {
+pub fn bus_tub_execute_query(bustub: &BustubInstanceShell, input: &str, buffer_size: usize) -> Vec<String> {
+    // pub fn bus_tub_execute_query(input: &str, prompt: &str, output: &str) -> (String, String) {
     println!("{}", input);
-    
+
     let mut writer = bustub_instance::result_writer::HtmlWriter::default();
     let result = bustub.bustub.lock().unwrap().execute_user_input(input, &mut writer, CheckOptions::default());
-    
-    let output_string = match result {
+
+    let mut output_string = match result {
         Ok(_) => writer.get_output().to_string(),
         Err(err) => format!("{:#?}", err),
     };
-    
+
     let txn = bustub.bustub.lock().unwrap().current_managed_txn();
-    
+
     let output_prompt = match txn {
         Some(txn) => {
             format!("txn{}", txn.get_transaction_id_human_readable())
@@ -101,6 +101,7 @@ pub fn bus_tub_execute_query(bustub: &BustubInstanceShell, input: &str) -> Vec<S
         None => "".to_string()
     };
 
+    output_string.truncate(buffer_size + 1);
 
     // (output_string, output_prompt);
     
