@@ -16,7 +16,7 @@ use parking_lot::Mutex;
 use planner::{PlanNode, Planner};
 use recovery_log_manager::LogManager;
 use std::collections::HashMap;
-use std::ops::Deref;
+use std::ops::{Deref, DerefMut};
 use std::path::PathBuf;
 use std::sync::Arc;
 use transaction::{Transaction, TransactionManager as TransactionManagerTrait};
@@ -160,8 +160,8 @@ impl BustubInstance {
         let txn = self.txn_manager.begin(None);
         let exec_ctx = self.make_executor_context(txn.clone(), false);
         let gen = TableGenerator::from(exec_ctx.deref());
-        let guard = self.catalog.lock();
-        gen.generate_test_tables();
+        let mut guard = self.catalog.lock();
+        gen.generate_test_tables(guard.deref_mut());
         drop(guard);
 
         self.txn_manager.commit(txn.clone());

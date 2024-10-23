@@ -1,7 +1,7 @@
 use crate::table_generator::column_insert_meta::{ColumnInsertMeta, GenerateMeta, GenerateType};
 use crate::table_generator::table_insert_meta::TableInsertMeta;
 use data_types::{DBTypeId, IntUnderlyingType, Value};
-use db_core::catalog::TableInfo;
+use db_core::catalog::{Catalog, TableInfo};
 use execution_engine::ExecutorContext;
 use rand::{thread_rng};
 use std::cmp::min;
@@ -23,7 +23,7 @@ pub(crate) struct TableGenerator<'a> {
 
 impl<'a> TableGenerator<'a>
 {
-    pub fn generate_test_tables(&self) {
+    pub fn generate_test_tables(&self, catalog: &mut Catalog) {
         for mut table_meta in Self::get_insert_meta() {
             // Create Schema
             let schema: Schema = table_meta.col_meta
@@ -39,7 +39,7 @@ impl<'a> TableGenerator<'a>
                 })
                 .into();
 
-            let info = self.exec_ctx.get_catalog().lock().create_table(
+            let info = catalog.create_table(
                 self.exec_ctx.get_transaction().clone(),
                 table_meta.name.to_string(),
                 Arc::new(schema),
