@@ -67,6 +67,7 @@
     tbody,
     thead,
     div {
+        /*noinspection CssUnresolvedCustomProperty*/
         font-size: calc(var(--size, 1)*(12px/var(--pixel-density, 1)));
         white-space: pre;
     }
@@ -78,28 +79,17 @@
     const BUSTUB_PUBLIC_VERSION_VAR = "${BUSTUB_PUBLIC_VERSION}"
     const BUSTUB_PRIVATE_VERSION_VAR = "${BUSTUB_PRIVATE_VERSION}"
     const BUSTUB_BUILD_TIME_VAR = "${BUSTUB_BUILD_TIME}"
-    let is_ready = false
+    let is_ready = false;
+
+    let bustub_shell;
 
     init().then(() => {
-        // const executeQuery = Module.cwrap('BusTubExecuteQuery', 'number', ['string', 'number', 'number', 'number'])
-        // const initialize = Module.cwrap('BusTubInit', 'number', [])
-        window.executeQuery = (x) => {
-            const bufferSize = 64 * 1024
-            let output = "\0".repeat(bufferSize)
-            let ptrOutput = output
-            // let ptrOutput = allocateUTF8(output)
-            let output2 = "\0".repeat(bufferSize)
-            let ptrOutput2 = output2;
-            debugger;
-            // let ptrOutput2 = allocateUTF8(output2)
-            const retCode = bus_tub_execute_query(x, ptrOutput2, ptrOutput, bufferSize)
-            output = UTF8ToString(ptrOutput)
-            output2 = UTF8ToString(ptrOutput2)
-            _free(ptrOutput)
-            _free(ptrOutput2)
-            return [retCode, output2, output]
+        window.executeQuery = (input) => {
+            const [output, prompt] = bus_tub_execute_query(bustub_shell, input)
+
+            return [prompt, output]
         }
-        bus_tub_init();
+        bustub_shell = bus_tub_init();
         is_ready = true
     });
 
@@ -121,23 +111,20 @@
             }
             line += command
             if (line.endsWith(';') || line.startsWith("\\")) {
-                if (line == "\\clear") {
+                if (line === "\\clear") {
                     this.clear()
                 } else {
-                    const [retCode, new_prompt, result] = executeQuery(line)
+                    const [new_prompt, result] = executeQuery(line)
                     bustub_prompt = new_prompt
                     console.log(bustub_prompt)
                     this.echo(result, { raw: true })
-                    if (retCode == 1) {
-                        this.echo("Table truncated due to output limit.")
-                    }
                     this.echo()
                 }
                 line = ""
             }
         }, {
             greetings: `[[@;;;;bustub.svg]]`,
-            prompt: () => line.length == 0 ? "[[b;;]" + (bustub_prompt.length == 0 ? "bustub" : bustub_prompt) + "> ]" : "[[b;;]... ]"
+            prompt: () => line.length === 0 ? "[[b;;]" + (bustub_prompt.length === 0 ? "bustub" : bustub_prompt) + "> ]" : "[[b;;]... ]"
         })
         term.echo(`<hr><h1>Live Database Shell</h1>`, { raw: true })
 

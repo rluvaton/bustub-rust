@@ -1,6 +1,6 @@
 extern crate console_error_panic_hook;
-use wasm_bindgen::prelude::*;
 use bustub_instance::BustubInstance;
+use wasm_bindgen::prelude::*;
 
 
 // https://rustwasm.github.io/wasm-bindgen/examples/console-log.html
@@ -33,14 +33,14 @@ macro_rules! console_log {
 }
 
 
-use std::panic;
 use execution_common::CheckOptions;
+use std::panic;
+use std::sync::Mutex;
 
 
-#[no_mangle]
 #[wasm_bindgen]
 pub struct BustubInstanceShell {
-    bustub: BustubInstance,
+    bustub: Mutex<BustubInstance>,
 }
 
 #[wasm_bindgen]
@@ -71,7 +71,7 @@ pub fn bus_tub_init() -> BustubInstanceShell {
     
     // Success
     BustubInstanceShell {
-        bustub
+        bustub: Mutex::new(bustub)
     }
 }
 
@@ -80,25 +80,25 @@ pub fn bus_tub_init() -> BustubInstanceShell {
 
 #[wasm_bindgen]
 #[no_mangle]
-pub fn bus_tub_execute_query(mut bustub: BustubInstanceShell, input: &str, prompt: &str, output: &str) -> Vec<String> {
+pub fn bus_tub_execute_query(bustub: &BustubInstanceShell, input: &str) -> Vec<String> {
 // pub fn bus_tub_execute_query(input: &str, prompt: &str, output: &str) -> (String, String) {
     println!("{}", input);
     
     let mut writer = bustub_instance::result_writer::HtmlWriter::default();
-    let result = bustub.bustub.execute_user_input(input, &mut writer, CheckOptions::default());
+    let result = bustub.bustub.lock().unwrap().execute_user_input(input, &mut writer, CheckOptions::default());
     
     let output_string = match result {
         Ok(_) => writer.get_output().to_string(),
         Err(err) => format!("{:#?}", err),
     };
     
-    let txn = bustub.bustub.current_managed_txn();
+    let txn = bustub.bustub.lock().unwrap().current_managed_txn();
     
     let output_prompt = match txn {
         Some(txn) => {
             format!("txn{}", txn.get_transaction_id_human_readable())
         }
-        None => prompt.to_string()
+        None => "".to_string()
     };
 
 
