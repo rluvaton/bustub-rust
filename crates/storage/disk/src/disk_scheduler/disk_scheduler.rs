@@ -1,10 +1,16 @@
 use std::sync::Arc;
-use std::thread::{Builder, JoinHandle};
 
 use crate::disk_scheduler::disk_request::WriteAndReadDiskRequest;
-use crate::{DiskManager, DiskRequestType, ReadDiskRequest, WriteDiskRequest};
-use common::{abort_process_on_panic, Channel, Future, Promise};
+use crate::disk_scheduler::worker::traits::{DiskSchedulerWorker, DiskSchedulerWorkerMessage};
+use crate::{DiskManager, ReadDiskRequest, WriteDiskRequest};
+use common::{Future, Promise};
 use pages::{PageData, PageId, UnderlyingPage};
+
+#[cfg(not(target_arch = "wasm32"))]
+use crate::disk_scheduler::worker::different_thread::DifferentThreadDiskSchedulerWorker;
+
+#[cfg(target_arch = "wasm32")]
+use crate::disk_scheduler::worker::same_thread::SameThreadDiskScheduler;
 
 /**
  * @brief The DiskScheduler schedules disk read and write operations.
@@ -15,37 +21,22 @@ use pages::{PageData, PageId, UnderlyingPage};
  */
 pub struct DiskScheduler {
     /** The background thread responsible for issuing scheduled requests to the disk manager. */
-    worker: DiskSchedulerWorker,
-
-    /** A shared queue to concurrently schedule and process requests. When the DiskScheduler's destructor is called,
-                 * `std::nullopt` is put into the queue to signal to the background thread to stop execution. */
-    sender: Arc<Channel<DiskSchedulerWorkerMessage<'static>>>,
-}
-
-
-enum DiskSchedulerWorkerMessage<'a> {
-    Terminate,
-    NewJob(DiskRequestType<'a>),
-}
-
-
-struct DiskSchedulerWorker {
-    thread: Option<JoinHandle<()>>,
+    worker: Box<dyn DiskSchedulerWorker>,
 }
 
 
 type DiskSchedulerPromise = Promise<bool>;
 
 impl DiskScheduler {
+    
     pub fn new<D: DiskManager + 'static>(disk_manager: Arc<D>) -> Self {
         // let (sender, receiver) = mpsc::channel();
 
-        let channel = Arc::new(Channel::new());
-
         let scheduler = DiskScheduler {
-            // disk_manager: Arc::new(Mutex::new(disk_manager)),
-            worker: DiskSchedulerWorker::new(disk_manager, Arc::clone(&channel)),
-            sender: Arc::clone(&channel),
+            #[cfg(not(target_arch = "wasm32"))]
+            worker: DifferentThreadDiskSchedulerWorker::new(disk_manager).boxed(),
+            #[cfg(target_arch = "wasm32")]
+            worker: SameThreadDiskScheduler::new(disk_manager).boxed(),
         };
 
         scheduler
@@ -75,7 +66,7 @@ impl DiskScheduler {
 
         let request = ReadDiskRequest::new(dest.get_page_id(), dest_updated_lifetime, promise);
 
-        self.sender.put(DiskSchedulerWorkerMessage::NewJob(request.into()));
+        self.worker.send(DiskSchedulerWorkerMessage::NewJob(request.into()));
 
         future
     }
@@ -105,7 +96,7 @@ impl DiskScheduler {
 
         let request = ReadDiskRequest::new(dest.get_page_id(), dest_updated_lifetime, promise);
 
-        self.sender.put(DiskSchedulerWorkerMessage::NewJob(request.into()));
+        self.worker.send(DiskSchedulerWorkerMessage::NewJob(request.into()));
 
         drop(self);
         let r = after_request_fn();
@@ -135,7 +126,7 @@ impl DiskScheduler {
 
         let request = WriteDiskRequest::new(page_to_write.get_page_id(), src_updated_lifetime, promise);
 
-        self.sender.put(DiskSchedulerWorkerMessage::NewJob(request.into()));
+        self.worker.send(DiskSchedulerWorkerMessage::NewJob(request.into()));
 
         future
     }
@@ -162,7 +153,7 @@ impl DiskScheduler {
 
         let request = WriteDiskRequest::new(page_to_write.get_page_id(), src_updated_lifetime, promise);
 
-        self.sender.put(DiskSchedulerWorkerMessage::NewJob(request.into()));
+        self.worker.send(DiskSchedulerWorkerMessage::NewJob(request.into()));
 
         drop(self);
         let r = after_request_fn();
@@ -194,7 +185,7 @@ impl DiskScheduler {
 
         let request = WriteAndReadDiskRequest::new(page.get_page_id(), page_id_to_read, data_updated_lifetime, promise);
 
-        self.sender.put(DiskSchedulerWorkerMessage::NewJob(request.into()));
+        self.worker.send(DiskSchedulerWorkerMessage::NewJob(request.into()));
 
         drop(self);
 
@@ -216,70 +207,7 @@ impl DiskScheduler {
 
 impl Drop for DiskScheduler {
     fn drop(&mut self) {
-        self.sender.put(DiskSchedulerWorkerMessage::Terminate);
-
-        if let Some(thread) = self.worker.thread.take() {
-            thread.join().unwrap();
-        }
-    }
-}
-
-// Influenced from
-// https://web.mit.edu/rust-lang_v1.25/arch/amd64_ubuntu1404/share/doc/rust/html/book/second-edition/ch20-06-graceful-shutdown-and-cleanup.html
-impl DiskSchedulerWorker {
-    /**
-     * TODO(P1): Add implementation
-     *
-     * @brief Background worker thread function that processes scheduled requests.
-     *
-     * The background thread needs to process requests while the DiskScheduler exists, i.e., this function should not
-     * return until ~DiskScheduler() is called. At that point you need to make sure that the function does return.
-     */
-    fn new<D: DiskManager>(disk_manager: Arc<D>, receiver: Arc<Channel<DiskSchedulerWorkerMessage<'static>>>) -> DiskSchedulerWorker {
-        let thread = Builder::new()
-            .name("Disk Scheduler".to_string())
-            .spawn(move || {
-                abort_process_on_panic();
-
-                loop {
-                    let job = receiver.get();
-
-                    let req: DiskRequestType;
-
-                    match job {
-                        DiskSchedulerWorkerMessage::Terminate => {
-                            break
-                        }
-                        DiskSchedulerWorkerMessage::NewJob(job) => {
-                            req = job;
-                        }
-                    }
-
-                    match req {
-                        DiskRequestType::Read(req) => {
-                            disk_manager.read_page(req.page_id, req.data.as_mut_slice());
-                            req.callback.set_value(true);
-                        }
-                        DiskRequestType::Write(req) => {
-                            disk_manager.write_page(req.page_id, req.data.as_slice());
-                            req.callback.set_value(true);
-                        }
-                        DiskRequestType::WriteAndRead(req) => {
-                            disk_manager.write_page(req.dest_page_id, req.data.as_slice());
-
-                            // TODO - read page if write was successful
-                            //        as otherwise, if the write failed we will read and lose the data
-                            disk_manager.read_page(req.source_page_id, req.data.as_mut_slice());
-                            req.callback.set_value(true);
-                        }
-                    }
-                }
-            })
-            .expect("failed to spawn disk scheduler thread");
-
-        DiskSchedulerWorker {
-            thread: Some(thread),
-        }
+        self.worker.stop();
     }
 }
 
