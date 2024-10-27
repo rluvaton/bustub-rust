@@ -11,3 +11,7 @@ getrandom = { version = "0.2", features = ["js"], optional = true }
 
 [features]
 wasm = ["getrandom"]
+
+# This is needed to avoid a build error when building for the wasm32-unknown-unknown target
+[package.metadata.cargo-machete]
+ignored = ["getrandom"]
