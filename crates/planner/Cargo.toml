@@ -11,3 +11,4 @@ data_types = {path = "../data_types"}
 db_core = {path = "../db_core" }
 expression = {path = "../execution/expression"}
 parking_lot = "0.12.3"
+error_utils = {path = "../utils/error_utils"}

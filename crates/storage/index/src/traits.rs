@@ -18,7 +18,7 @@ use crate::IndexMetadata;
 /// only supports conjunction, and may or may not be optimized depending on
 /// the type of expressions inside the predicate.
 ///
-pub trait Index where Self: 'static {
+pub trait Index: Sync + Send where Self: 'static {
     /// Insert an entry into the index.
     ///
     /// # Arguments

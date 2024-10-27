@@ -34,3 +34,5 @@ index = {path = "../../storage/index"}
 default = []
 tracing = ["tracy-client/enable", "buffer_pool_manager/tracing"]
 tracing-memory-allocation = ["tracing"]
+
+wasm = ["catalog_schema_mocks/wasm"]

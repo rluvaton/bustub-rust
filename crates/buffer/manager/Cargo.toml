@@ -17,7 +17,6 @@ eviction_policy = {path = "../eviction_policy"}
 recovery_log_manager = {path = "../../recovery/log_manager"}
 
 thiserror = "1.0.64"
-rand = "0.8"
 
 parking_lot = "0.12.3"
 derive_builder = "0.20.0"
@@ -26,6 +25,7 @@ derive_builder = "0.20.0"
 tracy-client = { version = "0.17.3", default-features = false}
 
 [dev-dependencies]
+rand = "0.8"
 derive_builder = "0.20.0"
 tempdir = "0.3.7"
 zipf = "7"

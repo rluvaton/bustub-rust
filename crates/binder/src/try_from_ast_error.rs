@@ -7,7 +7,7 @@ pub enum ParseASTError {
     #[error("Failed to parse {0}")]
     FailedParsing(String),
 
-    #[error("Using unimplemented features {0}")]
+    #[error("Using unimplemented features. {0}")]
     Unimplemented(String),
 
     #[error("Invalid SQL: {0}")]

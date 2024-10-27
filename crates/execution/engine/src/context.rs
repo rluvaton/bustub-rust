@@ -73,13 +73,13 @@ impl<'a> ExecutorContext<'a> {
     }
 
     /** @return the running transaction */
-    pub(crate) fn get_transaction(&self) -> &Arc<Transaction> {
+    pub fn get_transaction(&self) -> &Arc<Transaction> {
         &self.transaction
     }
 
 
     /** @return the catalog */
-    pub(crate) fn get_catalog(&self) -> &Arc<Mutex<Catalog>> { &self.catalog }
+    pub fn get_catalog(&self) -> &Arc<Mutex<Catalog>> { &self.catalog }
 
     /** @return the buffer pool manager */
     pub(crate) fn get_buffer_pool_manager(&self) -> &Arc<BufferPoolManager> { &self.bpm }

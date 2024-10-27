@@ -80,6 +80,10 @@ impl Statement for SelectStatement {
         } else {
             Rc::new(vec![])
         };
+        
+        if !ctes.is_empty() {
+            return Err(ParseASTError::Unimplemented("CTEs are not supported at the moment".to_string()));
+        }
 
         builder = builder.with_ctes(ctes);
 
@@ -106,12 +110,16 @@ impl Statement for SelectStatement {
 
         // OFFSET
         if let Some(offset) = &ast.offset {
-            builder = builder.with_limit_offset(ExpressionTypeImpl::try_parse_from_expr(&offset.value, ctx_guard.deref())?)
+            builder = builder.with_limit_offset(ExpressionTypeImpl::try_parse_from_expr(&offset.value, ctx_guard.deref())?);
+
+            return Err(ParseASTError::Unimplemented("OFFSET is not supported at the moment".to_string()));
         }
 
         // ORDER BY
         if let Some(order_by) = &ast.order_by {
-            builder = builder.with_sort(OrderBy::parse_from_order_by(order_by, ctx_guard.deref())?)
+            builder = builder.with_sort(OrderBy::parse_from_order_by(order_by, ctx_guard.deref())?);
+            
+            return Err(ParseASTError::Unimplemented("ORDER BY is not supported at the moment".to_string()));
         }
 
         builder

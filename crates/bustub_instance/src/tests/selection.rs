@@ -152,4 +152,23 @@ mod tests {
 
         assert_eq!(actual, expected);
     }
+    
+    #[test]
+    fn should_return_unsupported_for_sort() {
+        let mut instance = BustubInstance::in_memory(None);
+
+        // Create table
+        {
+            let sql = "CREATE TABLE books (id int);";
+
+            instance.execute_user_input(sql, &mut NoopWriter::default(), CheckOptions::default()).expect("Should execute");
+        }
+
+        let result = instance.execute_single_select_sql("SELECT id from books order by id;", CheckOptions::default());
+        
+        let err = result.expect_err("Should fail");
+        
+        // TODO - better error display where exactly the unsupported syntax
+        assert_eq!(err.to_string(), "Using unimplemented features. ORDER BY is not supported at the moment");
+    }
 }

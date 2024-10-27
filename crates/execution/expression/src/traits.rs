@@ -3,12 +3,13 @@ use catalog_schema::Schema;
 use data_types::{DBTypeId, Value};
 use std::fmt::{Debug, Display};
 use std::rc::Rc;
+use std::sync::Arc;
 use tuple::Tuple;
 
 pub(crate) const NO_CHILDREN: &[ExpressionRef] = &[];
 
 // TODO - remove RC
-pub type ExpressionRef = Rc<ExpressionType>;
+pub type ExpressionRef = Arc<ExpressionType>;
 
 /**
  * AbstractExpression is the base class of all the expressions in the system.
@@ -41,7 +42,7 @@ pub trait Expression: Clone + Display + Debug + Into<ExpressionType> {
     fn get_return_type(&self) -> DBTypeId;
 
     fn into_ref(self) -> ExpressionRef {
-        Rc::new(self.into())
+        Arc::new(self.into())
     }
 }
 

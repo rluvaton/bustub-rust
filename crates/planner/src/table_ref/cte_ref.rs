@@ -4,7 +4,7 @@ use crate::Planner;
 use binder::CTERef;
 
 impl Plan for CTERef {
-    fn plan<'a>(&self, planner: &'a Planner<'a>)-> PlanType {
+    fn plan<'a>(&self, planner: &'a Planner<'a>)-> error_utils::anyhow::Result<PlanType> {
         let cte_list = planner.context.lock().cte_list.clone();
 
         cte_list

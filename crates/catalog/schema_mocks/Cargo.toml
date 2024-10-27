@@ -11,3 +11,6 @@ rid = {path = "../../rid"}
 
 strum = "0.26.3"
 strum_macros = "0.26.3"
+
+[features]
+wasm = ["generics/wasm"]

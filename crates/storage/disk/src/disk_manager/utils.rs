@@ -1,4 +1,3 @@
-use std::os::unix::fs::MetadataExt;
 use std::path::Path;
 
 // TODO - should return option instead
@@ -11,5 +10,6 @@ pub(super) fn get_file_size(file_name: &Path) -> i32 {
 
     let m = m.unwrap();
 
-    m.size() as i32
+
+    m.len() as i32
 }

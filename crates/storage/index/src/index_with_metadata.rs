@@ -2,7 +2,6 @@ use crate::{Index, IndexMetadata};
 use catalog_schema::Schema;
 use rid::RID;
 use std::fmt::{Debug, Formatter};
-use std::fs::Metadata;
 use std::sync::Arc;
 use table::TableHeap;
 use transaction::Transaction;

@@ -5,4 +5,6 @@ edition = "2021"
 
 [dependencies]
 num-format = "0.4.4"
-comfy-table = "7.1.1"
+
+# TODO - enable this when wasm is disabled
+comfy-table = { version = "7.1.1", default-features = false }
