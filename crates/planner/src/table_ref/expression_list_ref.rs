@@ -11,7 +11,7 @@ use expression::Expression;
 use crate::expressions::PlanExpression;
 
 impl Plan for ExpressionListRef {
-    fn plan<'a>(&self, planner: &'a Planner<'a>)-> PlanType {
+    fn plan<'a>(&self, planner: &'a Planner<'a>)-> error_utils::anyhow::Result<PlanType> {
         let all_exprs = self.values
             .iter()
             .map(|row| {
@@ -37,6 +37,6 @@ impl Plan for ExpressionListRef {
             })
             .into();
 
-        ValuesPlanNode::new(Arc::new(schema), all_exprs).into()
+        Ok(ValuesPlanNode::new(Arc::new(schema), all_exprs).into())
     }
 }

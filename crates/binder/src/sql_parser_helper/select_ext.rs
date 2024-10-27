@@ -34,6 +34,10 @@ impl SelectExt for sqlparser::ast::Select {
             }
 
             builder = builder.with_is_distinct(is_distinct);
+            
+            if is_distinct {
+                return Err(ParseASTError::Unimplemented("DISTINCT is not supported at the moment".to_string()));
+            }
         }
 
         // SELECT list
@@ -59,24 +63,23 @@ impl SelectExt for sqlparser::ast::Select {
                 GroupByExpr::All(_) => return Err(ParseASTError::Unimplemented("ALL in group by is not supported".to_string())),
                 GroupByExpr::Expressions(expr, _) => {
                     builder = builder.with_group_by(ExpressionTypeImpl::parse_expression_list(expr, binder)?);
+                    if !expr.is_empty() {
+                        return Err(ParseASTError::Unimplemented("GROUP BY is not supported at the moment".to_string()));
+                    }
                 }
             }
+            
+            
         }
 
         // HAVING
         {
             if let Some(having) = &self.having {
                 builder = builder.with_having(ExpressionTypeImpl::try_parse_from_expr(having, binder)?);
+                
+                return Err(ParseASTError::Unimplemented("HAVING is not supported at the moment".to_string()));
             }
         }
-
-        // LIMIT
-        {
-            if let Some(having) = &self.having {
-                builder = builder.with_having(ExpressionTypeImpl::try_parse_from_expr(having, binder)?);
-            }
-        }
-
 
         Ok(builder)
     }

@@ -11,7 +11,7 @@ use expression::{ColumnValueExpression, Expression};
 use std::sync::Arc;
 
 impl Plan for SelectStatement {
-    fn plan<'a>(&self, planner: &'a Planner<'a>) -> PlanType {
+    fn plan<'a>(&self, planner: &'a Planner<'a>) -> error_utils::anyhow::Result<PlanType> {
         let ctx_guard = planner.new_context();
 
         if !self.ctes.is_empty() {
@@ -23,7 +23,7 @@ impl Plan for SelectStatement {
                 ValuesPlanNode::new(Arc::new(Schema::new(vec![])), vec![vec![]]).into()
             }
             _ => {
-                self.table.plan(planner)
+                self.table.plan(planner)?
             }
         };
 
@@ -113,6 +113,6 @@ impl Plan for SelectStatement {
         }
 
 
-        plan
+        Ok(plan)
     }
 }

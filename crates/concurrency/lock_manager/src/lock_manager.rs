@@ -10,7 +10,7 @@ use crate::{LockMode, LockRequestQueue};
 pub struct LockManager {
 
     #[allow(unused)]
-    transaction_manager: Arc<dyn TransactionManager>,
+    transaction_manager: Arc<Box<dyn TransactionManager>>,
 
     /// Structure that holds lock requests for a given table oid
     #[allow(unused)]
@@ -32,7 +32,7 @@ pub struct LockManager {
 }
 
 impl LockManager {
-    pub fn new(transaction_manager: Arc<dyn TransactionManager>) -> Self {
+    pub fn new(transaction_manager: Arc<Box<dyn TransactionManager>>) -> Self {
         Self {
             transaction_manager,
             table_lock_map: Mutex::new(HashMap::new()),

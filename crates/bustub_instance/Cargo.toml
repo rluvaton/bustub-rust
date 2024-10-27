@@ -28,11 +28,13 @@ catalog_schema_mocks = {path = "../catalog/schema_mocks" }
 
 binder = {path = "../binder"}
 
-comfy-table = "7.1.1"
+# TODO - enable this when wasm is disabled
+comfy-table = { version = "7.1.1", default-features = false }
 
 
 # Profiling
 tracy-client = { version = "0.17.3", default-features = false }
+rand = "0.8.5"
 
 [package.metadata.cargo-machete]
 ignored = ["anyhow"]
@@ -45,3 +47,5 @@ lock_manager = ["db_core/lock_manager"]
 statistics = ["buffer_pool_manager/statistics"]
 tracing = ["tracy-client/enable", "buffer_pool_manager/tracing"]
 tracing-memory-allocation = ["tracing"]
+
+wasm = ["catalog_schema_mocks/wasm"]

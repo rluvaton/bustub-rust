@@ -6,8 +6,8 @@ use binder::DeleteStatement;
 use std::sync::Arc;
 
 impl Plan for DeleteStatement {
-    fn plan<'a>(&self, planner: &'a Planner<'a>) -> PlanType {
-        let table = self.get_table().plan(planner);
+    fn plan<'a>(&self, planner: &'a Planner<'a>) -> error_utils::anyhow::Result<PlanType> {
+        let table = self.get_table().plan(planner)?;
 
         let expr_children = vec![&table];
 
@@ -26,6 +26,6 @@ impl Plan for DeleteStatement {
             plan = AggregationPlanNode::create_internal_result_count(plan, "delete_rows").into()
         }
         
-        plan
+        Ok(plan)
     }
 }

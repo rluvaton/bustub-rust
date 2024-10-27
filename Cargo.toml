@@ -38,7 +38,7 @@ members = [
     "crates/storage/table/core",
     "crates/planner",
     "crates/catalog/schema_mocks"
-]
+, "tools/wasm-shell"]
 
 [profile.bench]
 debug = true

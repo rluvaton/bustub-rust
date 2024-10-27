@@ -10,9 +10,6 @@ pub(crate) trait CreateExecutor<'a> {
 
 impl<'a> CreateExecutor<'a> for PlanType {
     fn create_executor(&'a self, ctx: Arc<ExecutorContext<'a>>) -> ExecutorRef<'a> {
-        // call_each_variant!(self, p, {
-        //     p.create_executor(ctx)
-        // })
         match self {
             PlanType::SeqScan(plan) => {
                 assert_eq!(plan.get_children(), &[], "SeqScan must not have any children");
@@ -59,7 +56,9 @@ impl<'a> CreateExecutor<'a> for PlanType {
                 ValuesExecutor::new(plan, ctx).into_ref()
             },
             // PlanType::Window(_) => {}
-            _ => unimplemented!("No executor found for the requested plan type {:#?}", self)
+            
+            // This should be blocked in the planner
+            _ => unreachable!("No executor found for the requested plan type {:#?}", self)
         }
     }
 }

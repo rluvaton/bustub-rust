@@ -8,9 +8,9 @@ use crate::expressions::PlanExpression;
 use crate::traits::Plan;
 
 impl Plan for JoinRef {
-    fn plan<'a>(&self, planner: &'a Planner<'a>)-> PlanType {
-        let left = self.left.plan(planner);
-        let right = self.right.plan(planner);
+    fn plan<'a>(&self, planner: &'a Planner<'a>)-> error_utils::anyhow::Result<PlanType> {
+        let left = self.left.plan(planner)?;
+        let right = self.right.plan(planner)?;
         let children = vec![&left, &right];
 
         let join_condition = if let Some(condition) = &self.condition {
@@ -19,12 +19,12 @@ impl Plan for JoinRef {
             ConstantValueExpression::new(Value::from(true)).into_ref()
         };
 
-        NestedLoopJoinPlanNode::new(
+        Ok(NestedLoopJoinPlanNode::new(
             Arc::new(NestedLoopJoinPlanNode::infer_join_schema(&left, &right)),
             left,
             right,
             join_condition,
             JoinType::Inner
-        ).into()
+        ).into())
     }
 }
