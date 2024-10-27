@@ -3,6 +3,7 @@ extern crate console_error_panic_hook;
 use bustub_instance::BustubInstance;
 use std::panic;
 use wasm_bindgen::prelude::*;
+use bustub_instance::result_writer::HtmlWriter;
 use execution_common::CheckOptions;
 
 // https://rustwasm.github.io/wasm-bindgen/examples/console-log.html
@@ -74,14 +75,19 @@ pub fn bus_tub_init() -> usize {
 pub fn bus_tub_execute_query(pointer: usize, input: &str, buffer_size: usize) -> Vec<String> {
     let mut bustub = unsafe { Box::from_raw(pointer as *mut BustubInstance) };
     
-    let mut writer = bustub_instance::result_writer::HtmlWriter::default();
+    let mut writer = HtmlWriter::default();
     let result = bustub.execute_user_input(input, &mut writer, CheckOptions::default());
     
     let has_error = result.is_err();
     
     let mut output_string = match result {
         Ok(_) => writer.get_output().to_string(),
-        Err(err) => format!("{:#?}", err),
+        Err(err) => {
+            let error_message = HtmlWriter::escape(err.to_string().as_str());
+            
+            // Format error message in red
+            format!("<span style=\"color: red\">{}</span>", error_message)
+        },
     };
     
     let txn = bustub.current_managed_txn();

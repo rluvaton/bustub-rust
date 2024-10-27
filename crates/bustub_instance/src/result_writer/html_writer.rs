@@ -15,7 +15,7 @@ impl Default for HtmlWriter {
 }
 
 impl HtmlWriter {
-    fn escape(data: &str) -> String {
+    pub fn escape(data: &str) -> String {
         let mut buffer = String::with_capacity(data.len());
 
         for ch in data.chars() {
