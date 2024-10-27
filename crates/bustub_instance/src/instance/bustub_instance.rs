@@ -305,7 +305,7 @@ impl BustubInstance {
         let catalog = self.catalog.lock();
 
         // Plan the query
-        let plan = Planner::new(catalog.deref()).plan(stmt);
+        let plan = Planner::new(catalog.deref()).plan(stmt)?;
 
         // Optimize the query
         // TODO - add back

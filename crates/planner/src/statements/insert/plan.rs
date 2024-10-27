@@ -5,8 +5,8 @@ use binder::InsertStatement;
 use std::sync::Arc;
 
 impl Plan for InsertStatement {
-    fn plan<'a>(&self, planner: &'a Planner<'a>)-> PlanType {
-        let select = self.select.plan(planner);
+    fn plan<'a>(&self, planner: &'a Planner<'a>)-> error_utils::anyhow::Result<PlanType> {
+        let select = self.select.plan(planner)?;
 
         let table_schema = self.get_table().schema.get_columns();
 
@@ -31,6 +31,6 @@ impl Plan for InsertStatement {
             plan = AggregationPlanNode::create_internal_result_count(plan, "insert_rows").into()
         }
 
-        plan
+        Ok(plan)
     }
 }

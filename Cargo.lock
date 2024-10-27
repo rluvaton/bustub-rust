@@ -1122,6 +1122,7 @@ dependencies = [
  "common",
  "data_types",
  "db_core",
+ "error_utils",
  "expression",
  "parking_lot",
 ]

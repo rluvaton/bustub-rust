@@ -35,7 +35,7 @@ impl<'a> Planner<'a> {
         ContextGuard::new(self)
     }
 
-    pub fn plan(self, statement: &StatementTypeImpl)-> PlanType {
+    pub fn plan(self, statement: &StatementTypeImpl)-> error_utils::anyhow::Result<PlanType> {
         statement.plan(&self)
     }
 
