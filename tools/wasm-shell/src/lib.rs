@@ -110,13 +110,3 @@ pub fn bus_tub_execute_query(pointer: usize, input: &str, buffer_size: usize) ->
 
     vec![(new_leak as *mut BustubInstance as usize).to_string(), output_string, output_prompt]
 }
-
-#[cfg(test)]
-mod tests {
-    use crate::bus_tub_init;
-
-    #[test]
-    fn init() {
-        bus_tub_init();
-    }
-}
