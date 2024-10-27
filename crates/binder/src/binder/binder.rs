@@ -1,7 +1,7 @@
 use crate::binder::context_guard::ContextGuard;
 use crate::binder::Context;
 use crate::statements::{Statement, StatementTypeImpl};
-use crate::try_from_ast_error::ParseASTResult;
+use crate::try_from_ast_error::{ParseASTError, ParseASTResult};
 use db_core::catalog::Catalog;
 use parking_lot::Mutex;
 use sqlparser::parser::Parser;
@@ -36,7 +36,7 @@ impl<'a> Binder<'a> {
     }
 
     pub fn parse(mut self, sql: &str) -> ParseASTResult<Vec<StatementTypeImpl>> {
-        let statements = Parser::parse_sql(&sqlparser::dialect::GenericDialect {}, sql).unwrap();
+        let statements = Parser::parse_sql(&sqlparser::dialect::GenericDialect {}, sql).map_err(|err| ParseASTError::InvalidSQL(err))?;
         statements.iter().map(|stmt| StatementTypeImpl::try_parse_from_statement(stmt, &mut self)).collect()
     }
 

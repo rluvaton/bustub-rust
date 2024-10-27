@@ -10,6 +10,9 @@ pub enum ParseASTError {
     #[error("Using unimplemented features {0}")]
     Unimplemented(String),
 
+    #[error("Invalid SQL: {0}")]
+    InvalidSQL(#[from] sqlparser::parser::ParserError),
+
     #[error("{0}")]
     Other(String),
 }
