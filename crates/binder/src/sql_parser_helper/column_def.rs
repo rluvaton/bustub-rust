@@ -1,5 +1,6 @@
 use sqlparser::ast::{CharLengthUnits, CharacterLength, ColumnOption, DataType};
 use catalog_schema::Column;
+use common::config::VARCHAR_DEFAULT_LENGTH;
 use data_types::DBTypeId;
 use crate::try_from_ast_error::{ParseASTResult, ParseASTError};
 
@@ -17,11 +18,10 @@ impl ColumnDefExt for sqlparser::ast::ColumnDef {
 
         let fixed_size_data_type = match self.data_type {
             DataType::CharacterVarying(size) | DataType::CharVarying(size) | DataType::Varchar(size) => {
-                if size.is_none() {
-                    return Err(ParseASTError::Unimplemented("Unsupported size".to_string()))
-                }
-
-                let size = size.unwrap();
+               let size = size.unwrap_or(CharacterLength::IntegerLength {
+                    length: VARCHAR_DEFAULT_LENGTH as u64,
+                    unit: Some(CharLengthUnits::Characters)
+                });
 
                 let length = match size {
                     CharacterLength::IntegerLength { length, unit } => {
@@ -41,28 +41,28 @@ impl ColumnDefExt for sqlparser::ast::ColumnDef {
             }
             DataType::TinyInt(unsupported) => {
                 if unsupported.is_some() {
-                    return Err(ParseASTError::Unimplemented("Unsupported size".to_string()))
+                    return Err(ParseASTError::Unimplemented(format!("Unsupported size for {}", self.data_type)))
                 }
 
                 DBTypeId::TINYINT
             }
             DataType::Int2(unsupported) | DataType::SmallInt(unsupported) => {
                 if unsupported.is_some() {
-                    return Err(ParseASTError::Unimplemented("Unsupported size".to_string()))
+                    return Err(ParseASTError::Unimplemented(format!("Unsupported size for {}", self.data_type)))
                 }
 
                 DBTypeId::SMALLINT
             }
             DataType::Int(unsupported) | DataType::Int4(unsupported) | DataType::Integer(unsupported) => {
                 if unsupported.is_some() {
-                    return Err(ParseASTError::Unimplemented("Unsupported size".to_string()))
+                    return Err(ParseASTError::Unimplemented(format!("Unsupported size for {}", self.data_type)))
                 }
 
                 DBTypeId::INT
             }
             DataType::Int8(unsupported) | DataType::BigInt(unsupported)=> {
                 if unsupported.is_some() {
-                    return Err(ParseASTError::Unimplemented("Unsupported size".to_string()))
+                    return Err(ParseASTError::Unimplemented(format!("Unsupported size for {}", self.data_type)))
                 }
 
                 DBTypeId::BIGINT
