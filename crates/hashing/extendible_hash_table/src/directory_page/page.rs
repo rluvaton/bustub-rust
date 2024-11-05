@@ -5,7 +5,6 @@ use comfy_table::{Table};
 use std::collections::HashMap;
 use std::fmt::{Debug, Formatter};
 use std::mem::size_of;
-use buffer_pool_manager::PageReadGuard;
 use crate::directory_page::DirectoryIter;
 use crate::directory_page::iterator::DirectoryIterState;
 

@@ -85,7 +85,7 @@ impl SelectExt for sqlparser::ast::Select {
             .map(|select_item| select_item.parse(binder))
             .collect();
 
-        let mut select_list = select_list?;
+        let select_list = select_list?;
 
         let has_select_star = select_list.iter().any(|item| matches!(item, ExpressionTypeImpl::Star(_)));
 
@@ -104,7 +104,7 @@ impl SelectExt for sqlparser::ast::Select {
             (has_agg || expr.has_aggregation(), has_window_agg || expr.has_window_function())
         });
 
-        if (has_agg && has_window_agg) {
+        if has_agg && has_window_agg {
             return Err(ParseASTError::FailedParsing("cannot have both normal agg and window agg in same query".to_string()));
         }
 

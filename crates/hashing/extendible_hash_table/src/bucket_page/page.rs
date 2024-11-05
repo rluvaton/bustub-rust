@@ -6,7 +6,6 @@ use std::cmp::Ordering;
 use std::fmt::{Debug, Formatter};
 use std::marker::PhantomData;
 use std::mem::size_of;
-use std::slice::Iter;
 use crate::bucket_page::{BucketIter, BucketPageIterState};
 
 pub type MappingType<KeyType, ValueType> = (KeyType, ValueType);

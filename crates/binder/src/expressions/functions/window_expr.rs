@@ -75,25 +75,6 @@ pub struct WindowExpr {
 }
 
 impl WindowExpr {
-    pub(crate) fn new(
-        func: String,
-        args: Vec<Box<ExpressionTypeImpl>>,
-
-        partition_by: Vec<Box<ExpressionTypeImpl>>,
-        order_bys: Vec<Box<OrderBy>>,
-        start: Option<WindowBoundary>,
-        end: Option<WindowBoundary>,
-    ) -> Self {
-        Self {
-            func,
-            args,
-            partition_by,
-            order_bys,
-            start,
-            end,
-        }
-    }
-
     pub(crate) fn is_window_function(f: &sqlparser::ast::Function) -> bool {
         is_aggregation_function_name(f.name.to_string()) && f.over.is_some()
     }

@@ -69,6 +69,7 @@ impl TransactionManager {
         }
     }
 
+    #[allow(unused_variables)]
     pub fn verify_txn(&self, txn: Arc<Transaction>) -> bool {
         // TODO - implement
         true

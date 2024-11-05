@@ -7,7 +7,6 @@ use pages::{PageId, INVALID_PAGE_ID};
 use common::{Comparator, PageKey, PageValue};
 use error_utils::Context;
 use std::fmt::Debug;
-use std::sync::Arc;
 use buffer_common::AccessType;
 use hashing_common::KeyHasher;
 use transaction::Transaction;

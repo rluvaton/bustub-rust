@@ -25,12 +25,15 @@ pub struct IndexInfo {
     table_name: String,
 
     /// The size of the index key, in bytes
+    #[allow(dead_code)]
     key_size: usize,
 
     /// Is primary key index?
+    #[allow(dead_code)]
     is_primary_key: bool,
 
     /// The index type
+    #[allow(dead_code)]
     index_type: IndexType,
 }
 

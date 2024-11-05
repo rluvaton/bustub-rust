@@ -1,4 +1,3 @@
-use std::rc::Rc;
 use std::sync::Arc;
 use crate::plan_nodes::PlanType;
 use crate::traits::Plan;

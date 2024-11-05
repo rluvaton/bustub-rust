@@ -17,21 +17,6 @@ pub struct BinaryOpExpr {
     pub rarg: Box<ExpressionTypeImpl>,
 }
 
-impl BinaryOpExpr {
-
-    pub(crate) fn new(
-        op: BinaryOp,
-        larg: Box<ExpressionTypeImpl>,
-        rarg: Box<ExpressionTypeImpl>
-    ) -> Self {
-        Self {
-            op,
-            larg,
-            rarg
-        }
-    }
-}
-
 impl Into<ExpressionTypeImpl> for BinaryOpExpr {
     fn into(self) -> ExpressionTypeImpl {
         ExpressionTypeImpl::BinaryOp(self)

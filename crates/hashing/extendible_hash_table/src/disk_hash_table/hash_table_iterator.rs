@@ -1,15 +1,12 @@
-use crate::bucket_array_size;
-use std::iter::{Flatten, Map};
-use std::slice::Iter;
+use crate::bucket_page::{BucketPage, BucketPageIterState, MappingType};
+use crate::directory_page::{DirectoryIterState, DirectoryPage};
+use crate::header_page::{HeaderIterState, HeaderPage};
+use crate::DiskHashTable;
 use buffer_common::AccessType;
 use buffer_pool_manager::BufferPool;
 use common::{Comparator, PageKey, PageValue};
 use hashing_common::KeyHasher;
 use pages::PageId;
-use crate::bucket_page::{BucketPage, BucketPageIterState, MappingType};
-use crate::directory_page::{DirectoryIter, DirectoryIterState, DirectoryPage};
-use crate::{bucket_page_type, DiskHashTable};
-use crate::header_page::{HeaderIter, HeaderIterState, HeaderPage};
 
 pub struct HashTableIterator<'a, const BUCKET_MAX_SIZE: usize, Key, Value, KeyComparator, KeyHasherImpl>
 where
@@ -203,23 +200,15 @@ where
 
 #[cfg(test)]
 mod tests {
+    use crate::errors::InsertionError;
     use crate::{bucket_array_size, DiskHashTable};
     use buffer_pool_manager::BufferPoolManager;
-    use common::{Comparator, OrdComparator, PageKey, PageValue, U64Comparator};
+    use common::OrdComparator;
     use disk_storage::DiskManagerUnlimitedMemory;
-    use generics::Shuffle;
-    use hashing_common::{DefaultKeyHasher, KeyHasher, U64IdentityKeyHasher};
+    use hashing_common::DefaultKeyHasher;
     use pages::PAGE_SIZE;
-    use rand::seq::SliceRandom;
-    use rand::{thread_rng, Rng, SeedableRng};
-    use rand_chacha::ChaChaRng;
-    use std::collections::HashSet;
-    use std::sync::atomic::{AtomicBool, Ordering};
-    use std::sync::Arc;
-    use std::sync::Barrier;
-    use std::thread;
+    use rand::{thread_rng, Rng};
     use transaction::Transaction;
-    use crate::errors::InsertionError;
 
     type TestKey = u32;
     type TestValue = u64;

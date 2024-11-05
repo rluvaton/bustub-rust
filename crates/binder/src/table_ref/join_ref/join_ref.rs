@@ -25,19 +25,6 @@ pub struct JoinRef {
 }
 
 impl JoinRef {
-    pub(crate) fn new(join_type: JoinType,
-                      left: Box<TableReferenceTypeImpl>,
-                      right: Box<TableReferenceTypeImpl>,
-                      condition: Option<ExpressionTypeImpl>) -> Self {
-        Self {
-            join_type,
-            left,
-            right,
-            condition,
-        }
-    }
-
-
     pub(crate) fn parse_from_table_with_join(ast: &TableWithJoins, binder: &Binder) -> ParseASTResult<TableReferenceTypeImpl> {
         if ast.joins.is_empty() {
             return Err(ParseASTError::IncompatibleType);

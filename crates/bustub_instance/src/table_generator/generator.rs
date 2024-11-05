@@ -99,9 +99,9 @@ impl<'a> TableGenerator<'a>
     
     fn get_insert_meta() -> Vec<TableInsertMeta> {
 
-        /// This array configures each of the test tables. Each table is configured
-        /// with a name, size, and schema. We also configure the columns of the table. If
-        /// you add a new table, set it up here.
+        // This array configures each of the test tables. Each table is configured
+        // with a name, size, and schema. We also configure the columns of the table. If
+        // you add a new table, set it up here.
 
         vec![
             TableInsertMeta {

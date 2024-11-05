@@ -24,25 +24,24 @@ pub struct TableHeap {
 
     /// Default: `INVALID_PAGE_ID`
     #[allow(unused)]
-    pub(super) last_page_id: Mutex<PageId>
+    pub(super) last_page_id: Mutex<PageId>,
 }
 
 impl TableHeap {
-
     /// Create a table heap without a transaction. (open table)
     pub fn new(bpm: Arc<BufferPoolManager>) -> Self {
         // Initialize the first table page.
         // TODO - return result here
         let mut guard = bpm.new_page(AccessType::default()).expect("Couldn't create a page for the table heap. Have you completed the buffer pool manager project?");
         let first_page_id = guard.get_page_id();
-        
+
         let first_page = guard.cast_mut::<TablePage>();
         first_page.init();
 
         Self {
             bpm: Some(bpm),
             first_page_id,
-            last_page_id: Mutex::new(first_page_id)
+            last_page_id: Mutex::new(first_page_id),
         }
     }
 
@@ -57,13 +56,24 @@ impl TableHeap {
     /// * `oid`:
     ///
     /// returns: Option<RID> the rid of the inserted tuple
-    pub fn insert_tuple(&self, meta: &TupleMeta, tuple: &Tuple, lock_mgr: &Option<Arc<LockManager>>, txn: &Arc<Transaction>, oid: Option<TableOID>) -> Option<RID> {
+    pub fn insert_tuple(&self,
+        meta: &TupleMeta,
+        tuple: &Tuple,
+        #[allow(unused_variables)]
+        lock_mgr: &Option<Arc<LockManager>>,
+        #[allow(unused_variables)]
+        txn: &Arc<Transaction>,
+        #[allow(unused_variables)]
+        oid: Option<TableOID>,
+    ) -> Option<RID> {
         // Tuple size is too big
         if tuple.get_length() as usize >= LARGEST_TUPLE_SIZE_WITHOUT_OVERFLOW {
             return None;
         }
-        
+
         let bpm = self.bpm.as_ref().unwrap();
+
+        #[cfg(feature = "lock_manager")]
         let oid = oid.unwrap_or(0);
 
         let mut last_page_id_guard = self.last_page_id.lock();
@@ -71,7 +81,7 @@ impl TableHeap {
         loop {
             let page = page_guard.cast_mut::<TablePage>();
             if let Some(_) = page.get_next_tuple_offset(meta, tuple) {
-                break
+                break;
             }
 
             // if there's no tuple in the page, and we can't insert the tuple, then this tuple is too large.
@@ -157,7 +167,6 @@ impl TableHeap {
         tuple.set_rid(*rid);
 
         (meta, tuple)
-
     }
 
     /**
@@ -176,11 +185,11 @@ impl TableHeap {
     }
 
     /** @return the iterator of this table. When this iterator is created, it will record the current last tuple in the
-      * table heap, and the iterator will stop at that point, in order to avoid halloween problem. You usually will need to
-      * use this function for project 3. Given that you have already implemented your project 4 update executor as a
-      * pipeline breaker, you may use `MakeEagerIterator` to test whether the update executor is implemented correctly.
-      * There should be no difference between this function and `MakeEagerIterator` in project 4 if everything is
-      * implemented correctly. */
+         * table heap, and the iterator will stop at that point, in order to avoid halloween problem. You usually will need to
+         * use this function for project 3. Given that you have already implemented your project 4 update executor as a
+         * pipeline breaker, you may use `MakeEagerIterator` to test whether the update executor is implemented correctly.
+         * There should be no difference between this function and `MakeEagerIterator` in project 4 if everything is
+         * implemented correctly. */
     pub fn iter(self: Arc<Self>) -> TableIterator {
         // Lock get value and unlock
         let last_page_id = *self.last_page_id.lock();
@@ -271,7 +280,7 @@ impl Default for TableHeap {
         Self {
             bpm: None,
             first_page_id: INVALID_PAGE_ID,
-            last_page_id: Mutex::new(INVALID_PAGE_ID)
+            last_page_id: Mutex::new(INVALID_PAGE_ID),
         }
     }
 }

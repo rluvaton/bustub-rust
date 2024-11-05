@@ -1,4 +1,3 @@
-use crate::sql_parser_helper::SelectItemExt;
 use crate::statements::traits::Statement;
 use crate::statements::{SelectStatement, StatementTypeImpl};
 use crate::table_ref::{BaseTableRef, TableReferenceTypeImpl};
@@ -7,7 +6,6 @@ use crate::{Binder, ExpressionTypeImpl};
 use catalog_schema::Column;
 use sqlparser::ast::Ident;
 use std::fmt::Debug;
-use std::ops::Deref;
 use std::rc::Rc;
 use crate::statements::parse_returning::parse_returning;
 

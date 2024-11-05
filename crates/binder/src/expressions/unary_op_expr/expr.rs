@@ -14,19 +14,6 @@ pub struct UnaryOpExpr {
     pub arg: Box<ExpressionTypeImpl>,
 }
 
-impl UnaryOpExpr {
-
-    pub(crate) fn new(
-        op: UnaryOp,
-        arg: Box<ExpressionTypeImpl>,
-    ) -> Self {
-        Self {
-            op,
-            arg,
-        }
-    }
-}
-
 impl Into<ExpressionTypeImpl> for UnaryOpExpr {
     fn into(self) -> ExpressionTypeImpl {
         ExpressionTypeImpl::UnaryOp(self)

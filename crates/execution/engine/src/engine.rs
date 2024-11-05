@@ -11,8 +11,13 @@ use crate::executors::CreateExecutor;
 
 /// The ExecutionEngine class executes query plans.
 pub struct ExecutionEngine {
+    #[allow(dead_code)]
     bpm: Arc<BufferPoolManager>,
+
+    #[allow(dead_code)]
     txn_manager: Arc<TransactionManager>,
+
+    #[allow(dead_code)]
     catalog: Arc<Mutex<Catalog>>,
 }
 

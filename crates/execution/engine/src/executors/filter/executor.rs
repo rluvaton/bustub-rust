@@ -12,7 +12,6 @@ use data_types::BooleanType;
 #[must_use = "iterators are lazy and do nothing unless consumed"]
 pub struct FilterExecutor<'a> {
 
-
     /// The executor context in which the executor runs
     ctx: Arc<ExecutorContext<'a>>,
 

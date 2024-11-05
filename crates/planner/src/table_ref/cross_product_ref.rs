@@ -1,4 +1,3 @@
-use std::rc::Rc;
 use std::sync::Arc;
 use binder::{CrossProductRef, JoinType};
 use data_types::Value;

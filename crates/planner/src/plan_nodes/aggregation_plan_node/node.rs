@@ -108,7 +108,7 @@ impl AggregationPlanNode {
             .iter()
 
             // TODO(chi): correctly infer agg call return type
-            .map(|column| Column::new_fixed_size(UNNAMED_COLUMN.to_string(), DBTypeId::INT));
+            .map(|_| Column::new_fixed_size(UNNAMED_COLUMN.to_string(), DBTypeId::INT));
 
         group_by_columns
             .chain(aggregate_columns)
