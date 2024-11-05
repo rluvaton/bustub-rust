@@ -165,6 +165,7 @@ impl BufferPoolManager {
         // 1. Hold replacer guard as all pin and unpin must first hold the replacer to avoid getting replaced in the middle
         let mut inner = self.wait_for_pending_fetch_page_to_finish(page_id);
 
+        #[cfg(any(feature = "tracing", feature = "statistics"))]
         let holding_inner_latch = (
             #[cfg(feature = "tracing")]
             span!("[fetch_page] Holding root lock"),
@@ -192,6 +193,7 @@ impl BufferPoolManager {
             page.pin();
 
             // 3.5 Drop all locks before waiting for the page read lock
+            #[cfg(any(feature = "tracing", feature = "statistics"))]
             drop(holding_inner_latch);
             drop(inner);
 
@@ -246,6 +248,7 @@ impl BufferPoolManager {
                     || {
                         // 8. release all locks as we don't want to hold the entire lock while flushing to disk
 
+                        #[cfg(any(feature = "tracing", feature = "statistics"))]
                         drop(holding_inner_latch);
                         drop(inner);
 
@@ -282,6 +285,7 @@ impl BufferPoolManager {
                     page_to_replace_guard.write_guard_mut(),
                     || {
                         // 7. release all locks as we don't want to hold the entire lock while flushing to disk
+                        #[cfg(any(feature = "tracing", feature = "statistics"))]
                         drop(holding_inner_latch);
                         drop(inner);
                     });
@@ -321,6 +325,7 @@ impl BufferPoolManager {
                 write_guard.write_guard_mut(),
                 || {
                     // 7. release all locks as we don't want to hold the entire lock while flushing to disk
+                    #[cfg(any(feature = "tracing", feature = "statistics"))]
                     drop(holding_inner_latch);
                     drop(inner);
 
@@ -436,6 +441,7 @@ impl BufferPool for Arc<BufferPoolManager> {
             self.inner.lock()
         };
 
+        #[cfg(any(feature = "tracing", feature = "statistics"))]
         let holding_root_lock = (
             #[cfg(feature = "tracing")]
             span!("[new_page] holding root lock"),
@@ -481,6 +487,7 @@ impl BufferPool for Arc<BufferPoolManager> {
                     page_and_write.deref(),
                     || {
                         // 7. release all locks as we don't want to hold the entire lock while flushing to disk
+                        #[cfg(any(feature = "tracing", feature = "statistics"))]
                         drop(holding_root_lock);
                         drop(inner);
 
@@ -542,6 +549,7 @@ impl BufferPool for Arc<BufferPoolManager> {
             self.inner.lock()
         };
 
+        #[cfg(any(feature = "tracing", feature = "statistics"))]
         let holding_root_lock = (
             #[cfg(feature = "tracing")]
             span!("[flush_page] holding root lock"),
@@ -573,6 +581,7 @@ impl BufferPool for Arc<BufferPoolManager> {
             #[inline]
             || {
                 // release all locks as we don't want to hold the entire lock while flushing to disk
+                #[cfg(any(feature = "tracing", feature = "statistics"))]
                 drop(holding_root_lock);
                 drop(inner);
 
