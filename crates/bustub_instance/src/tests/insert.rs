@@ -121,4 +121,27 @@ mod tests {
 
         instance.verify_integrity();
     }
+
+    #[test]
+    fn insert_null_to_table() {
+        let mut instance = BustubInstance::in_memory(None);
+
+        // Create table
+        {
+            let sql = "CREATE TABLE books (id int, other int);";
+
+            instance.execute_user_input(sql, &mut NoopWriter::default(), CheckOptions::default()).expect("Should execute");
+        }
+
+        let sql = "INSERT INTO books (id, other) VALUES (1, 2), (NULL, 4), (5, NULL)";
+
+        let inserted_rows_count_result = instance.execute_single_insert_sql(sql, CheckOptions::default()).expect("Should insert");
+
+        assert_eq!(inserted_rows_count_result, inserted_rows_count_result.create_with_same_schema(vec![
+            vec![Value::from(3)]
+        ]));
+
+        instance.verify_integrity();
+    }
+
 }
