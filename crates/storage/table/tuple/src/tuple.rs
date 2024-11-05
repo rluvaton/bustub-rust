@@ -58,7 +58,7 @@ impl Tuple {
 
             if !col.is_inlined() {
                 // Serialize relative offset, where the actual varchar data is stored.
-                data[col.get_offset()..].copy_from_slice(&u32::to_ne_bytes(offset));
+                data[col.get_offset()..col.get_offset() + size_of::<u32>()].copy_from_slice(&u32::to_ne_bytes(offset));
 
                 // Serialize varchar value, in place (size+data).
                 values[i].serialize_to(&mut data[offset as usize..]);

@@ -1,7 +1,7 @@
 // TODO - should probably be trait
 
 use crate::types::{BigIntType, BooleanType, ComparisonDBTypeTrait, ConversionDBTypeTrait, DBTypeId, DBTypeIdImpl, DecimalType, IntType, SmallIntType, StorageDBTypeTrait, TimestampType, TinyIntType, VariableLengthStorageDBTypeTrait};
-use crate::run_on_impl;
+use crate::{run_on_impl, VarcharType};
 use std::fmt::{Display, Formatter};
 
 
@@ -56,14 +56,14 @@ impl Value {
     /// Deserialize a value of the given type from the given storage space.
     pub fn deserialize_from_slice(value_type: DBTypeId, slice: &[u8]) -> Self {
         let db_impl: DBTypeIdImpl = match value_type {
-            DBTypeId::INVALID => unimplemented!(),
+            DBTypeId::INVALID => unreachable!(),
             DBTypeId::BOOLEAN => BooleanType::from(slice).into(),
             DBTypeId::TINYINT => TinyIntType::from(slice).into(),
             DBTypeId::SMALLINT => SmallIntType::from(slice).into(),
             DBTypeId::INT => IntType::from(slice).into(),
             DBTypeId::BIGINT => BigIntType::from(slice).into(),
             DBTypeId::DECIMAL => DecimalType::from(slice).into(),
-            DBTypeId::VARCHAR => unimplemented!(),
+            DBTypeId::VARCHAR => VarcharType::from(slice).into(),
             DBTypeId::TIMESTAMP => TimestampType::from(slice).into(),
         };
 
