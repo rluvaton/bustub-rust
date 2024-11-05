@@ -2,7 +2,7 @@ use std::fmt::{Debug, Display, Formatter};
 use crate::{BigIntType, BooleanType, DBTypeIdImpl, DecimalType, FormatDBTypeTrait, IntType, SmallIntType, TimestampType, TinyIntType, Value};
 
 // Every possible SQL type ID
-#[derive(Copy, Clone, PartialEq)]
+#[derive(Copy, Clone, PartialEq, Eq)]
 pub enum DBTypeId {
     INVALID = 0,
     BOOLEAN = 1,
