@@ -1,0 +1,34 @@
+[package]
+name = "sql_logic_test"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+async-trait = { workspace = true }
+bigdecimal = { workspace = true }
+bytes = { workspace = true, optional = true }
+chrono = { workspace = true, optional = true }
+clap = { version = "4.5.16", features = ["derive", "env"] }
+futures = { workspace = true }
+itertools = { workspace = true }
+log = { workspace = true }
+object_store = { workspace = true }
+postgres-protocol = { version = "0.6.4", optional = true }
+postgres-types = { version = "0.2.4", optional = true }
+rust_decimal = { version = "1.27.0" }
+sqllogictest = "0.22.0"
+sqlparser = { workspace = true }
+tempfile = { workspace = true }
+thiserror = { workspace = true }
+tokio = { workspace = true }
+tokio-postgres = { version = "0.7.7", optional = true }
+
+[dev-dependencies]
+env_logger = { workspace = true }
+num_cpus = { workspace = true }
+tokio = { workspace = true, features = ["rt-multi-thread"] }
+
+[[test]]
+harness = false
+name = "sqllogictests"
+path = "bin/sqllogictests.rs"

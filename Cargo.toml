@@ -39,7 +39,7 @@ members = [
     "crates/planner",
     "crates/catalog/schema_mocks",
     "tools/wasm-shell"
-]
+, "tools/sql_logic_test"]
 
 [profile.bench]
 debug = true

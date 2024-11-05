@@ -255,7 +255,6 @@ mod tests {
         assert_eq!(actual, expected);
     }
 
-
     #[test]
     fn select_from_table_with_emoji_in_strings() {
         let mut instance = BustubInstance::in_memory(None);
