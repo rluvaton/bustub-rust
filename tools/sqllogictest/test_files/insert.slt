@@ -1,0 +1,28 @@
+##########
+## INSERT tests
+##########
+
+
+statement ok
+CREATE TABLE aggregate_test_100 (
+  c1  VARCHAR,
+  c2  TINYINT,
+  c3  SMALLINT,
+  c4  SMALLINT,
+  c5  INT,
+  c6  BIGINT,
+  c7  SMALLINT,
+  c8  INT,
+  c9 VARCHAR,
+  c10 DOUBLE,
+  c11 VARCHAR
+)
+
+# test insert with column names
+statement ok
+CREATE TABLE table_without_values(id BIGINT, name varchar);
+
+query I
+insert into table_without_values(id, name) values(1, 'foo');
+----
+1

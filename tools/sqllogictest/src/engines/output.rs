@@ -16,42 +16,46 @@
 // under the License.
 
 use sqllogictest::{ColumnType, DBOutput};
+use data_types::DBTypeId;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub enum DFColumnType {
-    Boolean,
-    DateTime,
-    Integer,
-    Float,
-    Text,
-    Timestamp,
-    Another,
+pub struct BustubColumnType(DBTypeId);
+
+impl Default for BustubColumnType {
+    fn default() -> Self {
+        BustubColumnType(DBTypeId::INVALID)
+    }
 }
 
-impl ColumnType for DFColumnType {
+impl From<DBTypeId> for BustubColumnType {
+    fn from(value: DBTypeId) -> Self {
+        Self(value)
+    }
+}
+
+impl ColumnType for BustubColumnType {
     fn from_char(value: char) -> Option<Self> {
         match value {
-            'B' => Some(Self::Boolean),
-            'D' => Some(Self::DateTime),
-            'I' => Some(Self::Integer),
-            'P' => Some(Self::Timestamp),
-            'R' => Some(Self::Float),
-            'T' => Some(Self::Text),
-            _ => Some(Self::Another),
+            'B' => Some(DBTypeId::BOOLEAN.into()),
+            'I' => Some(DBTypeId::INT.into()),
+            'P' => Some(DBTypeId::TIMESTAMP.into()),
+            'R' => Some(DBTypeId::DECIMAL.into()),
+            'T' => Some(DBTypeId::VARCHAR.into()),
+            _ => Some(BustubColumnType::default()),
         }
     }
 
     fn to_char(&self) -> char {
-        match self {
-            Self::Boolean => 'B',
-            Self::DateTime => 'D',
-            Self::Integer => 'I',
-            Self::Timestamp => 'P',
-            Self::Float => 'R',
-            Self::Text => 'T',
-            Self::Another => '?',
+        match self.0 {
+            DBTypeId::BOOLEAN => 'B',
+            DBTypeId::INT => 'I',
+            DBTypeId::TIMESTAMP => 'P',
+            DBTypeId::DECIMAL => 'R',
+            DBTypeId::VARCHAR => 'T',
+            _ => '?'
         }
     }
 }
 
-pub(crate) type DFOutput = DBOutput<DFColumnType>;
+
+pub(crate) type BustubOutput = DBOutput<BustubColumnType>;

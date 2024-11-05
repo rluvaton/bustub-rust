@@ -32,7 +32,28 @@ mod tests {
         let sql = "INSERT INTO books (id) VALUES (1), (24);";
 
         let inserted_rows_count_result = instance.execute_single_insert_sql(sql, CheckOptions::default()).expect("Should insert");
-        
+
+        assert_eq!(inserted_rows_count_result, inserted_rows_count_result.create_with_same_schema(vec![
+            vec![Value::from(2)]
+        ]));
+
+        instance.verify_integrity();
+    }
+
+    #[test]
+    fn should_insert_to_newly_created_table_with_big_int_column() {
+        let mut instance = BustubInstance::in_memory(None);
+
+        {
+            let sql = "CREATE TABLE books (id bigint);";
+
+            instance.execute_user_input(sql, &mut NoopWriter::default(), CheckOptions::default()).expect("Should execute");
+        }
+
+        let sql = "INSERT INTO books (id) VALUES (1), (24);";
+
+        let inserted_rows_count_result = instance.execute_single_insert_sql(sql, CheckOptions::default()).expect("Should insert");
+
         assert_eq!(inserted_rows_count_result, inserted_rows_count_result.create_with_same_schema(vec![
             vec![Value::from(2)]
         ]));

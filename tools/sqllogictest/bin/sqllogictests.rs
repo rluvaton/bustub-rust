@@ -15,22 +15,26 @@
 // specific language governing permissions and limitations
 // under the License.
 
+mod spawned_task;
+
 use std::ffi::OsStr;
 use std::fs;
 use std::path::{Path, PathBuf};
 
 use clap::Parser;
-use datafusion_sqllogictest::{DataFusion, TestContext};
+use bustub_sqllogictest::{Bustub, TestContext};
 use futures::stream::StreamExt;
 use itertools::Itertools;
 use log::info;
 use sqllogictest::strict_column_validator;
-
-use datafusion_common::{exec_datafusion_err, exec_err, DataFusionError, Result};
-use datafusion_common_runtime::SpawnedTask;
+use bustub_instance::BustubInstance;
+use error_utils::{ToAnyhow, ToAnyhowResult};
+use crate::spawned_task::SpawnedTask;
 
 const TEST_DIRECTORY: &str = "test_files/";
 const PG_COMPAT_FILE_PREFIX: &str = "pg_compat_";
+
+type Result<T> = error_utils::anyhow::Result<T>;
 
 pub fn main() -> Result<()> {
     tokio::runtime::Builder::new_multi_thread()
@@ -69,9 +73,9 @@ fn setup_scratch_dir(name: &Path) -> Result<()> {
 
     info!("Creating scratch dir in {path:?}");
     if path.exists() {
-        fs::remove_dir_all(&path)?;
+        fs::remove_dir_all(&path).to_anyhow()?;
     }
-    fs::create_dir_all(&path)?;
+    fs::create_dir_all(&path).to_anyhow()?;
     Ok(())
 }
 
@@ -102,14 +106,12 @@ async fn run_tests() -> Result<()> {
                 println!("Running {:?}", test_file.relative_path);
                 if options.complete {
                     run_complete_file(test_file).await?;
-                } else if options.postgres_runner {
-                    run_test_file_with_postgres(test_file).await?;
                 } else {
                     run_test_file(test_file).await?;
                 }
                 Ok(()) as Result<()>
             })
-            .join()
+                .join()
         })
         // run up to num_cpus streams in parallel
         .buffer_unordered(num_cpus::get())
@@ -117,7 +119,7 @@ async fn run_tests() -> Result<()> {
             // Filter out any Ok() leaving only the DataFusionErrors
             futures::stream::iter(match result {
                 // Tokio panic error
-                Err(e) => Some(DataFusionError::External(Box::new(e))),
+                Err(e) => Some(e.to_anyhow()),
                 Ok(thread_result) => match thread_result {
                     // Test run error
                     Err(e) => Some(e),
@@ -134,7 +136,7 @@ async fn run_tests() -> Result<()> {
         for e in &errors {
             println!("{e}");
         }
-        exec_err!("{} failures", errors.len())
+        Err(error_utils::anyhow!("exec_err: {} failures", errors.len()))
     } else {
         Ok(())
     }
@@ -145,15 +147,11 @@ async fn run_test_file(test_file: TestFile) -> Result<()> {
         path,
         relative_path,
     } = test_file;
-    info!("Running with DataFusion runner: {}", path.display());
-    let Some(test_ctx) = TestContext::try_new_for_test_file(&relative_path).await else {
-        info!("Skipping: {}", path.display());
-        return Ok(());
-    };
+    info!("Running with Bustub runner: {}", path.display());
     setup_scratch_dir(&relative_path)?;
     let mut runner = sqllogictest::Runner::new(|| async {
-        Ok(DataFusion::new(
-            test_ctx.session_ctx().clone(),
+        Ok(Bustub::new(
+            BustubInstance::in_memory(None),
             relative_path.clone(),
         ))
     });
@@ -162,33 +160,7 @@ async fn run_test_file(test_file: TestFile) -> Result<()> {
     runner
         .run_file_async(path)
         .await
-        .map_err(|e| DataFusionError::External(Box::new(e)))
-}
-
-#[cfg(feature = "postgres")]
-async fn run_test_file_with_postgres(test_file: TestFile) -> Result<()> {
-    use datafusion_sqllogictest::Postgres;
-    let TestFile {
-        path,
-        relative_path,
-    } = test_file;
-    info!("Running with Postgres runner: {}", path.display());
-    setup_scratch_dir(&relative_path)?;
-    let mut runner =
-        sqllogictest::Runner::new(|| Postgres::connect(relative_path.clone()));
-    runner.with_column_validator(strict_column_validator);
-    runner.with_validator(value_validator);
-    runner
-        .run_file_async(path)
-        .await
-        .map_err(|e| DataFusionError::External(Box::new(e)))?;
-    Ok(())
-}
-
-#[cfg(not(feature = "postgres"))]
-async fn run_test_file_with_postgres(_test_file: TestFile) -> Result<()> {
-    use datafusion_common::plan_err;
-    plan_err!("Can not run with postgres as postgres feature is not enabled")
+        .to_anyhow()
 }
 
 async fn run_complete_file(test_file: TestFile) -> Result<()> {
@@ -199,14 +171,10 @@ async fn run_complete_file(test_file: TestFile) -> Result<()> {
 
     info!("Using complete mode to complete: {}", path.display());
 
-    let Some(test_ctx) = TestContext::try_new_for_test_file(&relative_path).await else {
-        info!("Skipping: {}", path.display());
-        return Ok(());
-    };
     setup_scratch_dir(&relative_path)?;
     let mut runner = sqllogictest::Runner::new(|| async {
-        Ok(DataFusion::new(
-            test_ctx.session_ctx().clone(),
+        Ok(Bustub::new(
+            BustubInstance::in_memory(None),
             relative_path.clone(),
         ))
     });
@@ -221,7 +189,7 @@ async fn run_complete_file(test_file: TestFile) -> Result<()> {
         .await
         // Can't use e directly because it isn't marked Send, so turn it into a string.
         .map_err(|e| {
-            DataFusionError::Execution(format!("Error completing {relative_path:?}: {e}"))
+            error_utils::anyhow!("execution: Error completing {relative_path:?}: {e}")
         })
 }
 
@@ -251,14 +219,6 @@ impl TestFile {
     fn is_slt_file(&self) -> bool {
         self.path.extension() == Some(OsStr::new("slt"))
     }
-
-    fn check_tpch(&self, options: &Options) -> bool {
-        if !self.relative_path.starts_with("tpch") {
-            return true;
-        }
-
-        options.include_tpch
-    }
 }
 
 fn read_test_files<'a>(
@@ -270,8 +230,6 @@ fn read_test_files<'a>(
             .map(TestFile::new)
             .filter(|f| options.check_test_file(&f.relative_path))
             .filter(|f| f.is_slt_file())
-            .filter(|f| f.check_tpch(options))
-            .filter(|f| options.check_pg_compat_file(f.path.as_path())),
     ))
 }
 
@@ -284,11 +242,11 @@ fn read_dir_recursive<P: AsRef<Path>>(path: P) -> Result<Vec<PathBuf>> {
 /// Append all paths recursively to dst
 fn read_dir_recursive_impl(dst: &mut Vec<PathBuf>, path: &Path) -> Result<()> {
     let entries = fs::read_dir(path)
-        .map_err(|e| exec_datafusion_err!("Error reading directory {path:?}: {e}"))?;
+        .map_err(|e| error_utils::anyhow!("exec_bustub_err: Error reading directory {path:?}: {e}"))?;
     for entry in entries {
         let path = entry
             .map_err(|e| {
-                exec_datafusion_err!("Error reading entry in directory {path:?}: {e}")
+                error_utils::anyhow!("exec_bustub_err: Error reading entry in directory {path:?}: {e}")
             })?
             .path();
 
@@ -313,16 +271,6 @@ fn read_dir_recursive_impl(dst: &mut Vec<PathBuf>, path: &Path) -> Result<()> {
 struct Options {
     #[clap(long, help = "Auto complete mode to fill out expected results")]
     complete: bool,
-
-    #[clap(
-        long,
-        env = "PG_COMPAT",
-        help = "Run Postgres compatibility tests with Postgres runner"
-    )]
-    postgres_runner: bool,
-
-    #[clap(long, env = "INCLUDE_TPCH", help = "Include tpch files")]
-    include_tpch: bool,
 
     #[clap(
         action,
@@ -383,12 +331,6 @@ impl Options {
         self.filters
             .iter()
             .any(|filter| relative_path.to_string_lossy().contains(filter))
-    }
-
-    /// Postgres runner executes only tests in files with specific names
-    fn check_pg_compat_file(&self, path: &Path) -> bool {
-        let file_name = path.file_name().unwrap().to_str().unwrap().to_string();
-        !self.postgres_runner || file_name.starts_with(PG_COMPAT_FILE_PREFIX)
     }
 
     /// Logs warning messages to stdout if any ignored options are passed

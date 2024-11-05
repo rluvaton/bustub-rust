@@ -38,8 +38,9 @@ members = [
     "crates/storage/table/core",
     "crates/planner",
     "crates/catalog/schema_mocks",
-    "tools/wasm-shell"
-, "tools/sql_logic_test"]
+    "tools/wasm-shell",
+    "tools/sqllogictest"
+]
 
 [profile.bench]
 debug = true

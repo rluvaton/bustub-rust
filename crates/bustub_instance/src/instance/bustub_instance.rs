@@ -39,7 +39,7 @@ pub struct BustubInstance {
     pub(super) catalog: Arc<Mutex<Catalog>>,
 
     pub(super) session_variables: HashMap<String, String>,
-    pub(super) current_txn: Option<Arc<Transaction>>,
+    pub(super) current_txn: Mutex<Option<Arc<Transaction>>>,
     pub(super) managed_txn_mode: bool,
 }
 
@@ -133,7 +133,7 @@ impl BustubInstance {
             execution_engine,
 
             session_variables: HashMap::new(),
-            current_txn: None,
+            current_txn: Mutex::new(None),
             managed_txn_mode: false,
         }
     }
@@ -173,12 +173,12 @@ impl BustubInstance {
     }
 
     /// Get the current transaction.
-    pub fn current_managed_txn(&self) -> Option<Arc<Transaction>> {
-        self.current_txn.clone()
+    pub fn current_managed_txn(&self) -> &Mutex<Option<Arc<Transaction>>> {
+        &self.current_txn
     }
 
     pub fn dump_current_txn<ResultWriterImpl: ResultWriter>(&self, writer: &mut ResultWriterImpl, prefix: &'static str) {
-        let current_txn = self.current_txn.as_ref().expect("Must have current transaction").clone();
+        let current_txn = self.current_txn.lock().as_ref().expect("Must have current transaction").clone();
 
         writer.one_cell(format!("{}txn_id={} txn_real_id={} read_ts={} commit_ts={} status={:?} iso_lvl={:?}",
                                 prefix,
@@ -191,30 +191,35 @@ impl BustubInstance {
         ).as_str());
     }
 
-    pub fn execute_user_input<ResultWriterImpl: ResultWriter>(&mut self, sql_or_command: &str, writer: &mut ResultWriterImpl, check_options: CheckOptions) -> error_utils::anyhow::Result<()> {
+    pub fn execute_user_input<ResultWriterImpl: ResultWriter>(&self, sql_or_command: &str, writer: &mut ResultWriterImpl, check_options: CheckOptions) -> error_utils::anyhow::Result<()> {
         self.wrap_with_txn(|this, txn|
             this.execute_sql_txn(sql_or_command, writer, txn.clone(), check_options)
         )
     }
 
-    fn wrap_with_txn<R, F: FnOnce(&mut Self, Arc<Transaction>) -> R>(&mut self, f: F) -> R {
-        let is_local_txn = self.current_txn.is_some();
+    fn wrap_with_txn<R, F: FnOnce(&Self, Arc<Transaction>) -> R>(&self, f: F) -> R {
+        let current_mutex_guard = self.current_txn.lock();
 
-        let txn = self.current_txn.clone().unwrap_or_else(|| self.txn_manager.begin(None));
+        if let Some(txn) = current_mutex_guard.deref() {
+            let result = f(self, txn.clone());
 
-        let result = f(self, txn.clone());
+            result
+        } else {
+            drop(current_mutex_guard);
+            let txn = self.txn_manager.begin(None);
 
-        if !is_local_txn {
+            let result = f(self, txn.clone());
+
             let res = self.txn_manager.commit(txn);
 
             // TODO - change this to return result instead
             assert!(res, "Failed to commit txn");
-        }
 
-        result
+            result
+        }
     }
 
-    pub fn execute_sql_txn<ResultWriterImpl: ResultWriter>(&mut self, sql: &str, writer: &mut ResultWriterImpl, txn: Arc<Transaction>, _check_options: CheckOptions) -> error_utils::anyhow::Result<()> {
+    pub fn execute_sql_txn<ResultWriterImpl: ResultWriter>(&self, sql: &str, writer: &mut ResultWriterImpl, txn: Arc<Transaction>, _check_options: CheckOptions) -> error_utils::anyhow::Result<()> {
         if sql.starts_with("\\") {
             return self.execute_shell_commands(sql, writer);
         }
@@ -237,6 +242,8 @@ impl BustubInstance {
             let rows = self.execute_data_stmt(stmt, txn.clone())?;
 
             rows.write_results(writer);
+
+            writer.save_rows(rows);
         }
         
         Ok(())
@@ -291,7 +298,7 @@ impl BustubInstance {
     }
 
     /// Execute SELECT/INSERT/DELETE/UPDATE statements
-    fn execute_data_stmt(&mut self, stmt: &StatementTypeImpl, txn: Arc<Transaction>) -> error_utils::anyhow::Result<Rows> {
+    fn execute_data_stmt(&self, stmt: &StatementTypeImpl, txn: Arc<Transaction>) -> error_utils::anyhow::Result<Rows> {
         let mut is_delete = false;
 
         // Assert SELECT/INSERT/DELETE/UPDATE statements
@@ -324,7 +331,7 @@ impl BustubInstance {
         Ok(Rows::new(result, schema))
     }
 
-    fn execute_shell_commands<ResultWriterImpl: ResultWriter>(&mut self, cmd: &str, writer: &mut ResultWriterImpl) -> error_utils::anyhow::Result<()> {
+    fn execute_shell_commands<ResultWriterImpl: ResultWriter>(&self, cmd: &str, writer: &mut ResultWriterImpl) -> error_utils::anyhow::Result<()> {
         // Internal meta-commands, like in `psql`.
         assert!(cmd.starts_with("\\"), "command must start with \\");
 
@@ -346,7 +353,7 @@ impl BustubInstance {
         Ok(())
     }
 
-    fn parse_sql(&mut self, sql: &str) -> error_utils::anyhow::Result<Vec<StatementTypeImpl>> {
+    fn parse_sql(&self, sql: &str) -> error_utils::anyhow::Result<Vec<StatementTypeImpl>> {
         assert_eq!(sql.starts_with("\\"), false, "SQL query must not start with meta command prefix \\");
 
         let catalog = self.catalog.lock();
@@ -370,13 +377,23 @@ impl BustubInstance {
     }
     
     pub fn verify_integrity(&self) {
-        let txn = self.current_txn.clone().unwrap_or_else(|| self.txn_manager.begin(None));
-        {
-            let catalog = self.catalog.lock();
-            
-            catalog.verify_integrity(txn.deref());
+        let txn_guard = self.current_txn.lock();
+        match &*txn_guard {
+            None => {
+                drop(txn_guard);
+                let txn = self.txn_manager.begin(None);
+
+                let catalog = self.catalog.lock();
+
+                catalog.verify_integrity(txn.deref());
+            }
+            Some(txn) => {
+                let catalog = self.catalog.lock();
+
+                catalog.verify_integrity(txn.deref());
+            }
         }
-    } 
+    }
 }
 
 impl Drop for BustubInstance {

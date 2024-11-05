@@ -15,31 +15,9 @@
 // specific language governing permissions and limitations
 // under the License.
 
-use postgres_types::Type;
-use std::fmt::Display;
-use tokio_postgres::types::FromSql;
+/// Implementation of sqllogictest for datafusion.
+mod conversion;
+mod bustub_engine;
+mod output;
 
-pub struct PgRegtype {
-    value: String,
-}
-
-impl<'a> FromSql<'a> for PgRegtype {
-    fn from_sql(
-        _: &Type,
-        buf: &'a [u8],
-    ) -> Result<Self, Box<dyn std::error::Error + Sync + Send>> {
-        let oid = postgres_protocol::types::oid_from_sql(buf)?;
-        let value = Type::from_oid(oid).ok_or("bad type")?.to_string();
-        Ok(PgRegtype { value })
-    }
-
-    fn accepts(ty: &Type) -> bool {
-        matches!(*ty, Type::REGTYPE)
-    }
-}
-
-impl Display for PgRegtype {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.value)
-    }
-}
+pub use bustub_engine::Bustub;

@@ -15,7 +15,6 @@
 // specific language governing permissions and limitations
 // under the License.
 
-use arrow::datatypes::{i256, Decimal128Type, Decimal256Type, DecimalType};
 use bigdecimal::BigDecimal;
 use half::f16;
 use rust_decimal::prelude::*;
@@ -23,12 +22,17 @@ use rust_decimal::prelude::*;
 /// Represents a constant for NULL string in your database.
 pub const NULL_STR: &str = "NULL";
 
-pub(crate) fn bool_to_str(value: bool) -> String {
-    if value {
-        "true".to_string()
+pub(crate) fn bool_to_str(value: Option<bool>) -> String {
+    if let Some(value) = value {
+        if value {
+            "true".to_string()
+        } else {
+            "false".to_string()
+        }
     } else {
-        "false".to_string()
+        NULL_STR.to_string()
     }
+
 }
 
 pub(crate) fn varchar_to_str(value: &str) -> String {
@@ -79,20 +83,6 @@ pub(crate) fn f64_to_str(value: f64) -> String {
     } else {
         big_decimal_to_str(BigDecimal::from_str(&value.to_string()).unwrap())
     }
-}
-
-pub(crate) fn i128_to_str(value: i128, precision: &u8, scale: &i8) -> String {
-    big_decimal_to_str(
-        BigDecimal::from_str(&Decimal128Type::format_decimal(value, *precision, *scale))
-            .unwrap(),
-    )
-}
-
-pub(crate) fn i256_to_str(value: i256, precision: &u8, scale: &i8) -> String {
-    big_decimal_to_str(
-        BigDecimal::from_str(&Decimal256Type::format_decimal(value, *precision, *scale))
-            .unwrap(),
-    )
 }
 
 #[cfg(feature = "postgres")]

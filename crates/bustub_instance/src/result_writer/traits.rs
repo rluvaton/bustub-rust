@@ -1,3 +1,5 @@
+use crate::rows::Rows;
+
 pub trait ResultWriter {
     fn write_cell(&mut self, cell: &str);
     fn write_header_cell(&mut self, cell: &str);
@@ -13,5 +15,9 @@ pub trait ResultWriter {
         self.write_cell(cell);
         self.end_row();
         self.end_table();
+    }
+
+    fn save_rows(&mut self, rows: Rows) {
+        // Noop
     }
 }

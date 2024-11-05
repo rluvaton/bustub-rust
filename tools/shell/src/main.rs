@@ -51,7 +51,7 @@ fn main() -> rustyline::Result<()> {
         loop {
             let mut context_prompt = prompt.clone();
 
-            if let Some(txn) = bustub.current_managed_txn().as_ref().cloned() {
+            if let Some(txn) = bustub.current_managed_txn().lock().as_ref().cloned() {
                 if txn.get_transaction_state() == TransactionState::Running {
                     context_prompt = format!("txn{} ({:?})> ", txn.get_transaction_id_human_readable(), txn.get_transaction_state());
                 } else {

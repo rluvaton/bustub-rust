@@ -1,0 +1,46 @@
+[package]
+name = "bustub_sqllogictest"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+bustub_instance = { path = "../../crates/bustub_instance" }
+transaction = {path = "../../crates/concurrency/transaction/core"}
+execution_common = {path = "../../crates/execution/common"}
+data_types = { path = "../../crates/data_types" }
+
+clap = { version = "4.5.16", features = ["derive", "env"] }
+sqllogictest = "0.22.0"
+tempdir = "0.3.7"
+
+error_utils = { path = "../../crates/utils/error_utils" }
+anyhow = "1.0.89"
+thiserror = "1.0.64"
+
+rust_decimal = { version = "1.27.0" }
+tempfile = "3"
+
+async-trait = "0.1.73"
+bigdecimal = "=0.4.1"
+bytes = "1.4"
+chrono = { version = "0.4.38", optional = true }
+futures = "0.3"
+half = { version = "2.2.1", default-features = true }
+itertools = "0.13"
+log = "^0.4"
+
+object_store = { version = "0.11.0", default-features = false }
+sqlparser = { version = "0.51.0", features = ["visitor"] }
+tokio = { version = "1.36", features = ["macros", "rt", "sync"] }
+
+
+[dev-dependencies]
+env_logger = "0.11"
+num_cpus = "1.13.0"
+tokio = { version = "1.36", features = ["rt-multi-thread"] }
+
+
+[[test]]
+harness = false
+name = "sqllogictests"
+path = "bin/sqllogictests.rs"

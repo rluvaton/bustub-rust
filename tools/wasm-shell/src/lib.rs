@@ -1,5 +1,6 @@
 extern crate console_error_panic_hook;
 
+use std::ops::Deref;
 use bustub_instance::BustubInstance;
 use std::panic;
 use wasm_bindgen::prelude::*;
@@ -92,7 +93,7 @@ pub fn bus_tub_execute_query(pointer: usize, input: &str, buffer_size: usize) ->
     
     let txn = bustub.current_managed_txn();
     
-    let output_prompt = match txn {
+    let output_prompt = match txn.lock().deref() {
         Some(txn) => {
             format!("txn{}", txn.get_transaction_id_human_readable())
         }

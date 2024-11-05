@@ -1,3 +1,4 @@
+use std::ops::Deref;
 use common::config::{TxnId, TXN_START_ID};
 use transaction::TransactionManager;
 use crate::BustubInstance;
@@ -100,7 +101,7 @@ see the execution plan of your query.
 )")
     }
 
-    pub fn cmd_txn<ResultWriterImpl: ResultWriter>(&mut self, params: Vec<&str>, writer: &mut ResultWriterImpl) {
+    pub fn cmd_txn<ResultWriterImpl: ResultWriter>(&self, params: Vec<&str>, writer: &mut ResultWriterImpl) {
         if !self.managed_txn_mode {
             writer.one_cell("only supported in managed mode, please use bustub-shell");
 
@@ -108,7 +109,7 @@ see the execution plan of your query.
         }
 
         if params.len() == 1 {
-            match self.current_txn {
+            match self.current_txn.lock().deref() {
                 Some(_) => self.dump_current_txn(writer, ""),
                 None => writer.one_cell("no active txn, each statement starts a new txn."),
             }
@@ -132,7 +133,8 @@ see the execution plan of your query.
                 self.dump_current_txn(writer, "pause current txn ");
 
                 // Remove current transaction
-                self.current_txn = None;
+                self.current_txn.lock().take();
+                // self.current_txn = None;
 
                 return;
             }
@@ -142,7 +144,9 @@ see the execution plan of your query.
                 .or_else(|| self.txn_manager.get_transaction_by_id(txn_id + TXN_START_ID));
 
             if let Some(transaction) = transaction {
-                self.current_txn = Some(transaction);
+                self.current_txn.lock().replace(transaction);
+
+                // self.current_txn = Some(transaction);
                 self.dump_current_txn(writer, "switch to new txn ");
             } else {
                 writer.one_cell("cannot find txn.");
