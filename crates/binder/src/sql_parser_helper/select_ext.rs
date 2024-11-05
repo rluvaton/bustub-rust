@@ -3,12 +3,14 @@ use crate::sql_parser_helper::SelectItemExt;
 use crate::statements::SelectStatementBuilder;
 use crate::table_ref::TableReferenceTypeImpl;
 use crate::try_from_ast_error::{ParseASTError, ParseASTResult};
-use crate::Binder;
+use crate::{Binder, TableRef};
 use sqlparser::ast::{Distinct, GroupByExpr};
 use std::rc::Rc;
 
 pub(crate) trait SelectExt {
     fn add_select_to_select_builder(&self, builder: SelectStatementBuilder, binder: &Binder) -> ParseASTResult<SelectStatementBuilder>;
+
+    fn parse_select_list(&self, binder: &Binder) -> ParseASTResult<Vec<ExpressionTypeImpl>>;
 }
 
 impl SelectExt for sqlparser::ast::Select {
@@ -41,14 +43,7 @@ impl SelectExt for sqlparser::ast::Select {
         }
 
         // SELECT list
-        {
-            let select_list: ParseASTResult<Vec<ExpressionTypeImpl>> = self.projection
-                .iter()
-                .map(|select_item| select_item.parse(binder))
-                .collect();
-
-            builder = builder.with_select_list(select_list?);
-        }
+        builder = builder.with_select_list(self.parse_select_list(binder)?);
 
         // WHERE
         {
@@ -82,5 +77,37 @@ impl SelectExt for sqlparser::ast::Select {
         }
 
         Ok(builder)
+    }
+
+    fn parse_select_list(&self, binder: &Binder) -> ParseASTResult<Vec<ExpressionTypeImpl>> {
+        let select_list: ParseASTResult<Vec<ExpressionTypeImpl>> = self.projection
+            .iter()
+            .map(|select_item| select_item.parse(binder))
+            .collect();
+
+        let mut select_list = select_list?;
+
+        let has_select_star = select_list.iter().any(|item| matches!(item, ExpressionTypeImpl::Star(_)));
+
+        if has_select_star {
+            if select_list.len() > 1 {
+                return Err(ParseASTError::Unimplemented("select * cannot have other expressions in list".to_string()));
+            }
+
+            let scope = binder.context.lock().scope.as_ref().expect("Must have scope for select *").clone();
+
+            return scope.get_all_columns(binder);
+        }
+
+
+        let (has_agg, has_window_agg) = select_list.iter().fold((false, false), |(has_agg, has_window_agg), expr| {
+            (has_agg || expr.has_aggregation(), has_window_agg || expr.has_window_function())
+        });
+
+        if (has_agg && has_window_agg) {
+            return Err(ParseASTError::FailedParsing("cannot have both normal agg and window agg in same query".to_string()));
+        }
+
+        Ok(select_list)
     }
 }

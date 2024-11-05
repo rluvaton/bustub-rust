@@ -171,4 +171,22 @@ mod tests {
         // TODO - better error display where exactly the unsupported syntax
         assert_eq!(err.to_string(), "Using unimplemented features. ORDER BY is not supported at the moment");
     }
+
+    #[test]
+    fn select_star() {
+        let mut instance = BustubInstance::in_memory(None);
+        instance.generate_mock_table();
+
+        let sql = format!("SELECT * from {} limit 3", MockTableName::Table1);
+
+        let actual = instance.execute_single_select_sql(sql.as_str(), CheckOptions::default()).expect("Should execute");
+
+        let expected = actual.create_with_same_schema(vec![
+            vec![Value::from(0), Value::from(0)],
+            vec![Value::from(1), Value::from(100)],
+            vec![Value::from(2), Value::from(200)],
+        ]);
+
+        assert_eq!(actual, expected)
+    }
 }

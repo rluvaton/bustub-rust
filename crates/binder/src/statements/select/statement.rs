@@ -46,12 +46,18 @@ pub struct SelectStatement {
     pub is_distinct: bool,
 }
 
-impl SelectStatement {
 
+
+impl SelectStatement {
     pub(crate) fn builder() -> SelectStatementBuilder {
         SelectStatementBuilder::default()
     }
+
+    pub fn get_select_list(&self) -> &Vec<ExpressionTypeImpl> {
+        &self.select_list
+    }
 }
+
 impl Into<StatementTypeImpl> for SelectStatement {
     fn into(self) -> StatementTypeImpl {
         StatementTypeImpl::Select(self)

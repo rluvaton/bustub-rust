@@ -5,7 +5,7 @@ use crate::table_ref::cte_ref::CTERef;
 use crate::table_ref::join_ref::JoinRef;
 use crate::table_ref::{ExpressionListRef, SubqueryRef, TableRef};
 use crate::try_from_ast_error::{ParseASTError, ParseASTResult};
-use crate::{fallback_on_incompatible_2_args, Binder};
+use crate::{fallback_on_incompatible_2_args, Binder, ExpressionTypeImpl};
 use sqlparser::ast::{TableFactor, TableWithJoins};
 use std::ops::Deref;
 
@@ -53,6 +53,20 @@ impl TableRef for TableReferenceTypeImpl {
             TableReferenceTypeImpl::SubQuery(b) => b.resolve_column(col_name, binder),
             TableReferenceTypeImpl::CTE(b) => b.resolve_column(col_name, binder),
             TableReferenceTypeImpl::Empty => Err(ParseASTError::FailedParsing(format!("column {} not found", col_name.join("."))))
+        }
+    }
+
+    fn get_all_columns(&self, binder: &Binder) -> ParseASTResult<Vec<ExpressionTypeImpl>> {
+        match &self {
+            TableReferenceTypeImpl::BaseTable(t) => t.get_all_columns(binder),
+            TableReferenceTypeImpl::Join(t) => t.get_all_columns(binder),
+            TableReferenceTypeImpl::CrossProduct(t) => t.get_all_columns(binder),
+            TableReferenceTypeImpl::SubQuery(t) => t.get_all_columns(binder),
+            TableReferenceTypeImpl::CTE(t) => t.get_all_columns(binder),
+            TableReferenceTypeImpl::ExpressionList(t) => t.get_all_columns(binder),
+            // TODO - remove the select * from error message
+            TableReferenceTypeImpl::Empty => Err(ParseASTError::FailedParsing(format!("select * cannot be used with {:?}", self))),
+            TableReferenceTypeImpl::Invalid => panic!("Cant get all columns in invalid scope"),
         }
     }
 

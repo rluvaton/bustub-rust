@@ -54,7 +54,7 @@ impl SubqueryRef {
         Ok(SubqueryRef {
             subquery,
             select_list_name,
-            alias: alias.unwrap_or("<unnamed>".to_string())
+            alias: alias.unwrap_or("<unnamed>".to_string()),
         })
     }
 }
@@ -70,7 +70,11 @@ impl TableRef for SubqueryRef {
         let alias = &self.alias;
 
         // Firstly, try directly resolve the column name through schema
-        let direct_resolved_expr = ColumnRef::resolve_from_select_list(&self.select_list_name, col_name)?.map(|mut c| c.prepend(alias.clone()));
+        let direct_resolved_expr = ColumnRef::resolve_from_select_list(&self.select_list_name, col_name)?.map(|mut c| {
+            c.prepend(alias.clone());
+
+            c
+        });
 
         let mut strip_resolved_expr: Option<ColumnRef> = None;
 
@@ -80,22 +84,34 @@ impl TableRef for SubqueryRef {
             if &col_name[0] == alias {
                 let strip_column_name = &col_name[1..];
 
-                strip_resolved_expr = ColumnRef::resolve_from_select_list(&self.select_list_name, strip_column_name)?.map(|mut c| c.prepend(alias.clone()));
+                strip_resolved_expr = ColumnRef::resolve_from_select_list(&self.select_list_name, strip_column_name)?.map(|mut c| {
+                    c.prepend(alias.clone());
+
+                    c
+                });
             }
         }
 
         if strip_resolved_expr.is_some() && direct_resolved_expr.is_some() {
-            return Err(ParseASTError::FailedParsing(format!("{} is ambiguous in subquery {}", col_name.join("."), alias)))
+            return Err(ParseASTError::FailedParsing(format!("{} is ambiguous in subquery {}", col_name.join("."), alias)));
         }
 
         Ok(strip_resolved_expr.or(direct_resolved_expr))
     }
 
+    fn get_all_columns(&self, _binder: &Binder) -> ParseASTResult<Vec<ExpressionTypeImpl>> {
+        Ok(self.select_list_name
+            .iter()
+            .cloned()
+            .map(|col_name| ColumnRef::new_with_prefix(col_name, self.alias.clone()).into())
+            .collect())
+    }
+
     fn try_from_ast<'a>(ast: &TableFactor, binder: &'a Binder) -> ParseASTResult<Self> {
         match ast {
-            TableFactor::Derived { subquery, alias, ..} => {
+            TableFactor::Derived { subquery, alias, .. } => {
                 Self::parse_from_subquery(subquery, alias.as_ref().map(|alias| alias.name.value.clone()), binder)
-            },
+            }
             _ => Err(ParseASTError::IncompatibleType)
         }
     }

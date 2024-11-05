@@ -46,6 +46,11 @@ impl TableRef for ExpressionListRef {
         Err(ParseASTError::FailedParsing(format!("cannot resolve column {} in VALUES", col_name.join("."))))
     }
 
+    fn get_all_columns(&self, _binder: &Binder) -> ParseASTResult<Vec<ExpressionTypeImpl>> {
+        // TODO - remove the select * from error message
+        Err(ParseASTError::FailedParsing("select * cannot be used with values".to_string()))
+    }
+
     fn try_from_ast(_ast: &TableFactor, _binder: &Binder) -> ParseASTResult<Self> {
         // No table factor matching the expression list
         Err(ParseASTError::IncompatibleType)

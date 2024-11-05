@@ -82,6 +82,13 @@ impl TableRef for JoinRef {
         Ok(left_column.or(right_column))
     }
 
+    fn get_all_columns(&self, binder: &Binder) -> ParseASTResult<Vec<ExpressionTypeImpl>> {
+        Ok([
+            self.left.get_all_columns(binder)?,
+            self.right.get_all_columns(binder)?
+        ].concat())
+    }
+
     fn try_from_ast(_ast: &TableFactor, _binder: &Binder) -> ParseASTResult<Self> {
         // Always incompatible as we need to have table with joins
         Err(ParseASTError::IncompatibleType)

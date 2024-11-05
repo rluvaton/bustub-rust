@@ -2,7 +2,7 @@ use crate::expressions::ColumnRef;
 use crate::table_ref::table_reference_type::TableReferenceTypeImpl;
 use crate::table_ref::TableRef;
 use crate::try_from_ast_error::{ParseASTError, ParseASTResult};
-use crate::Binder;
+use crate::{Binder, ExpressionTypeImpl};
 use common::config::TableOID;
 use sqlparser::ast::TableFactor;
 use std::sync::Arc;
@@ -59,7 +59,11 @@ impl TableRef for BaseTableRef {
         let bound_table_name = self.get_table_name();
 
         // Firstly, try directly resolve the column name through schema
-        let direct_resolved_expr = ColumnRef::resolve_from_schema(col_name, self.schema.clone())?.map(|mut c| c.prepend(bound_table_name.clone()));
+        let direct_resolved_expr = ColumnRef::resolve_from_schema(col_name, self.schema.clone())?.map(|mut c| {
+            c.prepend(bound_table_name.clone());
+
+            c
+        });
 
         let mut strip_resolved_expr: Option<ColumnRef> = None;
 
@@ -69,7 +73,11 @@ impl TableRef for BaseTableRef {
             if &col_name[0] == bound_table_name {
                 let strip_column_name = &col_name[1..];
 
-                strip_resolved_expr = ColumnRef::resolve_from_schema(strip_column_name, self.schema.clone())?.map(|mut c| c.prepend(bound_table_name.clone()));
+                strip_resolved_expr = ColumnRef::resolve_from_schema(strip_column_name, self.schema.clone())?.map(|mut c| {
+                    c.prepend(bound_table_name.clone());
+
+                    c
+                });
             }
         }
 
@@ -78,6 +86,17 @@ impl TableRef for BaseTableRef {
         }
 
         Ok(strip_resolved_expr.or(direct_resolved_expr))
+    }
+
+    fn get_all_columns(&self, _binder: &Binder) -> ParseASTResult<Vec<ExpressionTypeImpl>> {
+        let bound_table_name = self.get_table_name();
+
+        let columns = self.schema.get_columns()
+            .iter()
+            .map(|column| ColumnRef::new(vec![bound_table_name.clone(), column.get_name().clone()]).into())
+            .collect();
+
+        Ok(columns)
     }
 
     fn try_from_ast(ast: &TableFactor, binder: &Binder) -> ParseASTResult<Self> {

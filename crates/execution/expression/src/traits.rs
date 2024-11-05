@@ -2,7 +2,6 @@ use crate::expression_type::ExpressionType;
 use catalog_schema::Schema;
 use data_types::{DBTypeId, Value};
 use std::fmt::{Debug, Display};
-use std::rc::Rc;
 use std::sync::Arc;
 use tuple::Tuple;
 

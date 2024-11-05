@@ -20,11 +20,14 @@ impl ColumnRef {
         }
     }
 
-    pub fn prepend(&mut self, prefix: String) -> Self {
-        let mut new = self.clone();
-        new.col_name.insert(0, prefix);
+    pub fn new_with_prefix(mut col_name: Vec<String>, prefix: String) -> Self {
+        col_name.insert(0, prefix);
 
-        new
+        Self::new(col_name)
+    }
+
+    pub fn prepend(&mut self, prefix: String) {
+        self.col_name.insert(0, prefix);
     }
 
     pub fn resolve_from_schema(column_names: &[String], schema: Arc<Schema>) -> ParseASTResult<Option<Self>> {
