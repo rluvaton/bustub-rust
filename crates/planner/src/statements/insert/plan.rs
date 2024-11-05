@@ -12,8 +12,14 @@ impl Plan for InsertStatement {
 
         let schema = select.get_output_schema();
         let child_schema = schema.get_columns();
-        if table_schema.iter().zip(child_schema).any(|(col1, col2)| col1.get_type() != col2.get_type()) {
-            panic!("table schema mismatch");
+        if table_schema.iter().zip(child_schema).any(|(col1, col2)| {
+            let col1_type = col1.get_type();
+            let col2_type = col2.get_type();
+
+            !col1_type.is_coercable_from(&col2_type) && !col2_type.is_coercable_from(&col1_type)
+        }) {
+            // panic!("table schema mismatch");
+            return Err(error_utils::anyhow!("internal: table schema mismatch"))
         }
 
         // TODO - fix this!, we should not prefix column names like this!
