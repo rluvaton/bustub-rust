@@ -53,7 +53,6 @@ mod tests {
         assert_eq!(actual, expected)
     }
 
-    #[ignore]
     #[test]
     fn should_select_from_empty_table() {
         let mut instance = BustubInstance::in_memory(None);
@@ -209,6 +208,20 @@ mod tests {
     }
 
     #[test]
+    fn should_be_able_to_select_from_every_the_mock_tables() {
+        let mut instance = BustubInstance::in_memory(None);
+        instance.generate_mock_table();
+
+        for table_name in MockTableName::create_iter() {
+            let sql = format!("SELECT * from {} limit 10", table_name);
+
+            instance
+                .execute_single_select_sql(sql.as_str(), CheckOptions::default())
+                .expect(format!("Should select from {}", table_name).as_str());
+        }
+    }
+
+    #[test]
     fn select_from_table_with_varchar_columns() {
         let mut instance = BustubInstance::in_memory(None);
 
@@ -276,6 +289,4 @@ mod tests {
 
         assert_eq!(actual, expected);
     }
-
-    // TODO - add select * from all mock tables
 }

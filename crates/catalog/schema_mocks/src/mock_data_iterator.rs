@@ -80,6 +80,7 @@ impl From<MockTableName> for MockDataIterator {
             MockTableName::T1 => Box::new(|index| vec![
                 Value::from((index as i32) / 10000),
                 Value::from((index as i32) % 10000),
+                Value::from(index as i32),
             ]),
             MockTableName::T41M => Box::new(|index| vec![
                 Value::from((index as i32) % 500000),
