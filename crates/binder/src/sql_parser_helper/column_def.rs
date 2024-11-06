@@ -10,7 +10,7 @@ pub(crate) trait ColumnDefExt {
 
     fn try_parse_options(&self, binder: &Binder) -> ParseASTResult<ColumnOptions>;
 
-    fn try_is_primary_column(&self) -> ParseASTResult<bool>;
+    fn is_primary_column(&self) -> ParseASTResult<bool>;
 }
 
 // ColumnDef
@@ -113,8 +113,9 @@ impl ColumnDefExt for sqlparser::ast::ColumnDef {
         Ok(column_options_builder.build().expect("Must be able to build column options"))
     }
 
-    fn try_is_primary_column(&self) -> ParseASTResult<bool> {
+    fn is_primary_column(&self) -> bool {
         let mut is_col_primary = false;
+
         for option in &self.options {
             match option.option {
                 ColumnOption::Unique { is_primary, .. } => {
@@ -124,6 +125,6 @@ impl ColumnDefExt for sqlparser::ast::ColumnDef {
             }
         }
 
-        Ok(is_col_primary)
+       is_col_primary
     }
 }
