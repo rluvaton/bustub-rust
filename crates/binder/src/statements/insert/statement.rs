@@ -1,14 +1,12 @@
+use crate::statements::parse_returning::parse_returning;
 use crate::statements::traits::Statement;
 use crate::statements::{SelectStatement, StatementTypeImpl};
 use crate::table_ref::{BaseTableRef, TableReferenceTypeImpl};
 use crate::try_from_ast_error::{ParseASTError, ParseASTResult};
 use crate::{Binder, ColumnOrderingAndDefaultValuesForInsert, ExpressionTypeImpl};
-use catalog_schema::Column;
-use sqlparser::ast::Ident;
 use std::fmt::Debug;
 use std::ops::Deref;
 use std::rc::Rc;
-use crate::statements::parse_returning::parse_returning;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct InsertStatement {
