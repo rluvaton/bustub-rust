@@ -299,6 +299,41 @@ mod tests {
     }
 
     #[test]
+    fn insert_partial_with_null_default_bigint() {
+        let mut instance = BustubInstance::in_memory(None);
+
+        // Create table
+        {
+            let sql = "CREATE TABLE t(id BIGINT, name varchar NULL);";
+
+            instance.execute_user_input(sql, &mut NoopWriter::default(), CheckOptions::default()).expect("Should execute");
+        }
+
+        let sql = "insert into t(id) values(100);";
+
+        let actual = instance.execute_single_insert_sql(sql, CheckOptions::default()).expect("Should insert with default");
+
+        let expected = actual.create_with_same_schema(vec![
+            vec![Value::from(1)],
+        ]);
+
+        assert_eq!(actual, expected);
+
+        instance.verify_integrity();
+
+        // Assert inserted values exists
+        {
+            let sql = "SELECT * from t";
+
+            let actual = instance.execute_single_select_sql(sql, CheckOptions::default()).expect("Should execute");
+
+            let expected = actual.create_with_same_schema(vec![
+                vec![Value::from(100), Value::null(DBTypeId::VARCHAR)],
+            ]);
+        }
+    }
+
+    #[test]
     fn insert_partial_with_not_null_default() {
         let mut instance = BustubInstance::in_memory(None);
 

@@ -77,7 +77,7 @@ impl Iterator for InsertExecutor<'_>
             let table_schema = self.dest_table_info.get_schema();
             let values_to_insert = columns_ordering_and_default_values.map_values_based_on_schema(
                 table_schema.deref(),
-                tuple.get_values(self.plan.get_output_schema().deref()).deref(),
+                tuple.get_values(self.child_executor.get_output_schema().deref()).deref(),
                 |col| {
                     let options = col.get_options();
 
