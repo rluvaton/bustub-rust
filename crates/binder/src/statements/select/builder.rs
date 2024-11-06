@@ -2,7 +2,6 @@ use crate::expressions::ExpressionTypeImpl;
 use crate::order_by::OrderBy;
 use crate::statements::SelectStatement;
 use crate::table_ref::{CTEList, TableReferenceTypeImpl};
-use anyhow::anyhow;
 use std::fmt::Debug;
 use std::rc::Rc;
 
@@ -104,13 +103,13 @@ impl SelectStatementBuilder {
 
     pub(super) fn try_build(self) -> error_utils::anyhow::Result<SelectStatement> {
         if self.table.is_none() {
-            return Err(error_utils::Error::<anyhow::Error>::new_anyhow(anyhow!("table must be defined")));
+            return Err(error_utils::anyhow!("table must be defined"));
         }
 
         let table = self.table.unwrap();
 
         if self.select_list.is_none() {
-            return Err(error_utils::Error::<anyhow::Error>::new_anyhow(anyhow!("select list must be defined")));
+            return Err(error_utils::anyhow!("select list must be defined"));
         }
 
         let select_list = self.select_list.unwrap();
