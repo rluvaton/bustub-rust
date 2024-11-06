@@ -5,14 +5,14 @@ edition = "2021"
 
 [dependencies]
 
-buffer_pool_manager = {path = "../../buffer/manager"}
-catalog_schema = {path = "../../catalog/schema" }
-common = {path = "../../common"}
-data_types = {path = "../../data_types"}
-error_utils = {path = "../../utils/error_utils"}
-extendible_hash_table = {path = "../../hashing/extendible_hash_table"}
-hashing_common = {path = "../../hashing/common"}
-rid = {path = "../../rid"}
-transaction = {path = "../../concurrency/transaction/core"}
-tuple = {path = "../table/tuple"}
-table = {path = "../table/core"}
+buffer_pool_manager = { workspace = true }
+catalog_schema = { workspace = true }
+common = { workspace = true }
+data_types = { workspace = true }
+error_utils = { workspace = true }
+extendible_hash_table = { workspace = true }
+hashing_common = { workspace = true }
+rid = { workspace = true }
+transaction = { workspace = true }
+tuple = { workspace = true }
+table = { workspace = true }

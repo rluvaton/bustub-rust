@@ -4,8 +4,8 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-common = {path = "../../common"}
-pages = {path = "../../storage/pages"}
-disk_storage = {path = "../../storage/disk"}
+common = { workspace = true }
+pages = { workspace = true }
+disk_storage = { workspace = true }
 
-parking_lot = "0.12.3"
+parking_lot = { workspace = true }

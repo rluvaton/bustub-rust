@@ -4,26 +4,26 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-common = {path = "../common"}
-pages = {path = "../storage/pages"}
-buffer_pool_manager = {path = "../buffer/manager"}
+common = { workspace = true }
+pages = { workspace = true }
+buffer_pool_manager = { workspace = true }
 
-recovery_log_manager = {path = "../recovery/log_manager"}
-lock_manager = {path = "../concurrency/lock_manager"}
-transaction = {path = "../concurrency/transaction/core"}
-table = {path = "../storage/table/core"}
+recovery_log_manager = { workspace = true }
+lock_manager = { workspace = true }
+transaction = { workspace = true }
+table = { workspace = true }
 
-rid = {path = "../rid"}
+rid = { workspace = true }
 
-catalog_schema = {path = "../catalog/schema" }
-index = {path = "../storage/index"}
+catalog_schema = { workspace = true }
+index = { workspace = true }
 
-thiserror = "1.0.64"
+thiserror = { workspace = true }
 
-parking_lot = "0.12.3"
+parking_lot = { workspace = true }
 
 [dev-dependencies]
-tempdir = "0.3.7"
+tempdir = { workspace = true }
 
 
 [features]
