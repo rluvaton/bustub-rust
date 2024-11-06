@@ -10,7 +10,7 @@ pub(crate) trait ColumnDefExt {
 
     fn try_parse_options(&self, binder: &Binder) -> ParseASTResult<ColumnOptions>;
 
-    fn is_primary_column(&self) -> ParseASTResult<bool>;
+    fn is_primary_column(&self) -> bool;
 }
 
 // ColumnDef

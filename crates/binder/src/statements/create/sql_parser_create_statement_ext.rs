@@ -15,7 +15,7 @@ impl SqlParserCreateStatementExt for sqlparser::ast::CreateTable {
                 .map(|item| (item.is_primary_column(), item.name.value.clone()))
                 .collect();
 
-            primary_columns?.iter()
+            primary_columns.iter()
                 .filter(|col| col.0)
                 .map(|col| col.1.clone())
                 .collect()
