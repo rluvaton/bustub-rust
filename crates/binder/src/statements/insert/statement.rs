@@ -79,11 +79,43 @@ impl Statement for InsertStatement {
             }
         }
 
+        // Fails if we have unknown columns
+        {
+            let unknown_column = ast.columns.iter().find(|col| {
+                let col_name = col.to_string();
+
+                let column_index = table.schema.try_get_col_idx(col_name.as_str());
+
+                // If column is missing
+                column_index.is_none()
+            });
+
+            if let Some(missing_column) = unknown_column {
+                return Err(ParseASTError::FailedParsing(format!("Column {missing_column} is missing")))
+            }
+        }
+
         let column_ordering = ColumnOrderingAndDefaultValuesForInsert::from_ast_and_schema(ast.columns.as_slice(), table.schema.deref());
 
         let select = ast.source.as_ref().ok_or(ParseASTError::FailedParsing("Must have source".to_string()))?;
 
         let select_statement = SelectStatement::try_parse_ast(select, binder)?;
+
+        {
+            match select_statement.table.deref() {
+                TableReferenceTypeImpl::ExpressionList(list) => {
+                    let number_of_columns = ast.columns.len();
+                    let row_with_mismatch_values_count = list.values.iter()
+                        .enumerate()
+                        .find(|(index, row)| row.len() != number_of_columns);
+
+                    if let Some((index, row)) = row_with_mismatch_values_count {
+                        return Err(ParseASTError::FailedParsing(format!("Row {} columns count {} does not match the expected column count {}", index + 1, row.len(), number_of_columns)))
+                    }
+                }
+                _ => return Err(ParseASTError::Unimplemented(format!("Insert data source {} is not supported", select_statement.table.get_name())))
+            }
+        }
 
         let table: Rc<TableReferenceTypeImpl> = Rc::new(table.into());
 
