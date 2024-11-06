@@ -2,6 +2,10 @@ use crate::{DBTypeId, DBTypeIdImpl, Value};
 use std::fmt::{Debug, Display};
 use std::ops;
 
+pub trait ConstantsDBTypeTrait {
+    fn get_null() -> Self;
+}
+
 pub trait ArithmeticsDBTypeTrait:
 Sized +
 ops::Add<Self> + // '+'
@@ -84,4 +88,4 @@ pub trait VariableLengthStorageDBTypeTrait: Sized + Clone {
     fn get_data_from_slice(storage: &[u8]) -> &[u8];
 }
 
-pub trait DBTypeIdTrait: FormatDBTypeTrait + ConversionDBTypeTrait + ComparisonDBTypeTrait + ArithmeticsDBTypeTrait + StorageDBTypeTrait {}
+pub trait DBTypeIdTrait: ConstantsDBTypeTrait + FormatDBTypeTrait + ConversionDBTypeTrait + ComparisonDBTypeTrait + ArithmeticsDBTypeTrait + StorageDBTypeTrait {}
