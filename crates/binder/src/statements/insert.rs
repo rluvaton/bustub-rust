@@ -63,6 +63,18 @@ impl Statement for InsertStatement {
         if table.table.starts_with("__") {
             return Err(ParseASTError::FailedParsing(format!("Invalid table to insert: {}", table.table)));
         }
+
+        // Fail if there are duplicate columns
+        {
+            let mut columns = ast.columns.as_slice();
+            for (index, column) in columns.iter().enumerate() {
+                for other_column in columns[index + 1..].iter() {
+                    if column == other_column {
+                        return Err(ParseASTError::FailedParsing(format!("Schema contains duplicate unqualified field name {}", column)))
+                    }
+                }
+            }
+        }
         
         if !InsertStatement::is_same_columns(ast.columns.as_slice(), table.schema.get_columns().as_slice()) {
             // When we support this we should change the table context for returning, right?
