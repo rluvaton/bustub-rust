@@ -35,7 +35,7 @@ insert into table_without_values(name, id) values('bar', 2);
 statement error Schema contains duplicate unqualified field name id
 insert into table_without_values(id, id) values(3, 3);
 
-statement error Arrow error: Cast error: Cannot cast string 'zoo' to value of Int64 type
+statement error schema error: expected INTEGER got VARCHAR
 insert into table_without_values(name, id) values(4, 'zoo');
 
 statement error Error during planning: Column count doesn't match insert query!
