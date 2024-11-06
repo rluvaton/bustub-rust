@@ -166,6 +166,48 @@ mod tests {
     }
 
     #[test]
+    fn insert_more_values_than_columns() {
+        let mut instance = BustubInstance::in_memory(None);
+
+        // Create table
+        {
+            let sql = "CREATE TABLE t(id BIGINT, name varchar);";
+
+            instance.execute_user_input(sql, &mut NoopWriter::default(), CheckOptions::default()).expect("Should execute");
+        }
+
+        let sql = "insert into t(id) values(4, 'zoo');";
+
+        let err = instance.execute_single_insert_sql(sql, CheckOptions::default())
+            .expect_err("Should fail to insert");
+
+        assert_eq!(err.to_string(), "schema error: expected INTEGER got VARCHAR");
+
+        instance.verify_integrity();
+    }
+
+    #[test]
+    fn insert_more_columns_than_values() {
+        let mut instance = BustubInstance::in_memory(None);
+
+        // Create table
+        {
+            let sql = "CREATE TABLE t(id BIGINT, name varchar);";
+
+            instance.execute_user_input(sql, &mut NoopWriter::default(), CheckOptions::default()).expect("Should execute");
+        }
+
+        let sql = "insert into t(id, name) values(4);";
+
+        let err = instance.execute_single_insert_sql(sql, CheckOptions::default())
+            .expect_err("Should fail to insert");
+
+        assert_eq!(err.to_string(), "schema error: expected INTEGER got VARCHAR");
+
+        instance.verify_integrity();
+    }
+
+    #[test]
     fn insert_with_different_column_order() {
         let mut instance = BustubInstance::in_memory(None);
 
