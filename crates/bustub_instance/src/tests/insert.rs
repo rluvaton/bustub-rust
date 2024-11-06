@@ -208,6 +208,27 @@ mod tests {
     }
 
     #[test]
+    fn insert_with_different_column_name() {
+        let mut instance = BustubInstance::in_memory(None);
+
+        // Create table
+        {
+            let sql = "CREATE TABLE t(id INT);";
+
+            instance.execute_user_input(sql, &mut NoopWriter::default(), CheckOptions::default()).expect("Should execute");
+        }
+
+        let sql = "insert into t(hello) values(4);";
+
+        let err = instance.execute_single_insert_sql(sql, CheckOptions::default())
+            .expect_err("Should fail to insert");
+
+        assert_eq!(err.to_string(), "Failed to parse Column hello is missing");
+
+        instance.verify_integrity();
+    }
+
+    #[test]
     fn insert_with_different_column_order() {
         let mut instance = BustubInstance::in_memory(None);
 

@@ -79,6 +79,19 @@ impl Statement for InsertStatement {
             }
         }
 
+        let missing_column = ast.columns.iter().find(|col| {
+           let col_name = col.to_string();
+
+            let column_index = table.schema.try_get_col_idx(col_name.as_str());
+
+            // If column is missing
+            column_index.is_none()
+        });
+
+        if let Some(missing_column) = missing_column {
+            return Err(ParseASTError::FailedParsing(format!("Column {missing_column} is missing")))
+        }
+
         let column_ordering = ColumnOrderingAndDefaultValuesForInsert::from_ast_and_schema(ast.columns.as_slice(), table.schema.deref());
 
         let select = ast.source.as_ref().ok_or(ParseASTError::FailedParsing("Must have source".to_string()))?;
