@@ -1,5 +1,6 @@
 use std::fmt::{Debug, Display, Formatter};
 use data_types::DBTypeId;
+use crate::column_options::ColumnOptions;
 
 // TODO - implement src/include/catalog/column.h
 #[derive(Clone, PartialEq)]
@@ -18,6 +19,8 @@ pub struct Column {
 
     /// Column offset in the tuple.
     pub(super) column_offset: u32,
+
+    options: ColumnOptions
 }
 
 impl Column {
@@ -38,6 +41,7 @@ impl Column {
             fixed_length: type_id.get_size() as u32,
             variable_length: 0,
             column_offset: 0,
+            options: ColumnOptions::default()
         }
     }
 
@@ -58,6 +62,7 @@ impl Column {
             fixed_length: type_id.get_size() as u32,
             variable_length: length,
             column_offset: 0,
+            options: ColumnOptions::default(),
         }
     }
 
@@ -76,7 +81,14 @@ impl Column {
             fixed_length: column.fixed_length,
             variable_length: column.variable_length,
             column_offset: column.column_offset,
+            options: column.options.clone(),
         }
+    }
+
+    pub fn with_options(mut self, options: ColumnOptions) -> Self {
+        self.options = options;
+
+        self
     }
 
     /// get column name
@@ -112,6 +124,10 @@ impl Column {
     /// true if column is inlined, false otherwise
     pub fn is_inlined(&self) -> bool {
         !matches!(self.column_type, DBTypeId::VARCHAR)
+    }
+
+    pub fn get_column_options(&self) -> &ColumnOptions {
+        &self.options
     }
 }
 

@@ -33,14 +33,13 @@ impl Into<StatementTypeImpl> for CreateStatement {
 impl Statement for CreateStatement {
     type ASTStatement = sqlparser::ast::CreateTable;
 
-    fn try_parse_ast(ast: &Self::ASTStatement, _binder: &Binder) -> ParseASTResult<Self> {
-        let columns: ParseASTResult<Vec<Column>> = ast.columns.iter().map(|item| item.try_convert_into_column()).collect();
+    fn try_parse_ast(ast: &Self::ASTStatement, binder: &Binder) -> ParseASTResult<Self> {
+        let columns: ParseASTResult<Vec<Column>> = ast.columns.iter().map(|item| item.try_convert_into_column(binder)).collect();
         let columns = columns?;
 
         if columns.is_empty() {
             return Err(ParseASTError::FailedParsing("Columns cannot be empty".to_string()))
         }
-
 
         Ok(CreateStatement {
             table: ast.name.to_string(),

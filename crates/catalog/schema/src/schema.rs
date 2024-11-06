@@ -69,7 +69,8 @@ impl Schema {
 
         Schema::new(columns)
     }
-    
+
+    #[must_use]
     pub fn prefix_column_names(&self, prefix: &str) -> Self {
         self.columns
             .iter()

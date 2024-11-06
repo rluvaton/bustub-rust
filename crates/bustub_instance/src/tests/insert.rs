@@ -144,4 +144,51 @@ mod tests {
         instance.verify_integrity();
     }
 
+    #[test]
+    fn insert_wrong_value_type() {
+        let mut instance = BustubInstance::in_memory(None);
+
+        // Create table
+        {
+            let sql = "CREATE TABLE t(id BIGINT, name varchar);";
+
+            instance.execute_user_input(sql, &mut NoopWriter::default(), CheckOptions::default()).expect("Should execute");
+        }
+
+        let sql = "insert into t(name, id) values(4, 'zoo');";
+
+        let err = instance.execute_single_insert_sql(sql, CheckOptions::default())
+            .expect_err("Should fail to insert");
+
+        assert_eq!(err.to_string(), "aa");
+
+        instance.verify_integrity();
+
+        //
+    }
+
+    #[test]
+    fn insert_partial_with_default() {
+        let mut instance = BustubInstance::in_memory(None);
+
+        // Create table
+        {
+            let sql = "CREATE TABLE t(id INT, name varchar NULL);";
+
+            instance.execute_user_input(sql, &mut NoopWriter::default(), CheckOptions::default()).expect("Should execute");
+        }
+
+        let sql = "insert into t(id) values(1) RETURNING *;";
+
+        let actual = instance.execute_single_insert_sql(sql, CheckOptions::default()).expect("Should insert with default");
+
+        let expected = actual.create_with_same_schema(vec![
+            vec![Value::from(1), Value::from(Option::<&str>::None)],
+        ]);
+
+        assert_eq!(actual, expected);
+
+        instance.verify_integrity();
+    }
+
 }

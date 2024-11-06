@@ -15,6 +15,12 @@ pub enum DBTypeId {
     TIMESTAMP = 8,
 }
 
+pub enum CanBeCastedWithoutValueChangeResult {
+    True,
+    NeedBoundCheck,
+    False,
+}
+
 impl DBTypeId {
     /// Return the size in bytes of the type
     pub fn get_size(&self) -> usize {
@@ -34,6 +40,8 @@ impl DBTypeId {
         }
     }
 
+    /// Cant cast to another type
+    /// (can change the actual value - e.g. casting to varchar will make the value string)
     pub fn is_coercable_from(&self, from: &DBTypeId) -> bool {
         match self {
             DBTypeId::INVALID => false,
@@ -74,6 +82,57 @@ impl DBTypeId {
         }
     }
 
+    /// Can type be cast as the provided type without value changes
+    pub fn can_be_cast_without_value_changes(&self, cast_as: &DBTypeId) -> CanBeCastedWithoutValueChangeResult {
+        match (self, cast_as) {
+            (DBTypeId::INVALID, DBTypeId::INVALID) => CanBeCastedWithoutValueChangeResult::True,
+            (DBTypeId::INVALID, _) | (_, DBTypeId::INVALID) => CanBeCastedWithoutValueChangeResult::False,
+
+            (DBTypeId::BOOLEAN, DBTypeId::BOOLEAN) => CanBeCastedWithoutValueChangeResult::True,
+            (DBTypeId::BOOLEAN, _) | (_, DBTypeId::BOOLEAN) => CanBeCastedWithoutValueChangeResult::False,
+
+            (DBTypeId::VARCHAR, DBTypeId::VARCHAR) => CanBeCastedWithoutValueChangeResult::True,
+            (DBTypeId::VARCHAR, _) | (_, DBTypeId::VARCHAR) => CanBeCastedWithoutValueChangeResult::False,
+
+            (DBTypeId::TIMESTAMP, DBTypeId::TIMESTAMP) => CanBeCastedWithoutValueChangeResult::True,
+            (DBTypeId::TIMESTAMP, _) | (_, DBTypeId::TIMESTAMP) => CanBeCastedWithoutValueChangeResult::False,
+
+            (DBTypeId::TINYINT, DBTypeId::TINYINT) |
+            (DBTypeId::TINYINT, DBTypeId::SMALLINT) |
+            (DBTypeId::TINYINT, DBTypeId::INT) |
+            (DBTypeId::TINYINT, DBTypeId::BIGINT) |
+            (DBTypeId::TINYINT, DBTypeId::DECIMAL) |
+
+            (DBTypeId::SMALLINT, DBTypeId::SMALLINT) |
+            (DBTypeId::SMALLINT, DBTypeId::INT) |
+            (DBTypeId::SMALLINT, DBTypeId::BIGINT) |
+            (DBTypeId::SMALLINT, DBTypeId::DECIMAL) |
+
+            (DBTypeId::INT, DBTypeId::INT) |
+            (DBTypeId::INT, DBTypeId::BIGINT) |
+            (DBTypeId::INT, DBTypeId::DECIMAL) |
+
+            (DBTypeId::BIGINT, DBTypeId::BIGINT) |
+            (DBTypeId::BIGINT, DBTypeId::DECIMAL) |
+
+            (DBTypeId::DECIMAL, DBTypeId::DECIMAL) => CanBeCastedWithoutValueChangeResult::True,
+
+            (DBTypeId::SMALLINT, DBTypeId::TINYINT) |
+
+            (DBTypeId::INT, DBTypeId::TINYINT) |
+            (DBTypeId::INT, DBTypeId::SMALLINT) |
+
+            (DBTypeId::BIGINT, DBTypeId::TINYINT) |
+            (DBTypeId::BIGINT, DBTypeId::SMALLINT) |
+            (DBTypeId::BIGINT, DBTypeId::INT) |
+
+            (DBTypeId::DECIMAL, DBTypeId::TINYINT) |
+            (DBTypeId::DECIMAL, DBTypeId::SMALLINT) |
+            (DBTypeId::DECIMAL, DBTypeId::INT) |
+            (DBTypeId::DECIMAL, DBTypeId::BIGINT) => CanBeCastedWithoutValueChangeResult::NeedBoundCheck
+        }
+    }
+
     pub fn get_name(&self) -> &'static str {
         match self {
             DBTypeId::INVALID => "INVALID",
@@ -100,7 +159,7 @@ impl DBTypeId {
                     DBTypeId::BOOLEAN | DBTypeId::VARCHAR => true,
                     _ => false
                 }
-            },
+            }
 
             DBTypeId::TINYINT |
             DBTypeId::SMALLINT |

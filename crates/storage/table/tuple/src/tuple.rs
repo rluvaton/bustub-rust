@@ -1,4 +1,4 @@
-use catalog_schema::Schema;
+use catalog_schema::{Column, Schema};
 use common::PageKey;
 use data_types::{Value, BUSTUB_VALUE_NULL};
 use rid::RID;
@@ -104,10 +104,18 @@ impl Tuple {
     // Get the value of a specified column (const)
     // checks the schema to see how to return the Value.
     pub fn get_value(&self, schema: &Schema, column_idx: usize) -> Value {
-        let column_type = schema.get_column(column_idx).get_type();
-        let data_ptr = self.get_data_ptr(schema, column_idx);
-        // the third parameter "is_inlined" is unused
-        Value::deserialize_from_slice(column_type, data_ptr)
+        let col = schema.get_column(column_idx);
+        // the third parameter "is_inlined" in the original code was unused
+        Value::deserialize_from_slice(col.get_type(), self.get_data_ptr(col))
+    }
+
+    // Get the value of a specified column (const)
+    // checks the schema to see how to return the Value.
+    pub fn get_values(&self, schema: &Schema) -> Vec<Value> {
+        schema.get_columns()
+            .iter()
+            .map(|col| Value::deserialize_from_slice(col.get_type(), self.get_data_ptr(col)))
+            .collect()
     }
 
     // Generates a key tuple given schemas and attributes
@@ -156,9 +164,7 @@ impl Tuple {
     pub fn is_tuple_content_equal(a: &Self, b: &Self) -> bool { a.data == b.data }
 
     // Get the starting storage address of specific column
-    fn get_data_ptr(&self, schema: &Schema, column_idx: usize) -> &[u8] {
-        let col = schema.get_column(column_idx);
-
+    fn get_data_ptr(&self, col: &Column) -> &[u8] {
         // For inline type, data is stored where it is.
         if col.is_inlined() {
             &self.data[col.get_offset()..]
@@ -197,7 +203,6 @@ impl Tuple {
 // deserialize tuple data(deep copy)
 impl From<&[u8]> for Tuple {
     fn from(value: &[u8]) -> Self {
-
         Self {
             rid: RID::default(),
             data: value.to_vec()

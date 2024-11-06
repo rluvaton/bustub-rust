@@ -1,20 +1,23 @@
 use sqlparser::ast::{CharLengthUnits, CharacterLength, ColumnOption, DataType};
-use catalog_schema::Column;
+use catalog_schema::{Column, ColumnDefault, ColumnOptions};
 use common::config::VARCHAR_DEFAULT_LENGTH;
 use data_types::DBTypeId;
+use crate::{Binder, Expression, ExpressionTypeImpl};
 use crate::try_from_ast_error::{ParseASTResult, ParseASTError};
 
 pub(crate) trait ColumnDefExt {
-    fn try_convert_into_column(&self) -> ParseASTResult<Column>;
+    fn try_convert_into_column(&self, binder: &Binder) -> ParseASTResult<Column>;
+
+    fn try_parse_options(&self, binder: &Binder) -> ParseASTResult<ColumnOptions>;
 
     fn try_is_primary_column(&self) -> ParseASTResult<bool>;
 }
 
 // ColumnDef
 impl ColumnDefExt for sqlparser::ast::ColumnDef {
-    fn try_convert_into_column(&self) -> ParseASTResult<Column> {
+    fn try_convert_into_column(&self, binder: &Binder) -> ParseASTResult<Column> {
+        let column_options = self.try_parse_options(binder)?;
         let name = &self.name.value;
-
 
         let fixed_size_data_type = match self.data_type {
             DataType::CharacterVarying(size) | DataType::CharVarying(size) | DataType::Varchar(size) => {
@@ -37,7 +40,9 @@ impl ColumnDefExt for sqlparser::ast::ColumnDef {
                     CharacterLength::Max => return Err(ParseASTError::Unimplemented("Should specify max length".to_string()))
                 };
 
-                return Ok(Column::new_variable_size(name.clone(), DBTypeId::VARCHAR, length as u32));
+                return Ok(
+                    Column::new_variable_size(name.clone(), DBTypeId::VARCHAR, length as u32).with_options(column_options)
+                );
             }
             DataType::TinyInt(unsupported) => {
                 if unsupported.is_some() {
@@ -72,24 +77,50 @@ impl ColumnDefExt for sqlparser::ast::ColumnDef {
             _ => return Err(ParseASTError::Unimplemented(format!("datatype {} is not supported", self.data_type)))
         };
 
-        Ok(Column::new_fixed_size(name.clone(), fixed_size_data_type))
+        Ok(Column::new_fixed_size(name.clone(), fixed_size_data_type).with_options(column_options))
+    }
+
+    fn try_parse_options(&self, binder: &Binder) -> ParseASTResult<ColumnOptions> {
+        let mut column_options_builder = ColumnOptions::builder();
+
+        for option in &self.options {
+            match &option.option {
+                ColumnOption::Null => {
+                    column_options_builder.nullable(true);
+                }
+                ColumnOption::NotNull => {
+                    column_options_builder.nullable(false);
+                }
+                ColumnOption::Default(expr) => {
+                    let default_value = ExpressionTypeImpl::try_parse_from_expr(&expr, binder)?;
+
+                    let default = match default_value {
+                        ExpressionTypeImpl::Constant(c) => ColumnDefault::Value(c.value),
+                        _ => return Err(ParseASTError::Unimplemented(format!("Default value {:?} is not supported ", default_value))),
+                    };
+
+                    column_options_builder.default(default);
+                }
+                ColumnOption::Unique { is_primary, .. } => {
+                    if !is_primary {
+                        return Err(ParseASTError::Unimplemented("unique columns that are not primary key are not supported".to_string()))
+                    }
+                }
+                _ => return Err(ParseASTError::Unimplemented(format!("Option {} is not supported ", option.option))),
+            }
+        }
+
+        Ok(column_options_builder.build().expect("Must be able to build column options"))
     }
 
     fn try_is_primary_column(&self) -> ParseASTResult<bool> {
         let mut is_col_primary = false;
         for option in &self.options {
             match option.option {
-                // TODO - is supported?
-                // ColumnOption::Null => {}
-                // ColumnOption::NotNull => {}
                 ColumnOption::Unique { is_primary, .. } => {
-                    if !is_primary {
-                        return Err(ParseASTError::Unimplemented("unique columns that are not primary key are not supported".to_string()))
-                    }
-
                     is_col_primary = is_primary;
                 },
-                _ => return Err(ParseASTError::Unimplemented(format!("Option {} is not supported ", option.option))),
+                _ => {},
             }
         }
 

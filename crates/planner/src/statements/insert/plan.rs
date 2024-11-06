@@ -1,33 +1,48 @@
+use std::ops::Deref;
 use crate::plan_nodes::{PlanNode, PlanType};
 use crate::traits::Plan;
 use crate::{AggregationPlanNode, InsertPlan, Planner, ProjectionPlanNode};
 use binder::InsertStatement;
 use std::sync::Arc;
+use data_types::CanBeCastedWithoutValueChangeResult;
 
 impl Plan for InsertStatement {
     fn plan<'a>(&self, planner: &'a Planner<'a>)-> error_utils::anyhow::Result<PlanType> {
-        let select = self.select.plan(planner)?;
+        let select = self.get_select().plan(planner)?;
 
         let table_schema = self.get_table().schema.get_columns();
 
         let schema = select.get_output_schema();
         let child_schema = schema.get_columns();
-        if table_schema.iter().zip(child_schema).any(|(col1, col2)| {
-            let col1_type = col1.get_type();
-            let col2_type = col2.get_type();
+        if !table_schema.iter().zip(child_schema).all(|(expected_schema_column, current_value_column)| {
+            let cast_res = current_value_column
+                .get_type()
+                .can_be_cast_without_value_changes(&expected_schema_column.get_type());
 
-            !col1_type.is_coercable_from(&col2_type) && !col2_type.is_coercable_from(&col1_type)
+            match cast_res {
+                CanBeCastedWithoutValueChangeResult::True | CanBeCastedWithoutValueChangeResult::NeedBoundCheck => true,
+                CanBeCastedWithoutValueChangeResult::False => false,
+            }
         }) {
             // panic!("table schema mismatch");
             return Err(error_utils::anyhow!("internal: table schema mismatch"))
         }
 
+        let mut insert_schema = self.get_table().schema.clone();
+
+        let column_ordering = self.get_column_ordering();
+
+        if column_ordering.should_use_column_ordering() {
+            insert_schema = Arc::new(column_ordering.create_new_schema(insert_schema.deref()));
+        }
+
         // TODO - fix this!, we should not prefix column names like this!
-        let insert_schema = Arc::new(self.get_table().schema.prefix_column_names(self.get_table().table.as_str()));
+        insert_schema = Arc::new(insert_schema.prefix_column_names(self.get_table().table.as_str()));
 
         let mut plan = InsertPlan::new(
             insert_schema,
             select,
+            column_ordering.clone(),
             self.get_table().oid,
         ).into();
         
