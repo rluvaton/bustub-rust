@@ -13,3 +13,7 @@ expression = {path = "../execution/expression"}
 parking_lot = "0.12.3"
 error_utils = {path = "../utils/error_utils"}
 anyhow = "1.0.89"
+
+
+[package.metadata.cargo-machete]
+ignored = ["anyhow"]
