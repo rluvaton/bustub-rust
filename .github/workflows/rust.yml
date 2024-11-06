@@ -49,4 +49,7 @@ jobs:
 
           # Print --verbose output
           CARGO_TERM_VERBOSE: true
+
+          # Print queries run in sqllogictest
+          RUST_LOG: bustub_sqllogictest=debug
         run: cargo test
