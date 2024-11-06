@@ -4,32 +4,32 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-common = {path = "../../common"}
-stats = {path = "../../utils/stats"}
-error_utils = {path = "../../utils/error_utils"}
+common = { workspace = true }
+stats = { workspace = true }
+error_utils = { workspace = true }
 
-pages = {path = "../../storage/pages"}
-disk_storage = {path = "../../storage/disk"}
+pages = { workspace = true }
+disk_storage = { workspace = true }
 
-buffer_common = {path = "../common"}
-eviction_policy = {path = "../eviction_policy"}
+buffer_common = { workspace = true }
+eviction_policy = { workspace = true }
 
-recovery_log_manager = {path = "../../recovery/log_manager"}
+recovery_log_manager = { workspace = true }
 
-thiserror = "1.0.64"
+thiserror = { workspace = true }
 
-parking_lot = "0.12.3"
-derive_builder = "0.20.0"
+parking_lot = { workspace = true }
+derive_builder = { workspace = true }
 
 # Profiling
-tracy-client = { version = "0.17.3", default-features = false}
+tracy-client = { workspace = true }
 
 [dev-dependencies]
-rand = "0.8"
-derive_builder = "0.20.0"
-tempdir = "0.3.7"
-zipf = "7"
-parking_lot = { version = "0.12.3", features = ["default", "deadlock_detection"] }
+rand = { workspace = true }
+derive_builder = { workspace = true }
+tempdir ={ workspace = true }
+zipf = { workspace = true }
+parking_lot = { workspace = true, features = ["default", "deadlock_detection"] }
 
 [features]
 default = []

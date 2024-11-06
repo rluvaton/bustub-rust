@@ -5,17 +5,17 @@ edition = "2021"
 
 [dependencies]
 
-buffer_common = {path = "../../../buffer/common"}
-buffer_pool_manager = {path = "../../../buffer/manager"}
-common = {path = "../../../common"}
-lock_manager = {path = "../../../concurrency/lock_manager"}
-pages = {path = "../../pages"}
-parking_lot = "0.12.3"
-rid = {path = "../../../rid"}
-transaction = {path = "../../../concurrency/transaction/core"}
-tuple = {path = "../tuple"}
-catalog_schema = {path = "../../../catalog/schema"}
-data_types = {path = "../../../data_types"}
+buffer_common = { workspace = true }
+buffer_pool_manager = { workspace = true }
+common = { workspace = true }
+lock_manager = { workspace = true }
+pages = { workspace = true }
+parking_lot = { workspace = true }
+rid = { workspace = true }
+transaction = { workspace = true }
+tuple = { workspace = true }
+catalog_schema = { workspace = true }
+data_types = { workspace = true }
 
 [dev-dependencies]
 rand = "0.8.5"

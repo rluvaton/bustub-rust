@@ -37,11 +37,73 @@ members = [
     "crates/storage/index",
     "crates/storage/table/core",
     "crates/planner",
-    "crates/catalog/schema_mocks"
-, "tools/wasm-shell"]
+    "crates/catalog/schema_mocks",
+    "tools/wasm-shell"
+]
 
 [profile.bench]
 debug = true
 
 [workspace.metadata.cargo-machete]
 ignored = ["tracy-client"]
+
+[workspace.dependencies]
+# We turn off default-features for some dependencies here so the workspaces which inherit them can
+# selectively turn them on if needed, since we can override default-features = true (from false)
+# for the inherited dependency but cannot do the reverse (override from true to false).
+#
+# See for more detaiils: https://github.com/rust-lang/cargo/issues/11329
+
+# Local
+
+binder = {path = "crates/binder"}
+common = { path = "crates/common" }
+primer = { path = "crates/primer" }
+db_core = { path = "crates/db_core" }
+stats = { path = "crates/utils/stats" }
+data_types = { path = "crates/data_types" }
+binary_utils = { path = "crates/utils/binary_utils" }
+generics = { path = "crates/utils/generics" }
+error_utils = { path = "crates/utils/error_utils" }
+data_structures = { path = "crates/data_structures" }
+rid = { path = "crates/rid" }
+pages = { path = "crates/storage/pages" }
+disk_storage = { path = "crates/storage/disk" }
+recovery_log_manager = { path = "crates/recovery/log_manager" }
+eviction_policy = { path = "crates/buffer/eviction_policy" }
+buffer_common = { path = "crates/buffer/common" }
+buffer_pool_manager = { path = "crates/buffer/manager" }
+transaction = { path = "crates/concurrency/transaction/core" }
+expression = { path = "crates/execution/expression" }
+tuple = { path = "crates/storage/table/tuple" }
+hashing_common = { path = "crates/hashing/common" }
+extendible_hash_table = { path = "crates/hashing/extendible_hash_table" }
+bustub_instance = { path = "crates/bustub_instance" }
+checkpoint_manager = { path = "crates/recovery/checkpoint_manager" }
+execution_engine = { path = "crates/execution/engine" }
+execution_common = { path = "crates/execution/common" }
+catalog_schema = { path = "crates/catalog/schema" }
+lock_manager = { path = "crates/concurrency/lock_manager" }
+index = { path = "crates/storage/index" }
+table = { path = "crates/storage/table/core" }
+planner = { path = "crates/planner" }
+catalog_schema_mocks = { path = "crates/catalog/schema_mocks" }
+
+
+parking_lot = { version = "0.12.3", default-features = false }
+anyhow = "1.0.89"
+thiserror = { version = "1.0.64", default-features = false }
+sqlparser = "0.51.0"
+bit-vec = { version = "0.8.0", default-features = false }
+# Profiling
+tracy-client = { version = "0.17.3", default-features = false}
+rand = { version = "0.8", default-features = false }
+rand_chacha = { version = "0.3.1", default-features = false }
+derive_builder = "0.20.0"
+tempdir = { version = "0.3.7", default-features = false }
+zipf = { version = "7", default-features = false }
+comfy-table = { version = "7.1.1", default-features = false }
+
+strum = { version = "0.26.3", default-features = false }
+strum_macros = {version =  "0.26.3", default-features = false }
+bitflags = { version = "2.6.0", default-features = false }

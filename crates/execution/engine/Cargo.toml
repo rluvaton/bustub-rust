@@ -4,30 +4,30 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-parking_lot = "0.12.3"
+parking_lot = { workspace = true }
 
 # Profiling
-tracy-client = { version = "0.17.3", default-features = false }
+tracy-client = { workspace = true }
 
-common = { path = "../../common" }
-db_core = {path = "../../db_core" }
-buffer_pool_manager = {path = "../../buffer/manager"}
-transaction = {path = "../../concurrency/transaction/core"}
-lock_manager = {path = "../../concurrency/lock_manager"}
-execution_common = {path = "../common"}
-recovery_log_manager = {path = "../../recovery/log_manager"}
-planner = {path = "../../planner"}
-catalog_schema = {path = "../../catalog/schema"}
-catalog_schema_mocks = {path = "../../catalog/schema_mocks"}
-data_types = {path = "../../data_types"}
+common = { workspace = true }
+db_core = { workspace = true }
+buffer_pool_manager = { workspace = true }
+transaction = { workspace = true }
+lock_manager = { workspace = true }
+execution_common = { workspace = true }
+recovery_log_manager = { workspace = true }
+planner = { workspace = true }
+catalog_schema = { workspace = true }
+catalog_schema_mocks = { workspace = true }
+data_types = { workspace = true }
 
-expression = {path = "../expression"}
+expression = { workspace = true }
 
-error_utils = {path = "../../utils/error_utils"}
-table = {path = "../../storage/table/core"}
-tuple = {path = "../../storage/table/tuple"}
-rid = {path = "../../rid"}
-index = {path = "../../storage/index"}
+error_utils = { workspace = true }
+table = { workspace = true }
+tuple = { workspace = true }
+rid = { workspace = true }
+index = { workspace = true }
 
 
 [features]

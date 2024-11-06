@@ -4,15 +4,15 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-binder = {path = "../binder"}
-catalog_schema = {path = "../catalog/schema" }
-common = {path = "../common"}
-data_types = {path = "../data_types"}
-db_core = {path = "../db_core" }
-expression = {path = "../execution/expression"}
-parking_lot = "0.12.3"
-error_utils = {path = "../utils/error_utils"}
-anyhow = "1.0.89"
+binder = { workspace = true }
+catalog_schema = { workspace = true }
+common = { workspace = true }
+data_types = { workspace = true }
+db_core = { workspace = true }
+expression = { workspace = true }
+parking_lot = { workspace = true }
+error_utils = { workspace = true }
+anyhow = { workspace = true }
 
 
 [package.metadata.cargo-machete]

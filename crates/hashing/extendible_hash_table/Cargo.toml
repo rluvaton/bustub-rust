@@ -5,38 +5,37 @@ edition = "2021"
 
 [dependencies]
 
-hashing_common = {path = "../common"}
+hashing_common = { workspace = true }
 
-common = {path = "../../common"}
-stats = {path = "../../utils/stats"}
-pages = {path = "../../storage/pages"}
-disk_storage = {path = "../../storage/disk"}
+common = { workspace = true }
+stats = { workspace = true }
+pages = { workspace = true }
+disk_storage = { workspace = true }
 
-buffer_common = {path = "../../buffer/common"}
-buffer_pool_manager = {path = "../../buffer/manager"}
+buffer_common = { workspace = true }
+buffer_pool_manager = { workspace = true }
 
-transaction = {path = "../../concurrency/transaction/core"}
+transaction = { workspace = true }
 
-binary_utils = {path = "../../utils/binary_utils"}
-generics = {path = "../../utils/generics"}
-error_utils = {path = "../../utils/error_utils"}
+binary_utils = { workspace = true }
+generics = { workspace = true }
+error_utils = { workspace = true }
 
-thiserror = "1.0.64"
+thiserror = { workspace = true }
 
-# TODO - enable this when wasm is disabled
-comfy-table = { version = "7.1.1", default-features = false }
+comfy-table = { workspace = true }
 
-parking_lot = "0.12.3"
+parking_lot = { workspace = true }
 
 # Profiling
-tracy-client = { version = "0.17.3", default-features = false }
+tracy-client = { workspace = true }
 
 
 [dev-dependencies]
 
-rand = "0.8"
-rand_chacha = "0.3.1"
-parking_lot = { version = "0.12.3", features = ["default", "deadlock_detection"] }
+rand = { workspace = true }
+rand_chacha = { workspace = true }
+parking_lot = { workspace = true, features = ["default", "deadlock_detection"] }
 
 [features]
 default = []

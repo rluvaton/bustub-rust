@@ -4,37 +4,36 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-parking_lot = "0.12.3"
+parking_lot = { workspace = true }
 
-db_core = {path = "../db_core" }
-common = {path = "../common"}
-disk_storage = {path = "../storage/disk"}
-buffer_pool_manager = {path = "../buffer/manager"}
-recovery_log_manager = {path = "../recovery/log_manager"}
-checkpoint_manager = {path = "../recovery/checkpoint_manager"}
-execution_common = {path = "../execution/common"}
-execution_engine = {path = "../execution/engine"}
-planner = {path = "../planner"}
-data_types = {path = "../data_types"}
-lock_manager = {path = "../concurrency/lock_manager"}
-transaction = {path = "../concurrency/transaction/core"}
-index = {path = "../storage/index"}
-error_utils = {path = "../utils/error_utils"}
-anyhow = "1.0.89"
-tuple = { path = "../storage/table/tuple"}
+db_core = { workspace = true }
+common = { workspace = true }
+disk_storage = { workspace = true }
+buffer_pool_manager = { workspace = true }
+recovery_log_manager = { workspace = true }
+checkpoint_manager = { workspace = true }
+execution_common = { workspace = true }
+execution_engine = { workspace = true }
+planner = { workspace = true }
+data_types = { workspace = true }
+lock_manager = { workspace = true }
+transaction = { workspace = true }
+index = { workspace = true }
+error_utils = { workspace = true }
+anyhow = { workspace = true }
+tuple = { workspace = true }
 
-catalog_schema = {path = "../catalog/schema" }
-catalog_schema_mocks = {path = "../catalog/schema_mocks" }
+catalog_schema = { workspace = true }
+catalog_schema_mocks = { workspace = true }
 
-binder = {path = "../binder"}
+binder = { workspace = true }
 
-# TODO - enable this when wasm is disabled
-comfy-table = { version = "7.1.1", default-features = false }
+comfy-table = { workspace = true }
 
 
 # Profiling
-tracy-client = { version = "0.17.3", default-features = false }
-rand = "0.8.5"
+tracy-client = { workspace = true }
+rand = { workspace = true }
 
 [package.metadata.cargo-machete]
 ignored = ["anyhow"]

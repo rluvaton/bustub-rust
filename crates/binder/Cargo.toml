@@ -4,17 +4,17 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-parking_lot = "0.12.3"
+parking_lot = { workspace = true }
 
-db_core = {path = "../db_core" }
-common = {path = "../common"}
-data_types = {path = "../data_types"}
-error_utils = {path = "../utils/error_utils"}
-catalog_schema = {path = "../catalog/schema" }
-anyhow = "1.0.89"
-thiserror = "1.0.64"
+db_core = { workspace = true}
+common = {workspace = true}
+data_types = {workspace = true}
+error_utils = {workspace = true}
+catalog_schema = {workspace = true }
+anyhow = {workspace = true}
+thiserror = {workspace = true}
 
-sqlparser = "0.51.0"
+sqlparser = {workspace = true}
 
 [package.metadata.cargo-machete]
 ignored = ["anyhow"]

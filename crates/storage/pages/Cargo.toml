@@ -4,9 +4,9 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-common = {path = "../../common"}
+common = { workspace = true }
 
-parking_lot = { version = "0.12.3", features = ["default"] }
+parking_lot = { workspace = true }
 
 [dev-dependencies]
 

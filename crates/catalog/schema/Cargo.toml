@@ -4,8 +4,8 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-data_types = {path = "../../data_types"}
-error_utils = {path = "../../utils/error_utils"}
-derive_builder = "0.20.0"
+data_types = { workspace = true }
+error_utils = { workspace = true }
+derive_builder = { workspace = true }
 
 

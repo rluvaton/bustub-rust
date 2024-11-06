@@ -4,11 +4,11 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-common = {path = "../../common"}
-pages = {path = "../pages"}
-error_utils = {path = "../../utils/error_utils"}
+common = { workspace = true }
+pages = { workspace = true }
+error_utils = { workspace = true }
 
-parking_lot = "0.12.3"
+parking_lot = { workspace = true }
 
 [dev-dependencies]
-tempdir = "0.3.7"
+tempdir = { workspace = true }

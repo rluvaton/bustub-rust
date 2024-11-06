@@ -4,13 +4,13 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-generics = {path = "../../utils/generics"}
-data_types = {path = "../../data_types"}
-catalog_schema = {path = "../schema"}
-rid = {path = "../../rid"}
+generics = { workspace = true }
+data_types = { workspace = true }
+catalog_schema = { workspace = true }
+rid = { workspace = true }
 
-strum = "0.26.3"
-strum_macros = "0.26.3"
+strum = { workspace = true }
+strum_macros = { workspace = true }
 
 [features]
 wasm = ["generics/wasm"]

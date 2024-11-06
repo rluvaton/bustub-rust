@@ -4,8 +4,8 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-common = {path = "../../../common"}
-rid = {path = "../../../rid"}
+common = { workspace = true }
+rid = { workspace = true }
 
-catalog_schema = {path = "../../../catalog/schema"}
-data_types = {path = "../../../data_types"}
+catalog_schema = { workspace = true }
+data_types = { workspace = true }
