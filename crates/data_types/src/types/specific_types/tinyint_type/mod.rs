@@ -8,3 +8,7 @@ mod storage;
 mod constants;
 
 pub use base::{TinyIntType, TinyIntUnderlyingType};
+
+impl crate::DBTypeIdTrait for TinyIntType {
+
+}

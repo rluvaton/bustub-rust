@@ -8,3 +8,7 @@ mod storage;
 mod constants;
 
 pub use base::{VarcharType, VarcharUnderlyingType};
+
+impl crate::DBTypeIdTrait for VarcharType {
+
+}
