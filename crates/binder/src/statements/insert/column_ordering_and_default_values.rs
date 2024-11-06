@@ -54,7 +54,7 @@ impl ColumnOrderingAndDefaultValuesForInsert {
             .enumerate()
             .any(|(value_index, schema_index_op)| {
                 if let Some(schema_index) = schema_index_op {
-                    value_index == *schema_index
+                    value_index != *schema_index
                 } else {
                     true
                 }
@@ -99,7 +99,11 @@ impl ColumnOrderingAndDefaultValuesForInsert {
             .map(|(optional_input_column_index, schema_column)| {
                 match optional_input_column_index {
                     None => {
-                        get_default(schema_column)
+                        let default = get_default(schema_column);
+
+                        assert_eq!(default.get_db_type_id(), schema_column.get_type(), "Default DB type ({}) must be the same as the column type {}", default.get_db_type_id(), schema_column.get_type());
+
+                        default
                     }
                     // TODO - AVOID CLONE
                     Some(index) => values[*index].clone()

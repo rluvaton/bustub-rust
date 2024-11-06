@@ -7,9 +7,9 @@ use crate::column_options::ColumnOptions;
 pub struct Column {
     /// Column name.
     column_name: String,
-
-    /// Column value's type.
-    column_type: DBTypeId,
+    //
+    // /// Column value's type.
+    // column_type: DBTypeId,
 
     /// For a non-inlined column, this is the size of a pointer. Otherwise, the size of the fixed length column.
     fixed_length: u32,
@@ -37,11 +37,10 @@ impl Column {
 
         Self {
             column_name,
-            column_type: type_id,
             fixed_length: type_id.get_size() as u32,
             variable_length: 0,
             column_offset: 0,
-            options: ColumnOptions::default()
+            options: ColumnOptions::default_for_type(type_id)
         }
     }
 
@@ -58,11 +57,11 @@ impl Column {
 
         Self {
             column_name,
-            column_type: type_id,
+            // column_type: type_id,
             fixed_length: type_id.get_size() as u32,
             variable_length: length,
             column_offset: 0,
-            options: ColumnOptions::default(),
+            options: ColumnOptions::default_for_type(type_id),
         }
     }
 
@@ -77,7 +76,7 @@ impl Column {
     pub fn create_new_name(column_name: String, column: &Self) -> Self {
         Self {
             column_name,
-            column_type: column.column_type,
+            // column_type: column.column_type,
             fixed_length: column.fixed_length,
             variable_length: column.variable_length,
             column_offset: column.column_offset,
@@ -85,6 +84,7 @@ impl Column {
         }
     }
 
+    // TODO - FIX THIS
     pub fn with_options(mut self, options: ColumnOptions) -> Self {
         self.options = options;
 
@@ -118,29 +118,28 @@ impl Column {
 
     /// get column type
     pub fn get_type(&self) -> DBTypeId {
-        self.column_type
+        self.options.get_db_type()
     }
 
     /// true if column is inlined, false otherwise
     pub fn is_inlined(&self) -> bool {
-        !matches!(self.column_type, DBTypeId::VARCHAR)
+        !matches!(self.options.get_db_type(), DBTypeId::VARCHAR)
     }
 
-    pub fn get_column_options(&self) -> &ColumnOptions {
+    pub fn get_options(&self) -> &ColumnOptions {
         &self.options
     }
 }
 
 impl Display for Column {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}:{}", self.column_name, self.column_type)
+        write!(f, "{}:{}", self.column_name, self.options.get_db_type())
     }
 }
 
-
 impl Debug for Column {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Column[{}, {}, Offset: {}, ", self.column_name, self.column_type, self.column_offset)?;
+        write!(f, "Column[{}, {}, Offset: {}, ", self.column_name, self.options.get_db_type(), self.column_offset)?;
 
         if self.is_inlined() {
             write!(f, "FixedLength: {}", self.fixed_length)?;

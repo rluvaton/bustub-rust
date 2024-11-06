@@ -1,7 +1,7 @@
 use index::Index;
 use crate::context::ExecutorContext;
 use crate::executors::{Executor, ExecutorImpl, ExecutorItem, ExecutorMetadata, ExecutorRef};
-use catalog_schema::Schema;
+use catalog_schema::{ColumnDefault, Schema};
 use common::get_timestamp;
 use db_core::catalog::{IndexInfo, TableInfo};
 use planner::{InsertPlan, PlanNode};
@@ -78,7 +78,14 @@ impl Iterator for InsertExecutor<'_>
             let values_to_insert = columns_ordering_and_default_values.map_values_based_on_schema(
                 table_schema.deref(),
                 tuple.get_values(self.plan.get_output_schema().deref()).deref(),
-                |col| unimplemented!()
+                |col| {
+                    let options = col.get_options();
+
+                    match options.get_default() {
+                        ColumnDefault::None => unreachable!("Column {} must have default", col.get_name()),
+                        ColumnDefault::Value(v) => v.clone()
+                    }
+                }
             );
 
             tuple = Tuple::from_value(values_to_insert.as_slice(), table_schema.deref())

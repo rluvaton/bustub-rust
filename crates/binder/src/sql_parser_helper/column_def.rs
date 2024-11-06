@@ -1,5 +1,5 @@
 use sqlparser::ast::{CharLengthUnits, CharacterLength, ColumnOption, DataType};
-use catalog_schema::{Column, ColumnDefault, ColumnOptions};
+use catalog_schema::{Column, ColumnDefault, ColumnOptions, ColumnOptionsBuilder};
 use common::config::VARCHAR_DEFAULT_LENGTH;
 use data_types::DBTypeId;
 use crate::{Binder, Expression, ExpressionTypeImpl};
@@ -8,7 +8,7 @@ use crate::try_from_ast_error::{ParseASTResult, ParseASTError};
 pub(crate) trait ColumnDefExt {
     fn try_convert_into_column(&self, binder: &Binder) -> ParseASTResult<Column>;
 
-    fn try_parse_options(&self, binder: &Binder) -> ParseASTResult<ColumnOptions>;
+    fn try_parse_options(&self, binder: &Binder) -> ParseASTResult<ColumnOptionsBuilder>;
 
     fn is_primary_column(&self) -> bool;
 }
@@ -16,7 +16,7 @@ pub(crate) trait ColumnDefExt {
 // ColumnDef
 impl ColumnDefExt for sqlparser::ast::ColumnDef {
     fn try_convert_into_column(&self, binder: &Binder) -> ParseASTResult<Column> {
-        let column_options = self.try_parse_options(binder)?;
+        let mut column_options_builder = self.try_parse_options(binder)?;
         let name = &self.name.value;
 
         let fixed_size_data_type = match self.data_type {
@@ -40,8 +40,10 @@ impl ColumnDefExt for sqlparser::ast::ColumnDef {
                     CharacterLength::Max => return Err(ParseASTError::Unimplemented("Should specify max length".to_string()))
                 };
 
+                column_options_builder.db_type(DBTypeId::VARCHAR);
+
                 return Ok(
-                    Column::new_variable_size(name.clone(), DBTypeId::VARCHAR, length as u32).with_options(column_options)
+                    Column::new_variable_size(name.clone(), DBTypeId::VARCHAR, length as u32).with_options(column_options_builder.build().unwrap())
                 );
             }
             DataType::TinyInt(unsupported) => {
@@ -77,11 +79,14 @@ impl ColumnDefExt for sqlparser::ast::ColumnDef {
             _ => return Err(ParseASTError::Unimplemented(format!("datatype {} is not supported", self.data_type)))
         };
 
-        Ok(Column::new_fixed_size(name.clone(), fixed_size_data_type).with_options(column_options))
+        Ok(Column::new_fixed_size(name.clone(), fixed_size_data_type).with_options(column_options_builder.db_type(fixed_size_data_type).build().unwrap()))
     }
 
-    fn try_parse_options(&self, binder: &Binder) -> ParseASTResult<ColumnOptions> {
+    fn try_parse_options(&self, binder: &Binder) -> ParseASTResult<ColumnOptionsBuilder> {
         let mut column_options_builder = ColumnOptions::builder();
+
+        // Nullable by default
+        column_options_builder.nullable(true);
 
         for option in &self.options {
             match &option.option {
@@ -110,7 +115,7 @@ impl ColumnDefExt for sqlparser::ast::ColumnDef {
             }
         }
 
-        Ok(column_options_builder.build().expect("Must be able to build column options"))
+        Ok(column_options_builder)
     }
 
     fn is_primary_column(&self) -> bool {
