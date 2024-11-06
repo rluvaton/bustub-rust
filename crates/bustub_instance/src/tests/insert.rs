@@ -181,7 +181,7 @@ mod tests {
         let err = instance.execute_single_insert_sql(sql, CheckOptions::default())
             .expect_err("Should fail to insert");
 
-        assert_eq!(err.to_string(), "schema error: expected INTEGER got VARCHAR");
+        assert_eq!(err.to_string(), "Failed to parse Row 1 columns count 2 does not match the expected column count 1");
 
         instance.verify_integrity();
     }
@@ -202,7 +202,7 @@ mod tests {
         let err = instance.execute_single_insert_sql(sql, CheckOptions::default())
             .expect_err("Should fail to insert");
 
-        assert_eq!(err.to_string(), "schema error: expected INTEGER got VARCHAR");
+        assert_eq!(err.to_string(), "Failed to parse Row 1 columns count 1 does not match the expected column count 2");
 
         instance.verify_integrity();
     }

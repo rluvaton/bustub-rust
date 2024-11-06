@@ -40,6 +40,19 @@ impl TableReferenceTypeImpl {
             JoinRef::parse_from_table_with_join(ast, binder)
         }
     }
+
+    pub fn get_name(&self) -> &'static str {
+        match self {
+            TableReferenceTypeImpl::Invalid => "Invalid",
+            TableReferenceTypeImpl::BaseTable(_) => "BaseTable",
+            TableReferenceTypeImpl::Join(_) => "Join",
+            TableReferenceTypeImpl::ExpressionList(_) => "ExpressionList",
+            TableReferenceTypeImpl::CrossProduct(_) => "CrossProduct",
+            TableReferenceTypeImpl::SubQuery(_) => "SubQuery",
+            TableReferenceTypeImpl::CTE(_) => "CTE",
+            TableReferenceTypeImpl::Empty => "Empty"
+        }
+    }
 }
 
 impl TableRef for TableReferenceTypeImpl {
