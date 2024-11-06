@@ -1,14 +1,15 @@
 use index::Index;
 use crate::context::ExecutorContext;
 use crate::executors::{Executor, ExecutorImpl, ExecutorItem, ExecutorMetadata, ExecutorRef};
-use catalog_schema::Schema;
+use catalog_schema::{ColumnDefault, Schema};
 use common::get_timestamp;
 use db_core::catalog::{IndexInfo, TableInfo};
 use planner::{InsertPlan, PlanNode};
 use std::fmt;
 use std::fmt::Debug;
+use std::ops::Deref;
 use std::sync::Arc;
-use tuple::TupleMeta;
+use tuple::{Tuple, TupleMeta};
 
 #[must_use = "iterators are lazy and do nothing unless consumed"]
 pub struct InsertExecutor<'a> {
@@ -21,6 +22,9 @@ pub struct InsertExecutor<'a> {
     // ----
 
     plan: &'a InsertPlan,
+
+    // Saved here to avoid re-computing each time
+    should_use_column_ordering_and_default_values: bool,
 
     // The table info for the table the values should be inserted into
     dest_table_info: Arc<TableInfo>,
@@ -44,6 +48,7 @@ impl<'a> InsertExecutor<'a> {
         Self {
             child_executor,
             plan,
+            should_use_column_ordering_and_default_values: plan.get_column_ordering_and_default_values().should_use_column_ordering(),
             ctx,
             dest_table_info,
             dest_indexes
@@ -64,6 +69,27 @@ impl Iterator for InsertExecutor<'_>
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
         let (mut tuple, _) = self.child_executor.next()?;
+
+        // Fill default values and/or reorder columns to match the table order
+        if self.should_use_column_ordering_and_default_values {
+            let columns_ordering_and_default_values = self.plan.get_column_ordering_and_default_values();
+
+            let table_schema = self.dest_table_info.get_schema();
+            let values_to_insert = columns_ordering_and_default_values.map_values_based_on_schema(
+                table_schema.deref(),
+                tuple.get_values(self.plan.get_output_schema().deref()).deref(),
+                |col| {
+                    let options = col.get_options();
+
+                    match options.get_default() {
+                        ColumnDefault::None => unreachable!("Column {} must have default", col.get_name()),
+                        ColumnDefault::Value(v) => v.clone()
+                    }
+                }
+            );
+
+            tuple = Tuple::from_value(values_to_insert.as_slice(), table_schema.deref())
+        }
 
         let rid = self.dest_table_info.get_table_heap().insert_tuple(
             &TupleMeta::new(

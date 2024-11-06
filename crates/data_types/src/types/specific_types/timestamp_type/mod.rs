@@ -4,5 +4,10 @@ mod cmp;
 mod conversions;
 mod format;
 mod storage;
+mod constants;
 
 pub use base::{TimestampType, TimestampUnderlyingType};
+
+impl crate::DBTypeIdTrait for TimestampType {
+
+}

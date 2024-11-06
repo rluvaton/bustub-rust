@@ -2,7 +2,9 @@ use crate::plan_nodes::{PlanNode, PlanType};
 use catalog_schema::Schema;
 use common::config::TableOID;
 use std::fmt::{Display, Formatter};
+use std::rc::Rc;
 use std::sync::Arc;
+use binder::ColumnOrderingAndDefaultValuesForInsert;
 
 /**
  * The InsertPlanNode identifies a table into which tuples are inserted.
@@ -22,14 +24,17 @@ pub struct InsertPlan {
 
     /** The identifier of the table from which tuples are inserted into */
     table_oid: TableOID,
+
+    column_ordering_and_default_values: Rc<ColumnOrderingAndDefaultValuesForInsert>
 }
 
 impl InsertPlan {
-    pub fn new(output: Arc<Schema>, child: PlanType, table_oid: TableOID) -> Self {
+    pub fn new(output: Arc<Schema>, child: PlanType, column_ordering_and_default_values: Rc<ColumnOrderingAndDefaultValuesForInsert>, table_oid: TableOID) -> Self {
         Self {
             output_schema: output,
             children: vec![child],
             table_oid,
+            column_ordering_and_default_values,
         }
     }
 
@@ -40,6 +45,10 @@ impl InsertPlan {
     pub fn get_child_plan(&self) -> &PlanType {
         assert_eq!(self.children.len(), 1, "insert should have only one child plan.");
         &self.children[0]
+    }
+
+    pub fn get_column_ordering_and_default_values(&self) -> &ColumnOrderingAndDefaultValuesForInsert {
+        &self.column_ordering_and_default_values
     }
 }
 

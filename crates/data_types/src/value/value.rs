@@ -1,7 +1,4 @@
-// TODO - should probably be trait
-
-use crate::types::{BigIntType, BooleanType, ComparisonDBTypeTrait, ConversionDBTypeTrait, DBTypeId, DBTypeIdImpl, DecimalType, IntType, SmallIntType, StorageDBTypeTrait, TimestampType, TinyIntType, VariableLengthStorageDBTypeTrait};
-use crate::{run_on_impl, VarcharType};
+use crate::{run_on_impl, BooleanType, VarcharType, BigIntType, ComparisonDBTypeTrait, ConstantsDBTypeTrait, ConversionDBTypeTrait, DBTypeId, DBTypeIdImpl, DecimalType, IntType, SmallIntType, StorageDBTypeTrait, TimestampType, TinyIntType, VariableLengthStorageDBTypeTrait};
 use std::fmt::{Display, Formatter};
 
 
@@ -52,6 +49,20 @@ impl Value {
         run_on_impl!(&self.value, v, {
             v.is_null()
         })
+    }
+
+    pub fn null(db_type: DBTypeId) -> Self {
+        match db_type {
+            DBTypeId::INVALID => unreachable!(),
+            DBTypeId::BOOLEAN => BooleanType::get_null().into(),
+            DBTypeId::TINYINT => TinyIntType::get_null().into(),
+            DBTypeId::SMALLINT => SmallIntType::get_null().into(),
+            DBTypeId::INT => IntType::get_null().into(),
+            DBTypeId::BIGINT => BigIntType::get_null().into(),
+            DBTypeId::DECIMAL => DecimalType::get_null().into(),
+            DBTypeId::VARCHAR => VarcharType::get_null().into(),
+            DBTypeId::TIMESTAMP => TimestampType::get_null().into(),
+        }
     }
     /// Deserialize a value of the given type from the given storage space.
     pub fn deserialize_from_slice(value_type: DBTypeId, slice: &[u8]) -> Self {

@@ -10,12 +10,12 @@ impl SqlParserCreateStatementExt for sqlparser::ast::CreateTable {
     fn try_get_primary_columns(&self) -> ParseASTResult<Vec<String>> {
 
         let primary_columns_from_column_definition: Vec<String> = {
-            let primary_columns: ParseASTResult<Vec<(bool, String)>> = self.columns
+            let primary_columns: Vec<(bool, String)> = self.columns
                 .iter()
-                .map(|item| item.try_is_primary_column().map(|is_primary| (is_primary, item.name.value.clone())))
+                .map(|item| (item.is_primary_column(), item.name.value.clone()))
                 .collect();
 
-            primary_columns?.iter()
+            primary_columns.iter()
                 .filter(|col| col.0)
                 .map(|col| col.1.clone())
                 .collect()

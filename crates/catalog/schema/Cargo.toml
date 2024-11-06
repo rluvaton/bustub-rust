@@ -6,4 +6,6 @@ edition = "2021"
 [dependencies]
 data_types = {path = "../../data_types"}
 error_utils = {path = "../../utils/error_utils"}
+derive_builder = "0.20.0"
+
 

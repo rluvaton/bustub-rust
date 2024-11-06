@@ -2,9 +2,9 @@ mod traits;
 mod statement_type;
 mod create;
 mod delete;
-mod insert;
 mod select;
 mod parse_returning;
+mod insert;
 
 pub use traits::Statement;
 pub use statement_type::{StatementType, StatementTypeImpl};
