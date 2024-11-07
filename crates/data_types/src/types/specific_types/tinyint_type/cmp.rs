@@ -44,7 +44,7 @@ impl PartialEq<SmallIntType> for TinyIntType {
 impl PartialEq<Value> for TinyIntType {
     fn eq(&self, other: &Value) -> bool {
         let other_type_id = other.get_db_type_id();
-        assert!(Self::TYPE.check_comparable(&other_type_id));
+        assert!(Self::TYPE.check_comparable(&other_type_id), "{} is not comparable to {}", Self::TYPE, other_type_id);
 
         if self.is_null() && other.is_null() {
             return true;
@@ -119,7 +119,7 @@ impl PartialOrd<SmallIntType> for TinyIntType {
 impl PartialOrd<Value> for TinyIntType {
     fn partial_cmp(&self, other: &Value) -> Option<Ordering> {
         let other_type_id = other.get_db_type_id();
-        assert!(Self::TYPE.check_comparable(&other_type_id));
+        assert!(Self::TYPE.check_comparable(&other_type_id), "{} is not comparable to {}", Self::TYPE, other_type_id);
 
         if self.is_null() && other.is_null() {
             return Some(Ordering::Equal);
