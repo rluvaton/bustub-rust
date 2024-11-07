@@ -10,7 +10,7 @@ impl PartialEq for BooleanType {
 impl PartialEq<Value> for BooleanType {
     fn eq(&self, other: &Value) -> bool {
         let other_type_id = other.get_db_type_id();
-        assert!(Self::TYPE.check_comparable(&other_type_id));
+        assert!(Self::TYPE.check_comparable(&other_type_id), "{} is not comparable to {}", Self::TYPE, other_type_id);
 
         match other.get_value() {
             DBTypeIdImpl::BOOLEAN(rhs) => self.eq(rhs),
@@ -66,7 +66,7 @@ impl PartialOrd for BooleanType {
 impl PartialOrd<Value> for BooleanType {
     fn partial_cmp(&self, other: &Value) -> Option<Ordering> {
         let other_type_id = other.get_db_type_id();
-        assert!(Self::TYPE.check_comparable(&other_type_id));
+        assert!(Self::TYPE.check_comparable(&other_type_id), "{} is not comparable to {}", Self::TYPE, other_type_id);
 
         if self.is_null() && other.is_null() {
             return Some(Ordering::Equal);

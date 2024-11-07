@@ -33,6 +33,7 @@ impl VarcharType {
 }
 
 impl Deref for VarcharType {
+    // TODO - this is misleading as we can have null, so the underlying value is option
     type Target = VarcharUnderlyingType;
 
     fn deref(&self) -> &Self::Target {

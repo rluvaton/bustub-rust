@@ -106,11 +106,10 @@ impl Statement for InsertStatement {
                 TableReferenceTypeImpl::ExpressionList(list) => {
                     let number_of_columns = ast.columns.len();
                     let row_with_mismatch_values_count = list.values.iter()
-                        .enumerate()
-                        .find(|(index, row)| row.len() != number_of_columns);
+                        .any(|row| row.len() != number_of_columns);
 
-                    if let Some((index, row)) = row_with_mismatch_values_count {
-                        return Err(ParseASTError::FailedParsing(format!("Row {} columns count {} does not match the expected column count {}", index + 1, row.len(), number_of_columns)))
+                    if row_with_mismatch_values_count {
+                        return Err(ParseASTError::FailedParsing("Error during planning: Column count doesn't match insert query!".to_string()))
                     }
                 }
                 _ => return Err(ParseASTError::Unimplemented(format!("Insert data source {} is not supported", select_statement.table.get_name())))

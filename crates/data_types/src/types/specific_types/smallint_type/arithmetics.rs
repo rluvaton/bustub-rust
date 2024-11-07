@@ -47,7 +47,7 @@ impl Add<Value> for SmallIntType {
 
     fn add(self, rhs: Value) -> Self::Output {
         let other_type_id = rhs.get_db_type_id();
-        assert!(Self::TYPE.check_comparable(&other_type_id));
+        assert!(Self::TYPE.check_comparable(&other_type_id), "{} is not comparable to {}", Self::TYPE, other_type_id);
 
         Value::new(
             run_on_numeric_impl!(
@@ -104,7 +104,7 @@ impl Sub<Value> for SmallIntType {
 
     fn sub(self, rhs: Value) -> Self::Output {
         let other_type_id = rhs.get_db_type_id();
-        assert!(Self::TYPE.check_comparable(&other_type_id));
+        assert!(Self::TYPE.check_comparable(&other_type_id), "{} is not comparable to {}", Self::TYPE, other_type_id);
 
         Value::new(
             run_on_numeric_impl!(
@@ -161,7 +161,7 @@ impl Mul<Value> for SmallIntType {
 
     fn mul(self, rhs: Value) -> Self::Output {
         let other_type_id = rhs.get_db_type_id();
-        assert!(Self::TYPE.check_comparable(&other_type_id));
+        assert!(Self::TYPE.check_comparable(&other_type_id), "{} is not comparable to {}", Self::TYPE, other_type_id);
 
 
         Value::new(
@@ -219,7 +219,7 @@ impl Div<Value> for SmallIntType {
 
     fn div(self, rhs: Value) -> Self::Output {
         let other_type_id = rhs.get_db_type_id();
-        assert!(Self::TYPE.check_comparable(&other_type_id));
+        assert!(Self::TYPE.check_comparable(&other_type_id), "{} is not comparable to {}", Self::TYPE, other_type_id);
 
         if self.is_zero() && rhs.is_zero() {
             panic!("Division by zero on right-hand side");
@@ -280,7 +280,7 @@ impl Rem<Value> for SmallIntType {
 
     fn rem(self, rhs: Value) -> Self::Output {
         let other_type_id = rhs.get_db_type_id();
-        assert!(Self::TYPE.check_comparable(&other_type_id));
+        assert!(Self::TYPE.check_comparable(&other_type_id), "{} is not comparable to {}", Self::TYPE, other_type_id);
 
         Value::new(
             run_on_numeric_impl!(

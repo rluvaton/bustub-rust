@@ -34,8 +34,7 @@ impl Value {
         Ok(Value::new(new))
     }
 
-    #[allow(unused)]
-    unsafe fn cast_as_unchecked(&self, db_type_id: DBTypeId) -> Value {
+    pub unsafe fn cast_as_unchecked(&self, db_type_id: DBTypeId) -> Value {
         self.try_cast_as(db_type_id).expect("cannot cast as the requested_type")
     }
 

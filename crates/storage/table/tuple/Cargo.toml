@@ -6,6 +6,8 @@ edition = "2021"
 [dependencies]
 common = { workspace = true }
 rid = { workspace = true }
+error_utils = { workspace = true }
+anyhow = {workspace = true}
 
 catalog_schema = { workspace = true }
 data_types = { workspace = true }
