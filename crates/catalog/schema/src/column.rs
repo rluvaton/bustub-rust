@@ -1,5 +1,5 @@
 use std::fmt::{Debug, Display, Formatter};
-use data_types::DBTypeId;
+use data_types::{CanBeCastedWithoutValueChangeResult, ComparisonDBTypeTrait, DBTypeId, DBTypeIdImpl, Value, VariableLengthStorageDBTypeTrait};
 use crate::column_options::ColumnOptions;
 
 // TODO - implement src/include/catalog/column.h
@@ -20,7 +20,7 @@ pub struct Column {
     /// Column offset in the tuple.
     pub(super) column_offset: u32,
 
-    options: ColumnOptions
+    options: ColumnOptions,
 }
 
 impl Column {
@@ -40,7 +40,7 @@ impl Column {
             fixed_length: type_id.get_size() as u32,
             variable_length: 0,
             column_offset: 0,
-            options: ColumnOptions::default_for_type(type_id)
+            options: ColumnOptions::default_for_type(type_id),
         }
     }
 
@@ -128,6 +128,51 @@ impl Column {
 
     pub fn get_options(&self) -> &ColumnOptions {
         &self.options
+    }
+
+    pub fn value_might_need_casting_to(&self, cast_to: &Self) -> bool {
+        self.get_type() != cast_to.get_type() || self.get_length() != cast_to.get_length()
+    }
+
+    pub fn try_cast_value(&self, value: &Value, dest_column: &Self) -> error_utils::anyhow::Result<Value> {
+        assert_eq!(self.get_type(), value.get_db_type_id(), "Current column type must match the value type");
+
+        if value.is_null() {
+            assert_eq!(self.get_options().is_nullable(), true, "if value is null, current column type must be nullable");
+
+            return if dest_column.get_options().is_nullable() {
+                Err(error_utils::anyhow!("Dest column is not nullable but the value is null"))
+            } else {
+                Ok(Value::null(dest_column.get_type()))
+            };
+        }
+
+
+        let cast_type = self.get_type().can_be_cast_without_value_changes(&dest_column.get_type());
+
+        match cast_type {
+            CanBeCastedWithoutValueChangeResult::True => unsafe {
+                Ok(value.cast_as_unchecked(dest_column.get_type()))
+            },
+            CanBeCastedWithoutValueChangeResult::NeedNumberBoundCheck => {
+                value.try_cast_as(dest_column.get_type())
+            }
+            CanBeCastedWithoutValueChangeResult::NeedVarLengthCheck => {
+                match value.get_value() {
+                    DBTypeIdImpl::VARCHAR(v) => {
+                        assert_eq!(v.is_null(), false, "Value must not be null");
+
+                        if dest_column.variable_length >= v.len() {
+                            value.try_cast_as(dest_column.get_type())
+                        } else {
+                            Err(error_utils::anyhow!("value length {} is greater than dest column max length {}", v.len(), dest_column.variable_length))
+                        }
+                    }
+                    _ => unreachable!("Value {} must be varchar, but it is {}", value, value.get_db_type_id())
+                }
+            }
+            CanBeCastedWithoutValueChangeResult::False => Err(error_utils::anyhow!("value {} with type {} cannot be casted to {}", value, self.get_type(), dest_column.get_type()))
+        }
     }
 }
 

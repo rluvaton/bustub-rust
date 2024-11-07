@@ -269,6 +269,7 @@ checksum = "428d9aa8fbc0670b7b8d6030a7fadd0f86151cae55e4dbbece15f3780a3dfaf3"
 name = "catalog_schema"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "data_types",
  "derive_builder",
  "error_utils",
@@ -1757,9 +1758,11 @@ dependencies = [
 name = "tuple"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "catalog_schema",
  "common",
  "data_types",
+ "error_utils",
  "rid",
 ]
 

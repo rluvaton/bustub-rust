@@ -1,6 +1,6 @@
 use catalog_schema::{Column, Schema};
 use common::PageKey;
-use data_types::{Value, BUSTUB_VALUE_NULL};
+use data_types::{CanBeCastedWithoutValueChangeResult, Value, BUSTUB_VALUE_NULL};
 use rid::RID;
 use std::fmt::{Debug};
 use std::hash::Hash;
@@ -79,6 +79,28 @@ impl Tuple {
             data,
             rid: RID::default(),
         }
+    }
+
+    pub fn try_into_dest_schema(self, current_schema: &Schema, dest_schema: &Schema) -> error_utils::anyhow::Result<Self> {
+        if current_schema.get_column_count() != dest_schema.get_column_count() {
+            return Err(error_utils::anyhow!("Column count mismatch when trying to convert tuple to different schema"))
+        }
+
+        // The naive slow approch
+        let values = self.get_values(current_schema);
+
+        let mapped_values: error_utils::anyhow::Result<Vec<Value>> = values
+            .iter()
+            .enumerate()
+            // TODO - try map
+            .map(|(index, value)| {
+                current_schema.get_column(index).try_cast_value(value, dest_schema.get_column(index))
+            })
+            .collect();
+
+        let mapped_values = mapped_values?;
+
+        Ok(Tuple::from_value(mapped_values.as_slice(), dest_schema))
     }
 
 

@@ -5,6 +5,20 @@ mod tests {
     use data_types::{DBTypeId, Value};
     use execution_common::CheckOptions;
 
+    fn successful_create_table(instance: &mut BustubInstance, sql: &str) {
+        instance.execute_user_input(sql, &mut NoopWriter::default(), CheckOptions::default()).expect("Should execute");
+    }
+
+    fn successful_execute_insert_without_returning(instance: &mut BustubInstance, sql: &str, expected_count_to_insert: usize) {
+        let inserted_rows_count_result = instance.execute_single_insert_sql(sql, CheckOptions::default()).expect("Should insert");
+
+        assert_eq!(inserted_rows_count_result, inserted_rows_count_result.create_with_same_schema(vec![
+            vec![Value::from(expected_count_to_insert as i32)]
+        ]));
+
+        instance.verify_integrity();
+    }
+
     #[test]
     fn should_insert_to_newly_created_table() {
         let mut instance = BustubInstance::in_memory(None);
@@ -73,7 +87,7 @@ mod tests {
 
         instance.verify_integrity();
     }
-    
+
     #[test]
     fn should_insert_to_newly_created_table_with_index_with_returning_only_column_name() {
         let mut instance = BustubInstance::in_memory(None);
@@ -422,5 +436,76 @@ mod tests {
         assert_eq!(actual, expected);
 
         instance.verify_integrity();
+    }
+
+    #[test]
+    fn insert_bigint_first_and_select() {
+        let mut instance = BustubInstance::in_memory(None);
+
+        successful_create_table(&mut instance, "CREATE TABLE t(id BIGINT, name varchar);");
+
+        successful_execute_insert_without_returning(
+            &mut instance,
+            "insert into t(id, name) values(1, 'foo');",
+            1
+        );
+
+        // Assert inserted values exists
+        {
+            let sql = "SELECT * from t";
+
+            let mut actual = instance.execute_single_select_sql(sql, CheckOptions::default()).expect("Should execute");
+
+            // TODO AVOID CREATE WITH SAME SCHEMA
+            let expected = actual.create_with_same_schema(vec![
+                vec![Value::from(1), Value::from("foo")],
+            ]);
+
+            assert_eq!(actual, expected);
+        }
+    }
+
+    #[test]
+    fn multiple_insert_and_select() {
+        let mut instance = BustubInstance::in_memory(None);
+
+        successful_create_table(&mut instance, "CREATE TABLE table_without_values(id BIGINT, name varchar);");
+
+        successful_execute_insert_without_returning(
+            &mut instance,
+            "insert into table_without_values(id, name) values(1, 'foo');",
+            1
+        );
+
+        successful_execute_insert_without_returning(
+            &mut instance,
+            "insert into table_without_values(name, id) values('bar', 2)",
+            1
+        );
+
+        successful_execute_insert_without_returning(
+            &mut instance,
+            "insert into table_without_values(id) values(4)",
+            1
+        );
+
+
+        // Assert inserted values exists
+        {
+            let sql = "SELECT * from table_without_values";
+
+            let mut actual = instance.execute_single_select_sql(sql, CheckOptions::default()).expect("Should execute");
+
+            // TODO AVOID CREATE WITH SAME SCHEMA
+            let expected = actual.create_with_same_schema(vec![
+                vec![Value::from(1), Value::from("foo")],
+                vec![Value::from(2), Value::from("bar")],
+                vec![Value::from(4), Value::null(DBTypeId::VARCHAR)],
+            ]);
+
+            actual.row_sort();
+
+            assert_eq!(actual, expected);
+        }
     }
 }

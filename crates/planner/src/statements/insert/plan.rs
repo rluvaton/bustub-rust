@@ -33,7 +33,7 @@ impl Plan for InsertStatement {
                 let cast_res = expected_schema_column_type.can_be_cast_without_value_changes(current_value_column_type);
 
                 match cast_res {
-                    CanBeCastedWithoutValueChangeResult::True | CanBeCastedWithoutValueChangeResult::NeedBoundCheck => false,
+                    CanBeCastedWithoutValueChangeResult::True | CanBeCastedWithoutValueChangeResult::NeedNumberBoundCheck | CanBeCastedWithoutValueChangeResult::NeedVarLengthCheck => false,
                     CanBeCastedWithoutValueChangeResult::False => true,
                 }
             });

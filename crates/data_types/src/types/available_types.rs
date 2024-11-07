@@ -17,7 +17,8 @@ pub enum DBTypeId {
 
 pub enum CanBeCastedWithoutValueChangeResult {
     True,
-    NeedBoundCheck,
+    NeedNumberBoundCheck,
+    NeedVarLengthCheck,
     False,
 }
 
@@ -91,7 +92,8 @@ impl DBTypeId {
             (DBTypeId::BOOLEAN, DBTypeId::BOOLEAN) => CanBeCastedWithoutValueChangeResult::True,
             (DBTypeId::BOOLEAN, _) | (_, DBTypeId::BOOLEAN) => CanBeCastedWithoutValueChangeResult::False,
 
-            (DBTypeId::VARCHAR, DBTypeId::VARCHAR) => CanBeCastedWithoutValueChangeResult::True,
+            // Varchar need bound check for the length
+            (DBTypeId::VARCHAR, DBTypeId::VARCHAR) => CanBeCastedWithoutValueChangeResult::NeedVarLengthCheck,
             (DBTypeId::VARCHAR, _) | (_, DBTypeId::VARCHAR) => CanBeCastedWithoutValueChangeResult::False,
 
             (DBTypeId::TIMESTAMP, DBTypeId::TIMESTAMP) => CanBeCastedWithoutValueChangeResult::True,
@@ -129,7 +131,7 @@ impl DBTypeId {
             (DBTypeId::DECIMAL, DBTypeId::TINYINT) |
             (DBTypeId::DECIMAL, DBTypeId::SMALLINT) |
             (DBTypeId::DECIMAL, DBTypeId::INT) |
-            (DBTypeId::DECIMAL, DBTypeId::BIGINT) => CanBeCastedWithoutValueChangeResult::NeedBoundCheck
+            (DBTypeId::DECIMAL, DBTypeId::BIGINT) => CanBeCastedWithoutValueChangeResult::NeedNumberBoundCheck
         }
     }
 

@@ -6,6 +6,7 @@ edition = "2021"
 [dependencies]
 data_types = { workspace = true }
 error_utils = { workspace = true }
+anyhow = {workspace = true}
 derive_builder = { workspace = true }
 
 

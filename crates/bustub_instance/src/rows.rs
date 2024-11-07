@@ -55,6 +55,33 @@ impl Rows {
         }
         writer.end_table();
     }
+
+    pub fn get_schema(&self) -> &Schema {
+        self.schema.deref()
+    }
+
+    pub fn get_rows(&self) -> &[Vec<Value>] {
+        self.rows.as_slice()
+    }
+
+    pub fn row_sort(&mut self) {
+        self.rows
+            .sort_unstable_by(|a, b| {
+                let a_str = a
+                    .iter()
+                    .map(|item| item.to_string())
+                    .collect::<Vec<_>>()
+                    .join(" ");
+
+                let b_str = b
+                    .iter()
+                    .map(|item| item.to_string())
+                    .collect::<Vec<_>>()
+                    .join(" ");
+
+                a_str.cmp(&b_str)
+            })
+    }
 }
 
 impl Deref for Rows {

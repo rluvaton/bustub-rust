@@ -26,6 +26,9 @@ pub struct InsertExecutor<'a> {
     // Saved here to avoid re-computing each time
     should_use_column_ordering_and_default_values: bool,
 
+    // Should we cast each tuple
+    is_child_executor_schema_different: bool,
+
     // The table info for the table the values should be inserted into
     dest_table_info: Arc<TableInfo>,
     
@@ -46,6 +49,12 @@ impl<'a> InsertExecutor<'a> {
         };
 
         Self {
+            is_child_executor_schema_different: child_executor
+                .get_output_schema()
+                .get_columns()
+                .iter()
+                .zip(dest_table_info.get_schema().get_columns())
+                .any(|(child_col, table_col)| child_col.value_might_need_casting_to(table_col)),
             child_executor,
             plan,
             should_use_column_ordering_and_default_values: plan.get_column_ordering_and_default_values().should_use_column_ordering(),
@@ -89,6 +98,10 @@ impl Iterator for InsertExecutor<'_>
             );
 
             tuple = Tuple::from_value(values_to_insert.as_slice(), table_schema.deref())
+        } else if self.is_child_executor_schema_different {
+            tuple = tuple
+                .try_into_dest_schema(self.child_executor.get_output_schema().deref(), self.dest_table_info.get_schema().deref())
+                .expect("Must be able to cast tuple to the table schema (this should be blocked in the parsing state)");
         }
 
         let rid = self.dest_table_info.get_table_heap().insert_tuple(
