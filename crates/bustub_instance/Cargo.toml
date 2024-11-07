@@ -35,9 +35,6 @@ comfy-table = { workspace = true }
 tracy-client = { workspace = true }
 rand = { workspace = true }
 
-[package.metadata.cargo-machete]
-ignored = ["anyhow"]
-
 [features]
 default = ["checkpoint_manager"]
 checkpoint_manager = []

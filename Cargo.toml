@@ -45,7 +45,7 @@ members = [
 debug = true
 
 [workspace.metadata.cargo-machete]
-ignored = ["tracy-client"]
+ignored = ["tracy-client", "anyhow"]
 
 [workspace.dependencies]
 # We turn off default-features for some dependencies here so the workspaces which inherit them can
