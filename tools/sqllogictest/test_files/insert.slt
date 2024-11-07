@@ -47,7 +47,7 @@ insert into table_without_values(id) values(4);
 ----
 1
 
-query IT rowsort
+query LT rowsort
 select * from table_without_values;
 ----
 1 foo
@@ -88,7 +88,7 @@ insert into table_without_values values(NULL, 300);
 statement error Execution error: Invalid batch column at '0' has null but schema specifies non-nullable
 insert into table_without_values values(3, 300), (NULL, 400);
 
-query II rowsort
+query LL rowsort
 select * from table_without_values;
 ----
 1 100

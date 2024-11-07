@@ -38,6 +38,7 @@ impl ColumnType for BustubColumnType {
         match value {
             'B' => Some(DBTypeId::BOOLEAN.into()),
             'I' => Some(DBTypeId::INT.into()),
+            'L' => Some(DBTypeId::BIGINT.into()),
             'P' => Some(DBTypeId::TIMESTAMP.into()),
             'R' => Some(DBTypeId::DECIMAL.into()),
             'T' => Some(DBTypeId::VARCHAR.into()),
@@ -49,6 +50,7 @@ impl ColumnType for BustubColumnType {
         match self.0 {
             DBTypeId::BOOLEAN => 'B',
             DBTypeId::INT => 'I',
+            DBTypeId::BIGINT => 'L',
             DBTypeId::TIMESTAMP => 'P',
             DBTypeId::DECIMAL => 'R',
             DBTypeId::VARCHAR => 'T',
