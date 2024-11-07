@@ -74,6 +74,10 @@ impl Index for ExtendibleHashingIndex<{ bucket_array_size::<GenericKey<$key_size
             assert_eq!(table_heap_count, index_count, "Table heap count should have the same amount of items as the primary key index items");
         }
     }
+    
+    fn delete_completely(self, transaction: &Transaction) {
+        self.0.delete_completely(transaction)
+    }
 }
 
     )+)
