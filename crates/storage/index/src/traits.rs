@@ -52,6 +52,10 @@ pub trait Index: Sync + Send where Self: 'static {
     fn verify_integrity(&self, index_metadata: &IndexMetadata, table_heap: Arc<TableHeap>, transaction: &Transaction);
 
 
+    /// Delete the index and cleanup everything (local pages and more)
+    fn delete_completely(self, transaction: &Transaction);
+
+
     fn to_dyn_arc(self) -> Arc<dyn Index> where Self: Sized {
         Arc::new(self)
     }

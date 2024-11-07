@@ -77,6 +77,11 @@ impl Index for IndexWithMetadata {
     fn verify_integrity(&self, _index_metadata: &IndexMetadata, table_heap: Arc<TableHeap>, transaction: &Transaction) {
         self.index.verify_integrity(&self.metadata, table_heap, transaction)
     }
+
+    fn delete_completely(self, transaction: &Transaction) {
+        // TODO - fix this
+        self.index.delete_completely(transaction)
+    }
 }
 
 impl Debug for IndexWithMetadata {
