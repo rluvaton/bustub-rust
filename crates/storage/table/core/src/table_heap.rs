@@ -3,6 +3,7 @@ use parking_lot::Mutex;
 use buffer_common::AccessType;
 use pages::{PageId, INVALID_PAGE_ID};
 use buffer_pool_manager::{errors, BufferPool, BufferPoolManager, PageReadGuard, PageWriteGuard};
+use buffer_pool_manager::errors::MapErrorToBufferPoolError;
 use common::config::TableOID;
 use lock_manager::{LockManager};
 use rid::RID;
@@ -57,14 +58,14 @@ impl TableHeap {
     ///
     /// returns: Option<RID> the rid of the inserted tuple
     pub fn insert_tuple(&self,
-        meta: &TupleMeta,
-        tuple: &Tuple,
-        #[allow(unused_variables)]
-        lock_mgr: &Option<Arc<LockManager>>,
-        #[allow(unused_variables)]
-        txn: &Arc<Transaction>,
-        #[allow(unused_variables)]
-        oid: Option<TableOID>,
+                        meta: &TupleMeta,
+                        tuple: &Tuple,
+                        #[allow(unused_variables)]
+                        lock_mgr: &Option<Arc<LockManager>>,
+                        #[allow(unused_variables)]
+                        txn: &Arc<Transaction>,
+                        #[allow(unused_variables)]
+                        oid: Option<TableOID>,
     ) -> Option<RID> {
         // Tuple size is too big
         if tuple.get_length() as usize >= LARGEST_TUPLE_SIZE_WITHOUT_OVERFLOW {
@@ -185,11 +186,11 @@ impl TableHeap {
     }
 
     /** @return the iterator of this table. When this iterator is created, it will record the current last tuple in the
-         * table heap, and the iterator will stop at that point, in order to avoid halloween problem. You usually will need to
-         * use this function for project 3. Given that you have already implemented your project 4 update executor as a
-         * pipeline breaker, you may use `MakeEagerIterator` to test whether the update executor is implemented correctly.
-         * There should be no difference between this function and `MakeEagerIterator` in project 4 if everything is
-         * implemented correctly. */
+            * table heap, and the iterator will stop at that point, in order to avoid halloween problem. You usually will need to
+            * use this function for project 3. Given that you have already implemented your project 4 update executor as a
+            * pipeline breaker, you may use `MakeEagerIterator` to test whether the update executor is implemented correctly.
+            * There should be no difference between this function and `MakeEagerIterator` in project 4 if everything is
+            * implemented correctly. */
     pub fn iter(self: Arc<Self>) -> TableIterator {
         // Lock get value and unlock
         let last_page_id = *self.last_page_id.lock();
@@ -272,6 +273,39 @@ impl TableHeap {
 
     pub fn get_tuple_meta_with_lock_acquired(&self, rid: &RID, page: &TablePage) -> TupleMeta {
         page.get_tuple_meta(&rid)
+    }
+
+    pub fn delete_completely(self, txn: &Transaction) -> Result<(), errors::BufferPoolError> {
+        if self.bpm.is_none() {
+            return Ok(());
+        }
+
+        let bpm = self.bpm.unwrap();
+        let mut page_ids = vec![];
+
+        let mut current_page_id = self.first_page_id;
+
+        let end_page_id = self.last_page_id.lock();
+
+        while current_page_id != *end_page_id {
+            page_ids.push(current_page_id);
+
+            current_page_id = {
+                let page_guard = bpm.fetch_page_read(current_page_id, AccessType::Unknown)?;
+                let page = page_guard.cast::<TablePage>();
+                page.get_next_page_id()
+            }
+        }
+
+        page_ids.push(*end_page_id);
+
+        for page_id_to_delete in page_ids {
+            bpm
+                .delete_page(page_id_to_delete)
+                .map_err_to_buffer_pool_err()?;
+        }
+
+        Ok(())
     }
 }
 
