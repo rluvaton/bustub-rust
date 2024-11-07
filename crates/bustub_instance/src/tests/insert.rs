@@ -260,6 +260,8 @@ mod tests {
             let expected = actual.create_with_same_schema(vec![
                 vec![Value::from(100), Value::from("zoo")],
             ]);
+
+            assert_eq!(actual, expected);
         }
     }
 
@@ -295,6 +297,8 @@ mod tests {
             let expected = actual.create_with_same_schema(vec![
                 vec![Value::from(100), Value::null(DBTypeId::VARCHAR)],
             ]);
+
+            assert_eq!(actual, expected);
         }
     }
 
@@ -330,6 +334,8 @@ mod tests {
             let expected = actual.create_with_same_schema(vec![
                 vec![Value::from(100), Value::null(DBTypeId::VARCHAR)],
             ]);
+
+            assert_eq!(actual, expected);
         }
     }
 
