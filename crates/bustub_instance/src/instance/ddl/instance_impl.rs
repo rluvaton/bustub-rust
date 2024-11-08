@@ -1,7 +1,8 @@
+use std::ops::Deref;
 use crate::instance::ddl::StatementHandler;
 use crate::result_writer::ResultWriter;
 use crate::BustubInstance;
-use binder::CreateStatement;
+use binder::{CreateStatement, DropTableStatement};
 use std::sync::Arc;
 use catalog_schema::Schema;
 use data_types::DBTypeId;
@@ -63,6 +64,31 @@ impl StatementHandler for BustubInstance {
 
         match index_info {
             None => writer.one_cell(format!("Table created with id = {}", info.get_oid()).as_str()),
+            Some(index) => writer.one_cell(format!("Table created with id = {}, Primary key index created with id = {}", info.get_oid(), index.get_index_oid()).as_str()),
+        }
+    }
+
+    fn drop_table<ResultWriterImpl: ResultWriter>(&self, txn: Arc<Transaction>, stmt: &DropTableStatement, writer: &mut ResultWriterImpl) {
+        let mut catalog_guard = self.catalog.lock();
+
+        let table = catalog_guard.get_table_by_name(stmt.get_table_name());
+
+        let table_info = match (stmt.get_if_exists(), table) {
+            (false, None) => {
+                // TODO - return result instead
+                writer.one_cell("Error: Cannot delete missing table {}, consider using if exists");
+                return;
+            }
+            (true, None) => {
+                writer.one_cell("0 tables deleted");
+                return;
+            }
+            (_, Some(table_info)) => table_info,
+        };
+
+        let result = table_info.delete_completely(txn.deref());
+        match result {
+            Some => writer.one_cell(format!("Table and all related indexes deleted = {}", t).as_str()),
             Some(index) => writer.one_cell(format!("Table created with id = {}, Primary key index created with id = {}", info.get_oid(), index.get_index_oid()).as_str()),
         }
     }

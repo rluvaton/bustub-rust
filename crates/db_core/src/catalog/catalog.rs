@@ -112,6 +112,47 @@ impl Catalog {
         Some(meta)
     }
 
+    /// Drop table
+    ///
+    /// TODO - change value to result
+    pub fn drop_table(&mut self, txn: &Transaction, table_name: String) -> Option<Arc<TableInfo>> {
+        if !self.table_names.contains_key(&table_name) {
+            return None;
+        }
+
+        let table_oid = self.table_names.get(&table_name).unwrap();
+
+        // Remove every index
+        self.index_names
+            .get(&table_name)?
+            .keys()
+            .cloned()
+            .for_each(|index_name| {
+                self.drop_index(txn, table_name, index_name);
+            });
+
+        // Remove the index record
+        self.index_names.remove(&table_name);
+
+        let table_info = self.tables.remove(table_oid).unwrap();
+
+        let _ = table_info.delete_completely(txn);
+
+        // Cleanup
+    }
+
+    pub fn drop_index(&mut self, txn: &Transaction, table_name: String, index_name: String) -> Option<()> {
+        let indexes = self.index_names.get(&table_name);
+
+        let index = indexes?.remove(&index_name)?;
+
+        let index = self.indexes.remove(&index).expect("Must have index when got it through index names");
+
+        index.delete_completely(txn.deref());
+
+        Some(())
+    }
+
     /// Query table metadata by name.
     /// @param table_name The name of the table
     /// @return A (non-owning) pointer to the metadata for the table

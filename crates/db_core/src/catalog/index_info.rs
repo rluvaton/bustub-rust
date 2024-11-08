@@ -88,4 +88,8 @@ impl IndexInfo {
     pub fn get_index(&self) -> &IndexWithMetadata {
         self.index.deref()
     }
+
+    pub fn delete_completely(self, transaction: &Transaction) {
+        self.index.delete_completely(transaction);
+    }
 }
