@@ -481,9 +481,11 @@ dependencies = [
 name = "db_core"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "buffer_pool_manager",
  "catalog_schema",
  "common",
+ "error_utils",
  "index",
  "lock_manager",
  "pages",

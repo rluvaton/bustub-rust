@@ -78,7 +78,7 @@ impl Index for IndexWithMetadata {
         self.index.verify_integrity(&self.metadata, table_heap, transaction)
     }
 
-    fn delete_completely(self, transaction: &Transaction) {
+    fn delete_completely(self, transaction: &Transaction) -> error_utils::anyhow::Result<()> {
         // TODO - fix this
         self.index.delete_completely(transaction)
     }

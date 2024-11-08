@@ -53,7 +53,7 @@ pub trait Index: Sync + Send where Self: 'static {
 
 
     /// Delete the index and cleanup everything (local pages and more)
-    fn delete_completely(self, transaction: &Transaction);
+    fn delete_completely(self, transaction: &Transaction) -> error_utils::anyhow::Result<()>;
 
 
     fn to_dyn_arc(self) -> Arc<dyn Index> where Self: Sized {

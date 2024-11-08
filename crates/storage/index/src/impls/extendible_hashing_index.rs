@@ -1,7 +1,7 @@
 use crate::{GenericComparator, GenericKey, Index, IndexMetadata};
 use buffer_pool_manager::BufferPoolManager;
 use common::{Comparator, PageKey};
-use error_utils::ToAnyhow;
+use error_utils::{ToAnyhow, ToAnyhowResult};
 use extendible_hash_table::{DiskExtendibleHashTable, bucket_array_size};
 use hashing_common::{DefaultKeyHasher, KeyHasher};
 use rid::RID;
@@ -75,8 +75,8 @@ impl Index for ExtendibleHashingIndex<{ bucket_array_size::<GenericKey<$key_size
         }
     }
     
-    fn delete_completely(self, transaction: &Transaction) {
-        self.0.delete_completely(transaction)
+    fn delete_completely(self, transaction: &Transaction) -> error_utils::anyhow::Result<()> {
+        self.0.delete_completely(transaction).to_anyhow()
     }
 }
 

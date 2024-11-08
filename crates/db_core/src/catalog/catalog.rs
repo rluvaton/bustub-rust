@@ -9,6 +9,7 @@ use std::collections::HashMap;
 use std::ops::Deref;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
+use error_utils::ToAnyhowResult;
 use index::{create_extendible_hashing_index, Index, IndexMetadata, IndexWithMetadata};
 use table::TableHeap;
 use transaction::Transaction;
@@ -114,43 +115,61 @@ impl Catalog {
 
     /// Drop table
     ///
-    /// TODO - change value to result
-    pub fn drop_table(&mut self, txn: &Transaction, table_name: String) -> Option<Arc<TableInfo>> {
+    /// return Ok(true) if the table was found and removed, Ok(false) if the table was missing and Err if an error occur
+    pub fn drop_table(&mut self, txn: &Transaction, table_name: String) -> error_utils::anyhow::Result<bool> {
         if !self.table_names.contains_key(&table_name) {
-            return None;
+            assert_eq!(self.index_names.contains_key(&table_name), false, "If not having table name, must not have any index");
+            return Ok(false);
         }
 
         let table_oid = self.table_names.get(&table_name).unwrap();
 
         // Remove every index
-        self.index_names
-            .get(&table_name)?
-            .keys()
-            .cloned()
-            .for_each(|index_name| {
-                self.drop_index(txn, table_name, index_name);
-            });
+        if let Some(index_names) = self.index_names.get(&table_name) {
+            index_names
+                .keys()
+                .cloned()
+                .for_each(|index_name| {
+                    self.drop_index(txn, table_name, index_name);
+                });
 
-        // Remove the index record
-        self.index_names.remove(&table_name);
+            // Remove the index record
+            self.index_names.remove(&table_name);
+        }
 
-        let table_info = self.tables.remove(table_oid).unwrap();
+        let table_info = self.tables.remove(table_oid).expect("if have table name must have in the table entry");
 
-        let _ = table_info.delete_completely(txn);
+        table_info.delete_completely(txn).to_anyhow()?;
 
-        // Cleanup
+        Ok(true)
     }
 
-    pub fn drop_index(&mut self, txn: &Transaction, table_name: String, index_name: String) -> Option<()> {
-        let indexes = self.index_names.get(&table_name);
+    /// Drop an index
+    ///
+    /// return Ok(true) if the index was found and removed, Ok(false) if the index was missing and Err if the table is missing or if an error occur
+    pub fn drop_index(&mut self, txn: &Transaction, table_name: String, index_name: String) -> error_utils::anyhow::Result<bool> {
+        let indexes = self.index_names.get_mut(&table_name);
 
-        let index = indexes?.remove(&index_name)?;
+        if indexes.is_none() {
+            return Err(error_utils::anyhow!("The table {} is missing", table_name));
+        }
+
+        let indexes = indexes.unwrap();
+
+        let index = indexes.remove(&index_name);
+
+        if index.is_none() {
+            // The index is missing
+            return Ok(false);
+        }
+
+        let index = index.unwrap();
 
         let index = self.indexes.remove(&index).expect("Must have index when got it through index names");
 
-        index.delete_completely(txn.deref());
+        index.delete_completely(txn.deref())?;
 
-        Some(())
+        Ok(true)
     }
 
     /// Query table metadata by name.

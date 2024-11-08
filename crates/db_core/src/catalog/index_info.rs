@@ -89,7 +89,7 @@ impl IndexInfo {
         self.index.deref()
     }
 
-    pub fn delete_completely(self, transaction: &Transaction) {
-        self.index.delete_completely(transaction);
+    pub fn delete_completely(self, transaction: &Transaction) -> error_utils::anyhow::Result<()> {
+        self.index.delete_completely(transaction)
     }
 }
