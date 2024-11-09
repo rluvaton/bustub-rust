@@ -69,32 +69,21 @@ impl StatementHandler for BustubInstance {
             )?);
         }
 
-        drop(catalog_guard);
-
         Ok(match index_info {
-            None => StatementOutput::new_with_info(1, format!("Table created with id = {}", info.get_oid())),
-            Some(index) => StatementOutput::new_with_info(1, format!("Table created with id = {}, Primary key index created with id = {}", info.get_oid(), index.get_index_oid())),
+            None => StatementOutput::new_with_info(1, format!("Table created with id = {}", table_oid)),
+            Some(index) => StatementOutput::new_with_info(1, format!("Table created with id = {}, Primary key index created with id = {}", table_oid, index.get_index_oid())),
         })
     }
 
-
-    fn drop_table<ResultWriterImpl: ResultWriter>(&self, txn: Arc<Transaction>, stmt: &DropTableStatement, writer: &mut ResultWriterImpl) {
+    fn drop_table(&self, txn: Arc<Transaction>, stmt: &DropTableStatement) -> error_utils::anyhow::Result<StatementOutput> {
         let mut catalog_guard = self.catalog.lock();
 
-        let result = catalog_guard.drop_table(txn.deref(), stmt.get_table_name().to_string());
+        let founded = catalog_guard.drop_table(txn.deref(), stmt.get_table_name().to_string())?;
 
-        match result {
-            Ok(founded) => {
-                match (stmt.get_if_exists(), founded) {
-                    // TODO - return result instead
-                    (false, false) => writer.one_cell("Error: Cannot delete missing table {}, consider using if exists"),
-                    (true, false) => writer.one_cell("0 tables deleted"),
-                    (_, true) => writer.one_cell(format!("Table and all related indexes deleted = {}", stmt.get_table_name()).as_str())
-                }
-            }
-            Err(e) => {
-                writer.one_cell(format!("Failed to drop table {}, got error {}", stmt.get_table_name(), e).as_str());
-            }
+        match (stmt.get_if_exists(), founded) {
+            (false, false) => Err(error_utils::anyhow!("Cannot delete missing table {}, consider using if exists", stmt.get_table_name())),
+            (true, false) => Ok(StatementOutput::new_with_info(0, "0 tables deleted".to_string())),
+            (_, true) => Ok(StatementOutput::new_with_info(1, format!("Table and all related indexes deleted = {}", stmt.get_table_name())))
         }
     }
 }

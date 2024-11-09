@@ -11,11 +11,11 @@ mod tests {
 
         let sql = "CREATE TABLE books (id int);";
 
-        instance.execute_user_input(sql, &mut NoopWriter::default(), CheckOptions::default()).expect("Should execute");
+        instance.execute_user_input(sql, CheckOptions::default()).expect("Should execute");
 
         let sql = "DROP TABLE books;";
 
-        instance.execute_user_input(sql, &mut NoopWriter::default(), CheckOptions::default()).expect("Should execute");
+        instance.execute_user_input(sql, CheckOptions::default()).expect("Should execute");
     }
 
     #[test]
@@ -24,7 +24,7 @@ mod tests {
 
         let sql = "DROP TABLE books;";
 
-        let error = instance.execute_user_input(sql, &mut NoopWriter::default(), CheckOptions::default()).expect_err("Should fail");
+        let error = instance.execute_user_input(sql, CheckOptions::default()).expect_err("Should fail");
 
         assert_eq!(error.to_string(), "fail missing table");
     }
@@ -35,11 +35,11 @@ mod tests {
 
         let sql = "CREATE TABLE books (id int);";
 
-        instance.execute_user_input(sql, &mut NoopWriter::default(), CheckOptions::default()).expect("Should execute");
+        instance.execute_user_input(sql, CheckOptions::default()).expect("Should execute");
 
         let sql = "DROP TABLE IF EXISTS books;";
 
-        instance.execute_user_input(sql, &mut NoopWriter::default(), CheckOptions::default()).expect("Should execute");
+        instance.execute_user_input(sql, CheckOptions::default()).expect("Should execute");
     }
 
     #[test]
@@ -48,7 +48,7 @@ mod tests {
 
         let sql = "DROP TABLE IF EXISTS books;";
 
-        instance.execute_user_input(sql, &mut NoopWriter::default(), CheckOptions::default()).expect("Should execute");
+        instance.execute_user_input(sql, CheckOptions::default()).expect("Should execute");
     }
 
     #[test]
@@ -58,7 +58,7 @@ mod tests {
 
         let sql = format!("DROP TABLE {};", MockTableName::Table1);
 
-        let error = instance.execute_user_input(sql.as_str(), &mut NoopWriter::default(), CheckOptions::default()).expect_err("Should fail");
+        let error = instance.execute_user_input(sql.as_str(), CheckOptions::default()).expect_err("Should fail");
 
         assert_eq!(error.to_string(), format!("Failed to parse Invalid table to drop: {}", MockTableName::Table1));
     }

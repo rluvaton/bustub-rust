@@ -235,7 +235,7 @@ impl BustubInstance {
                     continue;
                 }
                 StatementTypeImpl::DropTable(stmt) => {
-                    self.drop_table(txn.clone(), stmt, writer);
+                    self.drop_table(txn.clone(), stmt);
                     continue;
                 }
             }
