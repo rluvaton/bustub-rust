@@ -47,7 +47,7 @@ impl Statement for DropTableStatement {
                 }
 
                 if names.len() > 1 {
-                    return Err(ParseASTError::Unimplemented(format!("Only 1 table table to drop is supported, instead got {names}")))
+                    return Err(ParseASTError::Unimplemented(format!("Only 1 table table to drop is supported, instead got {names:?}")))
                 }
 
                 Ok(Self {

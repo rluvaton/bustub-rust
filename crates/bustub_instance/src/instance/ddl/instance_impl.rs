@@ -21,7 +21,9 @@ impl StatementHandler for BustubInstance {
             None,
         ).expect("Should create table");
 
-        let mut index_info: Option<Arc<IndexInfo>> = None;
+        let table_oid = info.get_oid();
+
+        let mut index_info: Option<&IndexInfo> = None;
 
 
         if !stmt.primary_key.is_empty() {
@@ -47,11 +49,13 @@ impl StatementHandler for BustubInstance {
                 unimplemented!("only support creating index with exactly one or two columns");
             }
 
+            let schema = info.get_schema();
+
             index_info = catalog_guard.create_index(
                 txn,
                 (stmt.table.clone() + "_pk").as_str(),
                 stmt.table.as_str(),
-                info.get_schema(),
+                schema,
                 Arc::new(key_schema),
                 col_ids.as_slice(),
                 TWO_INTEGER_SIZE,
@@ -60,36 +64,29 @@ impl StatementHandler for BustubInstance {
             );
         }
 
-        drop(catalog_guard);
-
         match index_info {
-            None => writer.one_cell(format!("Table created with id = {}", info.get_oid()).as_str()),
-            Some(index) => writer.one_cell(format!("Table created with id = {}, Primary key index created with id = {}", info.get_oid(), index.get_index_oid()).as_str()),
+            None => writer.one_cell(format!("Table created with id = {}", table_oid).as_str()),
+            Some(index) => writer.one_cell(format!("Table created with id = {}, Primary key index created with id = {}", table_oid, index.get_index_oid()).as_str()),
         }
     }
 
     fn drop_table<ResultWriterImpl: ResultWriter>(&self, txn: Arc<Transaction>, stmt: &DropTableStatement, writer: &mut ResultWriterImpl) {
         let mut catalog_guard = self.catalog.lock();
 
-        let table = catalog_guard.get_table_by_name(stmt.get_table_name());
+        let result = catalog_guard.drop_table(txn.deref(), stmt.get_table_name().to_string());
 
-        let table_info = match (stmt.get_if_exists(), table) {
-            (false, None) => {
-                // TODO - return result instead
-                writer.one_cell("Error: Cannot delete missing table {}, consider using if exists");
-                return;
-            }
-            (true, None) => {
-                writer.one_cell("0 tables deleted");
-                return;
-            }
-            (_, Some(table_info)) => table_info,
-        };
-
-        let result = table_info.delete_completely(txn.deref());
         match result {
-            Some => writer.one_cell(format!("Table and all related indexes deleted = {}", t).as_str()),
-            Some(index) => writer.one_cell(format!("Table created with id = {}, Primary key index created with id = {}", info.get_oid(), index.get_index_oid()).as_str()),
+            Ok(founded) => {
+                match (stmt.get_if_exists(), founded) {
+                    // TODO - return result instead
+                    (false, false) => writer.one_cell("Error: Cannot delete missing table {}, consider using if exists"),
+                    (true, false) => writer.one_cell("0 tables deleted"),
+                    (_, true) => writer.one_cell(format!("Table and all related indexes deleted = {}", stmt.get_table_name()).as_str())
+                }
+            }
+            Err(e) => {
+                writer.one_cell(format!("Failed to drop table {}, got error {}", stmt.get_table_name(), e).as_str());
+            }
         }
     }
 }

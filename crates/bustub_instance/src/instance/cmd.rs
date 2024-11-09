@@ -16,7 +16,7 @@ impl BustubInstance {
 
        let catalog = self.catalog.lock();
        if let Some(table_info) = catalog.get_table_by_name(&table) {
-           self.txn_manager.debug("\\dbgmvcc".to_string(), Some(table_info.clone()), Some(table_info.get_table_heap()))
+           self.txn_manager.debug("\\dbgmvcc".to_string(), Some(table_info), Some(table_info.get_table_heap()))
        } else {
            writer.one_cell(format!("table {} not found", table).as_str());
        }

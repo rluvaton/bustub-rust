@@ -79,7 +79,7 @@ impl TransactionManager {
         self.txn_map.lock().get(&txn_id).cloned()
     }
 
-    pub fn debug(&self, info: String, _table_info: Option<Arc<TableInfo>>, _table_heap: Option<Arc<TableHeap>>) {
+    pub fn debug(&self, info: String, _table_info: Option<&TableInfo>, _table_heap: Option<&TableHeap>) {
         // always use stderr for printing logs...
        eprintln!("debug_hook: {}", info);
 

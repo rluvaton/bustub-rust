@@ -10,21 +10,20 @@ use table::TableIterator;
 #[must_use = "iterators are lazy and do nothing unless consumed"]
 pub struct SeqScanExecutor<'a> {
     /// The executor context in which the executor runs
-    ctx: Arc<ExecutorContext<'a>>,
+    ctx: &'a ExecutorContext<'a>,
 
     // ----
 
     /** The plan node for the scan */
     plan: &'a SeqScanPlanNode,
 
-    iter: TableIterator,
+    iter: TableIterator<'a>,
 }
 
 impl<'a> SeqScanExecutor<'a> {
-    pub(crate) fn new(plan: &'a SeqScanPlanNode, ctx: Arc<ExecutorContext<'a>>) -> Self {
+    pub(crate) fn new(plan: &'a SeqScanPlanNode, ctx: &'a ExecutorContext<'a>) -> SeqScanExecutor<'a> {
         let iter = ctx
             .get_catalog()
-            .lock()
             .get_table_by_oid(plan.get_table_oid())
             .expect("Table must exists (if table is missing it should be stopped at the planner)")
             .get_table_heap()

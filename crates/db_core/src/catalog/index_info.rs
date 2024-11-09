@@ -8,6 +8,7 @@ use table::TableHeap;
 use transaction::Transaction;
 
 /// The IndexInfo class maintains metadata about a index.
+#[derive(Debug)]
 pub struct IndexInfo {
     /// The schema for the index key
     key_schema: Arc<Schema>,
@@ -16,7 +17,7 @@ pub struct IndexInfo {
     name: String,
 
     /// An owning pointer to the index
-    index: Arc<IndexWithMetadata>,
+    index: IndexWithMetadata,
 
     /// The unique OID for the index
     index_oid: IndexOID,
@@ -41,7 +42,7 @@ impl IndexInfo {
     pub fn new(
         key_schema: Arc<Schema>,
         name: String,
-        index: Arc<IndexWithMetadata>,
+        index: IndexWithMetadata,
         index_oid: IndexOID,
         table_name: String,
         key_size: usize,
@@ -81,12 +82,12 @@ impl IndexInfo {
         self.key_schema.clone()
     }
     
-    pub fn verify_integrity(&self, table_heap: Arc<TableHeap>, txn: &Transaction) {
+    pub fn verify_integrity(&self, table_heap: &TableHeap, txn: &Transaction) {
         self.index.verify_integrity(self.index.get_metadata().deref(), table_heap, txn)
     }
     
     pub fn get_index(&self) -> &IndexWithMetadata {
-        self.index.deref()
+        &self.index
     }
 
     pub fn delete_completely(self, transaction: &Transaction) -> error_utils::anyhow::Result<()> {

@@ -10,7 +10,7 @@ impl Plan for StatementTypeImpl {
             StatementTypeImpl::Select(node) => node.plan(planner),
             StatementTypeImpl::Insert(node) => node.plan(planner),
             StatementTypeImpl::Delete(node) => node.plan(planner),
-            StatementTypeImpl::Create(_) => unreachable!("no plan needed for creation"),
+            StatementTypeImpl::Create(_) | StatementTypeImpl::DropTable(_)  => unreachable!("no plan needed for creation"),
         }
     }
 }

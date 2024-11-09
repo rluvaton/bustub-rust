@@ -15,14 +15,14 @@ pub struct TableInfo {
     name: String,
 
     /// An owning pointer to the table heap
-    table: Arc<TableHeap>,
+    table: TableHeap,
 
     /// The table OID
     oid: TableOID,
 }
 
 impl TableInfo {
-    pub fn new(schema: Arc<Schema>, name: String, table: Arc<TableHeap>, oid: TableOID) -> Self {
+    pub fn new(schema: Arc<Schema>, name: String, table: TableHeap, oid: TableOID) -> Self {
         Self {
             schema,
             name,
@@ -31,8 +31,8 @@ impl TableInfo {
         }
     }
 
-    pub fn get_table_heap(&self) -> Arc<TableHeap> {
-        self.table.clone()
+    pub fn get_table_heap(&self) -> &TableHeap {
+        &self.table
     }
 
     pub fn get_oid(&self) -> TableOID {

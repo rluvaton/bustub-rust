@@ -17,7 +17,7 @@ pub struct AggregationExecutor<'a> {
 
 
     /// The executor context in which the executor runs
-    ctx: Arc<ExecutorContext<'a>>,
+    ctx: &'a ExecutorContext<'a>,
 
     // ----
 
@@ -44,7 +44,7 @@ pub struct AggregationExecutor<'a> {
 }
 
 impl<'a> AggregationExecutor<'a> {
-    pub(crate) fn new(child_executor: ExecutorRef<'a>, plan: &'a AggregationPlanNode, ctx: Arc<ExecutorContext<'a>>) -> Self {
+    pub(crate) fn new(child_executor: ExecutorRef<'a>, plan: &'a AggregationPlanNode, ctx: &'a ExecutorContext<'a>) -> Self {
         let initial_values = plan.get_aggregate_types().iter()
             .zip(plan.get_aggregates().iter())
             .map(|(agg_type, agg)| {
