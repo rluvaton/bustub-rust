@@ -4,7 +4,6 @@ mod string_vector_writer;
 mod simple_stream_writer;
 mod html_writer;
 mod comfy_table_writer;
-mod sqltest_writer;
 
 pub use traits::ResultWriter;
 pub use noop_writer::NoopWriter;
@@ -12,4 +11,3 @@ pub use string_vector_writer::StringVectorWriter;
 pub use simple_stream_writer::SimpleStreamWriter;
 pub use html_writer::HtmlWriter;
 pub use comfy_table_writer::ComfyTableWriter;
-pub use sqltest_writer::SQLTestWriter;

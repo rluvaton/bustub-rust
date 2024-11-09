@@ -6,4 +6,4 @@ mod tests;
 mod rows;
 mod table_generator;
 
-pub use instance::BustubInstance;
+pub use instance::*;

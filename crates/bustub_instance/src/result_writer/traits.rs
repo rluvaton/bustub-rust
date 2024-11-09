@@ -16,8 +16,4 @@ pub trait ResultWriter {
         self.end_row();
         self.end_table();
     }
-
-    fn save_rows(&mut self, rows: Rows) {
-        // Noop
-    }
 }

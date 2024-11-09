@@ -1,3 +1,4 @@
+use std::ops::Deref;
 use crate::result_writer::ResultWriter;
 use crate::rows::Rows;
 
@@ -107,6 +108,10 @@ impl StatementOutput {
             writer.one_cell(self.affected.to_string().as_str());
         }
     }
+
+    pub fn get_affected(&self) -> u64 {
+        self.affected
+    }
 }
 
 
@@ -149,13 +154,20 @@ pub struct MultipleCommandsOutput(Vec<SqlDBOutput>);
 
 
 impl MultipleCommandsOutput {
-
     pub fn new(outputs: Vec<SqlDBOutput>) -> Self {
         Self(outputs)
     }
 
     pub fn write_results<ResultWriterImpl: ResultWriter>(&self, writer: &mut ResultWriterImpl) {
         self.0.iter().for_each(|res| res.write_results(writer));
+    }
+}
+
+impl Deref for MultipleCommandsOutput {
+    type Target = [SqlDBOutput];
+
+    fn deref(&self) -> &Self::Target {
+        self.0.deref()
     }
 }
 

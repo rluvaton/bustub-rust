@@ -4,8 +4,7 @@ use std::{path::PathBuf, time::Duration};
 use async_trait::async_trait;
 use log::info;
 use sqllogictest::DBOutput;
-use bustub_instance::BustubInstance;
-use bustub_instance::result_writer::SQLTestWriter;
+use bustub_instance::{BustubInstance, SqlDBOutput};
 use execution_common::CheckOptions;
 use crate::engines::bustub_engine::normalize::cell_to_string;
 use super::{error::Result, normalize, BustubSqlLogicTestError};
@@ -53,30 +52,42 @@ impl sqllogictest::AsyncDB for Bustub {
 }
 
 async fn run_query(ctx: &BustubInstance, sql: impl Into<String>) -> Result<BustubOutput> {
-    let mut writer = SQLTestWriter::default();
-    ctx.execute_user_input(sql.into().as_str(), &mut writer, CheckOptions::default())?;
+    let results = ctx.execute_user_input(sql.into().as_str(), CheckOptions::default())?;
 
-    if let Some(rows) = writer.rows {
-        let res = DBOutput::Rows {
-            types: rows
-                .get_schema()
-                .get_columns()
-                .iter()
-                .map(|col| col.get_type().into())
-                .collect(),
-            rows: rows
-                .get_rows()
-                .iter()
-                .map(|row| row.iter()
-                    .map(|cell| cell_to_string(cell))
-                    .collect::<Vec<_>>()
-                )
-                .collect::<Vec<_>>()
-        };
+    let results = match results {
+        bustub_instance::DBOutput::SQL(res) => res,
 
-        Ok(res)
-    } else {
-        // TODO - change this to the correct result?
-        Ok(DBOutput::StatementComplete(0))
+        // Should not be used
+        bustub_instance::DBOutput::System(_) => unreachable!("System commands should not be used i the sql logic tests")
+    };
+
+    assert_eq!(results.len(), 1, "Results must only have single result (1 query was ran)");
+
+    let result = &results[0];
+
+    match result {
+        SqlDBOutput::Rows(rows) => {
+            let res = DBOutput::Rows {
+                types: rows
+                    .get_schema()
+                    .get_columns()
+                    .iter()
+                    .map(|col| col.get_type().into())
+                    .collect(),
+                rows: rows
+                    .get_rows()
+                    .iter()
+                    .map(|row| row.iter()
+                        .map(|cell| cell_to_string(cell))
+                        .collect::<Vec<_>>()
+                    )
+                    .collect::<Vec<_>>(),
+            };
+
+            Ok(res)
+        }
+        SqlDBOutput::Statement(statement) => {
+            Ok(DBOutput::StatementComplete(statement.get_affected()))
+        }
     }
 }

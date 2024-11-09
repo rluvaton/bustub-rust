@@ -192,7 +192,7 @@ impl BustubInstance {
         )
     }
 
-    pub fn execute_user_input(&mut self, sql_or_command: &str, check_options: CheckOptions) -> error_utils::anyhow::Result<DBOutput> {
+    pub fn execute_user_input(&self, sql_or_command: &str, check_options: CheckOptions) -> error_utils::anyhow::Result<DBOutput> {
         self.wrap_with_txn(|this, txn|
             this.execute_sql_txn(sql_or_command, txn.clone(), check_options)
         )
@@ -239,7 +239,7 @@ impl BustubInstance {
                     continue;
                 }
                 StatementTypeImpl::DropTable(stmt) => {
-                    self.drop_table(txn.clone(), stmt)?;
+                    self.drop_table(txn.clone(), stmt).map(|output| sql_outputs.push(output.into()))?;
                     continue;
                 }
             }
@@ -247,8 +247,6 @@ impl BustubInstance {
             let rows = self.execute_data_stmt(stmt, txn.clone())?;
 
             sql_outputs.push(rows.into());
-
-            writer.save_rows(rows);
         }
 
         Ok(MultipleCommandsOutput::new(sql_outputs).into())

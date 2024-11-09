@@ -47,7 +47,7 @@ mod tests {
         {
             let sql = "CREATE TABLE books (id bigint);";
 
-            instance.execute_user_input(sql, &mut NoopWriter::default(), CheckOptions::default()).expect("Should execute");
+            instance.execute_user_input(sql, CheckOptions::default()).expect("Should execute");
         }
 
         let sql = "INSERT INTO books (id) VALUES (1), (24);";

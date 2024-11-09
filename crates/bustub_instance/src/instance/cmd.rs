@@ -100,13 +100,14 @@ see the execution plan of your query.
 )".to_string()))
     }
 
-    pub fn cmd_txn(&mut self, params: Vec<&str>) -> SystemOutputResult {
+    pub fn cmd_txn(&self, params: Vec<&str>) -> SystemOutputResult {
         if !self.managed_txn_mode {
             return Err(error_utils::anyhow!("only supported in managed mode, please use bustub-shell"));
         }
 
         if params.len() == 1 {
-            return match self.current_txn {
+            let txn = self.current_txn.lock();
+            return match *txn {
                 Some(_) => Ok(SystemOutput::single_cell(self.dump_current_txn(""))),
                 None => Err(error_utils::anyhow!("no active txn, each statement starts a new txn."))
             };
