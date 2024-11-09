@@ -141,9 +141,9 @@ impl Column {
             assert_eq!(self.get_options().is_nullable(), true, "if value is null, current column type must be nullable");
 
             return if dest_column.get_options().is_nullable() {
-                Err(error_utils::anyhow!("Dest column is not nullable but the value is null"))
-            } else {
                 Ok(Value::null(dest_column.get_type()))
+            } else {
+                Err(error_utils::anyhow!("Dest column is not nullable but the value is null"))
             };
         }
 

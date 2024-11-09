@@ -67,6 +67,7 @@ impl Statement for InsertStatement {
             return Err(ParseASTError::FailedParsing(format!("Invalid table to insert: {}", table.table)));
         }
 
+
         // Fail if there are duplicate columns
         {
             let mut columns = ast.columns.as_slice();
@@ -104,7 +105,15 @@ impl Statement for InsertStatement {
         {
             match select_statement.table.deref() {
                 TableReferenceTypeImpl::ExpressionList(list) => {
-                    let number_of_columns = ast.columns.len();
+                    let number_of_columns = {
+                        // Meaning all the table columns
+                        if ast.columns.len() == 0 {
+                            table.schema.get_column_count()
+                        } else {
+                            ast.columns.len()
+                        }
+                    };
+
                     let row_with_mismatch_values_count = list.values.iter()
                         .any(|row| row.len() != number_of_columns);
 
