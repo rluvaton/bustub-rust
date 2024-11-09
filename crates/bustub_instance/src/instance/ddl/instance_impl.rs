@@ -1,5 +1,4 @@
 use crate::instance::ddl::StatementHandler;
-use crate::result_writer::ResultWriter;
 use crate::BustubInstance;
 use binder::CreateStatement;
 use std::sync::Arc;
@@ -21,9 +20,8 @@ impl StatementHandler for BustubInstance {
             None,
         );
 
-        // TODO - return result
         if info.is_none() {
-            return Err(error_utils::anyhow!("Failed to create table"));
+            return Err(error_utils::anyhow!("Table already exists"));
         }
 
         let info = info.unwrap();
@@ -53,7 +51,7 @@ impl StatementHandler for BustubInstance {
                 return Err(error_utils::anyhow!("only support creating index with exactly one or two columns"));
             }
 
-            index_info = catalog_guard.create_index(
+            index_info = Some(catalog_guard.create_index(
                 txn,
                 (stmt.table.clone() + "_pk").as_str(),
                 stmt.table.as_str(),
@@ -63,7 +61,7 @@ impl StatementHandler for BustubInstance {
                 TWO_INTEGER_SIZE,
                 true,
                 IndexType::HashTableIndex,
-            );
+            )?);
             // TODO - handle result
         }
 

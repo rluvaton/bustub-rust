@@ -80,7 +80,6 @@ impl Catalog {
     /// @param create_table_heap whether to create a table heap for the new table
     /// @return A (non-owning) pointer to the metadata for the table
     ///
-    /// TODO - change return value to result
     pub fn create_table(&mut self, _txn: Arc<Transaction>, table_name: String, schema: Arc<Schema>, create_table_heap: Option<bool>) -> Option<Arc<TableInfo>> {
         if self.table_names.contains_key(&table_name) {
             return None;
@@ -170,7 +169,6 @@ impl Catalog {
      * @param hash_function The hash function for the index
      * @return A (non-owning) pointer to the metadata of the new table
      */
-    // TODO - return result
     pub fn create_index(&mut self,
                     txn: Arc<Transaction>,
                     index_name: &str,
@@ -182,10 +180,10 @@ impl Catalog {
                     // hash_function: HashFunction<KeyType>,
                     is_primary_key: bool,
                     index_type: IndexType,
-    ) -> Option<Arc<IndexInfo>> {
+    ) -> error_utils::anyhow::Result<Arc<IndexInfo>> {
         // Reject the creation request for nonexistent table
         if !self.table_names.contains_key(table_name) {
-            return None;
+            return Err(error_utils::anyhow!("Cannot create index for missing table"));
         }
 
         // If the table exists, an entry for the table should already be present in index_names_
@@ -195,7 +193,7 @@ impl Catalog {
         let table_indexes = self.index_names.get(table_name).unwrap();
         if table_indexes.contains_key(index_name) {
             // The requested index already exists for this table
-            return None;
+            return Err(error_utils::anyhow!("Index already exists"));
         }
 
         // Construct index metadata
@@ -227,11 +225,12 @@ impl Catalog {
         // Populate the index with all tuples in table heap
         let table_meta = self.get_table_by_name(table_name).expect("Should have table");
         for (_, tuple) in table_meta.get_table_heap().iter() {
+            // TODO - can improve performance by bulk insert
             index.insert_entry(
                 &tuple.key_from_tuple(&schema, &key_schema, key_attrs),
                 *tuple.get_rid(),
                 txn.deref()
-            ).expect("Should insert entry");
+            )?;
         }
 
         // Get the next OID for the new index
@@ -253,7 +252,7 @@ impl Catalog {
         self.indexes.insert(index_oid, index_info.clone());
         self.index_names.get_mut(table_name).unwrap().insert(index_name.to_string(), index_oid);
 
-        Some(index_info)
+        Ok(index_info)
     }
     
     pub fn verify_integrity(&self, txn: &Transaction) {

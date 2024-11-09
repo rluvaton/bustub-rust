@@ -231,12 +231,8 @@ impl BustubInstance {
                 StatementTypeImpl::Select(_) => {}
                 StatementTypeImpl::Insert(_) => {}
                 StatementTypeImpl::Create(stmt) => {
-                    let res = self.create_table(txn.clone(), stmt);
+                    self.create_table(txn.clone(), stmt).map(|output| sql_outputs.push(output.into()))?;
 
-                    match res {
-                        Ok(output) => sql_outputs.push(output.into()),
-                        Err(err) => return Err(err),
-                    }
                     continue;
                 }
                 StatementTypeImpl::Delete(_) => {}
