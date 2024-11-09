@@ -81,7 +81,7 @@ impl TransactionManager {
 
     pub fn debug(&self, info: String, _table_info: Option<Arc<TableInfo>>, _table_heap: Option<Arc<TableHeap>>) {
         // always use stderr for printing logs...
-       eprintln!("debug_hook: {}", info);
+        eprintln!("debug_hook: {}", info);
 
         eprintln!("You see this line of text because you have not implemented `TxnMgrDbg`. You should do this once you have \
         finished task 2. Implementing this helper function will save you a lot of time for debugging in later tasks.");

@@ -20,6 +20,7 @@ use std::ops::{Deref, DerefMut};
 use std::path::PathBuf;
 use std::sync::Arc;
 use transaction::{Transaction, TransactionManager as TransactionManagerTrait};
+use crate::instance::db_output::{DBOutput, MultipleCommandsOutput, SqlDBOutput, SystemOutput};
 use crate::table_generator::TableGenerator;
 
 const DEFAULT_BPM_SIZE: usize = 128;
@@ -177,10 +178,10 @@ impl BustubInstance {
         self.current_txn.clone()
     }
 
-    pub fn dump_current_txn<ResultWriterImpl: ResultWriter>(&self, writer: &mut ResultWriterImpl, prefix: &'static str) {
+    pub fn dump_current_txn(&self, prefix: &'static str) -> String {
         let current_txn = self.current_txn.as_ref().expect("Must have current transaction").clone();
 
-        writer.one_cell(format!("{}txn_id={} txn_real_id={} read_ts={} commit_ts={} status={:?} iso_lvl={:?}",
+        format!("{}txn_id={} txn_real_id={} read_ts={} commit_ts={} status={:?} iso_lvl={:?}",
                                 prefix,
                                 current_txn.get_transaction_id_human_readable(),
                                 current_txn.get_transaction_id(),
@@ -188,12 +189,12 @@ impl BustubInstance {
                                 current_txn.get_commit_ts(),
                                 current_txn.get_transaction_state(),
                                 current_txn.get_isolation_level()
-        ).as_str());
+        )
     }
 
-    pub fn execute_user_input<ResultWriterImpl: ResultWriter>(&mut self, sql_or_command: &str, writer: &mut ResultWriterImpl, check_options: CheckOptions) -> error_utils::anyhow::Result<()> {
+    pub fn execute_user_input(&mut self, sql_or_command: &str, check_options: CheckOptions) -> error_utils::anyhow::Result<DBOutput> {
         self.wrap_with_txn(|this, txn|
-            this.execute_sql_txn(sql_or_command, writer, txn.clone(), check_options)
+            this.execute_sql_txn(sql_or_command, txn.clone(), check_options)
         )
     }
 
@@ -214,10 +215,12 @@ impl BustubInstance {
         result
     }
 
-    pub fn execute_sql_txn<ResultWriterImpl: ResultWriter>(&mut self, sql: &str, writer: &mut ResultWriterImpl, txn: Arc<Transaction>, _check_options: CheckOptions) -> error_utils::anyhow::Result<()> {
+    pub fn execute_sql_txn(&mut self, sql: &str, txn: Arc<Transaction>, _check_options: CheckOptions) -> error_utils::anyhow::Result<DBOutput> {
         if sql.starts_with("\\") {
-            return self.execute_shell_commands(sql, writer);
+            return self.execute_shell_commands(sql).map(|res| res.into());
         }
+
+        let mut sql_outputs: Vec<SqlDBOutput> = vec![];
 
         let parsed = self.parse_sql(sql)?;
 
@@ -228,7 +231,8 @@ impl BustubInstance {
                 StatementTypeImpl::Select(_) => {}
                 StatementTypeImpl::Insert(_) => {}
                 StatementTypeImpl::Create(stmt) => {
-                    self.create_table(txn.clone(), stmt, writer);
+                    self.create_table(txn.clone(), stmt).map(|output| sql_outputs.push(output.into()))?;
+
                     continue;
                 }
                 StatementTypeImpl::Delete(_) => {}
@@ -236,10 +240,10 @@ impl BustubInstance {
 
             let rows = self.execute_data_stmt(stmt, txn.clone())?;
 
-            rows.write_results(writer);
+            sql_outputs.push(rows.into());
         }
-        
-        Ok(())
+
+        Ok(MultipleCommandsOutput::new(sql_outputs).into())
     }
 
     /// Execute Single SELECT statement and return the results
@@ -324,26 +328,24 @@ impl BustubInstance {
         Ok(Rows::new(result, schema))
     }
 
-    fn execute_shell_commands<ResultWriterImpl: ResultWriter>(&mut self, cmd: &str, writer: &mut ResultWriterImpl) -> error_utils::anyhow::Result<()> {
+    fn execute_shell_commands(&mut self, cmd: &str) -> error_utils::anyhow::Result<SystemOutput> {
         // Internal meta-commands, like in `psql`.
         assert!(cmd.starts_with("\\"), "command must start with \\");
 
         match cmd {
-            "\\dt" => self.cmd_display_tables(writer),
-            "\\di" => self.cmd_display_indices(writer),
-            "\\help" => Self::cmd_display_help(writer),
+            "\\dt" => self.cmd_display_tables(),
+            "\\di" => self.cmd_display_indices(),
+            "\\help" => Self::cmd_display_help(),
             _ => {
                 if cmd.starts_with("\\dbgmvcc") {
-                    self.cmd_dbg_mvcc(cmd.split("").collect(), writer);
+                    self.cmd_dbg_mvcc(cmd.split("").collect())
                 } else if cmd.starts_with("\\txn") {
-                    self.cmd_txn(cmd.split("").collect(), writer);
+                    self.cmd_txn(cmd.split("").collect())
                 } else {
-                    return Err(error_utils::anyhow::anyhow!("unsupported internal command: {}", cmd))
+                    Err(error_utils::anyhow::anyhow!("unsupported internal command: {}", cmd))
                 }
             }
         }
-
-        Ok(())
     }
 
     fn parse_sql(&mut self, sql: &str) -> error_utils::anyhow::Result<Vec<StatementTypeImpl>> {

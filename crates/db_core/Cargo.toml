@@ -18,6 +18,8 @@ rid = { workspace = true }
 catalog_schema = { workspace = true }
 index = { workspace = true }
 
+error_utils = { workspace = true }
+anyhow = { workspace = true }
 thiserror = { workspace = true }
 
 parking_lot = { workspace = true }

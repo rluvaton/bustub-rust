@@ -59,7 +59,7 @@ mod tests {
 
         let sql = "CREATE TABLE books (id int);";
 
-        instance.execute_user_input(sql, &mut NoopWriter::default(), CheckOptions::default()).expect("Should execute");
+        instance.execute_user_input(sql, CheckOptions::default()).expect("Should execute");
 
         let select_result = instance.execute_single_select_sql("SELECT id from books;", CheckOptions::default()).expect("Should execute");
 
@@ -76,7 +76,7 @@ mod tests {
         {
             let sql = "CREATE TABLE books (id int);";
 
-            instance.execute_user_input(sql, &mut NoopWriter::default(), CheckOptions::default()).expect("Should execute");
+            instance.execute_user_input(sql, CheckOptions::default()).expect("Should execute");
         }
 
         // Insert rows
@@ -105,7 +105,7 @@ mod tests {
         {
             let sql = "CREATE TABLE books (id int);";
 
-            instance.execute_user_input(sql, &mut NoopWriter::default(), CheckOptions::default()).expect("Should execute");
+            instance.execute_user_input(sql, CheckOptions::default()).expect("Should execute");
         }
 
         // Insert rows
@@ -133,7 +133,7 @@ mod tests {
         {
             let sql = "CREATE TABLE books (id int);";
 
-            instance.execute_user_input(sql, &mut NoopWriter::default(), CheckOptions::default()).expect("Should execute");
+            instance.execute_user_input(sql, CheckOptions::default()).expect("Should execute");
         }
 
         // Insert rows
@@ -160,7 +160,7 @@ mod tests {
         {
             let sql = "CREATE TABLE books (id int);";
 
-            instance.execute_user_input(sql, &mut NoopWriter::default(), CheckOptions::default()).expect("Should execute");
+            instance.execute_user_input(sql, CheckOptions::default()).expect("Should execute");
         }
 
         let result = instance.execute_single_select_sql("SELECT id from books order by id;", CheckOptions::default());
@@ -229,7 +229,7 @@ mod tests {
         {
             let sql = "CREATE TABLE books (id int, s varchar(128));";
 
-            instance.execute_user_input(sql, &mut NoopWriter::default(), CheckOptions::default()).expect("Should execute");
+            instance.execute_user_input(sql, CheckOptions::default()).expect("Should execute");
         }
 
         // Insert rows
@@ -264,7 +264,7 @@ mod tests {
         {
             let sql = "CREATE TABLE books (id int, s varchar(128));";
 
-            instance.execute_user_input(sql, &mut NoopWriter::default(), CheckOptions::default()).expect("Should execute");
+            instance.execute_user_input(sql, CheckOptions::default()).expect("Should execute");
         }
 
         // Insert rows

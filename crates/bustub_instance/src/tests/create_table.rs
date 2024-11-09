@@ -10,6 +10,6 @@ mod tests {
 
         let sql = "CREATE TABLE books (id int);";
 
-        instance.execute_user_input(sql, &mut NoopWriter::default(), CheckOptions::default()).expect("Should execute");
+        instance.execute_user_input(sql, CheckOptions::default()).expect("Should execute");
     }
 }
