@@ -132,9 +132,9 @@ impl Catalog {
             }
         }
 
-        let table_oid = self.table_names.get(&table_name).unwrap();
+        let table_oid = self.table_names.remove(&table_name).unwrap();
 
-        let table_info = self.tables.remove(table_oid).expect("if have table name must have in the table entry");
+        let table_info = self.tables.remove(&table_oid).expect("if have table name must have in the table entry");
 
         table_info.delete_completely(txn).to_anyhow()?;
 
