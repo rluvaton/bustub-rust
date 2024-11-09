@@ -6,8 +6,8 @@ use rid::RID;
 use tuple::{Tuple, TupleMeta};
 use crate::{TableHeap, TablePage};
 
-pub struct TableIterator {
-    table_heap: Arc<TableHeap>,
+pub struct TableIterator<'a> {
+    table_heap: &'a TableHeap,
     rid: RID,
 
     // When creating table iterator, we will record the maximum RID that we should scan.
@@ -16,8 +16,8 @@ pub struct TableIterator {
     stop_at_rid: RID,
 }
 
-impl TableIterator {
-    pub(crate) fn new(table_heap: Arc<TableHeap>, rid: RID, stop_at_rid: RID) -> Self {
+impl<'a> TableIterator<'a> {
+    pub(crate) fn new(table_heap: &'a TableHeap, rid: RID, stop_at_rid: RID) -> Self {
         Self {
             table_heap,
             rid,
@@ -27,7 +27,7 @@ impl TableIterator {
 }
 
 
-impl Iterator for TableIterator {
+impl Iterator for TableIterator<'_> {
     type Item = (TupleMeta, Tuple);
 
     fn next(&mut self) -> Option<Self::Item> {

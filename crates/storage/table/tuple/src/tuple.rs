@@ -1,6 +1,6 @@
 use catalog_schema::{Column, Schema};
 use common::PageKey;
-use data_types::{CanBeCastedWithoutValueChangeResult, Value, BUSTUB_VALUE_NULL};
+use data_types::{Value, BUSTUB_VALUE_NULL};
 use rid::RID;
 use std::fmt::{Debug};
 use std::hash::Hash;

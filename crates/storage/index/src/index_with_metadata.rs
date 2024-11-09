@@ -19,15 +19,14 @@ use tuple::Tuple;
 /// delete, predicate insert, point query, and full index scan. Predicate scan
 /// only supports conjunction, and may or may not be optimized depending on
 /// the type of expressions inside the predicate.
-///
 pub struct IndexWithMetadata {
     /// The Index structure owns its metadata
     metadata: Arc<IndexMetadata>,
-    index: Arc<dyn Index>
+    index: Box<dyn Index>
 }
 
 impl IndexWithMetadata {
-    pub fn new(index: Arc<dyn Index>, metadata: Arc<IndexMetadata>) -> Self {
+    pub fn new(index: Box<dyn Index>, metadata: Arc<IndexMetadata>) -> Self {
         Self {
             index,
             metadata,
@@ -59,6 +58,12 @@ impl IndexWithMetadata {
         self.metadata.get_key_attrs()
     }
 
+
+    pub fn delete_completely(self, transaction: &Transaction) -> error_utils::anyhow::Result<()> {
+        // TODO - fix this
+        self.index.delete_completely(transaction)
+    }
+
 }
 
 impl Index for IndexWithMetadata {
@@ -74,8 +79,13 @@ impl Index for IndexWithMetadata {
         self.index.scan_key(key, transaction)
     }
 
-    fn verify_integrity(&self, _index_metadata: &IndexMetadata, table_heap: Arc<TableHeap>, transaction: &Transaction) {
+    fn verify_integrity(&self, _index_metadata: &IndexMetadata, table_heap: &TableHeap, transaction: &Transaction) {
         self.index.verify_integrity(&self.metadata, table_heap, transaction)
+    }
+
+    fn delete_completely(self: Box<Self>, transaction: &Transaction) -> error_utils::anyhow::Result<()> {
+        // TODO - fix this
+        self.index.delete_completely(transaction)
     }
 }
 

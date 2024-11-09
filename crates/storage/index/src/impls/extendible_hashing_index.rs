@@ -1,7 +1,7 @@
 use crate::{GenericComparator, GenericKey, Index, IndexMetadata};
 use buffer_pool_manager::BufferPoolManager;
 use common::{Comparator, PageKey};
-use error_utils::ToAnyhow;
+use error_utils::{ToAnyhow, ToAnyhowResult};
 use extendible_hash_table::{DiskExtendibleHashTable, bucket_array_size};
 use hashing_common::{DefaultKeyHasher, KeyHasher};
 use rid::RID;
@@ -27,7 +27,7 @@ macro_rules! impl_extendible_hashing_index_for_generic_key {
 pub type $helper_type = ExtendibleHashingIndex<{ bucket_array_size::<GenericKey<$key_size>, RID>() }, GenericKey<$key_size>, GenericComparator<$key_size>, DefaultKeyHasher>;
 
 impl ExtendibleHashingIndex<{ bucket_array_size::<GenericKey<$key_size>, RID>() }, GenericKey<$key_size>, GenericComparator<$key_size>, DefaultKeyHasher> {
-    pub fn new(metadata: Arc<IndexMetadata>, bpm: Arc<BufferPoolManager>) -> Result<Arc<dyn Index>, extendible_hash_table::errors::InitError> {
+    pub fn new(metadata: Arc<IndexMetadata>, bpm: Arc<BufferPoolManager>) -> Result<Box<dyn Index>, extendible_hash_table::errors::InitError> {
         DiskExtendibleHashTable::new(
             metadata.get_name().to_string(),
             bpm,
@@ -35,7 +35,7 @@ impl ExtendibleHashingIndex<{ bucket_array_size::<GenericKey<$key_size>, RID>() 
             None,
             None,
             None
-        ).map(|h| Self(h).to_dyn_arc())
+        ).map(|h| Self(h).to_dyn_box())
     }
 }
 
@@ -55,11 +55,11 @@ impl Index for ExtendibleHashingIndex<{ bucket_array_size::<GenericKey<$key_size
             .map_err(|err| err.to_anyhow())
     }
     
-    fn verify_integrity(&self, index_metadata: &IndexMetadata, table_heap: Arc<TableHeap>, transaction: &Transaction) {
+    fn verify_integrity(&self, index_metadata: &IndexMetadata, table_heap: &TableHeap, transaction: &Transaction) {
         self.0.verify_integrity(false);
         
         if index_metadata.is_primary_key() {
-            let table_heap_count = table_heap.clone().iter().count();
+            let table_heap_count = table_heap.iter().count();
 
             let all_table_heap_values_are_in_the_index = table_heap
                 .iter()
@@ -74,6 +74,10 @@ impl Index for ExtendibleHashingIndex<{ bucket_array_size::<GenericKey<$key_size
             assert_eq!(table_heap_count, index_count, "Table heap count should have the same amount of items as the primary key index items");
         }
     }
+    
+    fn delete_completely(self: Box<Self>, transaction: &Transaction) -> error_utils::anyhow::Result<()> {
+        self.0.delete_completely(transaction).to_anyhow()
+    }
 }
 
     )+)
@@ -87,7 +91,7 @@ impl_extendible_hashing_index_for_generic_key! {
     ExtendibleHashingIndex64, 8
 }
 
-pub fn create_extendible_hashing_index(key_size: usize, metadata: Arc<IndexMetadata>, bpm: Arc<BufferPoolManager>) -> Result<Arc<dyn Index>, extendible_hash_table::errors::InitError> {
+pub fn create_extendible_hashing_index(key_size: usize, metadata: Arc<IndexMetadata>, bpm: Arc<BufferPoolManager>) -> Result<Box<dyn Index>, extendible_hash_table::errors::InitError> {
     match key_size {
         1 => ExtendibleHashingIndex8::new(metadata, bpm),
         2 => ExtendibleHashingIndex16::new(metadata, bpm),

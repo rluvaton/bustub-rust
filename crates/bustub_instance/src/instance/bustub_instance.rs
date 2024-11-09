@@ -1,5 +1,4 @@
 use crate::instance::ddl::StatementHandler;
-use crate::result_writer::ResultWriter;
 use crate::rows::Rows;
 use binder::{Binder, StatementTypeImpl};
 use buffer_pool_manager::BufferPoolManager;
@@ -159,8 +158,9 @@ impl BustubInstance {
 
     pub fn generate_test_table(&self) {
         let txn = self.txn_manager.begin(None);
-        let exec_ctx = self.make_executor_context(txn.clone(), false);
-        let gen = TableGenerator::from(exec_ctx.deref());
+        let catalog = self.catalog.lock();
+        let exec_ctx = self.make_executor_context(txn.clone(), catalog.deref(), false);
+        let gen = TableGenerator::from(&exec_ctx);
         let mut guard = self.catalog.lock();
         gen.generate_test_tables(guard.deref_mut());
         drop(guard);
@@ -225,17 +225,18 @@ impl BustubInstance {
         let parsed = self.parse_sql(sql)?;
 
         for stmt in &parsed {
-
             match &stmt {
                 StatementTypeImpl::Invalid => break,
-                StatementTypeImpl::Select(_) => {}
-                StatementTypeImpl::Insert(_) => {}
+                StatementTypeImpl::Select(_) | StatementTypeImpl::Insert(_) | StatementTypeImpl::Delete(_) => {}
                 StatementTypeImpl::Create(stmt) => {
                     self.create_table(txn.clone(), stmt).map(|output| sql_outputs.push(output.into()))?;
 
                     continue;
                 }
-                StatementTypeImpl::Delete(_) => {}
+                StatementTypeImpl::DropTable(stmt) => {
+                    self.drop_table(txn.clone(), stmt)?;
+                    continue;
+                }
             }
 
             let rows = self.execute_data_stmt(stmt, txn.clone())?;
@@ -314,13 +315,12 @@ impl BustubInstance {
         // Optimize the query
         // TODO - add back
 
-        drop(catalog);
-
         // Execute the query.
         // TODO - add executor
-        let exec_ctx = self.make_executor_context(txn.clone(), is_delete);
+        let exec_ctx = self.make_executor_context(txn.clone(), catalog.deref(), is_delete);
+
         // TODO - add check options
-        let result = self.execution_engine.execute(plan.clone(), txn.clone(), exec_ctx)?;
+        let result = self.execution_engine.execute(plan.clone(), txn.clone(), &exec_ctx)?;
 
         // Return the result set as a vector of string.
         let schema = plan.get_output_schema();
@@ -358,27 +358,25 @@ impl BustubInstance {
         binder.parse(sql).map_err(|err| err.to_anyhow())
     }
 
-    fn make_executor_context(&self, txn: Arc<Transaction>, is_modify: bool) -> Arc<ExecutorContext> {
-        Arc::new(
-            ExecutorContext::new(
-                txn,
-                self.catalog.clone(),
-                self.buffer_pool_manager.clone(),
-                self.txn_manager.clone(),
-                self.lock_manager.clone(),
-                is_modify,
-            )
+    fn make_executor_context<'a>(&self, txn: Arc<Transaction>, catalog: &'a Catalog, is_modify: bool) -> ExecutorContext<'a> {
+        ExecutorContext::new(
+            txn,
+            catalog,
+            self.buffer_pool_manager.clone(),
+            self.txn_manager.clone(),
+            self.lock_manager.clone(),
+            is_modify,
         )
     }
-    
+
     pub fn verify_integrity(&self) {
         let txn = self.current_txn.clone().unwrap_or_else(|| self.txn_manager.begin(None));
         {
             let catalog = self.catalog.lock();
-            
+
             catalog.verify_integrity(txn.deref());
         }
-    } 
+    }
 }
 
 impl Drop for BustubInstance {

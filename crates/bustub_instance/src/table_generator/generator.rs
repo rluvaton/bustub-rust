@@ -21,8 +21,7 @@ pub(crate) struct TableGenerator<'a> {
     exec_ctx: &'a ExecutorContext<'a>,
 }
 
-impl<'a> TableGenerator<'a>
-{
+impl<'a> TableGenerator<'a> {
     pub fn generate_test_tables(&self, catalog: &mut Catalog) {
         for mut table_meta in Self::get_insert_meta() {
             // Create Schema
@@ -50,7 +49,7 @@ impl<'a> TableGenerator<'a>
         }
     }
 
-    fn fill_table(&self, info: Arc<TableInfo>, table_meta: &mut TableInsertMeta) {
+    fn fill_table(&self, info: &TableInfo, table_meta: &mut TableInsertMeta) {
         let mut rng = thread_rng();
         let mut num_inserted = 0;
         let batch_size = 128;

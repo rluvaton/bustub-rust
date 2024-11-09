@@ -1,6 +1,7 @@
-use crate::{fallback_on_incompatible_2_args, Binder};
+use crate::statements::drop::{DropTableStatement};
 use crate::statements::{CreateStatement, DeleteStatement, InsertStatement, SelectStatement, Statement};
 use crate::try_from_ast_error::{ParseASTError, ParseASTResult};
+use crate::{fallback_on_incompatible_2_args, Binder};
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum StatementType {
@@ -26,7 +27,7 @@ pub enum StatementTypeImpl {
     Create(CreateStatement),         // create statement type
     Delete(DeleteStatement),         // delete statement type
     // Explain,        // explain statement type
-    // Drop,           // drop statement type
+    DropTable(DropTableStatement),           // drop statement type
     // Index,          // index statement type
     // VariableSet,   // set variable statement type
     // VariableShow,  // show variable statement type
@@ -51,7 +52,8 @@ impl Statement for StatementTypeImpl {
             SelectStatement,
             InsertStatement,
             CreateStatement,
-            DeleteStatement
+            DeleteStatement,
+            DropTableStatement
         });
 
         Err(ParseASTError::IncompatibleType)

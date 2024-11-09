@@ -4,6 +4,7 @@ mod lookup;
 mod insert;
 mod remove;
 mod update;
+mod delete_completely;
 
 pub use lookup::LookupError;
 pub use insert::InsertionError;

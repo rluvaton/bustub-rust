@@ -67,7 +67,7 @@ where
             .bpm
             .fetch_page_write(self.header_page_id, AccessType::Unknown)
             .map_err_to_buffer_pool_err()
-            .context("Hash Table header page must exists when trying to insert")?;
+            .context("Hash Table header page must exists when trying to delete")?;
 
         {
             let header_page = header.cast_mut::<<Self as TypeAliases>::HeaderPage>();

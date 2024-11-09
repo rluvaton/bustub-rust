@@ -1,6 +1,7 @@
+use std::ops::Deref;
 use crate::instance::ddl::StatementHandler;
 use crate::BustubInstance;
-use binder::CreateStatement;
+use binder::{CreateStatement, DropTableStatement};
 use std::sync::Arc;
 use catalog_schema::Schema;
 use data_types::DBTypeId;
@@ -26,7 +27,9 @@ impl StatementHandler for BustubInstance {
 
         let info = info.unwrap();
 
-        let mut index_info: Option<Arc<IndexInfo>> = None;
+        let table_oid = info.get_oid();
+
+        let mut index_info: Option<&IndexInfo> = None;
 
         if !stmt.primary_key.is_empty() {
             let col_ids: Vec<u32> = stmt.primary_key
@@ -51,25 +54,36 @@ impl StatementHandler for BustubInstance {
                 return Err(error_utils::anyhow!("only support creating index with exactly one or two columns"));
             }
 
+            let schema = info.get_schema();
+
             index_info = Some(catalog_guard.create_index(
                 txn,
                 (stmt.table.clone() + "_pk").as_str(),
                 stmt.table.as_str(),
-                info.get_schema(),
+                schema,
                 Arc::new(key_schema),
                 col_ids.as_slice(),
                 TWO_INTEGER_SIZE,
                 true,
                 IndexType::HashTableIndex,
             )?);
-            // TODO - handle result
         }
 
-        drop(catalog_guard);
-
         Ok(match index_info {
-            None => StatementOutput::new_with_info(1, format!("Table created with id = {}", info.get_oid())),
-            Some(index) => StatementOutput::new_with_info(1, format!("Table created with id = {}, Primary key index created with id = {}", info.get_oid(), index.get_index_oid())),
+            None => StatementOutput::new_with_info(1, format!("Table created with id = {}", table_oid)),
+            Some(index) => StatementOutput::new_with_info(1, format!("Table created with id = {}, Primary key index created with id = {}", table_oid, index.get_index_oid())),
         })
+    }
+
+    fn drop_table(&self, txn: Arc<Transaction>, stmt: &DropTableStatement) -> error_utils::anyhow::Result<StatementOutput> {
+        let mut catalog_guard = self.catalog.lock();
+
+        let founded = catalog_guard.drop_table(txn.deref(), stmt.get_table_name().to_string())?;
+
+        match (stmt.get_if_exists(), founded) {
+            (false, false) => Err(error_utils::anyhow!("Cannot delete missing table {}, consider using if exists", stmt.get_table_name())),
+            (true, false) => Ok(StatementOutput::new_with_info(0, "0 tables deleted".to_string())),
+            (_, true) => Ok(StatementOutput::new_with_info(1, format!("Table and all related indexes deleted = {}", stmt.get_table_name())))
+        }
     }
 }

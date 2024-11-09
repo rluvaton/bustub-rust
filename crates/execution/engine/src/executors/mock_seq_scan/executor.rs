@@ -12,7 +12,7 @@ use tuple::Tuple;
 #[must_use = "iterators are lazy and do nothing unless consumed"]
 pub struct MockScanExecutor<'a> {
     /// The executor context in which the executor runs
-    ctx: Arc<ExecutorContext<'a>>,
+    ctx: &'a ExecutorContext<'a>,
 
     // ----
 
@@ -25,7 +25,7 @@ pub struct MockScanExecutor<'a> {
 }
 
 impl<'a> MockScanExecutor<'a> {
-    pub(crate) fn new(plan: &'a MockScanPlanNode, ctx: Arc<ExecutorContext<'a>>) -> Self {
+    pub(crate) fn new(plan: &'a MockScanPlanNode, ctx: &'a ExecutorContext<'a>) -> Self {
         let mock_table_name: MockTableName = plan.get_table().as_str().try_into().expect("Must be a valid mock table name");
 
         Self {

@@ -17,7 +17,7 @@ impl BustubInstance {
        if let Some(table_info) = catalog.get_table_by_name(&table) {
            let output = SystemOutput::single_cell(format!("please view the result in the BusTub console (or Chrome DevTools console), table={}", table));
 
-           self.txn_manager.debug("\\dbgmvcc".to_string(), Some(table_info.clone()), Some(table_info.get_table_heap()));
+           self.txn_manager.debug("\\dbgmvcc".to_string(), Some(table_info), Some(table_info.get_table_heap()));
 
            Ok(output)
        } else {

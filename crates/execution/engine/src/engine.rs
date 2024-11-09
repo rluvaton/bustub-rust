@@ -42,7 +42,7 @@ impl ExecutionEngine {
      * @return `true` if execution of the query plan succeeds, `false` otherwise
 
      */
-    pub fn execute(&self, plan: PlanType, txn: Arc<Transaction>, exec_ctx: Arc<ExecutorContext>) -> error_utils::anyhow::Result<Vec<Tuple>> {
+    pub fn execute(&self, plan: PlanType, txn: Arc<Transaction>, exec_ctx: &ExecutorContext) -> error_utils::anyhow::Result<Vec<Tuple>> {
         assert_eq!(txn.get_transaction_id(), exec_ctx.get_transaction().get_transaction_id(), "Broken Invariant");
 
         // Construct the executor for the abstract plan node

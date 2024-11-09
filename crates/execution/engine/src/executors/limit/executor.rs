@@ -9,7 +9,7 @@ use std::sync::Arc;
 #[must_use = "iterators are lazy and do nothing unless consumed"]
 pub struct LimitExecutor<'a> {
     /// The executor context in which the executor runs
-    ctx: Arc<ExecutorContext<'a>>,
+    ctx: &'a ExecutorContext<'a>,
 
     // ----
 
@@ -23,7 +23,7 @@ pub struct LimitExecutor<'a> {
 }
 
 impl<'a> LimitExecutor<'a> {
-    pub(crate) fn new(child_executor: ExecutorRef<'a>, plan: &'a LimitPlanNode, ctx: Arc<ExecutorContext<'a>>) -> Self {
+    pub(crate) fn new(child_executor: ExecutorRef<'a>, plan: &'a LimitPlanNode, ctx: &'a ExecutorContext<'a>) -> Self {
         Self {
             remaining: plan.get_limit(),
             plan,

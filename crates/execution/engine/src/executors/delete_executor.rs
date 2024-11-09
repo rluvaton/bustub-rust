@@ -13,7 +13,7 @@ use tuple::TupleMeta;
 #[must_use = "iterators are lazy and do nothing unless consumed"]
 pub struct DeleteExecutor<'a> {
     /// The executor context in which the executor runs
-    ctx: Arc<ExecutorContext<'a>>,
+    ctx: &'a ExecutorContext<'a>,
 
     /** The child executor from which tuples are obtained */
     child_executor: ExecutorRef<'a>,
@@ -23,16 +23,16 @@ pub struct DeleteExecutor<'a> {
     plan: &'a DeletePlan,
 
     // The table info for the table the values should be inserted into
-    dest_table_info: Arc<TableInfo>,
+    dest_table_info: &'a TableInfo,
     
     // The indexes of the matching dest table
-    dest_indexes: Vec<Arc<IndexInfo>>
+    dest_indexes: Vec<&'a IndexInfo>
 }
 
 impl<'a> DeleteExecutor<'a> {
-    pub(crate) fn new(child_executor: ExecutorRef<'a>, plan: &'a DeletePlan, ctx: Arc<ExecutorContext<'a>>) -> Self {
+    pub(crate) fn new(child_executor: ExecutorRef<'a>, plan: &'a DeletePlan, ctx: &'a ExecutorContext<'a>) -> Self {
         let (dest_table_info, dest_indexes) = {
-            let c = ctx.get_catalog().lock();
+            let c = ctx.get_catalog();
 
             let table_info = c.get_table_by_oid(plan.get_table_oid()).expect("Table must exists (otherwise it should be blocked at the planner)");
             
