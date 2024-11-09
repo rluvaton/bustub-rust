@@ -170,6 +170,7 @@ impl Catalog {
      * @param hash_function The hash function for the index
      * @return A (non-owning) pointer to the metadata of the new table
      */
+    // TODO - return result
     pub fn create_index(&mut self,
                     txn: Arc<Transaction>,
                     index_name: &str,
