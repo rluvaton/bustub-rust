@@ -1,6 +1,5 @@
 use std::ops::Deref;
 use crate::instance::ddl::StatementHandler;
-use crate::result_writer::ResultWriter;
 use crate::BustubInstance;
 use binder::{CreateStatement, DropTableStatement};
 use std::sync::Arc;
@@ -9,9 +8,10 @@ use data_types::DBTypeId;
 use db_core::catalog::{IndexInfo, IndexType};
 use index::TWO_INTEGER_SIZE;
 use transaction::Transaction;
+use crate::instance::db_output::StatementOutput;
 
 impl StatementHandler for BustubInstance {
-    fn create_table<ResultWriterImpl: ResultWriter>(&self, txn: Arc<Transaction>, stmt: &CreateStatement, writer: &mut ResultWriterImpl) {
+    fn create_table(&self, txn: Arc<Transaction>, stmt: &CreateStatement) -> error_utils::anyhow::Result<StatementOutput> {
         let mut catalog_guard = self.catalog.lock();
 
         let info = catalog_guard.create_table(
@@ -19,12 +19,17 @@ impl StatementHandler for BustubInstance {
             stmt.table.clone(),
             Arc::new(Schema::new(stmt.columns.clone())),
             None,
-        ).expect("Should create table");
+        );
+
+        if info.is_none() {
+            return Err(error_utils::anyhow!("Table already exists"));
+        }
+
+        let info = info.unwrap();
 
         let table_oid = info.get_oid();
 
         let mut index_info: Option<&IndexInfo> = None;
-
 
         if !stmt.primary_key.is_empty() {
             let col_ids: Vec<u32> = stmt.primary_key
@@ -35,7 +40,7 @@ impl StatementHandler for BustubInstance {
             let has_unsupported_index = col_ids.iter().any(|&col_idx| info.get_schema().get_column(col_idx as usize).get_type() != DBTypeId::INT);
 
             if has_unsupported_index {
-                unimplemented!("only support creating index on integer column");
+                return Err(error_utils::anyhow!("Unimplemented: only support creating index on integer column"));
             }
 
             let key_schema = Schema::copy_schema(&info.get_schema(), &col_ids);
@@ -46,12 +51,12 @@ impl StatementHandler for BustubInstance {
             // You can also create clustered index that directly stores value inside the index by modifying the value type.
 
             if col_ids.is_empty() || col_ids.len() > 2 {
-                unimplemented!("only support creating index with exactly one or two columns");
+                return Err(error_utils::anyhow!("only support creating index with exactly one or two columns"));
             }
 
             let schema = info.get_schema();
 
-            index_info = catalog_guard.create_index(
+            index_info = Some(catalog_guard.create_index(
                 txn,
                 (stmt.table.clone() + "_pk").as_str(),
                 stmt.table.as_str(),
@@ -61,14 +66,17 @@ impl StatementHandler for BustubInstance {
                 TWO_INTEGER_SIZE,
                 true,
                 IndexType::HashTableIndex,
-            );
+            )?);
         }
 
-        match index_info {
-            None => writer.one_cell(format!("Table created with id = {}", table_oid).as_str()),
-            Some(index) => writer.one_cell(format!("Table created with id = {}, Primary key index created with id = {}", table_oid, index.get_index_oid()).as_str()),
-        }
+        drop(catalog_guard);
+
+        Ok(match index_info {
+            None => StatementOutput::new_with_info(1, format!("Table created with id = {}", info.get_oid())),
+            Some(index) => StatementOutput::new_with_info(1, format!("Table created with id = {}, Primary key index created with id = {}", info.get_oid(), index.get_index_oid())),
+        })
     }
+
 
     fn drop_table<ResultWriterImpl: ResultWriter>(&self, txn: Arc<Transaction>, stmt: &DropTableStatement, writer: &mut ResultWriterImpl) {
         let mut catalog_guard = self.catalog.lock();

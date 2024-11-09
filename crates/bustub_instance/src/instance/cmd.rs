@@ -1,85 +1,84 @@
 use common::config::{TxnId, TXN_START_ID};
 use transaction::TransactionManager;
 use crate::BustubInstance;
-use crate::result_writer::ResultWriter;
+use crate::instance::db_output::SystemOutput;
+
+type SystemOutputResult = error_utils::anyhow::Result<SystemOutput>;
 
 impl BustubInstance {
-   pub fn cmd_dbg_mvcc<ResultWriterImpl: ResultWriter>(&self, params: Vec<&str>, writer: &mut ResultWriterImpl) {
+   pub fn cmd_dbg_mvcc(&self, params: Vec<&str>) -> SystemOutputResult {
        if params.len() != 2 {
-           writer.one_cell("please provide a table name");
-
-           return;
+           return Err(error_utils::anyhow!("please provide a table name"));
        }
 
        let table = params[1];
-       writer.one_cell(format!("please view the result in the BusTub console (or Chrome DevTools console), table={}", table).as_str());
 
        let catalog = self.catalog.lock();
        if let Some(table_info) = catalog.get_table_by_name(&table) {
-           self.txn_manager.debug("\\dbgmvcc".to_string(), Some(table_info), Some(table_info.get_table_heap()))
+           let output = SystemOutput::single_cell(format!("please view the result in the BusTub console (or Chrome DevTools console), table={}", table));
+
+           self.txn_manager.debug("\\dbgmvcc".to_string(), Some(table_info), Some(table_info.get_table_heap()));
+
+           Ok(output)
        } else {
-           writer.one_cell(format!("table {} not found", table).as_str());
+           Err(error_utils::anyhow!("table {} not found", table))
        }
    }
 
-    pub fn cmd_display_tables<ResultWriterImpl: ResultWriter>(&self, writer: &mut ResultWriterImpl) {
+    pub fn cmd_display_tables(&self) -> SystemOutputResult {
         let catalog = self.catalog.lock();
         let table_names = catalog.get_table_names();
 
-        writer.begin_table(false);
+        Ok(SystemOutput::new(
+            vec!["oid".to_string(), "name".to_string(), "cols".to_string()],
+            table_names
+                .iter()
+                .map(|name| {
+                    let table_info = catalog.get_table_by_name(name).expect("Table must exists");
 
-        writer.begin_header();
-        writer.write_header_cell("oid");
-        writer.write_header_cell("name");
-        writer.write_header_cell("cols");
-        writer.end_header();
-
-        for name in &table_names {
-            let table_info = catalog.get_table_by_name(name).expect("Table must exists");
-
-            writer.begin_row();
-
-            writer.write_cell(table_info.get_oid().to_string().as_str());
-            writer.write_cell(table_info.get_name());
-            writer.write_cell(format!("{}", table_info.get_schema()).as_str());
-
-            writer.end_row();
-        }
-
-        writer.end_table();
+                    vec![
+                        table_info.get_oid().to_string(),
+                        table_info.get_name().clone(),
+                        format!("{}", table_info.get_schema())
+                    ]
+                })
+                .collect(),
+            false
+        ))
     }
 
-    pub fn cmd_display_indices<ResultWriterImpl: ResultWriter>(&self, writer: &mut ResultWriterImpl) {
+    pub fn cmd_display_indices(&self) -> SystemOutputResult {
         let catalog = self.catalog.lock();
         let table_names = catalog.get_table_names();
 
-        writer.begin_table(false);
+        Ok(SystemOutput::new(
+            vec!["table_name".to_string(), "index_oid".to_string(), "index_name".to_string(), "index_cols".to_string()],
+            table_names
+                .iter()
+                .map(|table_name| {
+                    catalog
+                        .get_table_indexes_by_name(table_name)
+                        .iter()
+                        .map(|index_info| (table_name.clone(), index_info.clone()))
+                        .collect::<Vec<_>>()
+                })
+                .flatten()
+                .map(|(table_name, index_info)| {
 
-        writer.begin_header();
-        writer.write_header_cell("table_name");
-        writer.write_header_cell("index_oid");
-        writer.write_header_cell("index_name");
-        writer.write_header_cell("index_cols");
-        writer.end_header();
-
-        for table_name in &table_names {
-            for index_info in catalog.get_table_indexes_by_name(table_name) {
-                writer.begin_row();
-
-                writer.write_cell(table_name);
-                writer.write_cell(index_info.get_index_oid().to_string().as_str());
-                writer.write_cell(index_info.get_name());
-                writer.write_cell(format!("{}", index_info.get_key_schema()).as_str());
-
-                writer.end_row();
-            }
-        }
-
-        writer.end_table();
+                    vec![
+                        table_name,
+                        index_info.get_index_oid().to_string(),
+                        index_info.get_name().clone(),
+                        format!("{}", index_info.get_key_schema())
+                    ]
+                })
+                .collect(),
+            false
+        ))
     }
 
-    pub fn cmd_display_help<ResultWriterImpl: ResultWriter>(writer: &mut ResultWriterImpl) {
-        writer.one_cell(r"(Welcome to the BusTub shell!
+    pub fn cmd_display_help() -> SystemOutputResult {
+        Ok(SystemOutput::single_cell(r"(Welcome to the BusTub shell!
 
 \dt: show all tables
 \di: show all indices
@@ -97,23 +96,19 @@ unsupported SQL queries. This shell will be able to run `create table` only
 after you have completed the buffer pool manager. It will be able to execute SQL
 queries after you have implemented necessary query executors. Use `explain` to
 see the execution plan of your query.
-)")
+)".to_string()))
     }
 
-    pub fn cmd_txn<ResultWriterImpl: ResultWriter>(&mut self, params: Vec<&str>, writer: &mut ResultWriterImpl) {
+    pub fn cmd_txn(&mut self, params: Vec<&str>) -> SystemOutputResult {
         if !self.managed_txn_mode {
-            writer.one_cell("only supported in managed mode, please use bustub-shell");
-
-            return;
+            return Err(error_utils::anyhow!("only supported in managed mode, please use bustub-shell"));
         }
 
         if params.len() == 1 {
-            match self.current_txn {
-                Some(_) => self.dump_current_txn(writer, ""),
-                None => writer.one_cell("no active txn, each statement starts a new txn."),
-            }
-
-            return;
+            return match self.current_txn {
+                Some(_) => Ok(SystemOutput::single_cell(self.dump_current_txn(""))),
+                None => Err(error_utils::anyhow!("no active txn, each statement starts a new txn."))
+            };
         }
 
         if params.len() == 2 {
@@ -121,36 +116,32 @@ see the execution plan of your query.
 
             if param1 == &"gc".to_string() {
                 self.txn_manager.garbage_collection();
-                writer.one_cell("GC complete");
-
-                return;
+                return Ok(SystemOutput::single_cell("GC complete".to_string()));
             }
 
             let txn_id = param1.parse::<TxnId>().expect("param1 must be a transaction id");
 
             if txn_id == -1 {
-                self.dump_current_txn(writer, "pause current txn ");
+                let dump_txn = self.dump_current_txn("pause current txn ");
 
                 // Remove current transaction
                 self.current_txn = None;
 
-                return;
+                return Ok(SystemOutput::single_cell(dump_txn));
             }
 
             let transaction = self.txn_manager
                 .get_transaction_by_id(txn_id)
                 .or_else(|| self.txn_manager.get_transaction_by_id(txn_id + TXN_START_ID));
 
-            if let Some(transaction) = transaction {
+            return if let Some(transaction) = transaction {
                 self.current_txn = Some(transaction);
-                self.dump_current_txn(writer, "switch to new txn ");
+                Ok(SystemOutput::single_cell(self.dump_current_txn("switch to new txn ")))
             } else {
-                writer.one_cell("cannot find txn.");
+                Err(error_utils::anyhow!("cannot find txn."))
             }
-
-            return;
         }
 
-        writer.one_cell("unsupported txn cmd.");
+        Err(error_utils::anyhow!("unsupported txn cmd."))
     }
 }
