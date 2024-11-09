@@ -14,6 +14,9 @@ pub struct ColumnOrderingAndDefaultValuesForInsert(
 
 impl ColumnOrderingAndDefaultValuesForInsert {
     pub(crate) fn from_ast_and_schema(ast_columns: &[Ident], schema: &Schema) -> Self {
+        if ast_columns.len() == 0 {
+            return Self::use_same_columns_ordering(schema)
+        }
         let schema_columns = schema.get_columns();
 
         assert!(schema_columns.len() >= ast_columns.len(), "Number of schema columns ({}) must be greater than or equal to the number of the AST columns {}", schema_columns.len(), ast_columns.len());
@@ -30,6 +33,12 @@ impl ColumnOrderingAndDefaultValuesForInsert {
             .collect::<Vec<_>>();
 
         Self(value)
+    }
+
+    pub(crate) fn use_same_columns_ordering(schema: &Schema) -> Self {
+        let positions = (0..schema.get_column_count()).map(|index| Some(index)).collect::<Vec<_>>();
+
+        Self(positions)
     }
 
     /// Reorder column to be in the same order as the schema one

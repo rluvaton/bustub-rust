@@ -32,7 +32,7 @@ mod tests {
         let sql = "INSERT INTO books (id) VALUES (1), (24);";
 
         let inserted_rows_count_result = instance.execute_single_insert_sql(sql, CheckOptions::default()).expect("Should insert");
-        
+
         assert_eq!(inserted_rows_count_result, inserted_rows_count_result.create_with_same_schema(vec![
             vec![Value::from(2)]
         ]));
@@ -489,7 +489,6 @@ mod tests {
             1
         );
 
-
         // Assert inserted values exists
         {
             let sql = "SELECT * from table_without_values";
@@ -507,5 +506,43 @@ mod tests {
 
             assert_eq!(actual, expected);
         }
+    }
+
+    #[test]
+    fn inserting_null_with_implicit_all_columns_should_work() {
+        let mut instance = BustubInstance::in_memory(None);
+
+        successful_create_table(&mut instance, "CREATE TABLE t(field1 BIGINT, field2 BIGINT);");
+
+        successful_execute_insert_without_returning(
+            &mut instance,
+            "insert into t values(1, 100);",
+            1
+        );
+
+        successful_execute_insert_without_returning(
+            &mut instance,
+            "insert into t values(2, NULL);",
+            1
+        );
+
+
+        // Assert inserted values exists
+        {
+            let sql = "SELECT * from t";
+
+            let mut actual = instance.execute_single_select_sql(sql, CheckOptions::default()).expect("Should execute");
+
+            // TODO AVOID CREATE WITH SAME SCHEMA
+            let expected = actual.create_with_same_schema(vec![
+                vec![Value::from(1), Value::from(100)],
+                vec![Value::from(4), Value::null(DBTypeId::BIGINT)],
+            ]);
+
+            actual.row_sort();
+
+            assert_eq!(actual, expected);
+        }
+
     }
 }
