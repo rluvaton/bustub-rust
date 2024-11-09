@@ -76,13 +76,16 @@ pub fn bus_tub_init() -> usize {
 pub fn bus_tub_execute_query(pointer: usize, input: &str, buffer_size: usize) -> Vec<String> {
     let mut bustub = unsafe { Box::from_raw(pointer as *mut BustubInstance) };
     
-    let mut writer = HtmlWriter::default();
-    let result = bustub.execute_user_input(input, &mut writer, CheckOptions::default());
+    let result = bustub.execute_user_input(input, CheckOptions::default());
     
     let has_error = result.is_err();
-    
+
+    let mut writer = HtmlWriter::default();
     let mut output_string = match result {
-        Ok(_) => writer.get_output().to_string(),
+        Ok(res) => {
+            res.write_results(&mut writer);
+            writer.get_output().to_string()
+        },
         Err(err) => {
             let error_message = HtmlWriter::escape(err.to_string().as_str());
             

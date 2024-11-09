@@ -79,10 +79,11 @@ fn main() -> rustyline::Result<()> {
         }
 
         let mut writer = ComfyTableWriter::default();
-        let result = bustub.execute_user_input(&query, &mut writer, CheckOptions::empty());
+        let result = bustub.execute_user_input(&query, CheckOptions::empty());
 
         match result {
-            Ok(_) => {
+            Ok(res) => {
+                res.write_results(&mut writer);
                 for table in writer.get_tables() {
                     println!("{}", table);
                 }

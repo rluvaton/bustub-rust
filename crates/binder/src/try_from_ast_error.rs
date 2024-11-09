@@ -1,6 +1,7 @@
 
 #[derive(thiserror::Error, Debug, PartialEq, Clone)]
 pub enum ParseASTError {
+    // This is to signal that the parser cannot parse the provided node
     #[error("node is incompatible")]
     IncompatibleType,
 

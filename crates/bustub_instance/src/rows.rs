@@ -6,6 +6,7 @@ use data_types::Value;
 use tuple::Tuple;
 use crate::result_writer::{ComfyTableWriter, ResultWriter};
 
+#[derive(Clone)]
 pub struct Rows {
     schema: Arc<Schema>,
     rows: Vec<Vec<Value>>,

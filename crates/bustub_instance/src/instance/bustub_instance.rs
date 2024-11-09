@@ -1,5 +1,4 @@
 use crate::instance::ddl::StatementHandler;
-use crate::result_writer::ResultWriter;
 use crate::rows::Rows;
 use binder::{Binder, StatementTypeImpl};
 use buffer_pool_manager::BufferPoolManager;
@@ -20,6 +19,7 @@ use std::ops::{Deref, DerefMut};
 use std::path::PathBuf;
 use std::sync::Arc;
 use transaction::{Transaction, TransactionManager as TransactionManagerTrait};
+use crate::instance::db_output::{DBOutput, MultipleCommandsOutput, SqlDBOutput, SystemOutput};
 use crate::table_generator::TableGenerator;
 
 const DEFAULT_BPM_SIZE: usize = 128;
@@ -158,8 +158,9 @@ impl BustubInstance {
 
     pub fn generate_test_table(&self) {
         let txn = self.txn_manager.begin(None);
-        let exec_ctx = self.make_executor_context(txn.clone(), false);
-        let gen = TableGenerator::from(exec_ctx.deref());
+        let catalog = self.catalog.lock();
+        let exec_ctx = self.make_executor_context(txn.clone(), catalog.deref(), false);
+        let gen = TableGenerator::from(&exec_ctx);
         let mut guard = self.catalog.lock();
         gen.generate_test_tables(guard.deref_mut());
         drop(guard);
@@ -177,10 +178,10 @@ impl BustubInstance {
         &self.current_txn
     }
 
-    pub fn dump_current_txn<ResultWriterImpl: ResultWriter>(&self, writer: &mut ResultWriterImpl, prefix: &'static str) {
+    pub fn dump_current_txn(&self, prefix: &'static str) -> String {
         let current_txn = self.current_txn.lock().as_ref().expect("Must have current transaction").clone();
 
-        writer.one_cell(format!("{}txn_id={} txn_real_id={} read_ts={} commit_ts={} status={:?} iso_lvl={:?}",
+        format!("{}txn_id={} txn_real_id={} read_ts={} commit_ts={} status={:?} iso_lvl={:?}",
                                 prefix,
                                 current_txn.get_transaction_id_human_readable(),
                                 current_txn.get_transaction_id(),
@@ -188,12 +189,12 @@ impl BustubInstance {
                                 current_txn.get_commit_ts(),
                                 current_txn.get_transaction_state(),
                                 current_txn.get_isolation_level()
-        ).as_str());
+        )
     }
 
-    pub fn execute_user_input<ResultWriterImpl: ResultWriter>(&self, sql_or_command: &str, writer: &mut ResultWriterImpl, check_options: CheckOptions) -> error_utils::anyhow::Result<()> {
+    pub fn execute_user_input(&mut self, sql_or_command: &str, check_options: CheckOptions) -> error_utils::anyhow::Result<DBOutput> {
         self.wrap_with_txn(|this, txn|
-            this.execute_sql_txn(sql_or_command, writer, txn.clone(), check_options)
+            this.execute_sql_txn(sql_or_command, txn.clone(), check_options)
         )
     }
 
@@ -219,34 +220,38 @@ impl BustubInstance {
         }
     }
 
-    pub fn execute_sql_txn<ResultWriterImpl: ResultWriter>(&self, sql: &str, writer: &mut ResultWriterImpl, txn: Arc<Transaction>, _check_options: CheckOptions) -> error_utils::anyhow::Result<()> {
+    pub fn execute_sql_txn(&self, sql: &str, txn: Arc<Transaction>, _check_options: CheckOptions) -> error_utils::anyhow::Result<DBOutput> {
         if sql.starts_with("\\") {
-            return self.execute_shell_commands(sql, writer);
+            return self.execute_shell_commands(sql).map(|res| res.into());
         }
+
+        let mut sql_outputs: Vec<SqlDBOutput> = vec![];
 
         let parsed = self.parse_sql(sql)?;
 
         for stmt in &parsed {
-
             match &stmt {
                 StatementTypeImpl::Invalid => break,
-                StatementTypeImpl::Select(_) => {}
-                StatementTypeImpl::Insert(_) => {}
+                StatementTypeImpl::Select(_) | StatementTypeImpl::Insert(_) | StatementTypeImpl::Delete(_) => {}
                 StatementTypeImpl::Create(stmt) => {
-                    self.create_table(txn.clone(), stmt, writer);
+                    self.create_table(txn.clone(), stmt).map(|output| sql_outputs.push(output.into()))?;
+
                     continue;
                 }
-                StatementTypeImpl::Delete(_) => {}
+                StatementTypeImpl::DropTable(stmt) => {
+                    self.drop_table(txn.clone(), stmt)?;
+                    continue;
+                }
             }
 
             let rows = self.execute_data_stmt(stmt, txn.clone())?;
 
-            rows.write_results(writer);
+            sql_outputs.push(rows.into());
 
             writer.save_rows(rows);
         }
-        
-        Ok(())
+
+        Ok(MultipleCommandsOutput::new(sql_outputs).into())
     }
 
     /// Execute Single SELECT statement and return the results
@@ -317,13 +322,12 @@ impl BustubInstance {
         // Optimize the query
         // TODO - add back
 
-        drop(catalog);
-
         // Execute the query.
         // TODO - add executor
-        let exec_ctx = self.make_executor_context(txn.clone(), is_delete);
+        let exec_ctx = self.make_executor_context(txn.clone(), catalog.deref(), is_delete);
+
         // TODO - add check options
-        let result = self.execution_engine.execute(plan.clone(), txn.clone(), exec_ctx)?;
+        let result = self.execution_engine.execute(plan.clone(), txn.clone(), &exec_ctx)?;
 
         // Return the result set as a vector of string.
         let schema = plan.get_output_schema();
@@ -331,26 +335,24 @@ impl BustubInstance {
         Ok(Rows::new(result, schema))
     }
 
-    fn execute_shell_commands<ResultWriterImpl: ResultWriter>(&self, cmd: &str, writer: &mut ResultWriterImpl) -> error_utils::anyhow::Result<()> {
+    fn execute_shell_commands(&self, cmd: &str) -> error_utils::anyhow::Result<SystemOutput> {
         // Internal meta-commands, like in `psql`.
         assert!(cmd.starts_with("\\"), "command must start with \\");
 
         match cmd {
-            "\\dt" => self.cmd_display_tables(writer),
-            "\\di" => self.cmd_display_indices(writer),
-            "\\help" => Self::cmd_display_help(writer),
+            "\\dt" => self.cmd_display_tables(),
+            "\\di" => self.cmd_display_indices(),
+            "\\help" => Self::cmd_display_help(),
             _ => {
                 if cmd.starts_with("\\dbgmvcc") {
-                    self.cmd_dbg_mvcc(cmd.split("").collect(), writer);
+                    self.cmd_dbg_mvcc(cmd.split("").collect())
                 } else if cmd.starts_with("\\txn") {
-                    self.cmd_txn(cmd.split("").collect(), writer);
+                    self.cmd_txn(cmd.split("").collect())
                 } else {
-                    return Err(error_utils::anyhow::anyhow!("unsupported internal command: {}", cmd))
+                    Err(error_utils::anyhow::anyhow!("unsupported internal command: {}", cmd))
                 }
             }
         }
-
-        Ok(())
     }
 
     fn parse_sql(&self, sql: &str) -> error_utils::anyhow::Result<Vec<StatementTypeImpl>> {
@@ -363,19 +365,17 @@ impl BustubInstance {
         binder.parse(sql).map_err(|err| err.to_anyhow())
     }
 
-    fn make_executor_context(&self, txn: Arc<Transaction>, is_modify: bool) -> Arc<ExecutorContext> {
-        Arc::new(
-            ExecutorContext::new(
-                txn,
-                self.catalog.clone(),
-                self.buffer_pool_manager.clone(),
-                self.txn_manager.clone(),
-                self.lock_manager.clone(),
-                is_modify,
-            )
+    fn make_executor_context<'a>(&self, txn: Arc<Transaction>, catalog: &'a Catalog, is_modify: bool) -> ExecutorContext<'a> {
+        ExecutorContext::new(
+            txn,
+            catalog,
+            self.buffer_pool_manager.clone(),
+            self.txn_manager.clone(),
+            self.lock_manager.clone(),
+            is_modify,
         )
     }
-    
+
     pub fn verify_integrity(&self) {
         let txn_guard = self.current_txn.lock();
         match &*txn_guard {

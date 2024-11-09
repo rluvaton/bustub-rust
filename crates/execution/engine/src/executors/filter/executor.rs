@@ -13,7 +13,7 @@ use data_types::BooleanType;
 pub struct FilterExecutor<'a> {
 
     /// The executor context in which the executor runs
-    ctx: Arc<ExecutorContext<'a>>,
+    ctx: &'a ExecutorContext<'a>,
 
     // ----
 
@@ -25,7 +25,7 @@ pub struct FilterExecutor<'a> {
 }
 
 impl<'a> FilterExecutor<'a> {
-    pub(crate) fn new(child_executor: ExecutorRef<'a>, plan: &'a FilterPlan, ctx: Arc<ExecutorContext<'a>>) -> Self {
+    pub(crate) fn new(child_executor: ExecutorRef<'a>, plan: &'a FilterPlan, ctx: &'a ExecutorContext<'a>) -> Self {
         Self {
             plan,
             child_executor,

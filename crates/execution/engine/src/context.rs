@@ -18,7 +18,7 @@ pub struct ExecutorContext<'a> {
     transaction: Arc<Transaction>,
 
     /// The database catalog associated with this executor context
-    catalog: Arc<Mutex<Catalog>>,
+    catalog: &'a Catalog,
 
     /// The buffer pool manager associated with this executor context
     bpm: Arc<BufferPoolManager>,
@@ -58,7 +58,7 @@ impl<'a> ExecutorContext<'a> {
      * @param txn_mgr The transaction manager that the executor uses
      * @param lock_mgr The lock manager that the executor uses
      */
-    pub fn new(transaction: Arc<Transaction>, catalog: Arc<Mutex<Catalog>>, bpm: Arc<BufferPoolManager>, txn_mgr: Arc<TransactionManager>,
+    pub fn new(transaction: Arc<Transaction>, catalog: &'a Catalog, bpm: Arc<BufferPoolManager>, txn_mgr: Arc<TransactionManager>,
                       lock_mgr: Option<Arc<LockManager>>, is_delete: bool) -> Self {
         Self {
             transaction,
@@ -79,7 +79,7 @@ impl<'a> ExecutorContext<'a> {
 
 
     /** @return the catalog */
-    pub fn get_catalog(&self) -> &Arc<Mutex<Catalog>> { &self.catalog }
+    pub fn get_catalog(&self) -> &Catalog { &self.catalog }
 
     /** @return the buffer pool manager */
     pub(crate) fn get_buffer_pool_manager(&self) -> &Arc<BufferPoolManager> { &self.bpm }

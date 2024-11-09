@@ -12,7 +12,7 @@ use tuple::Tuple;
 #[must_use = "iterators are lazy and do nothing unless consumed"]
 pub struct ValuesExecutor<'a> {
     /// The executor context in which the executor runs
-    ctx: Arc<ExecutorContext<'a>>,
+    ctx: &'a ExecutorContext<'a>,
 
     // ----
 
@@ -25,7 +25,7 @@ pub struct ValuesExecutor<'a> {
 }
 
 impl<'a> ValuesExecutor<'a> {
-    pub(crate) fn new(plan: &'a ValuesPlanNode, ctx: Arc<ExecutorContext<'a>>) -> Self {
+    pub(crate) fn new(plan: &'a ValuesPlanNode, ctx: &'a ExecutorContext<'a>) -> Self {
         Self {
             plan,
             ctx,

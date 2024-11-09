@@ -49,11 +49,18 @@ pub trait Index: Sync + Send where Self: 'static {
     
     
     /// Verify correctness of the index
-    fn verify_integrity(&self, index_metadata: &IndexMetadata, table_heap: Arc<TableHeap>, transaction: &Transaction);
+    fn verify_integrity(&self, index_metadata: &IndexMetadata, table_heap: &TableHeap, transaction: &Transaction);
 
+
+    /// Delete the index and cleanup everything (local pages and more)
+    fn delete_completely(self: Box<Self>, transaction: &Transaction) -> error_utils::anyhow::Result<()>;
 
     fn to_dyn_arc(self) -> Arc<dyn Index> where Self: Sized {
         Arc::new(self)
+    }
+
+    fn to_dyn_box(self) -> Box<dyn Index> where Self: Sized {
+        Box::new(self)
     }
 }
 
