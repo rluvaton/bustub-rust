@@ -50,8 +50,13 @@ impl Statement for DropTableStatement {
                     return Err(ParseASTError::Unimplemented(format!("Only 1 table table to drop is supported, instead got {names:?}")))
                 }
 
+                let table_name = names[0].to_string();
+                if table_name.starts_with("__") {
+                    return Err(ParseASTError::FailedParsing(format!("Invalid table to drop: {table_name}")));
+                }
+
                 Ok(Self {
-                    table_name: names[0].to_string(),
+                    table_name,
                     if_exists: *if_exists,
                 })
             },
@@ -61,7 +66,7 @@ impl Statement for DropTableStatement {
 
     fn try_parse_from_statement<'a>(statement: &sqlparser::ast::Statement, binder: &'a Binder) -> ParseASTResult<Self> {
         match &statement {
-            sqlparser::ast::Statement::Delete(ast) => Self::try_parse_ast(statement, binder),
+            sqlparser::ast::Statement::Drop { .. } => Self::try_parse_ast(statement, binder),
             _ => Err(ParseASTError::IncompatibleType)
         }
     }
