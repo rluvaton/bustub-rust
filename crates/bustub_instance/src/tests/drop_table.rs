@@ -1,7 +1,6 @@
 #[cfg(test)]
 mod tests {
     use catalog_schema_mocks::MockTableName;
-    use crate::result_writer::NoopWriter;
     use crate::BustubInstance;
     use execution_common::CheckOptions;
 
@@ -26,7 +25,7 @@ mod tests {
 
         let error = instance.execute_user_input(sql, CheckOptions::default()).expect_err("Should fail");
 
-        assert_eq!(error.to_string(), "fail missing table");
+        assert_eq!(error.to_string(), "Cannot delete missing table books, consider using if exists");
     }
 
     #[test]

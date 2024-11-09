@@ -1,5 +1,4 @@
 use crate::instance::ddl::StatementHandler;
-use crate::result_writer::ResultWriter;
 use crate::rows::Rows;
 use binder::{Binder, StatementTypeImpl};
 use buffer_pool_manager::BufferPoolManager;
@@ -235,7 +234,7 @@ impl BustubInstance {
                     continue;
                 }
                 StatementTypeImpl::DropTable(stmt) => {
-                    self.drop_table(txn.clone(), stmt);
+                    self.drop_table(txn.clone(), stmt)?;
                     continue;
                 }
             }
