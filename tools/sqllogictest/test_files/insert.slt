@@ -1,3 +1,4 @@
+
 ##########
 ## INSERT tests
 ##########
@@ -5,17 +6,18 @@
 
 statement ok
 CREATE TABLE aggregate_test_100 (
-  c1  VARCHAR,
-  c2  TINYINT,
-  c3  SMALLINT,
+  c1  VARCHAR NOT NULL,
+  c2  TINYINT NOT NULL,
+  c3  SMALLINT NOT NULL,
   c4  SMALLINT,
   c5  INT,
-  c6  BIGINT,
-  c7  SMALLINT,
-  c8  INT,
-  c9 VARCHAR,
-  c10 DOUBLE,
-  c11 VARCHAR
+  c6  BIGINT NOT NULL,
+  c7  SMALLINT NOT NULL,
+  c8  INT NOT NULL,
+  c9  BIGINT NOT NULL,
+  c10 VARCHAR NOT NULL,
+  c11 DOUBLE NOT NULL,
+  c12 VARCHAR NOT NULL
 )
 
 # test insert with column names
@@ -60,7 +62,7 @@ drop table table_without_values;
 
 # test insert with non-nullable column
 statement ok
-CREATE TABLE table_without_values(field1 BIGINT, field2 BIGINT);
+CREATE TABLE table_without_values(field1 BIGINT NOT NULL, field2 BIGINT NULL);
 
 query I
 insert into table_without_values values(1, 100);
