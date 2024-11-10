@@ -566,7 +566,6 @@ mod tests {
         instance.verify_integrity();
     }
 
-    #[ignore]
     #[test]
     fn fail_to_insert_null_to_non_nullable_column() {
         let mut instance = BustubInstance::in_memory(None);
@@ -583,7 +582,7 @@ mod tests {
         let err = instance.execute_single_insert_sql(sql, CheckOptions::default())
             .expect_err("Should fail to insert");
 
-        assert_eq!(err.to_string(), "Failed to parse Missing required columns id");
+        assert_eq!(err.to_string(), "Column 'id' is not nullable but the value is null");
 
         instance.verify_integrity();
     }

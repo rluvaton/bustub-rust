@@ -131,7 +131,7 @@ impl Column {
     }
 
     pub fn value_might_need_casting_to(&self, cast_to: &Self) -> bool {
-        self.get_type() != cast_to.get_type() || self.get_length() != cast_to.get_length()
+        self.get_type() != cast_to.get_type() || self.get_length() != cast_to.get_length() || (!cast_to.get_options().is_nullable() && self.get_options().is_nullable())
     }
 
     pub fn try_cast_value(&self, value: &Value, dest_column: &Self) -> error_utils::anyhow::Result<Value> {
@@ -143,10 +143,9 @@ impl Column {
             return if dest_column.get_options().is_nullable() {
                 Ok(Value::null(dest_column.get_type()))
             } else {
-                Err(error_utils::anyhow!("Dest column is not nullable but the value is null"))
+                Err(error_utils::anyhow!("Column '{}' is not nullable but the value is null", dest_column.column_name))
             };
         }
-
 
         let cast_type = self.get_type().can_be_cast_without_value_changes(&dest_column.get_type());
 
