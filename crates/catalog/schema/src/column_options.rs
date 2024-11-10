@@ -79,6 +79,10 @@ impl ColumnOptions {
         self.default == ColumnDefault::None
     }
 
+    pub fn is_required(&self) -> bool {
+        !self.has_default()
+    }
+
     pub fn get_default(&self) -> &ColumnDefault {
         &self.default
     }
