@@ -9,7 +9,7 @@ use crate::executors::ExecutorImpl;
 // TODO - avoid Rc
 pub(crate) type ExecutorRef<'a> = Box<ExecutorImpl<'a>>;
 
-pub(crate) type ExecutorItem = (Tuple, RID);
+pub(crate) type ExecutorItem = error_utils::anyhow::Result<(Tuple, RID)>;
 
 /**
  * The AbstractExecutor implements the Volcano tuple-at-a-time iterator model.

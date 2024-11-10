@@ -64,32 +64,40 @@ impl Iterator for DeleteExecutor<'_>
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
         
-        while let Some((tuple, rid)) = self.child_executor.next() {
-            let is_deleted = self.dest_table_info.get_table_heap().mark_tuple_as_deleted(
-                &TupleMeta::new(
-                    get_timestamp(),
-                    true,
-                ),
-                &rid
-            );
-            
-            // If not deleted just try the next one
-            if !is_deleted {
-                continue;
+        while let Some(res) = self.child_executor.next() {
+            match res {
+                Ok((tuple, rid)) => {
+                    let is_deleted = self.dest_table_info.get_table_heap().mark_tuple_as_deleted(
+                        &TupleMeta::new(
+                            get_timestamp(),
+                            true,
+                        ),
+                        &rid
+                    );
+
+                    // If not deleted just try the next one
+                    if !is_deleted {
+                        continue;
+                    }
+
+                    // Update indexes
+                    self.dest_indexes
+                        .iter()
+                        .for_each(|index_info| {
+                            let index = index_info.get_index();
+
+                            index
+                                .delete_entry(&tuple, rid,  self.ctx.get_transaction())
+                                .expect("Should delete from index");
+                        });
+
+                    return Some(Ok((tuple, rid)));
+                }
+                Err(err) => {
+                    return Some(Err(err))
+                }
             }
 
-            // Update indexes
-            self.dest_indexes
-                .iter()
-                .for_each(|index_info| {
-                    let index = index_info.get_index();
-
-                    index
-                        .delete_entry(&tuple, rid,  self.ctx.get_transaction())
-                        .expect("Should delete from index");
-                });
-
-            return Some((tuple, rid));
         }
         
         None

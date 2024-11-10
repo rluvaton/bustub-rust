@@ -49,11 +49,11 @@ impl ExecutionEngine {
         let ex = plan.create_executor(exec_ctx);
 
         let res = ex
-            .map(|item| item.0)
-            .collect::<Vec<Tuple>>();
+            .map(|res| res.map(|item| item.0))
+            .collect::<error_utils::anyhow::Result<Vec<Tuple>>>();
 
         // TODO - perform checks
 
-        Ok(res)
+        res
     }
 }

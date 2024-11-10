@@ -55,7 +55,7 @@ impl Iterator for SeqScanExecutor<'_>
         
         let rid = *tuple.get_rid();
 
-        Some((tuple, rid))
+        Some(Ok((tuple, rid)))
     }
 }
 

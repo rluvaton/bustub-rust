@@ -98,6 +98,12 @@ impl Iterator for AggregationExecutor<'_>
             }
             
             let item = item.unwrap();
+
+            if item.is_err() {
+                return Some(item);
+            }
+
+            let item = item.unwrap();
             
             let agg_iter = self.plan
                 .get_aggregate_types()
@@ -158,7 +164,7 @@ impl Iterator for AggregationExecutor<'_>
         self.finished = true;
         let tuple = Tuple::from_value(self.initial_values.as_slice(), self.plan.get_output_schema().deref());
         
-        Some((tuple, RID::default()))
+        Some(Ok((tuple, RID::default())))
     }
 
     #[inline]

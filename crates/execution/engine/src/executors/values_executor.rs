@@ -60,12 +60,12 @@ impl Iterator for ValuesExecutor<'_>
         
         self.index += 1;
 
-        Some((
+        Some(Ok((
             Tuple::from_value(values.as_slice(), &*self.plan.get_output_schema()),
 
             // TODO - recheck this
             RID::default()
-        ))
+        )))
     }
 
     #[inline]
