@@ -48,6 +48,56 @@ impl InsertStatement {
         self.returning.as_slice()
     }
 
+    fn assert_no_duplicate_columns(ast: &sqlparser::ast::Insert) -> ParseASTResult<()> {
+        let mut columns = ast.columns.as_slice();
+        for (index, column) in columns.iter().enumerate() {
+            for other_column in columns[index + 1..].iter() {
+                if column == other_column {
+                    return Err(ParseASTError::FailedParsing(format!("Schema contains duplicate unqualified field name {}", column)));
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    fn assert_no_unknowns_columns(ast: &sqlparser::ast::Insert, table: &BaseTableRef) -> ParseASTResult<()> {
+        let unknown_column = ast.columns.iter().find(|col| {
+            let col_name = col.to_string();
+
+            let column_index = table.schema.try_get_col_idx(col_name.as_str());
+
+            // If column is missing
+            column_index.is_none()
+        });
+
+        if let Some(missing_column) = unknown_column {
+            return Err(ParseASTError::FailedParsing(format!("Column {missing_column} is missing")))
+        }
+        Ok(())
+    }
+
+    fn assert_no_missing_required_columns(ast: &sqlparser::ast::Insert, table: &BaseTableRef) -> ParseASTResult<()> {
+        // No columns = all columns
+        if ast.columns.is_empty() {
+            return Ok(());
+        }
+
+        let missing_required_columns = table.schema.get_columns()
+            .iter()
+            .filter(|col| col.get_options().has_default())
+            .filter(|col| ast.columns.iter().all(|ast_col| &ast_col.to_string() != col.get_name()))
+            .map(|col| col.get_name())
+            .cloned()
+            .collect::<Vec<_>>();
+
+        if !missing_required_columns.is_empty() {
+            return Err(ParseASTError::FailedParsing(format!("Missing required columns {}", missing_required_columns.join(", "))))
+        }
+
+        Ok(())
+    }
+
 }
 
 impl Into<StatementTypeImpl> for InsertStatement {
@@ -68,33 +118,11 @@ impl Statement for InsertStatement {
         }
 
 
-        // Fail if there are duplicate columns
-        {
-            let mut columns = ast.columns.as_slice();
-            for (index, column) in columns.iter().enumerate() {
-                for other_column in columns[index + 1..].iter() {
-                    if column == other_column {
-                        return Err(ParseASTError::FailedParsing(format!("Schema contains duplicate unqualified field name {}", column)));
-                    }
-                }
-            }
-        }
+        Self::assert_no_duplicate_columns(ast)?;
+        Self::assert_no_unknowns_columns(ast, &table)?;
+        Self::assert_no_missing_required_columns(ast, &table)?;
 
-        // Fails if we have unknown columns
-        {
-            let unknown_column = ast.columns.iter().find(|col| {
-                let col_name = col.to_string();
-
-                let column_index = table.schema.try_get_col_idx(col_name.as_str());
-
-                // If column is missing
-                column_index.is_none()
-            });
-
-            if let Some(missing_column) = unknown_column {
-                return Err(ParseASTError::FailedParsing(format!("Column {missing_column} is missing")))
-            }
-        }
+        // TODO - fail if there are null values for non nullable column
 
         let column_ordering = ColumnOrderingAndDefaultValuesForInsert::from_ast_and_schema(ast.columns.as_slice(), table.schema.deref());
 
