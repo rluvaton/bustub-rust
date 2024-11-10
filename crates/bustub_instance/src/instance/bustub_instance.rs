@@ -158,14 +158,13 @@ impl BustubInstance {
 
     pub fn generate_test_table(&self) {
         let txn = self.txn_manager.begin(None);
-        let catalog = self.catalog.lock();
-        let exec_ctx = self.make_executor_context(txn.clone(), catalog.deref(), false);
-        let gen = TableGenerator::from(&exec_ctx);
-        let mut guard = self.catalog.lock();
-        gen.generate_test_tables(guard.deref_mut());
-        drop(guard);
 
-        self.txn_manager.commit(txn.clone());
+        {
+            let mut catalog = self.catalog.lock();
+            TableGenerator::generate_test_tables(txn.clone(), catalog.deref_mut());
+        }
+
+        self.txn_manager.commit(txn);
     }
 
     /// Enable managed txn mode on this BusTub instance, allowing statements like `BEGIN`

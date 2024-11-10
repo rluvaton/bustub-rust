@@ -557,13 +557,56 @@ mod tests {
             // TODO AVOID CREATE WITH SAME SCHEMA
             let expected = actual.create_with_same_schema(vec![
                 vec![Value::from(1), Value::from(100)],
-                vec![Value::from(4), Value::null(DBTypeId::BIGINT)],
+                vec![Value::from(2), Value::null(DBTypeId::BIGINT)],
             ]);
 
             actual.row_sort();
 
             assert_eq!(actual, expected);
         }
-
     }
+
+    #[test]
+    fn fail_to_insert_when_missing_required_columns() {
+        let mut instance = BustubInstance::in_memory(None);
+
+        // Create table
+        {
+            let sql = "CREATE TABLE t(id INT NOT NULL, other INT NULL);";
+
+            instance.execute_user_input(sql, CheckOptions::default()).expect("Should execute");
+        }
+
+        let sql = "insert into t(other) values(4);";
+
+        let err = instance.execute_single_insert_sql(sql, CheckOptions::default())
+            .expect_err("Should fail to insert");
+
+        assert_eq!(err.to_string(), "Failed to parse Missing required columns id");
+
+        instance.verify_integrity();
+    }
+
+    #[ignore]
+    #[test]
+    fn fail_to_insert_null_to_non_nullable_column() {
+        let mut instance = BustubInstance::in_memory(None);
+
+        // Create table
+        {
+            let sql = "CREATE TABLE t(id INT NOT NULL);";
+
+            instance.execute_user_input(sql, CheckOptions::default()).expect("Should execute");
+        }
+
+        let sql = "insert into t(id) values(NULL);";
+
+        let err = instance.execute_single_insert_sql(sql, CheckOptions::default())
+            .expect_err("Should fail to insert");
+
+        assert_eq!(err.to_string(), "Failed to parse Missing required columns id");
+
+        instance.verify_integrity();
+    }
+
 }
