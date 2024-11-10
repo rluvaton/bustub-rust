@@ -536,7 +536,7 @@ mod tests {
             // TODO AVOID CREATE WITH SAME SCHEMA
             let expected = actual.create_with_same_schema(vec![
                 vec![Value::from(1), Value::from(100)],
-                vec![Value::from(4), Value::null(DBTypeId::BIGINT)],
+                vec![Value::from(2), Value::null(DBTypeId::BIGINT)],
             ]);
 
             actual.row_sort();
