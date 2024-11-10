@@ -122,8 +122,6 @@ impl Statement for InsertStatement {
         Self::assert_no_unknowns_columns(ast, &table)?;
         Self::assert_no_missing_required_columns(ast, &table)?;
 
-        // TODO - fail if there are null values for non nullable column
-
         let column_ordering = ColumnOrderingAndDefaultValuesForInsert::from_ast_and_schema(ast.columns.as_slice(), table.schema.deref());
 
         let select = ast.source.as_ref().ok_or(ParseASTError::FailedParsing("Must have source".to_string()))?;
@@ -142,6 +140,7 @@ impl Statement for InsertStatement {
                         }
                     };
 
+                    // TODO - fail if there are null values for non nullable column
                     let row_with_mismatch_values_count = list.values.iter()
                         .any(|row| row.len() != number_of_columns);
 

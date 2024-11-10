@@ -566,4 +566,26 @@ mod tests {
         instance.verify_integrity();
     }
 
+    #[ignore]
+    #[test]
+    fn fail_to_insert_null_to_non_nullable_column() {
+        let mut instance = BustubInstance::in_memory(None);
+
+        // Create table
+        {
+            let sql = "CREATE TABLE t(id INT NOT NULL);";
+
+            instance.execute_user_input(sql, CheckOptions::default()).expect("Should execute");
+        }
+
+        let sql = "insert into t(id) values(NULL);";
+
+        let err = instance.execute_single_insert_sql(sql, CheckOptions::default())
+            .expect_err("Should fail to insert");
+
+        assert_eq!(err.to_string(), "Failed to parse Missing required columns id");
+
+        instance.verify_integrity();
+    }
+
 }
