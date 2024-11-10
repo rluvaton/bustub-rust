@@ -17,12 +17,10 @@ use crate::table_generator::dist::Dist;
 use crate::table_generator::generate_values::GenerateValues;
 
 
-pub(crate) struct TableGenerator<'a> {
-    exec_ctx: &'a ExecutorContext<'a>,
-}
+pub(crate) struct TableGenerator;
 
-impl<'a> TableGenerator<'a> {
-    pub fn generate_test_tables(&self, catalog: &mut Catalog) {
+impl TableGenerator {
+    pub fn generate_test_tables(txn: Arc<Transaction>, catalog: &mut Catalog) {
         for mut table_meta in Self::get_insert_meta() {
             // Create Schema
             let schema: Schema = table_meta.col_meta
@@ -39,17 +37,17 @@ impl<'a> TableGenerator<'a> {
                 .into();
 
             let info = catalog.create_table(
-                self.exec_ctx.get_transaction().clone(),
+                txn.clone(),
                 table_meta.name.to_string(),
                 Arc::new(schema),
                 None,
             ).expect("Should be able to create table");
             
-            self.fill_table(info, &mut table_meta);
+            Self::fill_table(info, &mut table_meta);
         }
     }
 
-    fn fill_table(&self, info: &TableInfo, table_meta: &mut TableInsertMeta) {
+    fn fill_table(info: &TableInfo, table_meta: &mut TableInsertMeta) {
         let mut rng = thread_rng();
         let mut num_inserted = 0;
         let batch_size = 128;
@@ -60,7 +58,7 @@ impl<'a> TableGenerator<'a> {
 
             let values = table_meta.col_meta
                 .iter_mut()
-                .map(|item| self.make_values(item, num_values, &mut rng))
+                .map(|item| Self::make_values(item, num_values, &mut rng))
                 .collect::<Vec<_>>();
 
             (0..num_values).for_each(|i| {
@@ -83,7 +81,7 @@ impl<'a> TableGenerator<'a> {
         }
     }
 
-    fn make_values(&self, col_meta: &mut ColumnInsertMeta, count: usize, rng: &mut ThreadRng) -> Vec<Value> {
+    fn make_values(col_meta: &mut ColumnInsertMeta, count: usize, rng: &mut ThreadRng) -> Vec<Value> {
         col_meta.generate_type.gen_numeric_values(col_meta.dist, &mut col_meta.serial_counter, count, rng)
         // match col_meta.db_type_id {
         //     DBTypeId::TINYINT => self.gen_numeric_values::<TinyIntUnderlyingType>(col_meta, count),
@@ -321,13 +319,5 @@ impl<'a> TableGenerator<'a> {
             //  0,
             //  {{"colA", TypeId::BIGINT, false, Dist::Serial, 0, 0}, {"colB", TypeId::INTEGER, false, Dist::Uniform, 0, 9}}},
         ]
-    }
-}
-
-impl<'a> From<&'a ExecutorContext<'a>> for TableGenerator<'a> {
-    fn from(value: &'a ExecutorContext<'a>) -> Self {
-        TableGenerator {
-            exec_ctx: value,
-        }
     }
 }

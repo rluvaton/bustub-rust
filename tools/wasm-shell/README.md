@@ -9,6 +9,8 @@ Bustub instance in the browser.
 ## Build
 
 ```bash
+cargo install wasm-pack
+
 wasm-pack build --target web
 ```
 
