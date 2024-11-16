@@ -148,7 +148,7 @@ impl Iterator for InsertExecutor<'_>
         tuple.set_rid(rid);
 
         // Update indexes
-        for index_info in self.dest_indexes {
+        for index_info in &self.dest_indexes {
             let index = index_info.get_index();
 
             let insert_result = index.insert_entry(&tuple, rid, self.ctx.get_transaction());
