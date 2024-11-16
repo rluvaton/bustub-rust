@@ -605,6 +605,7 @@ dependencies = [
 name = "execution_engine"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "buffer_pool_manager",
  "catalog_schema",
  "catalog_schema_mocks",

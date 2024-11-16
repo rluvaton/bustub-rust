@@ -24,6 +24,7 @@ data_types = { workspace = true }
 expression = { workspace = true }
 
 error_utils = { workspace = true }
+anyhow = { workspace = true }
 table = { workspace = true }
 tuple = { workspace = true }
 rid = { workspace = true }

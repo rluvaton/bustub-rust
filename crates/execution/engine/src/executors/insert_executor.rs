@@ -1,10 +1,12 @@
-use index::Index;
 use crate::context::ExecutorContext;
 use crate::executors::{Executor, ExecutorImpl, ExecutorItem, ExecutorMetadata, ExecutorRef};
 use catalog_schema::{ColumnDefault, Schema};
 use common::get_timestamp;
 use db_core::catalog::{IndexInfo, TableInfo};
+use error_utils::ToAnyhowResult;
+use index::Index;
 use planner::{InsertPlan, PlanNode};
+use rid::RID;
 use std::fmt;
 use std::fmt::Debug;
 use std::ops::Deref;
@@ -31,9 +33,11 @@ pub struct InsertExecutor<'a> {
 
     // The table info for the table the values should be inserted into
     dest_table_info: &'a TableInfo,
-    
+
     // The indexes of the matching dest table
-    dest_indexes: Vec<&'a IndexInfo>
+    dest_indexes: Vec<&'a IndexInfo>,
+
+    had_error: bool,
 }
 
 impl<'a> InsertExecutor<'a> {
@@ -42,7 +46,7 @@ impl<'a> InsertExecutor<'a> {
             let c = ctx.get_catalog();
 
             let table_info = c.get_table_by_oid(plan.get_table_oid()).expect("Table must exists (otherwise it should be blocked at the planner)");
-            
+
             let indexes = c.get_table_indexes_by_name(table_info.get_name());
 
             (table_info, indexes)
@@ -60,7 +64,8 @@ impl<'a> InsertExecutor<'a> {
             should_use_column_ordering_and_default_values: plan.get_column_ordering_and_default_values().should_use_column_ordering(),
             ctx,
             dest_table_info,
-            dest_indexes
+            dest_indexes,
+            had_error: false,
         }
     }
 }
@@ -77,72 +82,86 @@ impl Iterator for InsertExecutor<'_>
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
+        if self.had_error {
+            return None;
+        }
+
         let res = self.child_executor.next()?;
 
-        match res {
-            Ok((mut tuple, _)) => {
+        if res.is_err() {
+            self.had_error = true;
+            return Some(res);
+        }
 
-                // Fill default values and/or reorder columns to match the table order
-                if self.should_use_column_ordering_and_default_values {
-                    let columns_ordering_and_default_values = self.plan.get_column_ordering_and_default_values();
+        let (mut tuple, _) = res.unwrap();
 
-                    let table_schema = self.dest_table_info.get_schema();
-                    let values_to_insert = columns_ordering_and_default_values.map_values_based_on_schema(
-                        table_schema.deref(),
-                        tuple.get_values(self.child_executor.get_output_schema().deref()).deref(),
-                        |col| {
-                            let options = col.get_options();
 
-                            match options.get_default() {
-                                ColumnDefault::None => unreachable!("Column {} must have default", col.get_name()),
-                                ColumnDefault::Value(v) => v.clone()
-                            }
-                        }
-                    );
+        // Fill default values and/or reorder columns to match the table order
+        if self.should_use_column_ordering_and_default_values {
+            let columns_ordering_and_default_values = self.plan.get_column_ordering_and_default_values();
 
-                    tuple = Tuple::from_value(values_to_insert.as_slice(), table_schema.deref())
-                } else if self.is_child_executor_schema_different {
-                    let tuple_result = tuple
-                        .try_into_dest_schema(self.child_executor.get_output_schema().deref(), self.dest_table_info.get_schema().deref());
+            let table_schema = self.dest_table_info.get_schema();
+            let values_to_insert = columns_ordering_and_default_values.map_values_based_on_schema(
+                table_schema.deref(),
+                tuple.get_values(self.child_executor.get_output_schema().deref()).deref(),
+                |col| {
+                    let options = col.get_options();
 
-                    if tuple_result.is_err() {
-                        return Some(Err(tuple_result.unwrap_err()));
+                    match options.get_default() {
+                        ColumnDefault::None => unreachable!("Column {} must have default", col.get_name()),
+                        ColumnDefault::Value(v) => v.clone()
                     }
+                },
+            );
 
-                    tuple = tuple_result.unwrap()
-                }
+            tuple = Tuple::from_value(values_to_insert.as_slice(), table_schema.deref())
+        } else if self.is_child_executor_schema_different {
+            let tuple_result = tuple
+                .try_into_dest_schema(self.child_executor.get_output_schema().deref(), self.dest_table_info.get_schema().deref());
 
-                let rid = self.dest_table_info.get_table_heap().insert_tuple(
-                    &TupleMeta::new(
-                        get_timestamp(),
-                        false,
-                    ),
-                    &tuple,
-                    self.ctx.get_lock_manager(),
-                    self.ctx.get_transaction(),
-                    Some(self.plan.get_table_oid()),
-                ).expect("Tuple is too big to fit in a page (this should be blocked in the planner)");
-
-                tuple.set_rid(rid);
-
-                // Update indexes
-                self.dest_indexes
-                    .iter()
-                    .for_each(|index_info| {
-                        let index = index_info.get_index();
-
-                        index
-                            .insert_entry(&tuple, rid,  self.ctx.get_transaction())
-                            .expect("Should insert to index");
-                    });
-
-                Some(Ok((tuple, rid)))
+            if tuple_result.is_err() {
+                self.had_error = true;
+                return Some(Err(tuple_result.unwrap_err()));
             }
-            Err(err) => {
-                Some(Err(err))
+
+            tuple = tuple_result.unwrap()
+        }
+
+        let rid = self.dest_table_info.get_table_heap().insert_tuple(
+            &TupleMeta::new(
+                get_timestamp(),
+                false,
+            ),
+            &tuple,
+            self.ctx.get_lock_manager(),
+            self.ctx.get_transaction(),
+            Some(self.plan.get_table_oid()),
+        );
+
+        if rid.is_none() {
+            self.had_error = true;
+            return Some(Err(error_utils::anyhow!("Tuple is too big to fit in a page (this should be blocked in the planner)")));
+        }
+
+        let rid = rid.unwrap();
+
+        tuple.set_rid(rid);
+
+        // Update indexes
+        for index_info in self.dest_indexes {
+            let index = index_info.get_index();
+
+            let insert_result = index.insert_entry(&tuple, rid, self.ctx.get_transaction());
+            if insert_result.is_err() {
+                self.had_error = true;
+
+                return Some(insert_result
+                    .to_anyhow()
+                    .map(|_| -> (Tuple, RID) { unreachable!() }));
             }
         }
 
+        Some(Ok((tuple, rid)))
     }
 
     #[inline]
