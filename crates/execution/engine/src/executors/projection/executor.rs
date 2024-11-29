@@ -45,17 +45,23 @@ impl Iterator for ProjectionExecutor<'_>
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
-        let (tuple, rid) = self.child_executor.next()?;
+        let res = self.child_executor.next()?;
 
-        let values = self.plan.get_expressions()
-            .iter()
-            .map(|expr| expr.evaluate(&tuple, &*self.child_executor.get_output_schema().clone()))
-            .collect::<Vec<_>>();
+        match res {
+            Ok((tuple, rid)) => {
 
-        Some((
-            Tuple::from_value(values.as_slice(), &*self.plan.get_output_schema()),
-            rid
-        ))
+                let values = self.plan.get_expressions()
+                    .iter()
+                    .map(|expr| expr.evaluate(&tuple, &*self.child_executor.get_output_schema().clone()))
+                    .collect::<Vec<_>>();
+
+                Some(Ok((
+                    Tuple::from_value(values.as_slice(), &*self.plan.get_output_schema()),
+                    rid
+                )))
+            }
+            Err(err) => Some(Err(err))
+        }
     }
 
     #[inline]

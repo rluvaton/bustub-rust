@@ -50,10 +50,16 @@ impl Iterator for FilterExecutor<'_>
         let filter_expr = self.plan.get_predicate();
         let output_schema = self.child_executor.get_output_schema();
 
-        self.child_executor.find(move |(tuple, _) | {
-            let value = filter_expr.evaluate(tuple, output_schema.deref());
+        self.child_executor.find(move |res| {
+            match res {
+                Ok((tuple, _)) => {
+                    let value = filter_expr.evaluate(tuple, output_schema.deref());
 
-            value.try_into().is_ok_and(|val: BooleanType| val.get_as_bool().is_some_and(|b| b))
+                    value.try_into().is_ok_and(|val: BooleanType| val.get_as_bool().is_some_and(|b| b))
+                }
+                // Lift error
+                Err(_) => true
+            }
         })
     }
 

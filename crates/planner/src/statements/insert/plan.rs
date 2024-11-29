@@ -28,9 +28,12 @@ impl Plan for InsertStatement {
             .get_columns()
             .iter()
             .zip(insert_schema.get_columns())
-            .map(|(expected_schema_column, current_value_column)| (expected_schema_column.get_type(), current_value_column.get_type()))
-            .find(|(expected_schema_column_type, current_value_column_type)| {
-                let cast_res = expected_schema_column_type.can_be_cast_without_value_changes(current_value_column_type);
+            .find(|(expected_schema_column, current_value_column)| {
+                if !expected_schema_column.get_options().is_nullable() && current_value_column.get_options().is_nullable() {
+                    return true;
+                }
+                let (expected_schema_column_type, current_value_column_type) = (expected_schema_column.get_type(), current_value_column.get_type());
+                let cast_res = expected_schema_column_type.can_be_cast_without_value_changes(&current_value_column_type);
 
                 match cast_res {
                     CanBeCastedWithoutValueChangeResult::True | CanBeCastedWithoutValueChangeResult::NeedNumberBoundCheck | CanBeCastedWithoutValueChangeResult::NeedVarLengthCheck => false,
@@ -39,7 +42,7 @@ impl Plan for InsertStatement {
             });
 
         if let Some((expected, actual)) = mismatch_schema_columns {
-            return Err(error_utils::anyhow!("schema error: expected {expected} got {actual}"))
+            return Err(error_utils::anyhow!("schema error: expected {expected} got {actual}"));
         }
 
         let mut plan = InsertPlan::new(

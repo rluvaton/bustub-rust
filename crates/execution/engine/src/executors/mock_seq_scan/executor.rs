@@ -51,10 +51,10 @@ impl Iterator for MockScanExecutor<'_>
     fn next(&mut self) -> Option<Self::Item> {
         let (values, rid) = self.iter.next()?;
 
-        Some((
+        Some(Ok((
             Tuple::from_value(values.as_slice(), self.plan.get_output_schema().deref()),
             rid
-        ))
+        )))
     }
 }
 
